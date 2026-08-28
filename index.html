@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#07090d">
+  <title>PropBetEdge NFL | Prop Intelligence</title>
+  <meta name="description" content="Live NFL sportsbook markets with PropBetEdge fair-line model context.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=DM+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <header class="network-shell">
+    <div class="network-row">
+      <nav class="network-links network-left" aria-label="PropBetEdge network">
+        <a href="https://propbetedge.ai/news">All News</a>
+        <a href="https://mlb.propbetedge.ai">MLB</a>
+        <a class="active" href="https://nfl.propbetedge.ai">NFL</a>
+      </nav>
+
+      <a class="brand" href="https://propbetedge.ai" aria-label="PropBetEdge home">
+        <img src="https://propbetedge.ai/logo/pbe-mark-160.png" alt="PropBetEdge">
+        <span>Sports News · Prop-Bet Intelligence</span>
+      </a>
+
+      <nav class="network-links network-right" aria-label="PropBetEdge products">
+        <a href="https://propbetedge.ai/news/nba">NBA</a>
+        <a href="https://propbetedge.ai/news/nhl">NHL</a>
+        <a href="https://propbetedge.ai/games">PBEcast</a>
+        <a href="https://propbetedge.ai/odds">Edges</a>
+      </nav>
+    </div>
+
+    <div class="desk-row">
+      <div class="desk-label">NFL Intelligence</div>
+      <button class="desk-tab active" data-view="props">Props</button>
+      <button class="desk-tab" data-view="matchups">Matchups</button>
+      <button class="desk-tab" data-view="usage">Usage</button>
+      <button class="desk-tab" data-view="simulator">Simulator</button>
+      <button class="desk-tab" data-view="sgp">SGP Lab</button>
+      <button class="desk-tab" data-view="market">Market</button>
+      <button class="desk-tab" data-view="live">Live</button>
+      <button class="desk-tab" data-view="injuries">Injuries</button>
+      <a class="desk-news" href="https://propbetedge.ai/news/nfl">NFL News ↗</a>
+    </div>
+  </header>
+
+  <main id="app" class="app-shell" aria-live="polite">
+    <section class="boot-card">
+      <div class="status-dot"></div>
+      <div>
+        <div class="eyebrow">NFL PROP INTELLIGENCE</div>
+        <h1>Connecting to the market.</h1>
+        <p>Loading current sportsbook quotes and PropBetEdge model output.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <span>PropBetEdge NFL</span>
+    <span>Market data and model output are labeled separately.</span>
+  </footer>
+
+  <script src="./app.js" defer></script>
+</body>
+</html>
