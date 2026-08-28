@@ -26,3 +26,7 @@ Passing yards, completions, attempts, touchdowns, interceptions, receiving yards
 ## UI direction
 
 A football intelligence command center, not an encyclopedia. Props and market quality lead the experience. Other modules fail closed until their factual data services are production-ready.
+
+## Deployment
+
+Git-linked to the isolated Vercel project `nfl-propbetedge-new`. This project is separate from MLB and the existing NFL production projects.
