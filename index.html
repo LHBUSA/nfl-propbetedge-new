@@ -1,68 +1,174 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#07090d">
-  <title>PropBetEdge NFL | Prop Intelligence</title>
-  <meta name="description" content="Live NFL sportsbook markets with PropBetEdge fair-line model context.">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>PropBetEdge NFL — NFL Intelligence</title>
+  <meta name="description" content="PropBetEdge NFL intelligence, props, teams, stats, history and market analysis.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=DM+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,300;0,400;0,600;0,700;0,800;0,900;1,700;1,900&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- Exact live v5.5.33 visual baseline -->
+  <link rel="stylesheet" href="https://nfl.propbetedge.ai/css/tokens.css?v=202604071125">
+  <link rel="stylesheet" href="https://nfl.propbetedge.ai/css/layout.css?v=202604071125">
+  <link rel="stylesheet" href="https://nfl.propbetedge.ai/css/components.css?v=202604071125">
+  <link rel="stylesheet" href="https://nfl.propbetedge.ai/css/nfl.css?v=202604071125">
+
+  <!-- Additive redesign layer only -->
+  <link rel="stylesheet" href="./enhancements.css?v=20260828a1">
+  <!-- BASE: live v5.5.33 / 202604071125 -->
 </head>
 <body>
-  <header class="network-shell">
-    <div class="network-row">
-      <nav class="network-links network-left" aria-label="PropBetEdge network">
-        <a href="https://propbetedge.ai/news">All News</a>
-        <a href="https://mlb.propbetedge.ai">MLB</a>
-        <a class="active" href="https://nfl.propbetedge.ai">NFL</a>
-      </nav>
 
-      <a class="brand" href="https://propbetedge.ai" aria-label="PropBetEdge home">
-        <img src="https://propbetedge.ai/logo/pbe-mark-160.png" alt="PropBetEdge">
-        <span>Sports News · Prop-Bet Intelligence</span>
+<div class="ticker" id="ticker" role="marquee" aria-label="NFL news and scores"></div>
+<div class="trophy-watermark"></div>
+
+<div class="shell">
+  <aside class="sidebar" id="sidebar" role="navigation" aria-label="Main navigation">
+    <div class="sidebar-inner">
+      <a href="javascript:void(0)" class="sidebar-logo" onclick="App.nav('home')" aria-label="PropBetEdge NFL Home">
+        <svg width="30" height="30" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M17 2L30.8564 9.75V25.25L17 33L3.14359 25.25V9.75L17 2Z" stroke="#43A047" stroke-width="1.5" fill="none" opacity=".45"/>
+          <path d="M17 7L26.3923 12.25V22.75L17 28L7.6077 22.75V12.25L17 7Z" fill="#43A047" opacity=".1"/>
+          <line x1="17" y1="3" x2="17" y2="10" stroke="#66BB6A" stroke-width="1.5"/>
+          <line x1="17" y1="24" x2="17" y2="31" stroke="#66BB6A" stroke-width="1.5"/>
+          <line x1="4" y1="10.5" x2="10" y2="14" stroke="#66BB6A" stroke-width="1.5"/>
+          <line x1="24" y1="20" x2="30" y2="23.5" stroke="#66BB6A" stroke-width="1.5"/>
+          <line x1="30" y1="10.5" x2="24" y2="14" stroke="#66BB6A" stroke-width="1.5"/>
+          <line x1="10" y1="20" x2="4" y2="23.5" stroke="#66BB6A" stroke-width="1.5"/>
+          <circle cx="17" cy="17" r="3.5" fill="#66BB6A"/>
+          <circle cx="17" cy="17" r="6" stroke="#66BB6A" stroke-width="1" opacity=".4"/>
+        </svg>
+        <div class="sidebar-logo-text">
+          <div class="sl-brand">PropBet<em>Edge</em></div>
+          <div class="sl-sport">NFL Intelligence</div>
+        </div>
       </a>
 
-      <nav class="network-links network-right" aria-label="PropBetEdge products">
-        <a href="https://propbetedge.ai/news/nba">NBA</a>
-        <a href="https://propbetedge.ai/news/nhl">NHL</a>
-        <a href="https://propbetedge.ai/games">PBEcast</a>
-        <a href="https://propbetedge.ai/odds">Edges</a>
-      </nav>
-    </div>
+      <div class="sidebar-search">
+        <input type="search" id="global-search" placeholder="Search players, teams, records..." autocomplete="off" aria-label="Search">
+        <div class="search-results" id="search-results"></div>
+      </div>
 
-    <div class="desk-row">
-      <div class="desk-label">NFL Intelligence</div>
-      <button class="desk-tab active" data-view="props">Props</button>
-      <button class="desk-tab" data-view="matchups">Matchups</button>
-      <button class="desk-tab" data-view="usage">Usage</button>
-      <button class="desk-tab" data-view="simulator">Simulator</button>
-      <button class="desk-tab" data-view="sgp">SGP Lab</button>
-      <button class="desk-tab" data-view="market">Market</button>
-      <button class="desk-tab" data-view="live">Live</button>
-      <button class="desk-tab" data-view="injuries">Injuries</button>
-      <a class="desk-news" href="https://propbetedge.ai/news/nfl">NFL News ↗</a>
+      <nav class="sidebar-nav" role="navigation">
+        <div class="nav-group" id="intelligence-nav-group">
+          <div class="nav-group-label">Intelligence</div>
+          <a class="nav-item active" id="nav-home" href="javascript:void(0)" onclick="App.nav('home')"><span class="ni-icon">🏠</span> Dashboard</a>
+          <a class="nav-item" id="nav-picks" href="javascript:void(0)" onclick="App.nav('picks')"><span class="ni-icon">🎯</span> Picks Engine</a>
+          <a class="nav-item" id="nav-propchain" href="javascript:void(0)" onclick="App.nav('propchain')" style="display:flex;align-items:center;justify-content:space-between">PropChain™ <span class="nav-badge" style="background:rgba(239,68,68,.15);color:#f87171;font-size:8px;font-weight:700;padding:1px 6px;border-radius:99px;letter-spacing:.5px">NEW</span></a>
+          <a class="nav-item" id="nav-pbecast" href="javascript:void(0)" onclick="App.nav('pbecast')"><span class="ni-icon">📡</span> PBEcast <span class="nav-badge live">LIVE</span></a>
+          <a class="nav-item" id="nav-injuries" href="javascript:void(0)" onclick="App.nav('injuries')"><span class="ni-icon">🩹</span> Injury Tracker <span class="nav-badge" style="background:var(--danger-l);color:var(--danger)">20</span></a>
+          <a class="nav-item" id="nav-trades" href="javascript:void(0)" onclick="App.nav('trades')"><span class="ni-icon">🔄</span> Trades & Rumors <span class="nav-badge" style="background:#FEF2F2;color:#DC2626">🔥</span></a>
+        </div>
+
+        <div class="nav-group">
+          <div class="nav-group-label">2025 Season</div>
+          <a class="nav-item" id="nav-standings" href="javascript:void(0)" onclick="App.nav('standings')"><span class="ni-icon">🏆</span> Standings</a>
+          <a class="nav-item" id="nav-seasonhistory" href="javascript:void(0)" onclick="App.nav('seasonhistory')"><span class="ni-icon">📖</span> Season Encyclopedia</a>
+          <a class="nav-item" id="nav-stats" href="javascript:void(0)" onclick="App.nav('stats')"><span class="ni-icon">📊</span> Stats Leaders</a>
+          <a class="nav-item" id="nav-teams" href="javascript:void(0)" onclick="App.nav('teams')"><span class="ni-icon">🏈</span> All 32 Teams</a>
+        </div>
+
+        <div class="nav-group">
+          <div class="nav-group-label">All Time</div>
+          <a class="nav-item" id="nav-hof" href="javascript:void(0)" onclick="App.nav('hof')"><span class="ni-icon">🏆</span> Hall of Fame</a>
+          <a class="nav-item" id="nav-records" href="javascript:void(0)" onclick="App.nav('records')"><span class="ni-icon">📈</span> Records & Milestones</a>
+          <a class="nav-item" id="nav-prospects" href="javascript:void(0)" onclick="App.nav('prospects')"><span class="ni-icon">🔭</span> 2026 Draft Prospects</a>
+          <a class="nav-item" id="nav-sb" href="javascript:void(0)" onclick="App.nav('sb')"><span class="ni-icon">💍</span> Super Bowl History</a>
+        </div>
+
+        <div class="nav-group">
+          <div class="nav-group-label">Network</div>
+          <a class="nav-item ext" href="https://propbetedge.ai"><span class="ni-icon">🏠</span> All Sports Hub</a>
+          <a class="nav-item ext" href="https://mlb.propbetedge.ai"><span class="ni-icon">⚾</span> MLB</a>
+          <a class="nav-item ext" href="https://propbetedge.ai/news/nfl"><span class="ni-icon">📰</span> NFL News</a>
+          <a class="nav-item ext" href="https://propsports.proptechusa.ai"><span class="ni-icon">📡</span> PropSports API</a>
+        </div>
+      </nav>
+
+      <div class="sidebar-foot">
+        <div class="sf-season">NFL Intelligence</div>
+        <div class="sf-status">2026 preseason build</div>
+        <div class="sf-api">Powered by PropSports API</div>
+      </div>
     </div>
+  </aside>
+
+  <header class="mobile-header" id="mobile-header">
+    <button class="hamburger" id="hamburger" onclick="App.toggleMobile()" aria-label="Menu"><span></span><span></span><span></span></button>
+    <a href="javascript:void(0)" onclick="App.nav('home')" class="mobile-logo">PropBet<em>Edge</em> <strong>NFL</strong></a>
+    <a href="javascript:void(0)" onclick="App.nav('propboard')" class="mobile-picks-btn">Props</a>
   </header>
 
-  <main id="app" class="app-shell" aria-live="polite">
-    <section class="boot-card">
-      <div class="status-dot"></div>
-      <div>
-        <div class="eyebrow">NFL PROP INTELLIGENCE</div>
-        <h1>Connecting to the market.</h1>
-        <p>Loading current sportsbook quotes and PropBetEdge model output.</p>
+  <main class="main-content" id="main-content" role="main">
+    <div class="view-container" id="view-container">
+      <div class="view-loading">
+        <div class="loading-mark"></div>
+        <div class="loading-text">Loading NFL Intelligence...</div>
       </div>
-    </section>
+    </div>
   </main>
+</div>
 
-  <footer class="site-footer">
-    <span>PropBetEdge NFL</span>
-    <span>Market data and model output are labeled separately.</span>
-  </footer>
+<div class="mobile-overlay" id="mobile-overlay" onclick="App.toggleMobile()"></div>
 
-  <script src="./app.js" defer></script>
+<script>
+  const NFL_API_GATEWAY = 'https://nfl-api.propbetedge.ai';
+  const BUILD_VERSION = 'v5.5.33-additive-1';
+</script>
+
+<!-- Live v5.5.33 product code: deliberately retained as the baseline -->
+<script src="https://nfl.propbetedge.ai/js/components/utils.js?v=202604071125"></script>
+<script src="https://nfl.propbetedge.ai/js/data/teams.js?v=202604071125"></script>
+<script src="https://nfl.propbetedge.ai/js/data/superbowls.js?v=202604071125"></script>
+<script src="https://nfl.propbetedge.ai/js/data/hof.js?v=202604071125"></script>
+<script src="https://nfl.propbetedge.ai/js/data/live-data.js?v=202604071125"></script>
+<script src="https://nfl.propbetedge.ai/js/data/seasons.js?v=202604071125"></script>
+<script src="https://nfl.propbetedge.ai/js/data/records.js?v=202604071125"></script>
+<script src="https://nfl.propbetedge.ai/js/components/ticker.js?v=202604071125"></script>
+<script src="https://nfl.propbetedge.ai/js/components/search.js?v=202604071125"></script>
+<script src="https://nfl.propbetedge.ai/js/components/footer.js?v=202604071125"></script>
+<script src="https://nfl.propbetedge.ai/js/views/home.js?v=202604071125"></script>
+<script src="https://nfl.propbetedge.ai/js/views/propchain.js?v=202604071125"></script>
+<script src="https://nfl.propbetedge.ai/js/views/picks.js?v=202604071125"></script>
+<script src="https://nfl.propbetedge.ai/js/views/teams.js?v=202604071125"></script>
+<script src="https://nfl.propbetedge.ai/js/views/stats.js?v=202604071125"></script>
+<script src="https://nfl.propbetedge.ai/js/views/standings.js?v=202604071125"></script>
+<script src="https://nfl.propbetedge.ai/js/views/history.js?v=202604071125"></script>
+<script src="https://nfl.propbetedge.ai/js/views/season-history.js?v=202604071125"></script>
+<script src="https://nfl.propbetedge.ai/js/views/hof.js?v=202604071125"></script>
+<script src="https://nfl.propbetedge.ai/js/views/records.js?v=202604071125"></script>
+<script src="https://nfl.propbetedge.ai/js/views/superbowls.js?v=202604071125"></script>
+<script src="https://nfl.propbetedge.ai/js/views/prospects.js?v=202604071125"></script>
+<script src="https://nfl.propbetedge.ai/js/views/injuries.js?v=202604071125"></script>
+<script src="https://nfl.propbetedge.ai/js/views/trades.js?v=202604071125"></script>
+<script src="https://nfl.propbetedge.ai/js/views/player-modal.js?v=202604071125"></script>
+<script src="https://nfl.propbetedge.ai/js/views/pbecast.js?v=202604071125"></script>
+<script src="https://nfl.propbetedge.ai/js/app.js?v=202604071125"></script>
+
+<!-- Additive intelligence layer -->
+<script src="./enhancements.js?v=20260828a1"></script>
+
+<div class="mobile-bottom-nav" id="mobile-bottom-nav">
+  <div class="mobile-bottom-nav-inner">
+    <div class="mbn-item active" id="mbn-home" onclick="App.nav('home');pbeMbnActive('home')"><div class="mbn-icon">🏠</div><span>Home</span></div>
+    <div class="mbn-item" id="mbn-propboard" onclick="App.nav('propboard');pbeMbnActive('propboard')"><div class="mbn-icon">📈</div><span>Props</span></div>
+    <div class="mbn-item" id="mbn-picks" onclick="App.nav('picks');pbeMbnActive('picks')"><div class="mbn-icon">🎯</div><span>Picks</span></div>
+    <div class="mbn-item" id="mbn-injuries" onclick="App.nav('injuries');pbeMbnActive('injuries')"><div class="mbn-icon">🩹</div><span>Injuries</span></div>
+    <div class="mbn-item" id="mbn-menu" onclick="pbeToggleSidebar()"><div class="mbn-icon">☰</div><span>Menu</span></div>
+  </div>
+</div>
+<script>
+  function pbeMbnActive(id) {
+    document.querySelectorAll('.mbn-item').forEach(function(el){ el.classList.remove('active'); });
+    var el = document.getElementById('mbn-' + id); if (el) el.classList.add('active');
+  }
+  function pbeToggleSidebar() {
+    var sb = document.getElementById('sidebar');
+    var ov = document.getElementById('mobile-overlay');
+    if (sb) sb.classList.toggle('open');
+    if (ov) ov.classList.toggle('open');
+  }
+</script>
 </body>
 </html>

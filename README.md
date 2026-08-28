@@ -1,32 +1,31 @@
-# PropBetEdge NFL
+# PropBetEdge NFL — Additive Redesign
 
-Clean-room NFL prop intelligence frontend for PropBetEdge.
+This repository is the isolated redesign workspace for the existing PropBetEdge NFL product.
 
-## Product contract
+## Baseline
 
-- `LIVE` = current authorized sportsbook/provider data.
-- `MODEL` = PropBetEdge model output with explicit provenance.
-- `UNAVAILABLE` = required source/input is not available.
-- No synthetic data is presented as live.
-- No hardcoded current picks or random betting metrics.
+The product intentionally starts from the live NFL v5.5.33 experience rather than replacing it. The existing dashboard, sidebar navigation, Picks Engine, PropChain, team pages, standings, season encyclopedia, Hall of Fame, records, Super Bowl history and mobile navigation remain part of the product.
 
-## Current data plane
+## What is being added
 
-Frontend -> `https://nfl-api.propbetedge.ai`
+A first-class **Prop Board** is added to the Intelligence section using the rebuilt NFL gateway:
 
-- `/api/odds/board` — normalized sportsbook Prop Board.
-- `/api/picks/pass` — PBE passing model.
+- `https://nfl-api.propbetedge.ai/api/odds/board`
+- `https://nfl-api.propbetedge.ai/api/picks/pass`
 
-The live Prop Board enforces a maximum of **5 player markets per request**. The frontend preserves that backend guardrail by splitting the 10 launch markets into **two batches of five** and merging the factual responses client-side.
+The current live Prop Board accepts at most **5 player markets per request**, so the frontend requests the 10 launch markets in two batches of five and merges them client-side.
 
-## Launch markets
+## Truth contract
 
-Passing yards, completions, attempts, touchdowns, interceptions, receiving yards, receptions, rushing yards, rush attempts, anytime TD.
+- `LIVE` = genuine current authorized provider data.
+- `MODEL` = PropBetEdge model output.
+- `UNAVAILABLE` = required data/input is unavailable.
+- Synthetic/demo content is never relabeled as live.
 
-## UI direction
+The legacy PBEcast badge is relabeled `BETA` in this redesign until its transport is reconnected to verified live play-by-play.
 
-A football intelligence command center, not an encyclopedia. Props and market quality lead the experience. Other modules fail closed until their factual data services are production-ready.
+## Deployment isolation
 
-## Deployment
+Vercel project: `nfl-propbetedge-new`
 
-Git-linked to the isolated Vercel project `nfl-propbetedge-new`. This project is separate from MLB and the existing NFL production projects.
+This workspace is separate from MLB and from the existing `nfl-real` production project. The purpose is to improve the current NFL product safely before any future domain promotion.
