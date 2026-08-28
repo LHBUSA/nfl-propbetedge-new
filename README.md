@@ -29,3 +29,5 @@ The legacy PBEcast badge is relabeled `BETA` in this redesign until its transpor
 Vercel project: `nfl-propbetedge-new`
 
 This workspace is separate from MLB and from the existing `nfl-real` production project. The purpose is to improve the current NFL product safely before any future domain promotion.
+
+Current redesign baseline commit: `8153a583`.
