@@ -1,0 +1,49 @@
+name: NFL Frontend CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: JavaScript syntax
+        run: node --check app.js
+
+      - name: Validate Vercel config JSON
+        run: node -e "JSON.parse(require('fs').readFileSync('vercel.json','utf8')); console.log('vercel.json OK')"
+
+      - name: Enforce live Prop Board contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q "const BATCH_SIZE = 5;" app.js
+          grep -q "/api/odds/board" app.js
+          grep -q "/api/picks/pass" app.js
+          ! grep -q "Math.random" app.js
+          ! grep -Eqi "synthetic[_ -]?fallback[[:space:]]*[:=][[:space:]]*true|fake[[:space:]_-]*live" app.js
+          echo "NFL truth contract OK"
+
+      - name: Required application files
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s index.html
+          test -s styles.css
+          test -s app.js
+          test -s vercel.json
+          test -s README.md
+          echo "Required files OK"
