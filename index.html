@@ -15,9 +15,10 @@
   <link rel="stylesheet" href="https://nfl.propbetedge.ai/css/components.css?v=202604071125">
   <link rel="stylesheet" href="https://nfl.propbetedge.ai/css/nfl.css?v=202604071125">
 
-  <!-- Additive market layer + full UI redesign -->
+  <!-- Additive market layer + Intelligence OS + NFL Pro -->
   <link rel="stylesheet" href="./enhancements.css?v=20260828a1">
   <link rel="stylesheet" href="./ui-v2.css?v=20260828b1">
+  <link rel="stylesheet" href="./paywall.css?v=20260828c1">
 </head>
 <body>
 
@@ -115,7 +116,7 @@
 
 <script>
   const NFL_API_GATEWAY = 'https://nfl-api.propbetedge.ai';
-  const BUILD_VERSION = 'nfl-intelligence-os-v2';
+  const BUILD_VERSION = 'nfl-intelligence-os-v2-pro';
 </script>
 
 <!-- Retained product modules -->
@@ -146,6 +147,10 @@
 <script src="https://nfl.propbetedge.ai/js/views/player-modal.js?v=202604071125"></script>
 <script src="https://nfl.propbetedge.ai/js/views/pbecast.js?v=202604071125"></script>
 <script src="https://nfl.propbetedge.ai/js/app.js?v=202604071125"></script>
+
+<!-- NFL Pro auth is loaded before any client requests PBE model output. -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="./paywall.js?v=20260828c1"></script>
 
 <!-- Real Prop Board integration, then UI v2 overrides -->
 <script src="./enhancements.js?v=20260828a1"></script>
