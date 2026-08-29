@@ -1,5 +1,6 @@
 /* PropBetEdge NFL Pro
- * Auth: Supabase passwordless email
+ * Auth/session: Supabase
+ * Customer email delivery: Resend via /api/auth-email only
  * Billing: Stripe Checkout Session via /api/checkout with live Payment Link fallback
  * Entitlement: public.nfl_has_pro_access()
  * PBE model requests are rewritten through /api/pro-model and require NFL Pro.
@@ -123,10 +124,10 @@
     <div class="pbe-pro-auth-state">
       <input class="pbe-pro-email" id="pbe-pro-email" type="email" autocomplete="email" placeholder="you@example.com" aria-label="Email address">
       <button class="pbe-pro-cta" id="pbe-pro-signin" type="button">Sign in to continue</button>
-      <div class="pbe-pro-auth-copy">We use passwordless email sign-in. Checkout with the same email so your Stripe purchase can unlock NFL Pro automatically.</div>
+      <div class="pbe-pro-auth-copy">We send a secure passwordless sign-in link to your email. Checkout with the same email so your Stripe purchase can unlock NFL Pro automatically.</div>
       <div class="pbe-pro-message" id="pbe-pro-message"></div>
     </div>
-    <div class="pbe-pro-secure">◆ Secure checkout powered by Stripe</div>`;
+    <div class="pbe-pro-secure">◆ Secure sign-in · Secure checkout powered by Stripe</div>`;
   }
 
   function freeUserHtml() {
@@ -188,21 +189,23 @@
   }
 
   async function signIn() {
-    if (!state.client) return message('Account service is unavailable. Please try again shortly.','error');
     const input = document.getElementById('pbe-pro-email');
     const button = document.getElementById('pbe-pro-signin');
     const email = (input?.value || '').trim().toLowerCase();
     if (!/^\S+@\S+\.\S+$/.test(email)) return message('Enter a valid email address.','error');
     if (button) button.disabled = true;
-    message('Sending your secure sign-in link…');
+    message('Sending your secure PropBetEdge sign-in link…');
     try {
-      const options = { shouldCreateUser: true };
-      if (location.hostname === 'nfl.propbetedge.ai') {
-        options.emailRedirectTo = 'https://nfl.propbetedge.ai/?auth=complete';
-      }
-      const { error } = await state.client.auth.signInWithOtp({ email, options });
-      if (error) throw error;
-      message('Check your email. Open the PropBetEdge sign-in link to continue.','success');
+      const response = await nativeFetch('/api/auth-email', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', accept: 'application/json' },
+        cache: 'no-store',
+        body: JSON.stringify({ email })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload?.error || 'Email sign-in is unavailable right now.');
+      if (payload?.provider !== 'resend') throw new Error('PropBetEdge email delivery is not configured.');
+      message('Check your inbox. Your PropBetEdge NFL sign-in link is on the way.','success');
     } catch (error) {
       message(error?.message || 'Unable to send the sign-in link.','error');
     } finally {
