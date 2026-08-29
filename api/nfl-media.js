@@ -78,36 +78,51 @@ function pickPlayerCandidate(objects, query) {
   const q = normalize(query);
   let best = null;
   let bestScore = -Infinity;
+
   for (const obj of objects) {
     const label = bestLabel(obj);
     if (!label) continue;
     const value = normalize(label);
     if (!value) continue;
 
-    let score = 0;
-    if (value === q) score += 80;
-    else if (value.includes(q) || q.includes(value)) score += 42;
-    else score += tokenOverlap(q, value) * 26;
-
-    const type = normalize([
+    const exact = value === q;
+    const overlap = tokenOverlap(q, value);
+    const context = normalize([
       obj.type,
       obj.typeName,
       obj.contentType,
       obj.category,
       obj.subtitle,
       obj.description,
+      obj.uid,
+      obj.href,
+      obj.url,
+      obj.link?.href,
     ].filter(Boolean).join(' '));
-    if (type.includes('athlete') || type.includes('player')) score += 30;
-    if (type.includes('team')) score -= 35;
-    if (extractId(obj)) score += 7;
-    if (firstImage(obj)) score += 12;
+
+    const athleteLike = context.includes('athlete') || context.includes('player') || context.includes('nfl player');
+    const editorialLike = ['article','story','news','video','topic','award','headline','recap'].some(token => context.includes(token));
+
+    /* A player image must be identity-safe. We only accept an exact name match,
+     * or a very strong fuzzy match that is explicitly player/athlete shaped.
+     * This prevents names such as Walter Payton from resolving to articles
+     * about the Walter Payton Man of the Year award. */
+    if (!exact && !(athleteLike && overlap >= 0.8)) continue;
+    if (editorialLike && !athleteLike) continue;
+
+    let score = exact ? 100 : overlap * 70;
+    if (athleteLike) score += 45;
+    if (editorialLike) score -= 70;
+    if (extractId(obj)) score += 10;
+    if (firstImage(obj)) score += 10;
 
     if (score > bestScore) {
       bestScore = score;
       best = obj;
     }
   }
-  return bestScore >= 28 ? best : null;
+
+  return bestScore >= 100 ? best : null;
 }
 
 function bestNamedMatch(items, query, fields) {
