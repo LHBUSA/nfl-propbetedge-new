@@ -57,9 +57,10 @@ jobs:
             'js/components/ticker.js'
             'js/components/search.js'
             'js/app.js'
+            'game-center-v2.js'
           )
           for token in "${banned[@]}"; do
-            if grep -Fq "$token" index.html; then
+            if grep -Fq "$token" index.html || grep -Fq "$token" page-loader.js; then
               echo "Retired runtime import found: $token"
               exit 1
             fi
@@ -99,7 +100,7 @@ jobs:
             sgp-lab-v2.js
             usage-v2.js
             propchain-v2.js
-            game-center-v2.js
+            pbecast-v4.js
             news-intelligence-v2.js
             newsroom-v2.js
             player-research-v2.js
@@ -113,6 +114,20 @@ jobs:
               exit 1
             fi
           done
+
+      - name: Require live PBEcast transport and visuals
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s pbecast-v4.css
+          test -s api/nfl-live.js
+          grep -Fq 'Full Play-by-Play' pbecast-v4.js
+          grep -Fq 'current_drive' pbecast-v4.js
+          grep -Fq 'current_play' pbecast-v4.js
+          grep -Fq 'player_stats' pbecast-v4.js
+          grep -Fq 'espn_cdn_gamepackage' api/nfl-live.js
+          grep -Fq "return'LIVE'" api/nfl-live.js
+          grep -Fq "transport:'poll'" api/nfl-live.js
 
       - name: Require premium and newsroom server gates
         shell: bash
@@ -135,6 +150,7 @@ jobs:
           grep -Fiq 'local baseline' market-watch-v2.js
           grep -Fiq 'score feed says so' games-v2.js
           grep -Fiq 'current roster is not inferred' team-research-v3.js
+          grep -Fiq 'LIVE is rendered only' pbecast-v4.js
 
       - name: Validate Vercel configuration
         shell: bash
