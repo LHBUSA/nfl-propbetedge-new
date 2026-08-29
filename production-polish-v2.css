@@ -1,0 +1,42 @@
+/* PropBetEdge NFL — final production chrome safeguards */
+
+/* Never let the moving market/news tape collide with fixed controls. */
+#pbe-sports-shell .pbes-news{overflow:hidden!important;contain:paint!important}
+#pbe-sports-shell .pbes-news-vp{min-width:0!important;overflow:hidden!important;clip-path:inset(0)!important;padding-right:18px!important}
+#pbe-sports-shell .pbes-news-track{max-width:none!important;padding-right:96px!important;will-change:transform}
+#pbe-sports-shell .pbes-top{overflow:hidden!important}
+#pbe-sports-shell .pbes-right{position:relative;z-index:3;flex:0 0 auto;background:linear-gradient(90deg,rgba(12,11,9,0),rgba(12,11,9,.96) 18%)!important;padding-left:12px!important}
+#pbe-sports-shell .pbes-center{min-width:0!important;overflow:hidden!important}
+
+/* Wrong article context is worse than less copy. Side stories keep image/headline/time;
+   the featured story remains the only dashboard story with body copy. */
+.pbehome7 .pbe7-news-copy p{display:none!important}
+.pbehome7 .pbe7-news-item{min-height:104px!important}
+
+/* Make global search visibly discoverable instead of a hidden power-user affordance. */
+#global-search{
+  min-height:36px!important;
+  border:1px solid rgba(216,183,91,.18)!important;
+  border-radius:9px!important;
+  background:linear-gradient(135deg,rgba(216,183,91,.045),rgba(255,255,255,.018))!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.025)!important;
+}
+#global-search:hover,#global-search:focus{border-color:rgba(216,183,91,.34)!important;box-shadow:0 0 0 3px rgba(216,183,91,.045)!important}
+.pbe18-esc,.pbe18-key{font-size:8px!important;border-color:rgba(216,183,91,.16)!important;color:#a69c89!important;background:rgba(216,183,91,.035)!important}
+
+/* Neutral unavailable states. Not having a linked sportsbook market is not an error. */
+.cast5-coverage .missing,.cast6-coverage .neutral{border-color:rgba(255,255,255,.065)!important;background:rgba(255,255,255,.012)!important}
+.cast5-coverage .missing b,.cast6-coverage .neutral b{color:#777169!important}
+
+/* Header/badge vocabulary should read consistently. */
+.cast4-panel-head span,.cast5-module>header span,.cast6-module>header>span,.cast6-module>header>div>span{
+  letter-spacing:.10em!important;
+  text-transform:uppercase!important;
+}
+
+@media(max-width:760px){
+  #pbe-sports-shell .pbes-news-vp{padding-right:8px!important}
+  #pbe-sports-shell .pbes-news-track{padding-right:50px!important}
+  #pbe-sports-shell .pbes-right{padding-left:6px!important}
+  .pbehome7 .pbe7-news-item{min-height:88px!important}
+}
