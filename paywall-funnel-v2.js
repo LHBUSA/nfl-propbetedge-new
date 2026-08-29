@@ -149,9 +149,20 @@
     if(params.get('checkout')!=='success')return;
     const s=state();
     if(s.user)return;
+    const delivery=params.get('access_email')||'pending';
     setTimeout(()=>{
       const el=document.getElementById('pbe-funnel-message');
-      if(el){el.className='pbe-pro-message success';el.textContent='Payment received. Your NFL Pro access email is being delivered now. Open that link to sign in.'}
+      if(!el)return;
+      if(delivery==='sent'||delivery==='already_sent'){
+        el.className='pbe-pro-message success';
+        el.textContent='Payment confirmed. Your NFL Pro access email has been sent. Open that link to sign in.';
+      }else if(delivery==='failed'){
+        el.className='pbe-pro-message error';
+        el.textContent='Payment confirmed, but the access email could not be delivered. Enter the same checkout email above and use “Already have access? Sign in”.';
+      }else{
+        el.className='pbe-pro-message';
+        el.textContent='Payment confirmed. Your NFL Pro access email is being prepared.';
+      }
     },100);
   }
 
