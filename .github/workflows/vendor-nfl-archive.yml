@@ -54,7 +54,8 @@ jobs:
       - name: Commit archive snapshot if changed
         shell: bash
         run: |
-          if git diff --quiet -- archive; then
+          set -euo pipefail
+          if [ -z "$(git status --porcelain -- archive)" ]; then
             echo 'Archive snapshot already current.'
             exit 0
           fi
