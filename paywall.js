@@ -1,6 +1,6 @@
 /* PropBetEdge NFL Pro
  * Auth: Supabase passwordless email
- * Billing: Stripe Checkout Session via /api/checkout
+ * Billing: Stripe Checkout Session via /api/checkout with live Payment Link fallback
  * Entitlement: public.nfl_has_pro_access()
  * PBE model requests are rewritten through /api/pro-model and require NFL Pro.
  */
@@ -9,7 +9,8 @@
 
   const SUPABASE_URL = 'https://tkmlnhmylqnttmnsnief.supabase.co';
   const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_YkSuX7oXCxyTTMPtPqYIyw_qtbfA5c6';
-  const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/fZueVd1rU0PYg8d8Ez7wA05';
+  const WEEKLY_PAYMENT_LINK = 'https://buy.stripe.com/fZueVd1rU0PYg8d8Ez7wA05';
+  const SEASON_PASS_PAYMENT_LINK = 'https://buy.stripe.com/cNidR9eeGbuCe05f2X7wA06';
   const SEASON_PASS_PRICE_ID = 'price_1U9oVzF3CaVzg4ORnk5NiJFA';
   const WEEKLY_PRICE_ID = 'price_1U9QUZF3CaVzg4OR3QNfwWCS';
   const SEASON_PASS_THROUGH = 'February 14, 2027';
@@ -115,14 +116,14 @@
 
   function signedOutHtml() {
     return `<div class="pbe-pro-price-card">
-      <div class="pbe-pro-plan-label">NFL PRO · WEEKLY</div>
-      <div class="pbe-pro-price"><strong>$9.99</strong><span>/ week</span></div>
-      <div class="pbe-pro-renew">Renews automatically each week until canceled. No trial. Cancel anytime.</div>
+      <div class="pbe-pro-plan-label">NFL PRO</div>
+      <div class="pbe-pro-price"><strong>2</strong><span>ways to unlock</span></div>
+      <div class="pbe-pro-renew">Sign in once, then choose $9.99/week or the $99 Season Pass.</div>
     </div>
     <div class="pbe-pro-auth-state">
       <input class="pbe-pro-email" id="pbe-pro-email" type="email" autocomplete="email" placeholder="you@example.com" aria-label="Email address">
       <button class="pbe-pro-cta" id="pbe-pro-signin" type="button">Sign in to continue</button>
-      <div class="pbe-pro-auth-copy">We use passwordless email sign-in. After you're signed in, checkout with the same email so your NFL Pro subscription can unlock automatically.</div>
+      <div class="pbe-pro-auth-copy">We use passwordless email sign-in. Checkout with the same email so your Stripe purchase can unlock NFL Pro automatically.</div>
       <div class="pbe-pro-message" id="pbe-pro-message"></div>
     </div>
     <div class="pbe-pro-secure">◆ Secure checkout powered by Stripe</div>`;
@@ -146,7 +147,7 @@
     </div>
     <div class="pbe-pro-user-card"><strong>${esc(email)}</strong><span>Signed in · Free access</span></div>
     <button class="pbe-pro-cta secondary" id="pbe-pro-refresh" type="button">I already subscribed · Refresh access</button>
-    <div class="pbe-pro-auth-copy">At Stripe checkout, use <strong>${esc(email)}</strong>. The NFL subscription webhook matches that email to this signed-in account.</div>
+    <div class="pbe-pro-auth-copy">Use <strong>${esc(email)}</strong> at Stripe checkout. Your NFL Pro entitlement is matched to the same signed-in email.</div>
     <div class="pbe-pro-message" id="pbe-pro-message"></div>
     <div class="pbe-pro-secure">◆ Secure checkout powered by Stripe</div>`;
   }
@@ -209,6 +210,26 @@
     }
   }
 
+  function paymentLinkFor(price) {
+    if (price === WEEKLY_PRICE_ID) return WEEKLY_PAYMENT_LINK;
+    if (price === SEASON_PASS_PRICE_ID) return SEASON_PASS_PAYMENT_LINK;
+    return '';
+  }
+
+  function openPaymentLink(price) {
+    const base = paymentLinkFor(price);
+    if (!base) return false;
+    const email = String(state.user?.email || '').trim();
+    try {
+      const url = new URL(base);
+      if (email) url.searchParams.set('prefilled_email',email);
+      window.location.href = url.toString();
+    } catch (_) {
+      window.location.href = base;
+    }
+    return true;
+  }
+
   async function checkout(priceId) {
     if (!state.user) {
       open('signin');
@@ -216,6 +237,10 @@
     }
 
     const price = typeof priceId === 'string' && priceId ? priceId : WEEKLY_PRICE_ID;
+    if (!paymentLinkFor(price)) {
+      message('That NFL Pro plan is unavailable. Please refresh and try again.','error');
+      return;
+    }
 
     try {
       const token = await getToken();
@@ -236,21 +261,14 @@
         return;
       }
 
-      /* Temporary fail-safe: the Payment Link is the flow that currently
-       * converts, so a /api/checkout outage must not block weekly purchases.
-       * Remove once the new checkout flow is verified in production. */
-      if (price === WEEKLY_PRICE_ID) {
-        window.location.href = STRIPE_PAYMENT_LINK;
-        return;
-      }
-
-      message(payload.error ? `Checkout unavailable: ${payload.error}` : 'Checkout is unavailable right now. Please try again.');
+      /* Production fallback while the Vercel Checkout Session secret is not
+       * configured. Both live Payment Links feed the canonical Supabase Stripe
+       * webhook and redirect back to PropBetEdge NFL after purchase. */
+      if (openPaymentLink(price)) return;
+      message(payload.error ? `Checkout unavailable: ${payload.error}` : 'Checkout is unavailable right now. Please try again.','error');
     } catch (_) {
-      if (price === WEEKLY_PRICE_ID) {
-        window.location.href = STRIPE_PAYMENT_LINK;
-        return;
-      }
-      message('Checkout could not be started. Please try again.');
+      if (openPaymentLink(price)) return;
+      message('Checkout could not be started. Please try again.','error');
     }
   }
 
@@ -345,7 +363,7 @@
     if (strip.className !== nextClass) strip.className = nextClass;
     const next = state.pro
       ? `<div><div class="pbe-pro-dashboard-title"><span>NFL PRO ACTIVE</span> · Proprietary PBE model intelligence is unlocked.</div><div class="pbe-pro-dashboard-copy">Fair lines, probability and model-gap output are available anywhere the production model supports the current market.</div></div><button class="pbe-pro-mini-cta" onclick="App.nav('propboard')">Open Pro Board</button>`
-      : `<div><div class="pbe-pro-dashboard-title"><span>NFL PRO</span> · Unlock the proprietary layer above the sportsbook market.</div><div class="pbe-pro-dashboard-copy">Free access keeps current book numbers useful. Pro adds PBE fair line, model probability, model gap and premium tools as they launch.</div></div><button class="pbe-pro-mini-cta" onclick="PBEPro.open('upgrade')">Unlock for $9.99/week</button>`;
+      : `<div><div class="pbe-pro-dashboard-title"><span>NFL PRO</span> · Unlock the proprietary layer above the sportsbook market.</div><div class="pbe-pro-dashboard-copy">Free access keeps current book numbers useful. Pro adds PBE fair line, model probability, model gap and premium tools as they launch.</div></div><button class="pbe-pro-mini-cta" onclick="PBEPro.open('upgrade')">Unlock NFL Pro</button>`;
     setHtml(strip,next);
   }
 
@@ -467,10 +485,11 @@
     open('checkout-success');
     if (state.pro) message('NFL Pro is active. Your premium model intelligence is unlocked.','success');
     else if (!state.user) message('Purchase received. Sign in with the same email you used at Stripe to unlock NFL Pro.');
-    else message('Stripe checkout completed. Subscription access may still be syncing; use Refresh Access in a few seconds.');
+    else message('Stripe checkout completed. Access may still be syncing; use Refresh Access in a few seconds.');
     try {
       const url = new URL(location.href);
       url.searchParams.delete('checkout');
+      url.searchParams.delete('tier');
       history.replaceState({},'',url.pathname + (url.search ? url.search : '') + url.hash);
     } catch (_) {}
   }
@@ -491,6 +510,7 @@
   window.PBEPro = {
     state,
     prices: { weekly: WEEKLY_PRICE_ID, seasonPass: SEASON_PASS_PRICE_ID },
+    paymentLinks: { weekly: WEEKLY_PAYMENT_LINK, seasonPass: SEASON_PASS_PAYMENT_LINK },
     open,
     close,
     checkout,
