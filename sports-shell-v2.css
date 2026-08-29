@@ -1,0 +1,203 @@
+/* PropBetEdge NFL — sports shell scoreboard v2
+   Loaded after sports-shell-v1.css. Fixes the actual top scoreboard component. */
+
+#pbe-sports-shell[data-shell-version="2"] .pbes-scorebar{
+  min-height:96px!important;
+  height:auto!important;
+  display:grid!important;
+  grid-template-columns:56px minmax(0,1fr)!important;
+  align-items:stretch!important;
+  overflow:visible!important;
+  position:relative;
+}
+#pbe-sports-shell[data-shell-version="2"] .pbes-score-label{
+  min-height:96px!important;
+  padding:0 10px!important;
+  justify-content:center!important;
+  text-align:center;
+}
+#pbe-sports-shell[data-shell-version="2"] .pbes-score-window{
+  min-width:0;
+  min-height:96px;
+  display:grid;
+  grid-template-columns:32px minmax(0,1fr) 32px;
+  align-items:stretch;
+  overflow:hidden;
+  position:relative;
+}
+#pbe-sports-shell[data-shell-version="2"] .pbes-scores{
+  min-width:0!important;
+  min-height:96px!important;
+  height:auto!important;
+  display:flex!important;
+  align-items:stretch!important;
+  overflow-x:auto!important;
+  overflow-y:hidden!important;
+  scroll-snap-type:x proximity;
+  scroll-behavior:smooth;
+  overscroll-behavior-x:contain;
+  scrollbar-width:none;
+}
+#pbe-sports-shell[data-shell-version="2"] .pbes-scores::-webkit-scrollbar{display:none}
+#pbe-sports-shell[data-shell-version="2"] .pbes-score{
+  flex:0 0 218px!important;
+  width:218px!important;
+  min-width:218px!important;
+  min-height:96px!important;
+  height:auto!important;
+  padding:9px 11px 8px!important;
+  display:grid!important;
+  grid-template-rows:30px 30px minmax(20px,auto)!important;
+  gap:2px!important;
+  align-content:center!important;
+  scroll-snap-align:start;
+  overflow:visible!important;
+}
+#pbe-sports-shell[data-shell-version="2"] .pbes-score-teamrow{
+  min-width:0!important;
+  min-height:30px!important;
+  height:30px!important;
+  display:grid!important;
+  grid-template-columns:28px minmax(0,1fr) 34px!important;
+  align-items:center!important;
+  gap:8px!important;
+}
+#pbe-sports-shell[data-shell-version="2"] .pbes-team-logo,
+#pbe-sports-shell[data-shell-version="2"] .pbes-score-logo-fallback{
+  width:27px!important;
+  height:27px!important;
+  min-width:27px!important;
+  max-width:27px!important;
+  max-height:27px!important;
+  display:grid;
+  place-items:center;
+  object-fit:contain!important;
+  flex:0 0 27px;
+}
+#pbe-sports-shell[data-shell-version="2"] .pbes-team-logo{
+  filter:drop-shadow(0 3px 6px rgba(0,0,0,.30));
+}
+#pbe-sports-shell[data-shell-version="2"] .pbes-score-team{
+  min-width:0!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  white-space:nowrap!important;
+  font-size:12px!important;
+  line-height:1!important;
+}
+#pbe-sports-shell[data-shell-version="2"] .pbes-score-num{
+  min-width:34px;
+  text-align:right;
+  font-size:15px!important;
+  line-height:1!important;
+}
+#pbe-sports-shell[data-shell-version="2"] .pbes-score-meta{
+  min-width:0!important;
+  min-height:20px;
+  padding:4px 0 0 36px!important;
+  display:flex!important;
+  align-items:center;
+  gap:6px;
+  overflow:hidden!important;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-size:9px!important;
+  line-height:1.15!important;
+}
+#pbe-sports-shell[data-shell-version="2"] .pbes-score-meta strong{
+  flex:0 0 auto;
+  color:#c3d3df;
+  font:900 9px/1 'DM Mono',monospace;
+}
+#pbe-sports-shell[data-shell-version="2"] .pbes-score-meta span{
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+#pbe-sports-shell[data-shell-version="2"] .pbes-score.live{
+  box-shadow:inset 0 3px 0 rgba(95,226,147,.72);
+  background:linear-gradient(180deg,rgba(95,226,147,.055),transparent 60%);
+}
+#pbe-sports-shell[data-shell-version="2"] .pbes-score-nav{
+  position:relative;
+  z-index:4;
+  width:32px;
+  min-width:32px;
+  border:0;
+  border-left:1px solid rgba(255,255,255,.06);
+  border-right:1px solid rgba(255,255,255,.06);
+  background:rgba(7,14,23,.88);
+  color:#b9c8d4;
+  cursor:pointer;
+  font:700 26px/1 'DM Sans',sans-serif;
+  transition:background .15s,color .15s;
+}
+#pbe-sports-shell[data-shell-version="2"] .pbes-score-nav:hover{
+  color:#fff;
+  background:rgba(255,255,255,.08);
+}
+#pbe-sports-shell[data-shell-version="2"] .pbes-brand-logo{
+  width:142px!important;
+  height:52px!important;
+  object-fit:contain!important;
+  object-position:left center!important;
+}
+
+/* Prop Board player media must remain usable inside the dense market table. */
+.pbe3-player-name.pbe-player-name-enhanced{
+  min-height:42px!important;
+  display:flex!important;
+  align-items:center!important;
+  gap:9px!important;
+  white-space:nowrap;
+}
+.pbe3-player-name .pbe-player-headshot{
+  width:40px!important;
+  height:40px!important;
+  flex:0 0 40px!important;
+  border-radius:9px!important;
+  object-fit:cover!important;
+  object-position:top center!important;
+}
+.pbe3-table td:first-child{min-width:190px}
+.pbe3-table td{height:auto!important;min-height:64px!important}
+
+@media(max-width:760px){
+  #pbe-sports-shell[data-shell-version="2"] .pbes-scorebar{
+    min-height:92px!important;
+    grid-template-columns:40px minmax(0,1fr)!important;
+  }
+  #pbe-sports-shell[data-shell-version="2"] .pbes-score-label{min-height:92px!important;padding:0 6px!important;font-size:8px!important}
+  #pbe-sports-shell[data-shell-version="2"] .pbes-score-window{min-height:92px;grid-template-columns:28px minmax(0,1fr) 28px}
+  #pbe-sports-shell[data-shell-version="2"] .pbes-scores{min-height:92px!important}
+  #pbe-sports-shell[data-shell-version="2"] .pbes-score{
+    flex-basis:178px!important;
+    width:178px!important;
+    min-width:178px!important;
+    min-height:92px!important;
+    grid-template-rows:28px 28px minmax(19px,auto)!important;
+    padding:8px 8px 7px!important;
+  }
+  #pbe-sports-shell[data-shell-version="2"] .pbes-score-teamrow{height:28px!important;min-height:28px!important;grid-template-columns:25px minmax(0,1fr) 28px!important;gap:6px!important}
+  #pbe-sports-shell[data-shell-version="2"] .pbes-team-logo,
+  #pbe-sports-shell[data-shell-version="2"] .pbes-score-logo-fallback{width:24px!important;height:24px!important;min-width:24px!important;max-width:24px!important;max-height:24px!important}
+  #pbe-sports-shell[data-shell-version="2"] .pbes-score-team{font-size:11px!important}
+  #pbe-sports-shell[data-shell-version="2"] .pbes-score-num{min-width:28px;font-size:13px!important}
+  #pbe-sports-shell[data-shell-version="2"] .pbes-score-meta{padding-left:31px!important;font-size:8px!important;gap:4px}
+  #pbe-sports-shell[data-shell-version="2"] .pbes-score-meta strong{font-size:8px!important}
+  #pbe-sports-shell[data-shell-version="2"] .pbes-score-nav{width:28px;min-width:28px;font-size:22px}
+}
+
+@media(max-width:480px){
+  #pbe-sports-shell[data-shell-version="2"] .pbes-scorebar{grid-template-columns:34px minmax(0,1fr)!important}
+  #pbe-sports-shell[data-shell-version="2"] .pbes-score-window{grid-template-columns:24px minmax(0,1fr) 24px}
+  #pbe-sports-shell[data-shell-version="2"] .pbes-score-nav{width:24px;min-width:24px;font-size:20px}
+  #pbe-sports-shell[data-shell-version="2"] .pbes-score{
+    flex-basis:166px!important;
+    width:166px!important;
+    min-width:166px!important;
+  }
+  #pbe-sports-shell[data-shell-version="2"] .pbes-score-label{writing-mode:vertical-rl;transform:rotate(180deg);letter-spacing:.12em}
+  #pbe-sports-shell[data-shell-version="2"] .pbes-brand-logo{width:116px!important;height:43px!important}
+  .pbe3-player-name .pbe-player-headshot{width:34px!important;height:34px!important;flex-basis:34px!important}
+}
