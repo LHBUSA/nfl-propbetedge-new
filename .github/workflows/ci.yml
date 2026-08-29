@@ -21,7 +21,11 @@ jobs:
           node-version: '22'
 
       - name: JavaScript syntax
-        run: node --check app.js
+        run: |
+          set -euo pipefail
+          for f in app-core-v3.js page-loader.js paywall.js ui-v2.js prop-board-v3.js model-lab.js api/*.js; do
+            node --check "$f"
+          done
 
       - name: Validate Vercel config JSON
         run: node -e "JSON.parse(require('fs').readFileSync('vercel.json','utf8')); console.log('vercel.json OK')"
@@ -30,11 +34,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          grep -q "const BATCH_SIZE = 5;" app.js
-          grep -q "/api/odds/board" app.js
-          grep -q "/api/picks/pass" app.js
-          ! grep -q "Math.random" app.js
-          ! grep -Eqi "synthetic[_ -]?fallback[[:space:]]*[:=][[:space:]]*true|fake[[:space:]_-]*live" app.js
+          # prop-board-v3.js is the Prop Board that actually ships; app.js is dead
+          # and was never in index.html's load graph.
+          grep -q "const BATCH_SIZE = 5;" prop-board-v3.js
+          grep -q "/api/odds/board" prop-board-v3.js
+          grep -q "/api/picks/pass" prop-board-v3.js
+          for f in prop-board-v3.js model-lab.js dashboard-v5.js pbecast-v4.js; do
+            ! grep -q "Math.random" "$f"
+            ! grep -Eqi "synthetic[_ -]?fallback[[:space:]]*[:=][[:space:]]*true|fake[[:space:]_-]*live" "$f"
+          done
           echo "NFL truth contract OK"
 
       - name: Required application files
@@ -42,8 +50,15 @@ jobs:
         run: |
           set -euo pipefail
           test -s index.html
-          test -s styles.css
-          test -s app.js
           test -s vercel.json
           test -s README.md
+          test -s package.json
+          # Every file index.html actually loads must exist.
+          for f in $(grep -oE 'href="\./[a-z0-9.-]+\.css|src="\./[a-z0-9./-]+\.js' index.html | sed 's/.*"\.\///'); do
+            test -s "$f" || { echo "index.html references missing file: $f"; exit 1; }
+          done
+          # Every file page-loader.js injects must exist.
+          for f in $(sed -n '6,37p' page-loader.js | grep -oE "\./[a-z0-9.-]+\.(js|css)" | sed 's|^\./||' | sort -u); do
+            test -s "$f" || { echo "page-loader.js injects missing file: $f"; exit 1; }
+          done
           echo "Required files OK"
