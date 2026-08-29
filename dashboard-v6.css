@@ -1,0 +1,92 @@
+/* PropBetEdge NFL — dashboard v6 layout + live-refresh polish.
+   Loaded after the canonical brand/media layers. */
+
+/* Wide desktop should use the screen instead of looking like a narrow embedded site. */
+.view-container{
+  width:100%!important;
+  max-width:min(2200px,calc(100vw - 24px))!important;
+  margin-inline:auto!important;
+}
+.pbehome5{
+  width:100%!important;
+  max-width:2200px!important;
+  margin-inline:auto!important;
+}
+
+/* News is the editorial/intelligence anchor; tools are a compact utility rail and
+   must never stretch to match the full newsroom height. */
+.home5-grid{
+  grid-template-columns:minmax(0,1.55fr) minmax(390px,.65fr)!important;
+  align-items:start!important;
+  gap:14px!important;
+}
+.home5-grid>.home5-section{align-self:start!important}
+.home5-news-feature-wrap{
+  grid-template-columns:minmax(0,1.18fr) minmax(420px,.82fr)!important;
+}
+.home5-news-section{min-width:0}
+.home5-tools{align-content:start!important}
+.home5-tool{min-height:112px!important}
+
+/* A story without source photography can still appear in the feed, but it should
+   never create a giant empty hero billboard. */
+.home5-news-feature.no-image{min-height:300px!important}
+.home5-news-feature.no-image .home5-news-feature-media{
+  background:
+    radial-gradient(circle at 72% 30%,rgba(212,175,55,.13),transparent 30%),
+    linear-gradient(135deg,rgba(42,36,28,.98),rgba(13,12,10,.98));
+}
+.home5-news-feature.no-image .home5-news-fallback img{width:116px!important;height:116px!important;opacity:.42!important}
+.home5-news-feature.no-image .home5-news-feature-gradient{background:linear-gradient(180deg,rgba(0,0,0,.06),rgba(8,7,5,.90) 72%,rgba(8,7,5,.99))!important}
+
+/* Situational intelligence is truth-first. Missing data means no tile, not a box
+   containing a dash. Classes are emitted by dashboard-v6.js. */
+.home5-situation.count-1{grid-template-columns:minmax(220px,1fr)!important;max-width:420px!important}
+.home5-situation.count-2{grid-template-columns:repeat(2,minmax(0,1fr))!important;max-width:620px!important}
+.home5-situation.count-3{grid-template-columns:repeat(3,minmax(0,1fr))!important;max-width:780px!important}
+.home5-situation.count-4{grid-template-columns:repeat(4,minmax(0,1fr))!important}
+
+/* Background polling should feel invisible. This badge only appears if a refresh
+   fails after a previously good snapshot is already on screen. */
+.pbehome5{position:relative}
+.pbehome5[data-stale="true"]::before{
+  content:'LIVE REFRESH DELAYED · LAST GOOD SNAPSHOT';
+  position:sticky;
+  top:10px;
+  z-index:30;
+  display:block;
+  width:max-content;
+  max-width:calc(100% - 24px);
+  margin:0 0 8px auto;
+  padding:6px 9px;
+  border:1px solid rgba(230,57,70,.28);
+  border-radius:999px;
+  background:rgba(20,17,13,.88);
+  color:#ff9aa7;
+  backdrop-filter:blur(12px);
+  font:800 7px/1 'DM Mono',monospace;
+  letter-spacing:.08em;
+}
+
+@media(max-width:1500px){
+  .home5-grid{grid-template-columns:minmax(0,1.35fr) minmax(350px,.65fr)!important}
+  .home5-news-feature-wrap{grid-template-columns:minmax(0,1.08fr) minmax(360px,.92fr)!important}
+}
+@media(max-width:1180px){
+  .home5-grid{grid-template-columns:1fr!important}
+  .home5-news-feature-wrap{grid-template-columns:1fr!important}
+  .home5-news-feature{border-right:0!important;border-bottom:1px solid rgba(255,245,220,.08)!important}
+  .home5-tools{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+}
+@media(max-width:760px){
+  .view-container{max-width:100%!important}
+  .home5-grid{gap:10px!important}
+  .home5-tools{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .home5-news-feature,.home5-news-feature.no-image{min-height:360px!important}
+  .home5-situation.count-3,.home5-situation.count-4{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
+@media(max-width:500px){
+  .home5-tools{grid-template-columns:1fr!important}
+  .home5-news-feature,.home5-news-feature.no-image{min-height:330px!important}
+  .home5-situation.count-1,.home5-situation.count-2,.home5-situation.count-3,.home5-situation.count-4{grid-template-columns:1fr!important;max-width:none!important}
+}
