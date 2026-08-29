@@ -1,7 +1,7 @@
-/* PropBetEdge NFL — ordered page/product upgrade loader v12 */
+/* PropBetEdge NFL — ordered page/product upgrade loader v13 */
 (() => {
   'use strict';
-  const VERSION='20260829nflbrand1';
+  const VERSION='20260829nflfix2';
   const upgrades=[
     {css:'./dashboard-v5.css',js:'./dashboard-v5.js'},
     {css:'./games-v2.css',js:'./games-v2.js'},
@@ -28,14 +28,15 @@
     {css:'./command-palette-v2.css',js:'./command-palette-v3.js'},
     {css:'./event-selector-v2.css',js:'./event-selector-v2.js'},
     {css:'./global-polish-v2.css',js:'./global-polish-v5.js'},
-    {css:'./sports-shell-v1.css',js:'./sports-shell-v1.js'},
+    {css:'./sports-shell-v1.css',js:'./sports-shell-v2.js'},
+    {css:'./sports-shell-v2.css'},
     {css:'./world-class-v1.css'},
     {css:'./readability-v1.css'},
     {css:'./paywall-polish-v1.css',js:'./paywall-polish-v1.js'},
     {css:'./nfl-brand-media-v1.css',js:'./nfl-brand-media-v1.js'}
   ];
   function addCss(href){if(document.querySelector(`link[data-pbe-upgrade="${href}"]`))return;const link=document.createElement('link');link.rel='stylesheet';link.href=`${href}?v=${VERSION}`;link.dataset.pbeUpgrade=href;document.head.appendChild(link)}
-  function addScript(src){return new Promise(resolve=>{if(document.querySelector(`script[data-pbe-upgrade="${src}"]`))return resolve();const script=document.createElement('script');script.src=`${src}?v=${VERSION}`;script.async=false;script.dataset.pbeUpgrade=src;script.onload=resolve;script.onerror=()=>{console.error('PBE product module failed to load',src);resolve()};document.body.appendChild(script)})}
+  function addScript(src){return new Promise(resolve=>{if(!src)return resolve();if(document.querySelector(`script[data-pbe-upgrade="${src}"]`))return resolve();const script=document.createElement('script');script.src=`${src}?v=${VERSION}`;script.async=false;script.dataset.pbeUpgrade=src;script.onload=resolve;script.onerror=()=>{console.error('PBE product module failed to load',src);resolve()};document.body.appendChild(script)})}
   async function load(){upgrades.forEach(item=>{if(item.css)addCss(item.css)});for(const item of upgrades)await addScript(item.js);window.dispatchEvent(new CustomEvent('pbe:upgrades-ready',{detail:{version:VERSION}}))}
   load();
 })();
