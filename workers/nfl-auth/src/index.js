@@ -84,8 +84,13 @@ export default {
         body: JSON.stringify({
           from: env.RESEND_FROM_EMAIL,
           to: [email],
-          subject: 'Your PropBetEdge NFL sign-in link',
+          subject: 'PropBetEdge NFL — your secure access is ready',
           html: emailHtml(actionLink),
+          text: emailText(actionLink),
+          tags: [
+            { name: 'product', value: 'nfl' },
+            { name: 'message', value: 'secure-access' },
+          ],
         }),
       });
 
@@ -137,7 +142,87 @@ function json(body, status, requestOrigin, appOrigin, extra = {}) {
 
 function emailHtml(actionLink) {
   const href = escapeAttr(actionLink);
-  return `<!doctype html><html lang="en"><body style="margin:0;background:#0b1017;color:#f5f1eb;font-family:Arial,Helvetica,sans-serif"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#0b1017;padding:34px 16px"><tr><td align="center"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:580px;background:#151a20;border:1px solid rgba(212,175,55,.30);border-radius:18px;overflow:hidden"><tr><td style="padding:28px 30px 18px;background:linear-gradient(135deg,#1d1914,#111820)"><img src="${PBE_LOGO}" width="190" alt="PropBetEdge" style="display:block;max-width:190px;height:auto"><div style="margin-top:14px;color:#e9c75a;font-size:11px;font-weight:800;letter-spacing:2px;text-transform:uppercase">NFL Intelligence OS</div></td></tr><tr><td style="padding:8px 30px 32px"><h1 style="margin:12px 0 10px;font-size:30px;line-height:1.1;color:#f5f1eb">Your secure NFL sign-in link</h1><p style="margin:0 0 22px;color:#b8b3a8;font-size:15px;line-height:1.6">Open PropBetEdge NFL with this passwordless link. Use the same email at checkout so your Stripe purchase can unlock NFL Pro automatically.</p><a href="${href}" style="display:inline-block;padding:14px 20px;border-radius:9px;background:#d4af37;color:#17120a;text-decoration:none;font-size:14px;font-weight:900">Open PropBetEdge NFL</a><p style="margin:24px 0 0;color:#7e7a72;font-size:11px;line-height:1.55">If you did not request this email, ignore it. For security, do not forward this sign-in link.</p></td></tr></table></td></tr></table></body></html>`;
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="supported-color-schemes" content="dark">
+  <title>PropBetEdge NFL secure access</title>
+</head>
+<body style="margin:0;padding:0;background:#080b10;color:#f7f3ea;font-family:Arial,Helvetica,sans-serif;-webkit-font-smoothing:antialiased">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent">Your secure access to PropBetEdge NFL is ready.</div>
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;background:#080b10;margin:0;padding:0">
+    <tr>
+      <td align="center" style="padding:36px 16px 48px">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:640px;border-collapse:separate;background:#11161d;border:1px solid #30291d;border-radius:22px;overflow:hidden;box-shadow:0 28px 80px rgba(0,0,0,.45)">
+          <tr>
+            <td style="height:3px;background:#d4af37;font-size:0;line-height:0">&nbsp;</td>
+          </tr>
+          <tr>
+            <td style="padding:30px 34px 22px;background:linear-gradient(135deg,#17120d 0%,#111820 52%,#0d1420 100%)">
+              <img src="${PBE_LOGO}" width="196" alt="PropBetEdge" style="display:block;width:196px;max-width:100%;height:auto;border:0">
+              <div style="margin-top:18px;font-size:10px;line-height:1.4;font-weight:800;letter-spacing:2.4px;text-transform:uppercase;color:#d8b75b">NFL Intelligence OS &nbsp;•&nbsp; Secure Access</div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:30px 34px 12px">
+              <div style="font-size:13px;line-height:1.5;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:#8f98a6">Access request confirmed</div>
+              <h1 style="margin:8px 0 14px;font-size:40px;line-height:1.03;letter-spacing:-1.2px;color:#fffdf8;font-weight:900">Your NFL intelligence access is ready.</h1>
+              <p style="margin:0;color:#c3c8d0;font-size:16px;line-height:1.7">Open PropBetEdge NFL with the secure passwordless link below. Your identity, NFL Pro access, and Stripe entitlement are tied to this email so your account stays connected across the product.</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:18px 34px 10px">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                  <td style="border-radius:10px;background:#d4af37">
+                    <a href="${href}" style="display:inline-block;padding:16px 24px;color:#161008;text-decoration:none;font-size:14px;line-height:1;font-weight:900;letter-spacing:.45px;text-transform:uppercase">Enter NFL Intelligence OS</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:22px 34px 10px">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;background:#0b1016;border:1px solid #272d35;border-radius:14px">
+                <tr>
+                  <td style="padding:18px 20px">
+                    <div style="font-size:10px;line-height:1.4;font-weight:800;letter-spacing:1.8px;text-transform:uppercase;color:#d8b75b">One account. One entitlement.</div>
+                    <p style="margin:7px 0 0;color:#aeb5bf;font-size:13px;line-height:1.65">Use this same email when you purchase NFL Pro. PropBetEdge automatically matches the Stripe purchase to your account so premium access can activate without a separate license key.</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:18px 34px 30px">
+              <div style="font-size:10px;line-height:1.4;font-weight:800;letter-spacing:1.6px;text-transform:uppercase;color:#737b86">Security</div>
+              <p style="margin:6px 0 0;color:#8d949e;font-size:12px;line-height:1.65">This secure access link was generated for your email. If you did not request it, you can ignore this message. Do not forward the link to anyone else.</p>
+              <p style="margin:16px 0 0;color:#616873;font-size:11px;line-height:1.6">Button not working? Open this secure link:<br><a href="${href}" style="color:#bfa34c;text-decoration:underline;word-break:break-all">${href}</a></p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:18px 34px;background:#0a0e13;border-top:1px solid #20262d">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                  <td style="color:#6f7680;font-size:10px;line-height:1.6;letter-spacing:.3px">PROPBetEdge NFL &nbsp;•&nbsp; Football Intelligence OS</td>
+                  <td align="right" style="color:#8c7633;font-size:10px;line-height:1.6;font-weight:700">propbetedge.ai</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+function emailText(actionLink) {
+  return `PROPBETEDGE NFL — SECURE ACCESS\n\nYour NFL intelligence access is ready.\n\nOpen PropBetEdge NFL with this secure passwordless link:\n${actionLink}\n\nUse this same email when you purchase NFL Pro. PropBetEdge matches the Stripe purchase to your account so premium access can activate without a separate license key.\n\nIf you did not request this email, ignore it. Do not forward this secure access link.\n\nPropBetEdge NFL · Football Intelligence OS`;
 }
 
 function escapeAttr(value) {
