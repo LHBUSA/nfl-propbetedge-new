@@ -1,0 +1,40 @@
+/* PropBetEdge NFL — page upgrade loader
+ * Keeps the stable shell unchanged while page-specific redesigns are rolled out one at a time.
+ */
+(() => {
+  'use strict';
+
+  const VERSION = '20260828f1';
+  const upgrades = [
+    { css:'./teams-v2.css', js:'./teams-v2.js' }
+  ];
+
+  function addCss(href) {
+    if (document.querySelector(`link[data-pbe-upgrade="${href}"]`)) return;
+    const link=document.createElement('link');
+    link.rel='stylesheet';
+    link.href=`${href}?v=${VERSION}`;
+    link.dataset.pbeUpgrade=href;
+    document.head.appendChild(link);
+  }
+
+  function addScript(src) {
+    return new Promise(resolve => {
+      if (document.querySelector(`script[data-pbe-upgrade="${src}"]`)) return resolve();
+      const script=document.createElement('script');
+      script.src=`${src}?v=${VERSION}`;
+      script.async=false;
+      script.dataset.pbeUpgrade=src;
+      script.onload=()=>resolve();
+      script.onerror=()=>resolve();
+      document.body.appendChild(script);
+    });
+  }
+
+  async function load() {
+    upgrades.forEach(item=>addCss(item.css));
+    for (const item of upgrades) await addScript(item.js);
+  }
+
+  load();
+})();
