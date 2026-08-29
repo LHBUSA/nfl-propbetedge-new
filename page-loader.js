@@ -1,7 +1,7 @@
-/* PropBetEdge NFL — ordered page/product upgrade loader v16 */
+/* PropBetEdge NFL — ordered page/product upgrade loader v17 */
 (() => {
   'use strict';
-  const VERSION='20260829prod7';
+  const VERSION='20260829prod8';
   const upgrades=[
     {css:'./dashboard-v5.css',js:'./dashboard-v5.js'},
     {css:'./games-v2.css',js:'./games-v2.js'},
@@ -37,7 +37,8 @@
     {css:'./nfl-player-media-v2.css',js:'./nfl-brand-media-v2.js'},
     {css:'./nfl-stadium-bg-v2.css'},
     {css:'./dashboard-v6.css',js:'./dashboard-v6.js'},
-    {css:'./dashboard-v7.css',js:'./dashboard-v7.js'}
+    {css:'./dashboard-v7.css',js:'./dashboard-v7.js'},
+    {css:'./sports-shell-v3.css'}
   ];
   function addCss(href){if(document.querySelector(`link[data-pbe-upgrade="${href}"]`))return;const link=document.createElement('link');link.rel='stylesheet';link.href=`${href}?v=${VERSION}`;link.dataset.pbeUpgrade=href;document.head.appendChild(link)}
   function addScript(src){return new Promise(resolve=>{if(!src)return resolve();if(document.querySelector(`script[data-pbe-upgrade="${src}"]`))return resolve();const script=document.createElement('script');script.src=`${src}?v=${VERSION}`;script.async=false;script.dataset.pbeUpgrade=src;script.onload=resolve;script.onerror=()=>{console.error('PBE product module failed to load',src);resolve()};document.body.appendChild(script)})}
