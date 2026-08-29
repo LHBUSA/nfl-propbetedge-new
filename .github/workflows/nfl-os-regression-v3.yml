@@ -1,0 +1,129 @@
+name: NFL OS Regression v3
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Syntax check every local runtime file
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r -d '' file; do
+            node --check "$file"
+          done < <(find . -type f -name '*.js' -not -path './node_modules/*' -not -path './.git/*' -print0)
+
+      - name: Require standalone root
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq 'nfl-intelligence-os-standalone-v3' index.html
+          grep -Fq './app-core-v3.js' index.html
+          grep -Fq './page-loader.js' index.html
+          grep -Fq './paywall.js' index.html
+
+      - name: Forbid retired legacy runtime imports
+        shell: bash
+        run: |
+          set -euo pipefail
+          banned=(
+            'js/data/live-data.js'
+            'js/views/home.js'
+            'js/views/picks.js'
+            'js/views/propchain.js'
+            'js/views/pbecast.js'
+            'js/views/injuries.js'
+            'js/views/trades.js'
+            'js/views/player-modal.js'
+            'js/components/ticker.js'
+            'js/components/search.js'
+            'js/app.js'
+          )
+          for token in "${banned[@]}"; do
+            if grep -Fq "$token" index.html; then
+              echo "Legacy runtime import found: $token"
+              exit 1
+            fi
+          done
+
+      - name: Forbid random betting behavior
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -R --line-number --exclude-dir=.git --exclude-dir=.github 'Math\.random' -- '*.js' . 2>/dev/null; then
+            echo 'Math.random is forbidden in NFL product runtime.'
+            exit 1
+          fi
+
+      - name: Require active first-class product modules
+        shell: bash
+        run: |
+          set -euo pipefail
+          required=(
+            dashboard-v4.js
+            games-v2.js
+            team-research-v3.js
+            prop-board-v3.js
+            market-watch-v2.js
+            matchups-v2.js
+            model-lab.js
+            simulator-v2.js
+            sgp-lab-v2.js
+            usage-v2.js
+            propchain-v2.js
+            game-center-v2.js
+            news-intelligence-v2.js
+            newsroom-v2.js
+            player-research-v2.js
+            command-palette-v3.js
+            event-selector-v2.js
+          )
+          for file in "${required[@]}"; do
+            test -f "$file" || { echo "Missing module: $file"; exit 1; }
+            if ! grep -Fq "$file" page-loader.js && ! grep -Fq "$file" index.html; then
+              echo "Module not active: $file"
+              exit 1
+            fi
+          done
+
+      - name: Require premium server gate and newsroom adapter
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f api/pro-model.js
+          test -f api/news-feed.js
+          grep -Fq 'nfl_has_pro_access' api/pro-model.js
+          grep -Fq 'propbet-news-api' api/news-feed.js
+
+      - name: Require truth-boundary language
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq 'CAUSALITY UNPROVEN' propchain-v2.js
+          grep -Fq 'MODEL DERIVED' simulator-v2.js
+          grep -Fq 'Correlation model unavailable' sgp-lab-v2.js
+          grep -Fq 'current target share/usage remains unavailable' usage-v2.js
+          grep -Fq 'No fake board' draft-review-v2.js
+          grep -Fq 'local baseline' market-watch-v2.js
+          grep -Fq 'score feed says so' games-v2.js
+          grep -Fq 'current roster is not inferred' team-research-v3.js
+
+      - name: Validate Vercel config
+        shell: bash
+        run: |
+          if [ -f vercel.json ]; then
+            node -e "JSON.parse(require('fs').readFileSync('vercel.json','utf8'))"
+          fi
