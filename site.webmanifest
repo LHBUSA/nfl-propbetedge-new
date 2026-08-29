@@ -1,0 +1,25 @@
+{
+  "name": "PropBetEdge NFL — Football Intelligence OS",
+  "short_name": "PBE NFL",
+  "description": "Live NFL game context, prop markets, PBE model research, matchup intelligence and verified NFL archives.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#14110d",
+  "theme_color": "#14110d",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "https://propbetedge.ai/logo/pbe-mark-160.png",
+      "sizes": "160x160",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://propbetedge.ai/logo/pbe-mark-240.png",
+      "sizes": "240x240",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
