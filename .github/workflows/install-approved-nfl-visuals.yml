@@ -1,0 +1,60 @@
+name: Install Approved NFL Visuals
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.asset-staging/**'
+      - '.github/workflows/install-approved-nfl-visuals.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Decode approved visual assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p assets/visuals
+          for name in nfl-hero pbecast-live nfl-pro; do
+            shopt -s nullglob
+            parts=(.asset-staging/${name}.[0-9][0-9])
+            if [ ${#parts[@]} -eq 0 ]; then
+              echo "No staged chunks for ${name}; leaving current asset in place."
+              continue
+            fi
+            cat "${parts[@]}" | base64 -d > "assets/visuals/${name}.webp"
+            bytes=$(stat -c%s "assets/visuals/${name}.webp")
+            echo "${name}: ${bytes} bytes"
+            if [ "$bytes" -lt 50000 ]; then
+              echo "Decoded asset is unexpectedly small: ${name}"
+              exit 1
+            fi
+            file "assets/visuals/${name}.webp" | grep -qi 'Web/P image' || {
+              echo "Decoded asset is not a valid WebP: ${name}"
+              exit 1
+            }
+          done
+
+      - name: Commit real binaries and remove staging chunks
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .asset-staging
+          git config user.name "PropBetEdge Build"
+          git config user.email "sales@localhomebuyersusa.com"
+          git add -A assets/visuals .asset-staging
+          if git diff --cached --quiet; then
+            echo "No visual asset changes to commit."
+            exit 0
+          fi
+          git commit -m "Install approved high-resolution NFL visual assets"
+          git push origin HEAD:main
