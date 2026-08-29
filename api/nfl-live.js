@@ -67,15 +67,58 @@ function game(event){
 function drive(d,current=false){
   const plays=A(d?.plays).map(play);return {id:S(F(d?.id,d?.sequenceNumber,`${d?.team?.id||''}-${d?.start?.clock?.displayValue||''}`)),sequence:N(d?.sequenceNumber),is_current:current,team:{id:F(d?.team?.id),abbreviation:F(d?.team?.abbreviation),display_name:F(d?.team?.displayName,d?.team?.name),logo:logo(d?.team)},description:F(d?.description,d?.displayResult,d?.result),result:F(d?.displayResult,d?.result,d?.description),yards:N(F(d?.yards,d?.netYards)),offensive_plays:N(F(d?.offensivePlays,d?.playCount,plays.length)),time_elapsed:F(d?.timeElapsed?.displayValue,d?.timeElapsed),start:{period:N(d?.start?.period?.number),clock:F(d?.start?.clock?.displayValue),yard_line:N(d?.start?.yardLine),text:F(d?.start?.text)},end:{period:N(d?.end?.period?.number),clock:F(d?.end?.clock?.displayValue),yard_line:N(d?.end?.yardLine),text:F(d?.end?.text)},plays};
 }
-function leaders(pkg){
-  const out=[];A(pkg?.leaders).forEach(cat=>A(cat?.leaders).forEach(l=>{const a=l?.athlete||{};out.push({category:F(cat?.name,cat?.displayName),display_name:F(cat?.displayName,cat?.name),value:F(l?.displayValue,l?.value),athlete:{id:F(a?.id),name:F(a?.displayName,a?.fullName,a?.shortName),short_name:F(a?.shortName),headshot:headshot(a),position:F(a?.position?.abbreviation),team:F(a?.team?.abbreviation,a?.team?.displayName)}})}));return out;
-}
 function stats(pkg){
   return A(pkg?.boxscore?.players).map(tb=>{const t=tb?.team||{};return{team:{id:F(t?.id),abbreviation:F(t?.abbreviation),display_name:F(t?.displayName,t?.name),logo:logo(t)},groups:A(tb?.statistics).map(group=>({name:F(group?.name),display_name:F(group?.displayName,group?.name),labels:A(group?.labels),athletes:A(group?.athletes).map(row=>{const a=row?.athlete||{};return{athlete:{id:F(a?.id),name:F(a?.displayName,a?.fullName,a?.shortName),short_name:F(a?.shortName),jersey:F(a?.jersey),headshot:headshot(a),position:F(a?.position?.abbreviation),team:F(a?.team?.abbreviation,t?.abbreviation)},starter:Boolean(row?.starter),did_not_play:Boolean(row?.didNotPlay),stats:A(row?.stats),values:A(row?.stats).map((value,i)=>({label:A(group?.labels)[i]||String(i),value}))}})}))}});
 }
+function numberFromStat(value){
+  const match=String(value??'').replace(/,/g,'').match(/-?\d+(?:\.\d+)?/);
+  return match?Number(match[0]):null;
+}
+function derivedLeaders(playerStats){
+  const wanted=[['pass','Passing'],['rush','Rushing'],['receiv','Receiving']];
+  const out=[];
+  for(const [needle,label] of wanted){
+    let best=null;
+    for(const tb of A(playerStats))for(const group of A(tb?.groups)){
+      const groupName=S(F(group?.name,group?.display_name)).toLowerCase();
+      if(!groupName.includes(needle))continue;
+      const labels=A(group?.labels).map(x=>S(x).toUpperCase());
+      const ydsIndex=labels.findIndex(x=>x==='YDS'||x.includes('YDS'));
+      if(ydsIndex<0)continue;
+      for(const row of A(group?.athletes)){
+        if(row?.did_not_play)continue;
+        const raw=A(row?.stats)[ydsIndex];
+        const yards=numberFromStat(raw);
+        if(yards==null)continue;
+        if(!best||yards>best.yards)best={yards,raw,athlete:row?.athlete||{}};
+      }
+    }
+    if(best)out.push({category:needle,display_name:`${label} leader`,value:`${best.raw} YDS`,athlete:best.athlete});
+  }
+  return out;
+}
+function leaders(pkg,playerStats){
+  const out=[];
+  A(pkg?.leaders).forEach(cat=>A(cat?.leaders).forEach(l=>{const a=l?.athlete||{};const row={category:F(cat?.name,cat?.displayName),display_name:F(cat?.displayName,cat?.name),value:F(l?.displayValue,l?.value),athlete:{id:F(a?.id),name:F(a?.displayName,a?.fullName,a?.shortName),short_name:F(a?.shortName),headshot:headshot(a),position:F(a?.position?.abbreviation),team:F(a?.team?.abbreviation,a?.team?.displayName)}};if(row.athlete.name&&row.value!=null)out.push(row)}));
+  return out.length?out:derivedLeaders(playerStats);
+}
 function detail(pkg,eventId){
-  const hc=A(pkg?.header?.competitions)[0]||{};const headerEvent={id:eventId,date:F(hc?.date),name:F(pkg?.header?.shortName,pkg?.header?.name),shortName:F(pkg?.header?.shortName),season:pkg?.header?.season||{},week:pkg?.header?.week,competitions:A(pkg?.header?.competitions)};const g=game(headerEvent);const previous=A(pkg?.drives?.previous).map(d=>drive(d,false));const curRaw=pkg?.drives?.current;const current=curRaw?drive(curRaw,true):null;const drives=current?[...previous,current]:previous;const map=new Map();drives.forEach(d=>d.plays.forEach(p=>{if(p.id)map.set(p.id,p)}));const plays=[...map.values()];const currentPlay=current?.plays?.at(-1)||g?.situation?.last_play||plays.at(-1)||null;
-  return {ok:true,source:{provider:'espn_cdn_gamepackage',semantics:g.status.semantics,fetched_at:new Date().toISOString(),transport:'poll'},game:g,current_drive:current,current_play:currentPlay,drives,plays,last_five_plays:plays.slice(-5).reverse(),leaders:leaders(pkg),player_stats:stats(pkg),win_probability:A(pkg?.winprobability).slice(-80).map(x=>({play_id:F(x?.playId,x?.play?.id),home_win_percentage:N(x?.homeWinPercentage),tie_percentage:N(x?.tiePercentage)})),play_count:plays.length,drive_count:drives.length};
+  const hc=A(pkg?.header?.competitions)[0]||{};
+  const headerEvent={id:eventId,date:F(hc?.date),name:F(pkg?.header?.shortName,pkg?.header?.name),shortName:F(pkg?.header?.shortName),season:pkg?.header?.season||{},week:pkg?.header?.week,competitions:A(pkg?.header?.competitions)};
+  const g=game(headerEvent);
+  const previous=A(pkg?.drives?.previous).map(d=>drive(d,false));
+  const curRaw=pkg?.drives?.current;
+  const current=curRaw?drive(curRaw,true):null;
+  const driveMap=new Map();
+  previous.forEach(d=>{if(d.id)driveMap.set(d.id,d)});
+  if(current?.id)driveMap.set(current.id,current);
+  const drives=[...driveMap.values()];
+  const playMap=new Map();
+  drives.forEach(d=>d.plays.forEach(p=>{if(p.id)playMap.set(p.id,p)}));
+  const plays=[...playMap.values()];
+  const currentPlay=current?.plays?.at(-1)||g?.situation?.last_play||plays.at(-1)||null;
+  const playerStats=stats(pkg);
+  return {ok:true,source:{provider:'espn_cdn_gamepackage',semantics:g.status.semantics,fetched_at:new Date().toISOString(),transport:'poll'},game:g,current_drive:current,current_play:currentPlay,drives,plays,last_five_plays:plays.slice(-5).reverse(),leaders:leaders(pkg,playerStats),player_stats:playerStats,win_probability:A(pkg?.winprobability).slice(-80).map(x=>({play_id:F(x?.playId,x?.play?.id),home_win_percentage:N(x?.homeWinPercentage),tie_percentage:N(x?.tiePercentage)})),play_count:plays.length,drive_count:drives.length};
 }
 async function scoreboard(date){
   const raw=await upstream(`${CDN}/scoreboard?xhr=1&limit=100&dates=${encodeURIComponent(date)}`);const games=findEvents(raw).map(game);return {ok:true,source:{provider:'espn_cdn_scoreboard',semantics:'SCOREBOARD',fetched_at:new Date().toISOString(),transport:'poll'},date,count:games.length,games};
