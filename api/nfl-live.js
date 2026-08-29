@@ -1,354 +1,91 @@
-const SCOREBOARD_URL = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard';
-const SUMMARY_URL = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary';
+const CDN = 'https://cdn.espn.com/core/nfl';
 
 function send(res,status,body,ttl=0){
   res.statusCode=status;
   res.setHeader('content-type','application/json; charset=utf-8');
   res.setHeader('access-control-allow-origin','*');
   res.setHeader('x-content-type-options','nosniff');
-  res.setHeader('cache-control',status===200 && ttl>0 ? `public, s-maxage=${ttl}, stale-while-revalidate=${Math.max(ttl*2,10)}` : 'no-store');
+  res.setHeader('cache-control',status===200&&ttl>0?`public, s-maxage=${ttl}, stale-while-revalidate=${Math.max(10,ttl*2)}`:'no-store');
   res.end(JSON.stringify(body));
 }
+const A=v=>Array.isArray(v)?v:[];
+const S=v=>v==null?'':String(v);
+const N=v=>{const n=Number(v);return Number.isFinite(n)?n:null};
+const F=(...v)=>v.find(x=>x!==undefined&&x!==null&&x!=='')??null;
+const image=v=>typeof v==='string'?v:(v?.href||v?.url||v?.src||null);
+const logo=t=>image(A(t?.logos)[0])||image(t?.logo)||null;
+const headshot=a=>image(a?.headshot)||image(A(a?.images)[0])||null;
 
-function arr(value){ return Array.isArray(value) ? value : []; }
-function str(value){ return value == null ? '' : String(value); }
-function num(value){ const n=Number(value); return Number.isFinite(n) ? n : null; }
-function first(...values){ for(const value of values){ if(value!==undefined && value!==null && value!=='') return value; } return null; }
-function imageOf(value){
-  if(!value) return null;
-  if(typeof value==='string') return value;
-  return value.href || value.url || value.src || null;
-}
-function logoOf(team){
-  return imageOf(arr(team?.logos)[0]) || imageOf(team?.logo) || null;
-}
-function athleteImage(athlete){
-  return imageOf(athlete?.headshot) || imageOf(arr(athlete?.images)[0]) || null;
-}
-function statusContract(status){
-  const state=str(status?.type?.state).toLowerCase();
-  const completed=Boolean(status?.type?.completed);
-  if(state==='in') return 'LIVE';
-  if(state==='post' || completed) return 'FINAL';
-  if(state==='pre') return 'SCHEDULE';
-  return 'UNAVAILABLE';
-}
-function formatDateQuery(raw){
-  const value=str(raw).replace(/[^0-9]/g,'');
-  if(/^\d{8}$/.test(value)) return value;
-  const d=new Date();
-  const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(d);
-  const get=type=>parts.find(p=>p.type===type)?.value || '';
+function todayET(raw){
+  const value=S(raw).replace(/\D/g,'');
+  if(/^\d{8}$/.test(value))return value;
+  const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
+  const get=t=>parts.find(p=>p.type===t)?.value||'';
   return `${get('year')}${get('month')}${get('day')}`;
 }
-
+function semantics(status){
+  const state=S(status?.type?.state).toLowerCase();
+  if(state==='in')return'LIVE';
+  if(state==='post'||status?.type?.completed)return'FINAL';
+  if(state==='pre')return'SCHEDULE';
+  return'UNAVAILABLE';
+}
 async function upstream(url){
-  const response=await fetch(url,{
-    headers:{
-      accept:'application/json,text/plain,*/*',
-      'user-agent':'Mozilla/5.0 (compatible; PropBetEdge-NFL-Live/1.0; +https://propbetedge.ai)'
-    },
-    cache:'no-store'
-  });
-  const text=await response.text();
-  if(!response.ok) throw new Error(`upstream_${response.status}:${text.slice(0,140)}`);
-  try { return JSON.parse(text); }
-  catch { throw new Error('upstream_non_json'); }
+  const r=await fetch(url,{headers:{accept:'application/json,text/plain,*/*'},cache:'no-store'});
+  const text=await r.text();
+  if(!r.ok)throw new Error(`upstream_${r.status}:${text.slice(0,140)}`);
+  try{return JSON.parse(text)}catch{throw new Error('upstream_non_json')}
 }
-
-function teamSide(competition,homeAway){
-  const competitor=arr(competition?.competitors).find(c=>c?.homeAway===homeAway) || {};
-  const team=competitor.team || {};
-  return {
-    id:first(team.id,competitor.id),
-    uid:first(team.uid,competitor.uid),
-    abbreviation:first(team.abbreviation,team.shortDisplayName),
-    display_name:first(team.displayName,team.name,team.shortDisplayName),
-    short_name:first(team.shortDisplayName,team.name),
-    location:first(team.location),
-    color:first(team.color),
-    alternate_color:first(team.alternateColor),
-    logo:logoOf(team),
-    score:num(competitor.score),
-    winner:Boolean(competitor.winner),
-    possession:Boolean(competitor.possession),
-    records:arr(competitor.records).map(r=>({name:r.name,summary:r.summary,type:r.type}))
-  };
-}
-
-function competitionOfEvent(event){ return arr(event?.competitions)[0] || {}; }
-function normalizedGame(event){
-  const competition=competitionOfEvent(event);
-  const status=competition.status || event.status || {};
-  const situation=competition.situation || {};
-  const away=teamSide(competition,'away');
-  const home=teamSide(competition,'home');
-  const possessionId=first(situation.possession, away.possession?away.id:null, home.possession?home.id:null);
-  return {
-    id:str(event?.id || competition?.id),
-    date:first(event?.date,competition?.date),
-    name:first(event?.name,event?.shortName),
-    short_name:first(event?.shortName,event?.name),
-    season:{year:num(event?.season?.year),type:num(event?.season?.type),slug:first(event?.season?.slug)},
-    week:num(event?.week?.number),
-    status:{
-      semantics:statusContract(status),
-      state:first(status?.type?.state),
-      name:first(status?.type?.name),
-      detail:first(status?.type?.detail,status?.type?.shortDetail),
-      short_detail:first(status?.type?.shortDetail,status?.type?.detail),
-      period:num(status?.period),
-      clock:first(status?.displayClock,status?.clock),
-      completed:Boolean(status?.type?.completed)
-    },
-    venue:{
-      id:first(competition?.venue?.id),
-      name:first(competition?.venue?.fullName,competition?.venue?.shortName),
-      city:first(competition?.venue?.address?.city),
-      state:first(competition?.venue?.address?.state)
-    },
-    broadcast:arr(competition?.broadcasts).flatMap(b=>arr(b?.names)).filter(Boolean),
-    neutral_site:Boolean(competition?.neutralSite),
-    conference_competition:Boolean(competition?.conferenceCompetition),
-    attendance:num(competition?.attendance),
-    teams:{away,home},
-    situation:{
-      possession_id:possessionId,
-      down:num(situation?.down),
-      distance:num(situation?.distance),
-      yard_line:num(situation?.yardLine),
-      down_distance_text:first(situation?.shortDownDistanceText,situation?.downDistanceText),
-      possession_text:first(situation?.possessionText),
-      red_zone:Boolean(situation?.isRedZone),
-      home_timeouts:num(situation?.homeTimeouts),
-      away_timeouts:num(situation?.awayTimeouts),
-      last_play:situation?.lastPlay ? normalizePlay(situation.lastPlay) : null
+function findEvents(root){
+  const seen=new Set();
+  function walk(node,depth=0){
+    if(!node||typeof node!=='object'||depth>6||seen.has(node))return null;
+    seen.add(node);
+    if(Array.isArray(node.events)&&node.events.some(e=>e?.competitions))return node.events;
+    for(const value of Object.values(node)){
+      if(value&&typeof value==='object'){
+        const hit=walk(value,depth+1);if(hit)return hit;
+      }
     }
-  };
+    return null;
+  }
+  return walk(root)||[];
 }
-
-function normalizePlay(play){
-  const participants=arr(play?.participants).map(p=>({
-    id:first(p?.athlete?.id,p?.id),
-    name:first(p?.athlete?.displayName,p?.athlete?.fullName,p?.displayName),
-    short_name:first(p?.athlete?.shortName),
-    headshot:athleteImage(p?.athlete),
-    position:first(p?.athlete?.position?.abbreviation,p?.position?.abbreviation)
-  })).filter(p=>p.id||p.name);
-  return {
-    id:str(first(play?.id,play?.sequenceNumber,play?.text)),
-    sequence:num(first(play?.sequenceNumber,play?.id)),
-    text:first(play?.text,play?.shortText,play?.type?.text),
-    short_text:first(play?.shortText,play?.text),
-    type:first(play?.type?.text,play?.type?.abbreviation),
-    type_id:first(play?.type?.id),
-    period:num(first(play?.period?.number,play?.period)),
-    clock:first(play?.clock?.displayValue,play?.displayClock),
-    wallclock:first(play?.wallclock),
-    scoring_play:Boolean(play?.scoringPlay),
-    score_value:num(play?.scoreValue),
-    modified:first(play?.modified),
-    team:{
-      id:first(play?.team?.id),
-      abbreviation:first(play?.team?.abbreviation),
-      display_name:first(play?.team?.displayName,play?.team?.name),
-      logo:logoOf(play?.team)
-    },
-    start:{
-      down:num(play?.start?.down),
-      distance:num(play?.start?.distance),
-      yard_line:num(play?.start?.yardLine),
-      yards_to_endzone:num(play?.start?.yardsToEndzone),
-      possession_text:first(play?.start?.possessionText),
-      down_distance_text:first(play?.start?.shortDownDistanceText,play?.start?.downDistanceText)
-    },
-    end:{
-      down:num(play?.end?.down),
-      distance:num(play?.end?.distance),
-      yard_line:num(play?.end?.yardLine),
-      yards_to_endzone:num(play?.end?.yardsToEndzone),
-      possession_text:first(play?.end?.possessionText),
-      down_distance_text:first(play?.end?.shortDownDistanceText,play?.end?.downDistanceText)
-    },
-    home_score:num(first(play?.homeScore,play?.home_score)),
-    away_score:num(first(play?.awayScore,play?.away_score)),
-    participants
-  };
+function packageOf(raw){return raw?.gamepackageJSON||raw?.content?.gamepackageJSON||raw?.page?.content?.gamepackageJSON||raw}
+function competition(event){return A(event?.competitions)[0]||{}}
+function side(comp,where){
+  const c=A(comp?.competitors).find(x=>x?.homeAway===where)||{};const t=c.team||{};
+  return {id:F(t.id,c.id),abbreviation:F(t.abbreviation,t.shortDisplayName),display_name:F(t.displayName,t.name,t.shortDisplayName),short_name:F(t.shortDisplayName,t.name),location:F(t.location),color:F(t.color),alternate_color:F(t.alternateColor),logo:logo(t),score:N(c.score),winner:Boolean(c.winner),possession:Boolean(c.possession),records:A(c.records).map(r=>({name:r.name,summary:r.summary,type:r.type}))};
 }
-
-function normalizeDrive(drive,isCurrent=false){
-  const plays=arr(drive?.plays).map(normalizePlay);
-  return {
-    id:str(first(drive?.id,drive?.sequenceNumber,`${drive?.team?.id||''}-${drive?.start?.clock?.displayValue||''}`)),
-    sequence:num(drive?.sequenceNumber),
-    is_current:Boolean(isCurrent),
-    team:{
-      id:first(drive?.team?.id),
-      abbreviation:first(drive?.team?.abbreviation),
-      display_name:first(drive?.team?.displayName,drive?.team?.name),
-      logo:logoOf(drive?.team)
-    },
-    description:first(drive?.description,drive?.displayResult,drive?.result),
-    result:first(drive?.displayResult,drive?.result,drive?.description),
-    yards:num(first(drive?.yards,drive?.netYards)),
-    offensive_plays:num(first(drive?.offensivePlays,drive?.playCount,plays.length)),
-    time_elapsed:first(drive?.timeElapsed?.displayValue,drive?.timeElapsed),
-    start:{
-      period:num(drive?.start?.period?.number),
-      clock:first(drive?.start?.clock?.displayValue),
-      yard_line:num(drive?.start?.yardLine),
-      text:first(drive?.start?.text)
-    },
-    end:{
-      period:num(drive?.end?.period?.number),
-      clock:first(drive?.end?.clock?.displayValue),
-      yard_line:num(drive?.end?.yardLine),
-      text:first(drive?.end?.text)
-    },
-    plays
-  };
+function play(p){
+  return {id:S(F(p?.id,p?.sequenceNumber,p?.text)),sequence:N(F(p?.sequenceNumber,p?.id)),text:F(p?.text,p?.shortText,p?.type?.text),short_text:F(p?.shortText,p?.text),type:F(p?.type?.text,p?.type?.abbreviation),type_id:F(p?.type?.id),period:N(F(p?.period?.number,p?.period)),clock:F(p?.clock?.displayValue,p?.displayClock),wallclock:F(p?.wallclock),scoring_play:Boolean(p?.scoringPlay),score_value:N(p?.scoreValue),team:{id:F(p?.team?.id),abbreviation:F(p?.team?.abbreviation),display_name:F(p?.team?.displayName,p?.team?.name),logo:logo(p?.team)},start:{down:N(p?.start?.down),distance:N(p?.start?.distance),yard_line:N(p?.start?.yardLine),yards_to_endzone:N(p?.start?.yardsToEndzone),possession_text:F(p?.start?.possessionText),down_distance_text:F(p?.start?.shortDownDistanceText,p?.start?.downDistanceText)},end:{down:N(p?.end?.down),distance:N(p?.end?.distance),yard_line:N(p?.end?.yardLine),yards_to_endzone:N(p?.end?.yardsToEndzone),possession_text:F(p?.end?.possessionText),down_distance_text:F(p?.end?.shortDownDistanceText,p?.end?.downDistanceText)},home_score:N(p?.homeScore),away_score:N(p?.awayScore),participants:A(p?.participants).map(x=>({id:F(x?.athlete?.id,x?.id),name:F(x?.athlete?.displayName,x?.athlete?.fullName,x?.displayName),short_name:F(x?.athlete?.shortName),headshot:headshot(x?.athlete),position:F(x?.athlete?.position?.abbreviation,x?.position?.abbreviation)})).filter(x=>x.id||x.name)};
 }
-
-function normalizeLeaders(summary){
-  const rows=[];
-  arr(summary?.leaders).forEach(category=>{
-    arr(category?.leaders).forEach(leader=>{
-      const athlete=leader?.athlete || {};
-      rows.push({
-        category:first(category?.name,category?.displayName),
-        display_name:first(category?.displayName,category?.name),
-        value:first(leader?.displayValue,leader?.value),
-        athlete:{
-          id:first(athlete?.id),
-          name:first(athlete?.displayName,athlete?.fullName,athlete?.shortName),
-          short_name:first(athlete?.shortName),
-          headshot:athleteImage(athlete),
-          position:first(athlete?.position?.abbreviation),
-          team:first(athlete?.team?.abbreviation,athlete?.team?.displayName)
-        }
-      });
-    });
-  });
-  return rows;
+function game(event){
+  const c=competition(event),status=c.status||event?.status||{},sit=c.situation||{},away=side(c,'away'),home=side(c,'home');
+  return {id:S(F(event?.id,c?.id)),date:F(event?.date,c?.date),name:F(event?.name,event?.shortName),short_name:F(event?.shortName,event?.name),season:{year:N(event?.season?.year),type:N(event?.season?.type),slug:F(event?.season?.slug)},week:N(event?.week?.number),status:{semantics:semantics(status),state:F(status?.type?.state),name:F(status?.type?.name),detail:F(status?.type?.detail,status?.type?.shortDetail),short_detail:F(status?.type?.shortDetail,status?.type?.detail),period:N(status?.period),clock:F(status?.displayClock,status?.clock),completed:Boolean(status?.type?.completed)},venue:{id:F(c?.venue?.id),name:F(c?.venue?.fullName,c?.venue?.shortName),city:F(c?.venue?.address?.city),state:F(c?.venue?.address?.state)},broadcast:A(c?.broadcasts).flatMap(b=>A(b?.names)).filter(Boolean),attendance:N(c?.attendance),teams:{away,home},situation:{possession_id:F(sit?.possession,away.possession?away.id:null,home.possession?home.id:null),down:N(sit?.down),distance:N(sit?.distance),yard_line:N(sit?.yardLine),down_distance_text:F(sit?.shortDownDistanceText,sit?.downDistanceText),possession_text:F(sit?.possessionText),red_zone:Boolean(sit?.isRedZone),home_timeouts:N(sit?.homeTimeouts),away_timeouts:N(sit?.awayTimeouts),last_play:sit?.lastPlay?play(sit.lastPlay):null}};
 }
-
-function normalizePlayerStats(summary){
-  const teams=[];
-  arr(summary?.boxscore?.players).forEach(teamBlock=>{
-    const team=teamBlock?.team || {};
-    const groups=arr(teamBlock?.statistics).map(group=>({
-      name:first(group?.name),
-      display_name:first(group?.displayName,group?.name),
-      labels:arr(group?.labels),
-      descriptions:arr(group?.descriptions),
-      athletes:arr(group?.athletes).map(row=>{
-        const athlete=row?.athlete || {};
-        return {
-          athlete:{
-            id:first(athlete?.id),
-            name:first(athlete?.displayName,athlete?.fullName,athlete?.shortName),
-            short_name:first(athlete?.shortName),
-            jersey:first(athlete?.jersey),
-            headshot:athleteImage(athlete),
-            position:first(athlete?.position?.abbreviation),
-            team:first(athlete?.team?.abbreviation,team?.abbreviation)
-          },
-          starter:Boolean(row?.starter),
-          did_not_play:Boolean(row?.didNotPlay),
-          stats:arr(row?.stats),
-          values:arr(row?.stats).map((value,index)=>({label:arr(group?.labels)[index]||String(index),value}))
-        };
-      })
-    }));
-    teams.push({
-      team:{id:first(team?.id),abbreviation:first(team?.abbreviation),display_name:first(team?.displayName,team?.name),logo:logoOf(team)},
-      groups
-    });
-  });
-  return teams;
+function drive(d,current=false){
+  const plays=A(d?.plays).map(play);return {id:S(F(d?.id,d?.sequenceNumber,`${d?.team?.id||''}-${d?.start?.clock?.displayValue||''}`)),sequence:N(d?.sequenceNumber),is_current:current,team:{id:F(d?.team?.id),abbreviation:F(d?.team?.abbreviation),display_name:F(d?.team?.displayName,d?.team?.name),logo:logo(d?.team)},description:F(d?.description,d?.displayResult,d?.result),result:F(d?.displayResult,d?.result,d?.description),yards:N(F(d?.yards,d?.netYards)),offensive_plays:N(F(d?.offensivePlays,d?.playCount,plays.length)),time_elapsed:F(d?.timeElapsed?.displayValue,d?.timeElapsed),start:{period:N(d?.start?.period?.number),clock:F(d?.start?.clock?.displayValue),yard_line:N(d?.start?.yardLine),text:F(d?.start?.text)},end:{period:N(d?.end?.period?.number),clock:F(d?.end?.clock?.displayValue),yard_line:N(d?.end?.yardLine),text:F(d?.end?.text)},plays};
 }
-
-function normalizeSummary(raw,eventId){
-  const headerEvent={
-    id:eventId,
-    date:first(raw?.header?.competitions?.[0]?.date,raw?.header?.season?.year ? null : null),
-    name:first(raw?.header?.competitions?.[0]?.notes?.[0]?.headline),
-    season:raw?.header?.season || {},
-    week:raw?.header?.week,
-    competitions:arr(raw?.header?.competitions)
-  };
-  const game=normalizedGame(headerEvent);
-  const previous=arr(raw?.drives?.previous).map(d=>normalizeDrive(d,false));
-  const currentRaw=raw?.drives?.current;
-  const current=currentRaw ? normalizeDrive(currentRaw,true) : null;
-  const drives=current ? [...previous,current] : previous;
-  const playMap=new Map();
-  drives.forEach(d=>d.plays.forEach(play=>{ if(play.id) playMap.set(play.id,play); }));
-  const plays=[...playMap.values()];
-  const situation=game.situation || {};
-  const currentPlay=current?.plays?.[current.plays.length-1] || situation.last_play || plays[plays.length-1] || null;
-  return {
-    ok:true,
-    source:{provider:'espn_site_api',semantics:game.status.semantics,fetched_at:new Date().toISOString(),transport:'poll'},
-    game,
-    current_drive:current,
-    current_play:currentPlay,
-    drives,
-    plays,
-    leaders:normalizeLeaders(raw),
-    player_stats:normalizePlayerStats(raw),
-    win_probability:arr(raw?.winprobability).slice(-40).map(row=>({
-      play_id:first(row?.playId,row?.play?.id),
-      home_win_percentage:num(row?.homeWinPercentage),
-      tie_percentage:num(row?.tiePercentage)
-    })),
-    last_five_plays:plays.slice(-5).reverse(),
-    play_count:plays.length,
-    drive_count:drives.length
-  };
+function leaders(pkg){
+  const out=[];A(pkg?.leaders).forEach(cat=>A(cat?.leaders).forEach(l=>{const a=l?.athlete||{};out.push({category:F(cat?.name,cat?.displayName),display_name:F(cat?.displayName,cat?.name),value:F(l?.displayValue,l?.value),athlete:{id:F(a?.id),name:F(a?.displayName,a?.fullName,a?.shortName),short_name:F(a?.shortName),headshot:headshot(a),position:F(a?.position?.abbreviation),team:F(a?.team?.abbreviation,a?.team?.displayName)}})}));return out;
 }
-
+function stats(pkg){
+  return A(pkg?.boxscore?.players).map(tb=>{const t=tb?.team||{};return{team:{id:F(t?.id),abbreviation:F(t?.abbreviation),display_name:F(t?.displayName,t?.name),logo:logo(t)},groups:A(tb?.statistics).map(group=>({name:F(group?.name),display_name:F(group?.displayName,group?.name),labels:A(group?.labels),athletes:A(group?.athletes).map(row=>{const a=row?.athlete||{};return{athlete:{id:F(a?.id),name:F(a?.displayName,a?.fullName,a?.shortName),short_name:F(a?.shortName),jersey:F(a?.jersey),headshot:headshot(a),position:F(a?.position?.abbreviation),team:F(a?.team?.abbreviation,t?.abbreviation)},starter:Boolean(row?.starter),did_not_play:Boolean(row?.didNotPlay),stats:A(row?.stats),values:A(row?.stats).map((value,i)=>({label:A(group?.labels)[i]||String(i),value}))}})}))}});
+}
+function detail(pkg,eventId){
+  const hc=A(pkg?.header?.competitions)[0]||{};const headerEvent={id:eventId,date:F(hc?.date),name:F(pkg?.header?.shortName,pkg?.header?.name),shortName:F(pkg?.header?.shortName),season:pkg?.header?.season||{},week:pkg?.header?.week,competitions:A(pkg?.header?.competitions)};const g=game(headerEvent);const previous=A(pkg?.drives?.previous).map(d=>drive(d,false));const curRaw=pkg?.drives?.current;const current=curRaw?drive(curRaw,true):null;const drives=current?[...previous,current]:previous;const map=new Map();drives.forEach(d=>d.plays.forEach(p=>{if(p.id)map.set(p.id,p)}));const plays=[...map.values()];const currentPlay=current?.plays?.at(-1)||g?.situation?.last_play||plays.at(-1)||null;
+  return {ok:true,source:{provider:'espn_cdn_gamepackage',semantics:g.status.semantics,fetched_at:new Date().toISOString(),transport:'poll'},game:g,current_drive:current,current_play:currentPlay,drives,plays,last_five_plays:plays.slice(-5).reverse(),leaders:leaders(pkg),player_stats:stats(pkg),win_probability:A(pkg?.winprobability).slice(-80).map(x=>({play_id:F(x?.playId,x?.play?.id),home_win_percentage:N(x?.homeWinPercentage),tie_percentage:N(x?.tiePercentage)})),play_count:plays.length,drive_count:drives.length};
+}
 async function scoreboard(date){
-  const raw=await upstream(`${SCOREBOARD_URL}?dates=${encodeURIComponent(date)}&limit=100`);
-  const games=arr(raw?.events).map(normalizedGame);
-  return {
-    ok:true,
-    source:{provider:'espn_site_api',semantics:'SCOREBOARD',fetched_at:new Date().toISOString(),transport:'poll'},
-    date,
-    count:games.length,
-    games
-  };
+  const raw=await upstream(`${CDN}/scoreboard?xhr=1&limit=100&dates=${encodeURIComponent(date)}`);const games=findEvents(raw).map(game);return {ok:true,source:{provider:'espn_cdn_scoreboard',semantics:'SCOREBOARD',fetched_at:new Date().toISOString(),transport:'poll'},date,count:games.length,games};
 }
-
 export default async function handler(req,res){
-  if(req.method==='OPTIONS'){
-    res.statusCode=204;
-    res.setHeader('access-control-allow-origin','*');
-    res.setHeader('access-control-allow-methods','GET,OPTIONS');
-    res.setHeader('access-control-allow-headers','content-type');
-    return res.end();
-  }
-  if(req.method!=='GET') return send(res,405,{ok:false,error:'method_not_allowed'});
-  const event=str(req.query?.event).trim();
-  const date=formatDateQuery(req.query?.date);
+  if(req.method==='OPTIONS'){res.statusCode=204;res.setHeader('access-control-allow-origin','*');res.setHeader('access-control-allow-methods','GET,OPTIONS');return res.end()}
+  if(req.method!=='GET')return send(res,405,{ok:false,error:'method_not_allowed'});
+  const event=S(req.query?.event).trim(),date=todayET(req.query?.date);
   try{
-    if(event){
-      if(!/^\d+$/.test(event)) return send(res,400,{ok:false,error:'invalid_event'});
-      const raw=await upstream(`${SUMMARY_URL}?event=${encodeURIComponent(event)}`);
-      const normalized=normalizeSummary(raw,event);
-      const ttl=normalized?.source?.semantics==='LIVE' ? 2 : normalized?.source?.semantics==='FINAL' ? 30 : 10;
-      return send(res,200,normalized,ttl);
-    }
-    const normalized=await scoreboard(date);
-    const hasLive=normalized.games.some(g=>g?.status?.semantics==='LIVE');
-    return send(res,200,normalized,hasLive?3:15);
-  }catch(error){
-    return send(res,503,{
-      ok:false,
-      error:'nfl_live_unavailable',
-      detail:error instanceof Error ? error.message : String(error),
-      semantics:'UNAVAILABLE',
-      fetched_at:new Date().toISOString()
-    });
-  }
+    if(event){if(!/^\d+$/.test(event))return send(res,400,{ok:false,error:'invalid_event'});const raw=await upstream(`${CDN}/game?xhr=1&gameId=${encodeURIComponent(event)}`);const out=detail(packageOf(raw),event);const ttl=out.source.semantics==='LIVE'?2:out.source.semantics==='FINAL'?30:10;return send(res,200,out,ttl)}
+    const out=await scoreboard(date);return send(res,200,out,out.games.some(g=>g.status.semantics==='LIVE')?3:15);
+  }catch(error){return send(res,503,{ok:false,error:'nfl_live_unavailable',detail:error instanceof Error?error.message:String(error),semantics:'UNAVAILABLE',fetched_at:new Date().toISOString()})}
 }
