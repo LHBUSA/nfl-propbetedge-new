@@ -1,0 +1,35 @@
+/* PropBetEdge NFL — persistent player media v2 */
+.pbe3-signal-player.pbe-player-name-enhanced,
+.pbe3-drawer-title.pbe-player-name-enhanced{
+  display:flex!important;
+  align-items:center!important;
+  gap:10px!important;
+}
+.pbe3-signal-player .pbe-player-headshot{
+  width:34px!important;
+  height:34px!important;
+  flex:0 0 34px!important;
+  border-radius:8px!important;
+  object-fit:cover!important;
+  object-position:top center!important;
+  background:#101a27;
+  border:1px solid rgba(255,255,255,.10);
+}
+.pbe3-drawer-title .pbe-player-headshot{
+  width:56px!important;
+  height:56px!important;
+  flex:0 0 56px!important;
+  border-radius:12px!important;
+  object-fit:cover!important;
+  object-position:top center!important;
+  background:#101a27;
+  border:1px solid rgba(255,255,255,.12);
+  box-shadow:0 10px 28px rgba(0,0,0,.25);
+}
+.pbe3-signal-player .pbe-player-headshot.is-fallback,
+.pbe3-drawer-title .pbe-player-headshot.is-fallback{object-fit:contain!important;padding:7px}
+
+@media(max-width:640px){
+  .pbe3-signal-player .pbe-player-headshot{width:30px!important;height:30px!important;flex-basis:30px!important}
+  .pbe3-drawer-title .pbe-player-headshot{width:46px!important;height:46px!important;flex-basis:46px!important}
+}
