@@ -1,7 +1,7 @@
-/* PropBetEdge NFL — ordered page/product upgrade loader v20 */
+/* PropBetEdge NFL — ordered page/product upgrade loader v21 */
 (() => {
   'use strict';
-  const VERSION='20260829prod11';
+  const VERSION='20260829prod12';
   const upgrades=[
     {css:'./dashboard-v5.css',js:'./dashboard-v5.js'},
     {css:'./games-v2.css',js:'./games-v2.js'},
@@ -42,7 +42,6 @@
 
     /* Production authorities. */
     {css:'./paywall-funnel-v2.css',js:'./paywall-funnel-v2.js'},
-    {js:'./paywall-checkout-continuation-v1.js'},
     {css:'./pbecast-v6.css',js:'./pbecast-v6.js'},
     {css:'./stadium-selector-v1.css',js:'./stadium-selector-v1.js'},
     {css:'./production-polish-v2.css',js:'./production-polish-v2.js'}
