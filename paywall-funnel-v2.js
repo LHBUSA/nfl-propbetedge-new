@@ -37,7 +37,7 @@
       ${planCard('season',selected)}
       ${planCard('weekly',selected)}
     </div>
-    <div class="pbe-funnel-step"><span>2</span><div><b>Verify the email that will own this purchase</b><small>One secure link. No password. After verification we continue the plan you selected.</small></div></div>
+    <div class="pbe-funnel-step"><span>2</span><div><b>Verify the email that will own this purchase</b><small>One secure link. No password. After verification we continue the exact plan you selected.</small></div></div>
     <div class="pbe-pro-auth-state pbe-funnel-auth">
       <input class="pbe-pro-email" id="pbe-funnel-email" type="email" autocomplete="email" inputmode="email" placeholder="you@example.com" aria-label="Email address">
       <button class="pbe-pro-cta" id="pbe-funnel-continue" type="button"></button>
@@ -81,12 +81,13 @@
   async function requestEmail() {
     const email=String(document.getElementById('pbe-funnel-email')?.value||'').trim().toLowerCase();
     if(!/^\S+@\S+\.\S+$/.test(email))return message('Enter the email you want tied to NFL Pro.','error');
+    const key=selectedKey();
+    const p=PLANS[key]||PLANS.season;
     const btn=document.getElementById('pbe-funnel-continue');
     if(btn)btn.disabled=true;
-    const p=PLANS[selectedKey()]||PLANS.season;
     message(`Sending a secure link to continue ${p.label} checkout…`);
     try{
-      const r=await fetch('/api/auth-email',{method:'POST',headers:{'content-type':'application/json',accept:'application/json'},credentials:'same-origin',cache:'no-store',body:JSON.stringify({email})});
+      const r=await fetch('/api/auth-email',{method:'POST',headers:{'content-type':'application/json',accept:'application/json'},credentials:'same-origin',cache:'no-store',body:JSON.stringify({email,plan:key})});
       const body=await r.json().catch(()=>({}));
       if(!r.ok)throw new Error(body?.error||'Could not send the verification email.');
       message(`Check ${email}. Click the secure link and we’ll continue your ${p.label} checkout.`, 'success');
@@ -123,7 +124,12 @@
   }
 
   function routeAuthMarker() {
-    try{if(new URLSearchParams(location.search).get('auth')==='complete')sessionStorage.setItem('pbe_nfl_auth_just_completed','1')}catch(_){}
+    try{
+      const params=new URLSearchParams(location.search);
+      const plan=params.get('plan');
+      if(PLANS[plan])setSelected(plan);
+      if(params.get('auth')==='complete')sessionStorage.setItem('pbe_nfl_auth_just_completed','1');
+    }catch(_){}
   }
 
   function apply(){queued=false;mountSignedOut();continuePendingCheckout()}
