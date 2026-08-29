@@ -157,6 +157,11 @@
   flex-direction:column;
   justify-content:center;
 }
+.pbe-pro-plans { display:grid; grid-template-columns:1fr 1fr; gap:9px; }
+.pbe-pro-plans .pbe-pro-price-card { display:flex; flex-direction:column; }
+.pbe-pro-plans .pbe-pro-cta { margin-top:auto; }
+.pbe-pro-plans .pbe-pro-price-card[data-plan="season"] { border-color:rgba(216,183,91,.34); }
+@media(max-width:560px){ .pbe-pro-plans { grid-template-columns:1fr; } }
 .pbe-pro-price-card {
   padding:19px;
   border:1px solid rgba(216,183,91,.20);

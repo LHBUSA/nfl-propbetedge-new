@@ -11,9 +11,8 @@
   const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_YkSuX7oXCxyTTMPtPqYIyw_qtbfA5c6';
   const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/fZueVd1rU0PYg8d8Ez7wA05';
   const SEASON_PASS_PRICE_ID = 'price_1U9oVzF3CaVzg4ORnk5NiJFA';
-  /* Must match WEEKLY_PRICE_ID in api/checkout.js. Until the real id is filled
-   * in there, weekly checkout falls back to STRIPE_PAYMENT_LINK. */
-  const WEEKLY_PRICE_ID = 'price_REPLACE_ME_WEEKLY_999';
+  const WEEKLY_PRICE_ID = 'price_1U9QUZF3CaVzg4OR3QNfwWCS';
+  const SEASON_PASS_THROUGH = 'February 14, 2027';
   const MODEL_UPSTREAM_PREFIX = 'https://nfl-api.propbetedge.ai/api/picks/pass';
 
   const state = {
@@ -119,13 +118,21 @@
 
   function freeUserHtml() {
     const email = state.user?.email || 'Signed-in account';
-    return `<div class="pbe-pro-price-card">
-      <div class="pbe-pro-plan-label">NFL PRO · WEEKLY</div>
-      <div class="pbe-pro-price"><strong>$9.99</strong><span>/ week</span></div>
-      <div class="pbe-pro-renew">Renews automatically each week until canceled. No trial. Cancel anytime.</div>
+    return `<div class="pbe-pro-plans">
+      <div class="pbe-pro-price-card" data-plan="season">
+        <div class="pbe-pro-plan-label">NFL PRO · SEASON PASS</div>
+        <div class="pbe-pro-price"><strong>$99</strong><span>one time</span></div>
+        <div class="pbe-pro-renew">Access through ${SEASON_PASS_THROUGH}. No recurring billing.</div>
+        <button class="pbe-pro-cta" id="pbe-pro-buy-season" type="button">Get Season Pass</button>
+      </div>
+      <div class="pbe-pro-price-card" data-plan="weekly">
+        <div class="pbe-pro-plan-label">NFL PRO · WEEKLY</div>
+        <div class="pbe-pro-price"><strong>$9.99</strong><span>/ week</span></div>
+        <div class="pbe-pro-renew">Renews automatically each week until canceled. No trial. Cancel anytime.</div>
+        <button class="pbe-pro-cta secondary" id="pbe-pro-buy-weekly" type="button">Start Weekly</button>
+      </div>
     </div>
     <div class="pbe-pro-user-card"><strong>${esc(email)}</strong><span>Signed in · Free access</span></div>
-    <button class="pbe-pro-cta" id="pbe-pro-upgrade" type="button">Upgrade to NFL Pro</button>
     <button class="pbe-pro-cta secondary" id="pbe-pro-refresh" type="button">I already subscribed · Refresh access</button>
     <div class="pbe-pro-auth-copy">At Stripe checkout, use <strong>${esc(email)}</strong>. The NFL subscription webhook matches that email to this signed-in account.</div>
     <div class="pbe-pro-message" id="pbe-pro-message"></div>
@@ -220,9 +227,9 @@
         return;
       }
 
-      /* Weekly still has a working Payment Link, so a misconfigured endpoint
-       * must not block the checkout that currently converts. Remove this
-       * fallback once WEEKLY_PRICE_ID is the real Stripe id. */
+      /* Temporary fail-safe: the Payment Link is the flow that currently
+       * converts, so a /api/checkout outage must not block weekly purchases.
+       * Remove once the new checkout flow is verified in production. */
       if (price === WEEKLY_PRICE_ID) {
         window.location.href = STRIPE_PAYMENT_LINK;
         return;
@@ -401,7 +408,9 @@
     document.getElementById('pbe-pro-email')?.addEventListener('keydown',event => {
       if (event.key === 'Enter') signIn();
     });
-    document.getElementById('pbe-pro-upgrade')?.addEventListener('click',checkout);
+    document.getElementById('pbe-pro-upgrade')?.addEventListener('click',() => checkout(WEEKLY_PRICE_ID));
+    document.getElementById('pbe-pro-buy-weekly')?.addEventListener('click',() => checkout(WEEKLY_PRICE_ID));
+    document.getElementById('pbe-pro-buy-season')?.addEventListener('click',() => checkout(SEASON_PASS_PRICE_ID));
     document.getElementById('pbe-pro-refresh')?.addEventListener('click',async event => {
       event.currentTarget.disabled = true;
       message('Checking Stripe-backed NFL Pro access…');

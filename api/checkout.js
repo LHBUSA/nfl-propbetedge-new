@@ -19,12 +19,7 @@ const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_YkSuX7oXCxyTTMPtPqYIyw_qtbfA5c6
 const SEASON_PASS_PRICE_ID = 'price_1U9oVzF3CaVzg4ORnk5NiJFA';
 const SEASON_PASS_EXPIRES_AT = '2027-02-14T23:59:59-06:00';
 
-/* The $9.99/week price id is not recoverable from this repo. The existing
- * Stripe Payment Link slug (buy.stripe.com/fZueVd1rU0PYg8d8Ez7wA05) is opaque
- * and does not encode it. Replace this constant with the real id from
- * Stripe -> Payment Links -> that link -> line item. Until then the weekly
- * tier is rejected here and paywall.js falls back to the Payment Link. */
-const WEEKLY_PRICE_ID = 'price_REPLACE_ME_WEEKLY_999';
+const WEEKLY_PRICE_ID = 'price_1U9QUZF3CaVzg4OR3QNfwWCS';
 
 const VALID_PRICES = {
   [SEASON_PASS_PRICE_ID]: { tier: 'season_pass', mode: 'payment' },
@@ -106,13 +101,20 @@ export default async function handler(req, res) {
         tier,
         user_id: userId,
         email: email || '',
-        acquired_sport: 'nfl'
+        acquired_sport: 'nfl',
+        product: 'propbetedge_nfl'
       }
     };
 
     if (mode === 'subscription') {
       params.subscription_data = {
-        metadata: { tier, user_id: userId, email: email || '', acquired_sport: 'nfl' }
+        metadata: {
+          tier,
+          user_id: userId,
+          email: email || '',
+          acquired_sport: 'nfl',
+          product: 'propbetedge_nfl'
+        }
       };
     }
 
