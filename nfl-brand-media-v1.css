@@ -1,42 +1,151 @@
-/* PropBetEdge NFL — brand, media and scoreboard resilience v1 */
-:root{--pbe-brand-gold:#ffd24a;--pbe-brand-navy:#08101e;--pbe-brand-navy-2:#101b30}
+/* PropBetEdge NFL — production brand + media layer
+   Loaded after world-class-v1.css. This is the canonical late brand layer. */
+:root{
+  --pbe-ink:#14110d;
+  --pbe-ink-2:#1d1914;
+  --pbe-ink-3:#2a241c;
+  --pbe-paper:#f5f1eb;
+  --pbe-paper-2:#e8e1d4;
+  --pbe-muted:#b8b3a8;
+  --pbe-dim:#7e7a72;
+  --pbe-gold:#d4af37;
+  --pbe-gold-bright:#e9c75a;
+  --pbe-crimson:#c1273d;
+  --pbe-crimson-bright:#e63946;
+  --pbe-line:rgba(255,245,220,.10);
+  --pbe-line-strong:rgba(255,245,220,.18);
+}
 
-/* Carry the actual PropBetEdge newsroom identity into the NFL product. */
-.sidebar-logo{gap:11px!important}
-.pbe-brand-mark{width:36px;height:36px;display:block;object-fit:contain;filter:drop-shadow(0 7px 16px rgba(0,0,0,.32))}
-.sidebar-logo .sl-brand em{color:var(--pbe-brand-gold)!important}
-.mobile-logo{display:flex!important;align-items:center;gap:7px}
-.mobile-logo .pbe-mobile-mark{width:25px;height:25px;object-fit:contain}
-.mobile-logo .pbe-mobile-nfl{color:#fff;font:900 18px/1 'Barlow Condensed',sans-serif;letter-spacing:.03em;text-transform:uppercase}
-.mobile-logo .pbe-mobile-nfl em{color:var(--pbe-brand-gold);font-style:normal}
+html,body{background:var(--pbe-ink)!important;color:var(--pbe-paper)!important}
+body{
+  background:
+    radial-gradient(circle at 82% 3%,rgba(212,175,55,.10),transparent 31rem),
+    radial-gradient(circle at 12% 20%,rgba(193,39,61,.055),transparent 26rem),
+    linear-gradient(180deg,var(--pbe-ink) 0%,#100e0b 48rem,#0d0b09 100%)!important;
+}
+.main-content,.view-container{background:transparent!important}
 
-/* Schedule cards always get a real NFL crest when an abbreviation is resolvable. */
-.pbe25-crest{overflow:visible!important}
-.pbe25-crest img.pbe-official-team-logo{width:30px!important;height:30px!important;max-width:30px!important;max-height:30px!important;object-fit:contain;filter:drop-shadow(0 5px 8px rgba(0,0,0,.32))}
+/* ---------- PropBetEdge sports chrome ---------- */
+#pbe-sports-shell{
+  background:rgba(20,17,13,.97)!important;
+  border-bottom-color:var(--pbe-line-strong)!important;
+  box-shadow:0 12px 38px rgba(0,0,0,.34)!important;
+  backdrop-filter:blur(20px) saturate(120%);
+}
+.pbes-top{
+  background:linear-gradient(90deg,rgba(20,17,13,.99),rgba(29,25,20,.96),rgba(20,17,13,.99))!important;
+  border-bottom-color:var(--pbe-line)!important;
+}
+.pbes-brand-logo{filter:drop-shadow(0 6px 18px rgba(0,0,0,.34))}
+.pbes-brand-name{color:var(--pbe-paper)!important}
+.pbes-brand-pill{color:var(--pbe-gold-bright)!important;border-color:rgba(212,175,55,.32)!important;background:rgba(212,175,55,.09)!important}
+.pbes-brand-sub{color:var(--pbe-muted)!important}
+.pbes-date strong{color:var(--pbe-paper-2)!important}.pbes-date span{color:var(--pbe-dim)!important}
+.pbes-head-btn{background:rgba(245,241,235,.035)!important;border-color:var(--pbe-line)!important;color:var(--pbe-muted)!important}
+.pbes-head-btn:hover{background:rgba(245,241,235,.075)!important;border-color:var(--pbe-line-strong)!important;color:var(--pbe-paper)!important}
+.pbes-head-btn.pro{color:var(--pbe-gold-bright)!important;border-color:rgba(212,175,55,.34)!important;background:rgba(212,175,55,.09)!important}
+.pbes-live-pill{background:rgba(245,241,235,.035)!important;border-color:var(--pbe-line)!important;color:var(--pbe-muted)!important}
+.pbes-live-pill.is-live{color:#ff9aa7!important;border-color:rgba(230,57,70,.38)!important;background:rgba(193,39,61,.12)!important}
+.pbes-live-pill.is-live:before{background:var(--pbe-crimson-bright)!important;box-shadow:0 0 12px rgba(230,57,70,.7)!important}
 
-/* Player imagery on market rows — useful context, not decoration. */
+.pbes-news{background:#18140f!important;border-bottom-color:var(--pbe-line)!important}
+.pbes-news-badge{background:rgba(212,175,55,.12)!important;border-right-color:rgba(212,175,55,.25)!important;color:var(--pbe-gold-bright)!important}
+.pbes-news-item{border-right-color:var(--pbe-line)!important;color:var(--pbe-muted)!important}
+.pbes-news-item strong{color:var(--pbe-paper-2)!important}.pbes-news-item span{color:var(--pbe-dim)!important}
+
+.pbes-scorebar{background:#17130f!important;border-bottom-color:var(--pbe-line-strong)!important}
+.pbes-score-label{color:var(--pbe-muted)!important;border-right-color:var(--pbe-line)!important}
+.pbes-score-label.live{color:#fff!important;background:linear-gradient(135deg,var(--pbe-crimson-bright),#9d1f32)!important}
+.pbes-score{border-right-color:var(--pbe-line)!important}
+.pbes-score:hover{background:rgba(212,175,55,.06)!important}
+.pbes-score.live{box-shadow:inset 0 3px 0 rgba(230,57,70,.82)!important;background:linear-gradient(180deg,rgba(193,39,61,.08),transparent 62%)!important}
+.pbes-score-team{color:var(--pbe-paper-2)!important}.pbes-score-num{color:var(--pbe-paper)!important}.pbes-score-meta{color:var(--pbe-dim)!important}.pbes-score.live .pbes-score-meta{color:#ff9aa7!important}
+.pbes-score-nav{background:#120f0c!important;color:var(--pbe-muted)!important;border-color:var(--pbe-line)!important}
+.pbes-score-nav:hover{background:#262018!important;color:var(--pbe-gold-bright)!important}
+
+.pbes-primary,.pbes-research{background:#120f0c!important;border-bottom-color:var(--pbe-line)!important}
+.pbes-research{background:#17130f!important}
+.pbes-nav-label{color:var(--pbe-dim)!important}
+.pbes-nav-btn{color:var(--pbe-muted)!important}
+.pbes-nav-btn:hover{color:var(--pbe-paper)!important;background:rgba(212,175,55,.055)!important}
+.pbes-nav-btn.active{color:var(--pbe-gold-bright)!important;background:rgba(212,175,55,.11)!important;border-color:rgba(212,175,55,.22)!important}
+.pbes-research .pbes-nav-btn{color:#aaa49a!important}.pbes-research .pbes-nav-btn.active{color:var(--pbe-gold-bright)!important;background:rgba(212,175,55,.07)!important}
+.pbes-nav-btn.cast{color:#17120a!important;background:linear-gradient(135deg,var(--pbe-gold-bright),var(--pbe-gold))!important;border-color:var(--pbe-gold)!important}
+.pbes-nav-btn.cast.is-live{background:linear-gradient(135deg,var(--pbe-crimson-bright),var(--pbe-crimson))!important;border-color:var(--pbe-crimson)!important;color:#fff!important}
+
+/* ---------- shared premium surfaces ---------- */
+.home5-section,.cast4-panel,.cast4-rail-wrap,.pbe3-panel,.pbe3-desk,.pbe16-panel,.pbe16-model,.pbe17-section,.pbe26-card,.pbe26-section,
+.pbe-v2-panel,.pbe-pro-price-card,.pbe-news2-panel,.pbe-match2-panel,.pbe-usage2-panel,.pbe-game2-panel{
+  border-color:var(--pbe-line)!important;
+  background:linear-gradient(145deg,rgba(42,36,28,.90),rgba(20,17,13,.94))!important;
+  box-shadow:0 16px 42px rgba(0,0,0,.18),inset 0 1px 0 rgba(245,241,235,.025)!important;
+}
+.home5-head,.cast4-panel-head,.cast4-rail-head,.pbe3-panel-head,.pbe16-panel-head,.pbe17-section-head,.pbe26-section-head{border-bottom-color:var(--pbe-line)!important;background:rgba(245,241,235,.018)!important}
+.home5-head strong,.cast4-panel-head strong,.cast4-rail-head strong,.pbe16-panel-head strong,.pbe17-section-head strong,.pbe26-section-head strong{color:var(--pbe-paper)!important}
+.home5-head span,.cast4-panel-head span,.cast4-rail-head span,.pbe16-panel-head span,.pbe17-section-head span,.pbe26-section-head span{color:var(--pbe-dim)!important}
+
+/* ---------- factual hero/game stages ---------- */
+.home5-hero,.cast4-hero{
+  border-color:var(--pbe-line-strong)!important;
+  background-image:
+    radial-gradient(circle at 15% 22%,var(--h5-away,rgba(212,175,55,.08)),transparent 34%),
+    radial-gradient(circle at 85% 22%,var(--h5-home,rgba(193,39,61,.06)),transparent 34%),
+    linear-gradient(180deg,rgba(29,25,20,.90),rgba(20,17,13,.97))!important;
+  box-shadow:0 30px 90px rgba(0,0,0,.34),inset 0 1px 0 rgba(245,241,235,.045)!important;
+}
+.home5-state,.home5-btn,.home5-sit,.cast4-live-tag,.cast4-sit,.cast4-btn{background:rgba(29,25,20,.78)!important;border-color:var(--pbe-line-strong)!important;color:var(--pbe-paper-2)!important}
+.home5-btn:hover,.cast4-btn:hover{background:rgba(212,175,55,.09)!important;border-color:rgba(212,175,55,.26)!important}
+.home5-source,.home5-name,.home5-venue,.cast4-source,.cast4-team-name,.cast4-venue{color:var(--pbe-muted)!important}
+.home5-record,.home5-sit span,.home5-card-state,.home5-card-meta,.home5-player-copy span,.cast4-record{color:var(--pbe-dim)!important}
+.home5-game-card,.home5-tool,.cast4-game-chip,.cast4-person{background:rgba(245,241,235,.025)!important;border-color:var(--pbe-line)!important}
+.home5-game-card:hover,.home5-tool:hover,.cast4-game-chip:hover{background:rgba(212,175,55,.065)!important;border-color:rgba(212,175,55,.24)!important}
+.home5-news-row{border-bottom-color:var(--pbe-line)!important}.home5-news-row b{color:var(--pbe-paper-2)!important}.home5-news-row p{color:var(--pbe-muted)!important}.home5-news-row time{color:var(--pbe-dim)!important}
+
+/* ---------- official NFL logos ---------- */
+.pbe25-crest,.pbe16-crest,.pbe26-crest,.pbe26-drawer-crest{overflow:visible!important;display:grid!important;place-items:center!important}
+.pbe25-crest img.pbe-official-team-logo{width:30px!important;height:30px!important;max-width:30px!important;max-height:30px!important}
+.pbe16-crest img.pbe-official-team-logo{width:58px!important;height:58px!important;max-width:58px!important;max-height:58px!important}
+.pbe26-crest img.pbe-official-team-logo{width:42px!important;height:42px!important;max-width:42px!important;max-height:42px!important}
+.pbe26-drawer-crest img.pbe-official-team-logo{width:52px!important;height:52px!important;max-width:52px!important;max-height:52px!important}
+.pbe-official-team-logo,.home5-card-row>img{object-fit:contain!important;filter:drop-shadow(0 5px 9px rgba(0,0,0,.35))}
+.home5-card-row>img{width:25px!important;height:25px!important;max-width:25px!important}
+.pbe-team-logo-fallback{display:grid;place-items:center;min-width:30px;min-height:30px;padding:4px;border:1px solid var(--pbe-line);border-radius:50%;color:var(--pbe-gold-bright);font:900 9px/1 'DM Mono',monospace;background:#1d1914}
+
+/* Player imagery on market/research rows — identity context, not decoration. */
 .pbe3-player-name.pbe-player-name-enhanced{display:flex!important;align-items:center;gap:9px;min-height:38px}
-.pbe-player-headshot{width:36px;height:36px;flex:0 0 36px;border-radius:9px;object-fit:cover;object-position:top center;background:linear-gradient(145deg,#142238,#0b1320);border:1px solid rgba(255,255,255,.09);box-shadow:0 5px 13px rgba(0,0,0,.22)}
-.pbe-player-headshot.is-fallback{object-fit:contain;padding:7px}
+.pbe-player-headshot{background:linear-gradient(145deg,#2a241c,#14110d)!important;border-color:var(--pbe-line)!important;box-shadow:0 5px 13px rgba(0,0,0,.28)!important}
+.pbe-player-headshot.is-fallback{object-fit:contain!important;padding:7px}
 
-/* The PBEcast scoreboard must be allowed to shrink instead of clipping. */
+/* Scoreboards shrink instead of clipping. */
 .cast4-scoreboard,.home5-game{width:100%;max-width:100%}
 .cast4-scoreboard>*,.cast4-team,.cast4-team>*,.cast4-center,.home5-game>*,.home5-team,.home5-team>*{min-width:0!important}
 .cast4-team-logo img,.home5-logo img{max-width:100%;max-height:100%;object-fit:contain}
 .cast4-team-abbr,.home5-abbr{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cast4-score,.home5-score{white-space:nowrap}
 
-/* PBE-branded NFL Pro modal. Existing Supabase/Stripe entitlement logic stays intact. */
-.pbe-pro-modal{border-color:rgba(255,210,74,.28)!important;background:linear-gradient(145deg,var(--pbe-brand-navy) 0%,var(--pbe-brand-navy-2) 58%,#0b1424 100%)!important;box-shadow:0 28px 90px rgba(0,0,0,.52),0 0 0 1px rgba(255,210,74,.05) inset!important}
-.pbe-pro-pitch{background:radial-gradient(circle at 12% 5%,rgba(255,210,74,.11),transparent 31%)!important}
-.pbe-pro-kicker{display:flex!important;align-items:center!important;gap:11px!important;color:var(--pbe-brand-gold)!important}
+/* ---------- NFL Pro ---------- */
+.pbe-pro-backdrop{background:rgba(10,8,6,.78)!important;backdrop-filter:blur(14px) saturate(115%)!important}
+.pbe-pro-modal{
+  border-color:rgba(212,175,55,.30)!important;
+  background:
+    radial-gradient(circle at 10% 0%,rgba(212,175,55,.11),transparent 32%),
+    linear-gradient(145deg,var(--pbe-ink) 0%,var(--pbe-ink-2) 60%,#100d0a 100%)!important;
+  box-shadow:0 30px 100px rgba(0,0,0,.58),0 0 0 1px rgba(212,175,55,.04) inset!important;
+}
+.pbe-pro-pitch{background:transparent!important}
+.pbe-pro-kicker{display:flex!important;align-items:center!important;gap:11px!important;color:var(--pbe-gold-bright)!important}
 .pbe-pro-kicker .pbe-paywall-logo{width:154px;height:auto;max-height:44px;object-fit:contain;object-position:left center}
-.pbe-pro-kicker .pbe-paywall-label{padding-left:10px;border-left:1px solid rgba(255,210,74,.32);white-space:nowrap}
-.pbe-pro-pitch h2 em,.pbe-pro-plan-label{color:var(--pbe-brand-gold)!important}
-.pbe-pro-price-card{border-color:rgba(255,210,74,.17)!important;background:linear-gradient(145deg,rgba(255,210,74,.07),rgba(255,255,255,.018))!important}
-.pbe-pro-cta:not(.secondary),.pbe-pro-mini-cta{background:var(--pbe-brand-gold)!important;border-color:var(--pbe-brand-gold)!important;color:#101827!important}
-.pbe-pro-email:focus{border-color:rgba(255,210,74,.72)!important;box-shadow:0 0 0 3px rgba(255,210,74,.08)!important}
-.pbe-pro-secure{color:#8e9bad!important}
+.pbe-pro-kicker .pbe-paywall-label{padding-left:10px;border-left:1px solid rgba(212,175,55,.34);white-space:nowrap}
+.pbe-pro-pitch h2,.pbe-pro-price strong{color:var(--pbe-paper)!important}.pbe-pro-pitch h2 em,.pbe-pro-plan-label{color:var(--pbe-gold-bright)!important}
+.pbe-pro-pitch p,.pbe-pro-feature span,.pbe-pro-auth-copy,.pbe-pro-renew{color:var(--pbe-muted)!important}
+.pbe-pro-feature strong,.pbe-pro-user-card strong{color:var(--pbe-paper-2)!important}
+.pbe-pro-price-card{border-color:rgba(212,175,55,.19)!important;background:linear-gradient(145deg,rgba(212,175,55,.075),rgba(245,241,235,.018))!important}
+.pbe-pro-price-card[data-plan="season"]{border-color:rgba(233,199,90,.42)!important;box-shadow:inset 0 2px 0 rgba(233,199,90,.45)!important}
+.pbe-pro-cta:not(.secondary),.pbe-pro-mini-cta{background:linear-gradient(135deg,var(--pbe-gold-bright),var(--pbe-gold))!important;border-color:var(--pbe-gold)!important;color:#17120a!important}
+.pbe-pro-cta.secondary{background:rgba(245,241,235,.035)!important;border-color:var(--pbe-line-strong)!important;color:var(--pbe-paper-2)!important}
+.pbe-pro-cta:hover,.pbe-pro-mini-cta:hover{filter:brightness(1.06)}
+.pbe-pro-email{background:#100d0a!important;border-color:var(--pbe-line-strong)!important;color:var(--pbe-paper)!important}.pbe-pro-email:focus{border-color:rgba(212,175,55,.72)!important;box-shadow:0 0 0 3px rgba(212,175,55,.09)!important}
+.pbe-pro-secure{color:var(--pbe-dim)!important}
 
 @media(max-width:850px){
   .cast4-hero-inner{padding-left:12px!important;padding-right:12px!important}
@@ -53,28 +162,16 @@
 
 @media(max-width:520px){
   .cast4-hero{overflow:hidden!important}
-  .cast4-hero-inner{padding-left:8px!important;padding-right:8px!important}
+  .cast4-hero-inner,.home5-inner{padding-left:8px!important;padding-right:8px!important}
   .cast4-scoreboard{grid-template-columns:minmax(0,1fr) minmax(70px,.62fr) minmax(0,1fr)!important;gap:2px!important;margin-top:20px!important}
-  .cast4-team-logo{width:48px!important;height:48px!important;margin-bottom:4px!important}
-  .cast4-team-abbr{font-size:27px!important}
-  .cast4-center{min-width:0!important}
-  .cast4-score{font-size:36px!important;gap:3px!important;letter-spacing:-.055em!important}
-  .cast4-period{font-size:9px!important}
-  .cast4-venue{max-width:86px;margin-left:auto!important;margin-right:auto!important;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-
-  .home5-inner{padding-left:8px!important;padding-right:8px!important}
+  .cast4-team-logo,.home5-logo{width:48px!important;height:48px!important}
+  .cast4-team-abbr,.home5-abbr{font-size:27px!important}
+  .cast4-score,.home5-score{font-size:36px!important;gap:3px!important;letter-spacing:-.045em!important}
   .home5-game{grid-template-columns:minmax(0,1fr) minmax(72px,.62fr) minmax(0,1fr)!important;gap:2px!important}
-  .home5-logo{width:48px!important;height:48px!important}
-  .home5-abbr{font-size:27px!important}
-  .home5-score{font-size:36px!important;gap:3px!important}
-  .home5-mid{min-width:0!important}
-  .home5-venue{max-width:90px;margin-left:auto!important;margin-right:auto!important;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-
+  .cast4-venue,.home5-venue{max-width:90px;margin-left:auto!important;margin-right:auto!important;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .pbe-pro-kicker{align-items:flex-start!important;flex-direction:column!important}
   .pbe-pro-kicker .pbe-paywall-label{padding-left:0;border-left:0}
   .pbe-pro-kicker .pbe-paywall-logo{width:138px}
-  .pbe3-player-name.pbe-player-name-enhanced{gap:7px}
-  .pbe-player-headshot{width:32px;height:32px;flex-basis:32px;border-radius:8px}
 }
 
 @media(max-width:390px){
