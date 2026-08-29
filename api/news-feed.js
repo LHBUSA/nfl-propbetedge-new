@@ -1,4 +1,5 @@
 const NEWS_UPSTREAM = 'https://propbet-news-api.sales-fd3.workers.dev';
+const IMG_PROXY = 'https://propbet-img-proxy.sales-fd3.workers.dev/?url=';
 
 function send(res,status,body){
   res.statusCode=status;
@@ -25,6 +26,14 @@ function arr(value){
   return [value].filter(Boolean);
 }
 
+function proxiedImage(raw){
+  const value=String(raw||'').trim();
+  if(!value)return null;
+  if(value.startsWith(IMG_PROXY)||value.startsWith('/')||value.includes('propbetedge.ai'))return value;
+  if(!/^https?:\/\//i.test(value))return null;
+  return IMG_PROXY+encodeURIComponent(value);
+}
+
 function article(row){
   const take=row?.take || row?.analysis || row?.ai_take || {};
   const teams=arr(row?.take_teams ?? row?.affected_teams ?? row?.teams ?? take?.teams);
@@ -35,12 +44,17 @@ function article(row){
   const summary=row?.summary ?? row?.description ?? row?.dek ?? row?.excerpt ?? row?.take_summary ?? take?.summary ?? '';
   const slug=row?.slug ?? null;
   const url=row?.url ?? row?.article_url ?? row?.link ?? (slug?`https://propbetedge.ai/news/nfl/${slug}`:null);
+  const rawImage=row?.image_url ?? row?.imageUrl ?? row?.featured_image ?? row?.featuredImage ?? row?.thumbnail_url ?? row?.thumbnail ?? row?.image?.url ?? row?.image?.href ?? take?.image_url ?? null;
   return {
     id: row?.id ?? row?.news_id ?? slug ?? url ?? `${title}|${row?.published_at||''}`,
     title,
     summary,
     url,
     slug,
+    image_url: proxiedImage(rawImage),
+    original_image_url: rawImage || null,
+    image_alt: row?.image_alt ?? row?.imageAlt ?? title ?? null,
+    image_credit: row?.image_credit ?? row?.imageCredit ?? row?.photo_credit ?? row?.photoCredit ?? null,
     source: row?.source ?? row?.publisher ?? row?.source_name ?? null,
     author: row?.author ?? null,
     published_at: row?.published_at ?? row?.publishedAt ?? row?.date ?? row?.created_at ?? null,
@@ -55,6 +69,7 @@ function article(row){
     provenance: {
       semantics: 'NEWS',
       upstream: 'propbet-news-api',
+      image_transport: rawImage ? 'propbet-img-proxy' : null,
       sport: row?.sport ?? 'nfl'
     }
   };
@@ -94,6 +109,7 @@ export default async function handler(req,res){
         semantics:'NEWS',
         source:'propbet-news-api',
         count:rows.length,
+        image_count:rows.filter(row=>row.image_url).length,
         articles:rows,
         fetched_at:new Date().toISOString()
       });
