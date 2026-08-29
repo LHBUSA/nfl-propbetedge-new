@@ -1,14 +1,16 @@
+/* PropBetEdge NFL — magic link landing.
+ * Exchanges the Worker-signed magic JWT for a session JWT, then writes ONE
+ * host-only session cookie and purges every historical `pbe_nfl_session`
+ * variant (host-only and `.propbetedge.ai`) that could otherwise shadow it.
+ * Never logs the token. */
+
+import { sessionCookie, purgeCookies } from './_nfl-auth.js';
+
 const APP_ORIGIN = 'https://nfl.propbetedge.ai';
-const AUTH_WORKER = 'https://propbetedge-nfl-auth.sales-fd3.workers.dev';
-const COOKIE_NAME = 'pbe_nfl_session';
-const SESSION_MAX_AGE = 30 * 24 * 60 * 60;
+const DEFAULT_AUTH_WORKER = 'https://propbetedge-nfl-auth.sales-fd3.workers.dev';
 
-function sessionCookie(token) {
-  return `${COOKIE_NAME}=${token}; Path=/; Max-Age=${SESSION_MAX_AGE}; HttpOnly; Secure; SameSite=Lax`;
-}
-
-function clearLegacyDomainCookie() {
-  return `${COOKIE_NAME}=; Domain=.propbetedge.ai; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax`;
+function safeReason(value, fallback) {
+  return String(value || fallback).replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 80) || fallback;
 }
 
 export default async function handler(req, res) {
@@ -21,10 +23,15 @@ export default async function handler(req, res) {
   }
 
   const token = typeof req.query?.token === 'string' ? req.query.token.trim() : '';
-  if (!token || token.length > 1200) return res.redirect(302, `${APP_ORIGIN}/?auth=invalid`);
+  if (!token || token.length > 1200) {
+    console.error('[auth-verify] stage=bad_request token_present=%s', Boolean(token));
+    return res.redirect(302, `${APP_ORIGIN}/?auth=invalid`);
+  }
+
+  const workerBase = String(process.env.NFL_AUTH_WORKER_URL || DEFAULT_AUTH_WORKER).trim().replace(/\/$/, '');
 
   try {
-    const response = await fetch(`${AUTH_WORKER}/v1/auth/exchange`, {
+    const response = await fetch(`${workerBase}/v1/auth/exchange`, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
@@ -37,19 +44,26 @@ export default async function handler(req, res) {
 
     const body = await response.json().catch(() => ({}));
     const sessionToken = String(body?.session_token || '');
-    if (!response.ok || !sessionToken || sessionToken.length < 40) {
-      const reason = String(body?.error || `exchange_${response.status}`).replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 80);
-      console.error('[auth-verify] exchange failed', response.status, reason);
-      return res.redirect(302, `${APP_ORIGIN}/?auth=${encodeURIComponent(reason || 'exchange_failed')}`);
+
+    if (!response.ok || sessionToken.length < 40) {
+      const reason = safeReason(body?.error, `exchange_${response.status}`);
+      console.error('[auth-verify] stage=exchange_failed status=%s reason=%s', response.status, reason);
+      return res.redirect(302, `${APP_ORIGIN}/?auth=${encodeURIComponent(reason)}`);
     }
 
-    res.setHeader('Set-Cookie', [
-      clearLegacyDomainCookie(),
-      sessionCookie(sessionToken),
-    ]);
+    /* Purge first, set last: the browser applies these in order, so the
+     * authoritative cookie is always the survivor. */
+    const cookies = [...purgeCookies(), sessionCookie(sessionToken)];
+    res.setHeader('Set-Cookie', cookies);
+
+    console.log(
+      '[auth-verify] stage=session_established exchange=200 token_bytes=%d cookies_emitted=%d',
+      sessionToken.length,
+      cookies.length
+    );
     return res.redirect(302, `${APP_ORIGIN}/?auth=complete&session=established`);
   } catch (error) {
-    console.error('[auth-verify] exchange unavailable', error?.message || error);
+    console.error('[auth-verify] stage=exchange_unavailable reason=%s', safeReason(error?.message, 'network'));
     return res.redirect(302, `${APP_ORIGIN}/?auth=exchange_unavailable`);
   }
 }

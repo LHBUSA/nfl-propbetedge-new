@@ -19,7 +19,12 @@ export default async function handler(req, res) {
   try {
     const auth = await getNflSession(req);
     const email = verifiedEmail(auth);
-    if (!email) return send(res, 401, { error: 'sign_in_required', entitlement: 'nfl_pro' });
+    if (!email) {
+      /* A degraded backend is not the same as a signed-out visitor. */
+      if (auth?.degraded) return send(res, 503, { error: 'entitlement_unavailable', stage: auth.stage });
+      return send(res, 401, { error: 'sign_in_required', entitlement: 'nfl_pro' });
+    }
+    if (auth.degraded) return send(res, 503, { error: 'entitlement_unavailable', stage: auth.stage });
     if (auth.pro !== true) return send(res, 403, { error: 'nfl_pro_required', entitlement: 'nfl_pro' });
 
     const upstreamResponse = await fetch(`${UPSTREAM}?event_id=${encodeURIComponent(eventId)}`, {

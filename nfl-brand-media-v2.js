@@ -237,39 +237,6 @@
     });
   }
 
-  function setPaywallMessage(text,type=''){
-    const el=document.getElementById('pbe-pro-message');
-    if(!el)return;
-    const cls=`pbe-pro-message ${type}`.trim();
-    if(el.className!==cls)el.className=cls;
-    if(el.textContent!==text)el.textContent=text||'';
-  }
-  async function brandedSignIn(button){
-    const input=document.getElementById('pbe-pro-email');
-    const email=String(input?.value||'').trim().toLowerCase();
-    if(!/^\S+@\S+\.\S+$/.test(email)){setPaywallMessage('Enter a valid email address.','error');return}
-    button.disabled=true;
-    setPaywallMessage('Sending your secure PropBetEdge sign-in link with Resend…');
-    try{
-      const response=await fetch('/api/auth-email',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email})});
-      const payload=await response.json().catch(()=>({}));
-      if(!response.ok)throw new Error(payload?.error||'Resend email delivery is unavailable.');
-      if(payload?.provider!=='resend')throw new Error('Resend email transport is not active.');
-      setPaywallMessage('Check your inbox. Your PropBetEdge NFL sign-in link was sent with Resend.','success');
-    }catch(error){
-      setPaywallMessage(error?.message||'Unable to send the Resend sign-in email.','error');
-    }finally{button.disabled=false}
-  }
-  function installAuthIntercept(){
-    if(document.documentElement.dataset.pbeAuthInterceptV2==='1')return;
-    document.documentElement.dataset.pbeAuthInterceptV2='1';
-    document.addEventListener('click',event=>{
-      const button=event.target?.closest?.('#pbe-pro-signin');
-      if(!button)return;
-      event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();brandedSignIn(button);
-    },true);
-  }
-
   function scan(){
     brandPaywall();
     repairScheduleLogos();
@@ -283,7 +250,6 @@
   function scheduleScan(){clearTimeout(scanTimer);scanTimer=setTimeout(scan,35)}
   function burstScan(){[0,120,420,1100,2400].forEach(delay=>setTimeout(scan,delay))}
   function init(){
-    installAuthIntercept();
     burstScan();
     new MutationObserver(scheduleScan).observe(document.getElementById('view-container')||document.documentElement,{childList:true,subtree:true});
     window.addEventListener('pbe:upgrades-ready',burstScan);

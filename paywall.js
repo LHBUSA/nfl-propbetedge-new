@@ -21,6 +21,7 @@
     loading: true,
     subscription: null,
     checkoutSyncing: false,
+    stage: null,
     error: null
   };
 
@@ -165,14 +166,28 @@
     return backdrop;
   }
 
+  /* This file owns auth STATE. paywall-funnel-v2.js owns the SIGNED-OUT
+   * checkout UI. Rendering signedOutHtml() here as well made the two fight over
+   * #pbe-pro-checkout on every mutation, wiping whatever email had been typed.
+   * signedOutHtml() is now only the fallback for when the funnel never loaded. */
   function renderModal() {
     const backdrop = ensureModal();
     const host = backdrop?.querySelector('#pbe-pro-checkout');
     if (!host) return;
-    const next = state.loading
-      ? `<div class="pbe-pro-market-empty">Checking your PropBetEdge NFL session and Pro access…</div>`
-      : (state.pro ? proUserHtml() : (state.user ? freeUserHtml() : signedOutHtml()));
-    if (setHtml(host,next)) wireModalActions();
+
+    if (state.loading) {
+      if (setHtml(host,`<div class="pbe-pro-market-empty">Checking your PropBetEdge NFL session and Pro access…</div>`)) wireModalActions();
+      return;
+    }
+    if (state.pro || state.user) {
+      if (setHtml(host,state.pro ? proUserHtml() : freeUserHtml())) wireModalActions();
+      return;
+    }
+    if (window.PBECheckoutFunnel?.apply) {
+      window.PBECheckoutFunnel.apply();
+      return;
+    }
+    if (setHtml(host,signedOutHtml())) wireModalActions();
   }
 
   function message(text,type='') {
@@ -261,7 +276,10 @@
     state.error = null;
     state.loading = false;
     applyState();
-    message('Signed out.','success');
+    /* Confirm against the server that the cookie is actually gone rather than
+     * trusting local state. */
+    await refreshAccess({ preserveOnError:false });
+    message(state.user ? 'Sign out did not clear the session. Please reload.' : 'Signed out.', state.user ? 'error' : 'success');
   }
 
   async function refreshAccess({ preserveOnError = true } = {}) {
@@ -284,6 +302,10 @@
       state.user = payload?.valid && payload?.user?.email ? { email: String(payload.user.email).toLowerCase() } : null;
       state.pro = Boolean(payload?.valid && payload?.pro === true);
       state.subscription = state.pro ? (payload?.subscription || null) : null;
+      /* /api/auth-session reports the stage it reached, so a backend failure is
+       * no longer indistinguishable from a genuinely signed-out visitor. */
+      state.stage = payload?.stage || null;
+      if (payload?.degraded) state.error = `Access check degraded (${payload?.error || payload?.stage || 'unknown'}).`;
     } catch (error) {
       state.error = error?.message || 'Session service unavailable.';
       if (!preserveOnError || !hadIdentity) {
@@ -453,14 +475,25 @@
     } catch (_) {}
   }
 
+  /* A successful magic-link return must NOT reopen the checkout modal. Doing so
+   * is what made a working sign-in look identical to a failed one, and it is
+   * half of the reported "click link -> still signed out" loop. */
   async function handleAuthReturn() {
     const params = new URLSearchParams(location.search);
-    if (params.get('auth') !== 'complete') return;
-    await refreshAccess({ preserveOnError:false });
-    open('auth-complete');
-    if (state.user) message(state.pro ? 'Signed in. NFL Pro is active.' : 'Signed in securely. Choose an NFL Pro plan when you are ready.','success');
-    else message('We could not confirm the new session. Request another secure sign-in link.','error');
-    cleanQuery(['auth']);
+    const auth = params.get('auth');
+    if (!auth) return;
+    cleanQuery(['auth','session']);
+
+    if (auth === 'complete') {
+      if (!state.user) await refreshAccess({ preserveOnError:false });
+      if (state.user) { applyState(); return; }
+      open('auth-incomplete');
+      message(state.error || 'We could not confirm the new session. Request another secure sign-in link.','error');
+      return;
+    }
+
+    open('auth-failed');
+    message(`Your sign-in link could not be used (${auth}). Request a new secure link.`,'error');
   }
 
   async function syncCheckoutSuccess() {

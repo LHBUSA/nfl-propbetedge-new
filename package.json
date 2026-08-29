@@ -6,5 +6,10 @@
   "dependencies": {
     "stripe": "^14.0.0"
   },
-  "engines": { "node": ">=18" }
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node --test tests/nfl-auth.test.mjs"
+  }
 }
