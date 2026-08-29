@@ -1,0 +1,46 @@
+name: Promote Latest NFL OS Manifest
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'page-loader-v*.js'
+      - '.github/workflows/sync-page-loader-universal.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Select newest versioned manifest
+        id: manifest
+        shell: bash
+        run: |
+          latest=$(ls -1 page-loader-v*.js 2>/dev/null | sort -V | tail -n 1)
+          if [ -z "$latest" ]; then
+            echo "No versioned loader manifest found."
+            exit 1
+          fi
+          echo "latest=$latest" >> "$GITHUB_OUTPUT"
+          echo "Promoting $latest"
+          cp "$latest" page-loader.js
+
+      - name: Commit active loader if changed
+        run: |
+          if git diff --quiet -- page-loader.js; then
+            echo "Active loader is already current."
+            exit 0
+          fi
+          git config user.name "PropBetEdge Build"
+          git config user.email "sales@localhomebuyersusa.com"
+          git add page-loader.js
+          git commit -m "Promote latest NFL OS page manifest"
+          git push origin HEAD:main
