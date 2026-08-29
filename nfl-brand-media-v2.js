@@ -244,26 +244,20 @@
     if(el.className!==cls)el.className=cls;
     if(el.textContent!==text)el.textContent=text||'';
   }
-  async function supabaseFallback(email){
-    const client=window.PBEPro?.state?.client;
-    if(!client)throw new Error('Account service is unavailable.');
-    const {error}=await client.auth.signInWithOtp({email,options:{shouldCreateUser:true,emailRedirectTo:`${location.origin}/?auth=complete`}});
-    if(error)throw error;
-  }
   async function brandedSignIn(button){
     const input=document.getElementById('pbe-pro-email');
     const email=String(input?.value||'').trim().toLowerCase();
     if(!/^\S+@\S+\.\S+$/.test(email)){setPaywallMessage('Enter a valid email address.','error');return}
     button.disabled=true;
-    setPaywallMessage('Sending your secure PropBetEdge sign-in link…');
+    setPaywallMessage('Sending your secure PropBetEdge sign-in link with Resend…');
     try{
       const response=await fetch('/api/auth-email',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email})});
-      if(response.ok){setPaywallMessage('Check your inbox. Your PropBetEdge NFL sign-in link is on the way.','success');return}
-      await supabaseFallback(email);
-      setPaywallMessage('Check your inbox. Your secure NFL sign-in link is on the way.','success');
+      const payload=await response.json().catch(()=>({}));
+      if(!response.ok)throw new Error(payload?.error||'Resend email delivery is unavailable.');
+      if(payload?.provider!=='resend')throw new Error('Resend email transport is not active.');
+      setPaywallMessage('Check your inbox. Your PropBetEdge NFL sign-in link was sent with Resend.','success');
     }catch(error){
-      try{await supabaseFallback(email);setPaywallMessage('Check your inbox. Your secure NFL sign-in link is on the way.','success')}
-      catch(fallbackError){setPaywallMessage(fallbackError?.message||error?.message||'Unable to send the sign-in link.','error')}
+      setPaywallMessage(error?.message||'Unable to send the Resend sign-in email.','error');
     }finally{button.disabled=false}
   }
   function installAuthIntercept(){
