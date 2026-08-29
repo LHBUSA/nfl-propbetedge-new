@@ -41,7 +41,7 @@ jobs:
             exit 1
           fi
 
-      - name: Forbid retired fake-live runtime imports
+      - name: Forbid retired fake-live and rejected shell modules
         shell: bash
         run: |
           set -euo pipefail
@@ -58,10 +58,11 @@ jobs:
             'js/components/search.js'
             'js/app.js'
             'game-center-v2.js'
+            'dashboard-v4.js'
           )
           for token in "${banned[@]}"; do
             if grep -Fq "$token" index.html || grep -Fq "$token" page-loader.js; then
-              echo "Retired runtime import found: $token"
+              echo "Retired/rejected runtime import found: $token"
               exit 1
             fi
           done
@@ -84,12 +85,14 @@ jobs:
             test -s "$file" || { echo "Missing archive asset: $file"; exit 1; }
           done
 
-      - name: Require active first-class product modules
+      - name: Require active broadcast-first product modules
         shell: bash
         run: |
           set -euo pipefail
           required=(
-            dashboard-v4.js
+            dashboard-v5.js
+            sports-shell-v1.js
+            pbecast-v4.js
             games-v2.js
             team-research-v3.js
             prop-board-v3.js
@@ -100,7 +103,6 @@ jobs:
             sgp-lab-v2.js
             usage-v2.js
             propchain-v2.js
-            pbecast-v4.js
             news-intelligence-v2.js
             newsroom-v2.js
             player-research-v2.js
@@ -114,12 +116,14 @@ jobs:
               exit 1
             fi
           done
+          test -s dashboard-v5.css
+          test -s sports-shell-v1.css
+          test -s pbecast-v4.css
 
       - name: Require live PBEcast transport and visuals
         shell: bash
         run: |
           set -euo pipefail
-          test -s pbecast-v4.css
           test -s api/nfl-live.js
           grep -Fq 'Full Play-by-Play' pbecast-v4.js
           grep -Fq 'current_drive' pbecast-v4.js
@@ -128,6 +132,17 @@ jobs:
           grep -Fq 'espn_cdn_gamepackage' api/nfl-live.js
           grep -Fq "return'LIVE'" api/nfl-live.js
           grep -Fq "transport:'poll'" api/nfl-live.js
+
+      - name: Require sports broadcast hierarchy
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq 'pbes-scorebar' sports-shell-v1.js
+          grep -Fq 'PBEcast' sports-shell-v1.js
+          grep -Fq 'Tonight in the NFL' dashboard-v5.js
+          grep -Fq 'FEATURED GAME' dashboard-v5.js
+          grep -Fq 'headshot' dashboard-v5.js
+          grep -Fq 'PBEcastV4' dashboard-v5.js
 
       - name: Require premium and newsroom server gates
         shell: bash
