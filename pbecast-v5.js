@@ -13,7 +13,6 @@
 
   const arr=v=>Array.isArray(v)?v:[];
   const esc=v=>String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-  const num=v=>{const n=Number(v);return Number.isFinite(n)?n:null};
 
   function activeDetail(){const v4=V4();const s=v4?.state;return s?.activeId?s.details?.[s.activeId]||null:null}
   function semantics(detail){return String(detail?.source?.semantics||detail?.game?.status?.semantics||'UNAVAILABLE').toUpperCase()}
@@ -25,7 +24,7 @@
     return{age,label:age<2?'just now':age<60?`${age}s ago`:`${Math.floor(age/60)}m ago`};
   }
   function playerCount(detail){
-    const ids=new Set();arr(detail?.player_stats).forEach(tb=>arr(tb?.groups).forEach(g=>arr(g?.athletes).forEach(r=>{const a=r?.athlete||{};ids.add(String(a.id||a.name||Math.random))})));
+    const ids=new Set();arr(detail?.player_stats).forEach((tb,tbi)=>arr(tb?.groups).forEach((g,gi)=>arr(g?.athletes).forEach((r,ri)=>{const a=r?.athlete||{};ids.add(String(a.id||a.name||`${tbi}:${gi}:${ri}`))})));
     return [...ids].filter(x=>x&&x!=='undefined').length;
   }
   function coverage(detail){
