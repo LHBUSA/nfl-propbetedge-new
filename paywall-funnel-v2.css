@@ -1,0 +1,22 @@
+/* PropBetEdge NFL — plan-first checkout funnel v2 */
+.pbe-funnel-head{margin-bottom:14px}
+.pbe-funnel-head>span{display:block;color:#d8b75b;font:800 9px/1 'DM Mono',monospace;letter-spacing:.14em;text-transform:uppercase}
+.pbe-funnel-head>strong{display:block;margin-top:7px;color:#fff;font:900 30px/.95 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:-.015em}
+.pbe-funnel-head>p{margin:9px 0 0;color:#9b958a;font-size:11px;line-height:1.55}
+.pbe-funnel-plans{margin-top:4px}
+.pbe-funnel-plan{position:relative;width:100%;min-height:190px;text-align:left;cursor:pointer;appearance:none;color:inherit;transition:.16s ease}
+.pbe-funnel-plan:hover{transform:translateY(-2px);border-color:rgba(216,183,91,.34);background:linear-gradient(145deg,rgba(216,183,91,.095),rgba(255,255,255,.022))}
+.pbe-funnel-plan.selected{border-color:rgba(216,183,91,.58)!important;background:radial-gradient(circle at 100% 0,rgba(216,183,91,.14),transparent 42%),linear-gradient(145deg,rgba(216,183,91,.10),rgba(255,255,255,.025));box-shadow:0 14px 36px rgba(216,183,91,.10),inset 0 1px 0 rgba(255,255,255,.04)}
+.pbe-funnel-check{position:absolute;top:12px;right:12px;width:26px;height:26px;display:grid;place-items:center;border:1px solid rgba(216,183,91,.24);border-radius:50%;background:rgba(0,0,0,.24);color:#d8b75b;font-weight:900}
+.pbe-funnel-plan.selected .pbe-funnel-check{background:#d8b75b;color:#151108;border-color:#d8b75b}
+.pbe-funnel-select-copy{margin-top:14px;color:#898274;font:800 8px/1 'DM Mono',monospace;text-transform:uppercase;letter-spacing:.08em}
+.pbe-funnel-plan.selected .pbe-funnel-select-copy{color:#e9c967}
+.pbe-funnel-step{display:grid;grid-template-columns:32px 1fr;gap:10px;align-items:start;margin-top:16px;padding:12px 13px;border:1px solid rgba(255,255,255,.075);border-radius:10px;background:rgba(255,255,255,.018)}
+.pbe-funnel-step>span{width:32px;height:32px;display:grid;place-items:center;border-radius:9px;background:rgba(216,183,91,.10);color:#d8b75b;font:900 13px/1 'DM Mono',monospace}
+.pbe-funnel-step b{display:block;color:#ede8df;font-size:11px}
+.pbe-funnel-step small{display:block;margin-top:4px;color:#777166;font-size:9px;line-height:1.45}
+.pbe-funnel-auth{margin-top:11px!important}
+#pbe-funnel-continue{min-height:48px;font-size:9px}
+.pbe-pro-checkout{justify-content:flex-start!important}
+@media(max-width:760px){.pbe-funnel-head>strong{font-size:26px}.pbe-funnel-plan{min-height:160px}.pbe-funnel-step{grid-template-columns:28px 1fr}.pbe-funnel-step>span{width:28px;height:28px}}
+@media(max-width:560px){.pbe-funnel-plans{grid-template-columns:1fr!important}.pbe-funnel-plan{min-height:auto}.pbe-pro-modal-grid{grid-template-columns:1fr!important}.pbe-pro-pitch{border-right:0!important;border-bottom:1px solid rgba(255,255,255,.07)!important}}
