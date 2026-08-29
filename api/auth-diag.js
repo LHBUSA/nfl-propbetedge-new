@@ -75,18 +75,61 @@ export default async function handler(req, res) {
     }
   }
 
-  /* 2. Does Supabase accept this deployment's key? No row data is returned. */
-  if (secret) {
+  /* 2. Does Supabase accept this deployment's key? No row data is returned.
+   *
+   * Probes BOTH the SUPABASE_URL env value and the hardcoded project URL that
+   * api/stripe-webhook.js already uses, because a wrong env URL and a rotated
+   * key produce the same 401 and are otherwise indistinguishable. The project
+   * URL and Supabase's own error text are not secrets; the key never is. */
+  const envBase = String(process.env.SUPABASE_URL || '').trim().replace(/\/$/, '');
+  const bases = [
+    { label: 'env', url: envBase || null },
+    { label: 'repo_default', url: DEFAULT_SUPABASE_URL },
+  ];
+
+  async function probeSupabase(url) {
     try {
-      const base = String(process.env.SUPABASE_URL || DEFAULT_SUPABASE_URL).replace(/\/$/, '');
-      const response = await fetch(`${base}/rest/v1/nfl_subscriptions?select=status&limit=1`, {
+      const response = await fetch(`${url}/rest/v1/nfl_subscriptions?select=status&limit=1`, {
         headers: { apikey: secret, authorization: `Bearer ${secret}`, accept: 'application/json' },
         cache: 'no-store',
       });
-      report.entitlement_store.status = response.status;
-      report.entitlement_store.reachable = response.ok;
+      const detail = response.ok ? '' : await response.text().catch(() => '');
+      let message = '';
+      if (detail) {
+        try { const body = JSON.parse(detail); message = String(body?.message || body?.msg || body?.error || detail); }
+        catch (_) { message = detail; }
+      }
+      return { status: response.status, ok: response.ok, message: message.slice(0, 160) || null };
     } catch (error) {
-      report.entitlement_store.error = String(error?.message || 'supabase_unreachable').slice(0, 120);
+      return { status: null, ok: false, message: String(error?.message || 'unreachable').slice(0, 160) };
+    }
+  }
+
+  if (secret) {
+    /* Shape only, never the value. Distinguishes a legacy service_role JWT from
+     * the newer sb_secret_ format, which is what a key rotation looks like. */
+    report.service_role_key_format = secret.startsWith('eyJ') ? 'legacy_jwt'
+      : secret.startsWith('sb_secret_') ? 'sb_secret'
+      : secret.startsWith('sb_publishable_') ? 'sb_publishable_WRONG_KEY'
+      : 'unrecognized';
+
+    report.entitlement_store.probes = {};
+    for (const { label, url } of bases) {
+      if (!url) { report.entitlement_store.probes[label] = { configured: false }; continue; }
+      const result = await probeSupabase(url);
+      report.entitlement_store.probes[label] = { url, ...result };
+      if (result.ok && !report.entitlement_store.reachable) {
+        report.entitlement_store.reachable = true;
+        report.entitlement_store.status = result.status;
+        report.entitlement_store.working_base = url;
+      }
+    }
+    if (!report.entitlement_store.reachable) {
+      const primary = report.entitlement_store.probes.env?.configured === false
+        ? report.entitlement_store.probes.repo_default
+        : report.entitlement_store.probes.env;
+      report.entitlement_store.status = primary?.status ?? null;
+      report.entitlement_store.error = primary?.message || 'supabase_rejected_key';
     }
   }
 
