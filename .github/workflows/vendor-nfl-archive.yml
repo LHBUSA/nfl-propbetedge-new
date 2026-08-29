@@ -34,6 +34,21 @@ jobs:
           curl -fsSL "$base/js/views/stats.js?v=$stamp" -o archive/stats-2025.js
           curl -fsSL "$base/js/views/standings.js?v=$stamp" -o archive/standings-2025.js
 
+      - name: Sanitize non-product random DOM identifier
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('archive/utils.js')
+          text = p.read_text()
+          old = "var uid = (num||'') + (team||'') + Math.random().toString(36).slice(2,5);"
+          new = "var uid = (num||'') + (team||'') + String((window.__pbeArchiveUid = (window.__pbeArchiveUid || 0) + 1));"
+          if old not in text:
+              raise SystemExit('Expected archived UID expression not found')
+          p.write_text(text.replace(old, new))
+          PY
+
       - name: Verify only intended archive assets were captured
         shell: bash
         run: |
@@ -47,7 +62,7 @@ jobs:
           test -s archive/stats-2025.js
           test -s archive/standings-2025.js
           if grep -R --line-number -E 'live-data\.js|views/pbecast|views/propchain|Math\.random' archive; then
-            echo 'Unexpected live/synthetic behavior found in archive vendor set.'
+            echo 'Unexpected live/synthetic/random behavior found in archive vendor set.'
             exit 1
           fi
 
