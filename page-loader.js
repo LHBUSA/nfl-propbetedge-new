@@ -4,9 +4,10 @@
 (() => {
   'use strict';
 
-  const VERSION = '20260828f1';
+  const VERSION = '20260828g1';
   const upgrades = [
-    { css:'./teams-v2.css', js:'./teams-v2.js' }
+    { css:'./teams-v2.css', js:'./teams-v2.js' },
+    { css:'./stats-v2.css', js:'./stats-v2.js' }
   ];
 
   function addCss(href) {
