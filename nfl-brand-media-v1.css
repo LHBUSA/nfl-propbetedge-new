@@ -17,23 +17,52 @@
 }
 
 html,body{background:var(--pbe-ink)!important;color:var(--pbe-paper)!important}
-body{
-  background:
-    radial-gradient(circle at 82% 3%,rgba(212,175,55,.10),transparent 31rem),
-    radial-gradient(circle at 12% 20%,rgba(193,39,61,.055),transparent 26rem),
-    linear-gradient(180deg,var(--pbe-ink) 0%,#100e0b 48rem,#0d0b09 100%)!important;
+body{position:relative;z-index:0;background:var(--pbe-ink)!important;min-height:100vh}
+/* Same atmospheric system as propbetedge.ai/news: a viewport-locked stadium image,
+   not background-attachment:fixed, so phones avoid scroll-jitter repaint cost. */
+body::before{
+  content:'';
+  position:fixed;
+  inset:0;
+  background-image:url('https://images.unsplash.com/photo-1666366330282-b11566b272cf?w=2400&q=70&auto=format&fit=crop');
+  background-size:cover;
+  background-position:center;
+  background-repeat:no-repeat;
+  opacity:.18;
+  filter:blur(.5px) grayscale(8%) brightness(1.1) saturate(110%);
+  z-index:-3;
+  pointer-events:none;
+  will-change:transform;
+  transform:translateZ(0);
+  -webkit-transform:translateZ(0);
+  -webkit-backface-visibility:hidden;
+}
+body::after{
+  content:'';
+  position:fixed;
+  inset:0;
+  background-image:
+    radial-gradient(ellipse 60% 40% at 15% 5%,rgba(212,175,55,.08),transparent 50%),
+    radial-gradient(ellipse 50% 35% at 85% 15%,rgba(193,39,61,.06),transparent 55%),
+    radial-gradient(ellipse 40% 30% at 50% 100%,rgba(212,175,55,.04),transparent 60%);
+  pointer-events:none;
+  z-index:-2;
+  will-change:transform;
+  transform:translateZ(0);
+  -webkit-transform:translateZ(0);
 }
 .main-content,.view-container{background:transparent!important}
 
 /* ---------- PropBetEdge sports chrome ---------- */
 #pbe-sports-shell{
-  background:rgba(20,17,13,.97)!important;
+  background:rgba(20,17,13,.90)!important;
   border-bottom-color:var(--pbe-line-strong)!important;
   box-shadow:0 12px 38px rgba(0,0,0,.34)!important;
   backdrop-filter:blur(20px) saturate(120%);
+  -webkit-backdrop-filter:blur(20px) saturate(120%);
 }
 .pbes-top{
-  background:linear-gradient(90deg,rgba(20,17,13,.99),rgba(29,25,20,.96),rgba(20,17,13,.99))!important;
+  background:linear-gradient(90deg,rgba(20,17,13,.94),rgba(29,25,20,.90),rgba(20,17,13,.94))!important;
   border-bottom-color:var(--pbe-line)!important;
 }
 .pbes-brand-logo{filter:drop-shadow(0 6px 18px rgba(0,0,0,.34))}
@@ -48,12 +77,12 @@ body{
 .pbes-live-pill.is-live{color:#ff9aa7!important;border-color:rgba(230,57,70,.38)!important;background:rgba(193,39,61,.12)!important}
 .pbes-live-pill.is-live:before{background:var(--pbe-crimson-bright)!important;box-shadow:0 0 12px rgba(230,57,70,.7)!important}
 
-.pbes-news{background:#18140f!important;border-bottom-color:var(--pbe-line)!important}
+.pbes-news{background:rgba(24,20,15,.92)!important;border-bottom-color:var(--pbe-line)!important;backdrop-filter:blur(14px)}
 .pbes-news-badge{background:rgba(212,175,55,.12)!important;border-right-color:rgba(212,175,55,.25)!important;color:var(--pbe-gold-bright)!important}
 .pbes-news-item{border-right-color:var(--pbe-line)!important;color:var(--pbe-muted)!important}
 .pbes-news-item strong{color:var(--pbe-paper-2)!important}.pbes-news-item span{color:var(--pbe-dim)!important}
 
-.pbes-scorebar{background:#17130f!important;border-bottom-color:var(--pbe-line-strong)!important}
+.pbes-scorebar{background:rgba(23,19,15,.94)!important;border-bottom-color:var(--pbe-line-strong)!important;backdrop-filter:blur(14px)}
 .pbes-score-label{color:var(--pbe-muted)!important;border-right-color:var(--pbe-line)!important}
 .pbes-score-label.live{color:#fff!important;background:linear-gradient(135deg,var(--pbe-crimson-bright),#9d1f32)!important}
 .pbes-score{border-right-color:var(--pbe-line)!important}
@@ -63,8 +92,8 @@ body{
 .pbes-score-nav{background:#120f0c!important;color:var(--pbe-muted)!important;border-color:var(--pbe-line)!important}
 .pbes-score-nav:hover{background:#262018!important;color:var(--pbe-gold-bright)!important}
 
-.pbes-primary,.pbes-research{background:#120f0c!important;border-bottom-color:var(--pbe-line)!important}
-.pbes-research{background:#17130f!important}
+.pbes-primary,.pbes-research{background:rgba(18,15,12,.93)!important;border-bottom-color:var(--pbe-line)!important;backdrop-filter:blur(14px)}
+.pbes-research{background:rgba(23,19,15,.93)!important}
 .pbes-nav-label{color:var(--pbe-dim)!important}
 .pbes-nav-btn{color:var(--pbe-muted)!important}
 .pbes-nav-btn:hover{color:var(--pbe-paper)!important;background:rgba(212,175,55,.055)!important}
@@ -77,8 +106,10 @@ body{
 .home5-section,.cast4-panel,.cast4-rail-wrap,.pbe3-panel,.pbe3-desk,.pbe16-panel,.pbe16-model,.pbe17-section,.pbe26-card,.pbe26-section,
 .pbe-v2-panel,.pbe-pro-price-card,.pbe-news2-panel,.pbe-match2-panel,.pbe-usage2-panel,.pbe-game2-panel{
   border-color:var(--pbe-line)!important;
-  background:linear-gradient(145deg,rgba(42,36,28,.90),rgba(20,17,13,.94))!important;
+  background:linear-gradient(145deg,rgba(42,36,28,.86),rgba(20,17,13,.90))!important;
   box-shadow:0 16px 42px rgba(0,0,0,.18),inset 0 1px 0 rgba(245,241,235,.025)!important;
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
 }
 .home5-head,.cast4-panel-head,.cast4-rail-head,.pbe3-panel-head,.pbe16-panel-head,.pbe17-section-head,.pbe26-section-head{border-bottom-color:var(--pbe-line)!important;background:rgba(245,241,235,.018)!important}
 .home5-head strong,.cast4-panel-head strong,.cast4-rail-head strong,.pbe16-panel-head strong,.pbe17-section-head strong,.pbe26-section-head strong{color:var(--pbe-paper)!important}
@@ -90,8 +121,9 @@ body{
   background-image:
     radial-gradient(circle at 15% 22%,var(--h5-away,rgba(212,175,55,.08)),transparent 34%),
     radial-gradient(circle at 85% 22%,var(--h5-home,rgba(193,39,61,.06)),transparent 34%),
-    linear-gradient(180deg,rgba(29,25,20,.90),rgba(20,17,13,.97))!important;
+    linear-gradient(180deg,rgba(29,25,20,.80),rgba(20,17,13,.93))!important;
   box-shadow:0 30px 90px rgba(0,0,0,.34),inset 0 1px 0 rgba(245,241,235,.045)!important;
+  backdrop-filter:blur(8px);
 }
 .home5-state,.home5-btn,.home5-sit,.cast4-live-tag,.cast4-sit,.cast4-btn{background:rgba(29,25,20,.78)!important;border-color:var(--pbe-line-strong)!important;color:var(--pbe-paper-2)!important}
 .home5-btn:hover,.cast4-btn:hover{background:rgba(212,175,55,.09)!important;border-color:rgba(212,175,55,.26)!important}
@@ -161,6 +193,7 @@ body{
 }
 
 @media(max-width:520px){
+  body::before{opacity:.14;background-position:54% center}
   .cast4-hero{overflow:hidden!important}
   .cast4-hero-inner,.home5-inner{padding-left:8px!important;padding-right:8px!important}
   .cast4-scoreboard{grid-template-columns:minmax(0,1fr) minmax(70px,.62fr) minmax(0,1fr)!important;gap:2px!important;margin-top:20px!important}
