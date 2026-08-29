@@ -7,11 +7,12 @@ export default async function handler(req, res) {
 
   /* Supabase remains the identity/session issuer. Resend is the only customer-facing
    * email transport. There is intentionally no Supabase-delivery fallback. */
-  const enabled = Boolean(
-    process.env.RESEND_API_KEY &&
-    process.env.SUPABASE_SERVICE_ROLE_KEY &&
-    process.env.RESEND_FROM_EMAIL
-  );
+  const requirements = {
+    RESEND_API_KEY: Boolean(process.env.RESEND_API_KEY),
+    RESEND_FROM_EMAIL: Boolean(process.env.RESEND_FROM_EMAIL),
+    SUPABASE_SERVICE_ROLE_KEY: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY),
+  };
+  const enabled = Object.values(requirements).every(Boolean);
 
   if (req.method === 'GET') {
     return res.status(200).json({
@@ -19,6 +20,7 @@ export default async function handler(req, res) {
       provider: enabled ? 'resend' : 'unconfigured',
       auth_issuer: 'supabase',
       fallback: false,
+      requirements,
     });
   }
 
@@ -32,6 +34,7 @@ export default async function handler(req, res) {
       error: 'PropBetEdge email sign-in is temporarily unavailable.',
       provider: 'resend',
       fallback: false,
+      missing: Object.entries(requirements).filter(([, ok]) => !ok).map(([name]) => name),
     });
   }
 
