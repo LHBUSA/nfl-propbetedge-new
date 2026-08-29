@@ -1,0 +1,12 @@
+/* PropBetEdge NFL — global OS polish */
+.sidebar-nav .nav-group:first-child{padding-bottom:5px;border-bottom:1px solid rgba(255,255,255,.045)}
+.sidebar-nav .nav-group:nth-child(2){padding-top:1px}
+#nav-propboard,#nav-matchups,#nav-picks{font-weight:700!important}
+#nav-propboard .nav-badge,#nav-matchups .nav-badge{margin-left:auto}
+.pbe-v2-quicknav{max-width:min(760px,58vw);overflow:auto;scrollbar-width:none;padding:2px 0}.pbe-v2-quicknav::-webkit-scrollbar{display:none}.pbe-v2-quicknav button,.pbe-v2-quicknav a{flex:0 0 auto}
+.pbe-v2-commandbar{box-shadow:0 12px 35px rgba(0,0,0,.08)}
+.sidebar-foot{position:relative;overflow:hidden}.sidebar-foot:after{content:'PRO';position:absolute;right:-5px;bottom:-9px;color:rgba(216,183,91,.035);font:900 48px/.8 'Barlow Condensed',sans-serif;pointer-events:none}
+.sf-api{position:relative;z-index:1}
+.pbe-os-shortcut{display:inline-flex;align-items:center;gap:5px;margin-left:4px;color:#5b6877!important}.pbe-os-shortcut kbd{padding:3px 5px;border:1px solid rgba(255,255,255,.06);border-radius:4px;background:rgba(255,255,255,.014);color:#778493;font:700 5px/1 'DM Mono',monospace}
+@media(max-width:1180px){.pbe-v2-quicknav{max-width:50vw}}
+@media(max-width:900px){.pbe-v2-quicknav{display:none!important}.sidebar-nav .nav-group:first-child{border-bottom:0}.mobile-bottom-nav .mbn-item span{font-size:8px}}
