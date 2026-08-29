@@ -1,7 +1,7 @@
-/* PropBetEdge NFL — ordered page/product upgrade loader v18 */
+/* PropBetEdge NFL — ordered page/product upgrade loader v19 */
 (() => {
   'use strict';
-  const VERSION='20260829prod9';
+  const VERSION='20260829prod10';
   const upgrades=[
     {css:'./dashboard-v5.css',js:'./dashboard-v5.js'},
     {css:'./games-v2.css',js:'./games-v2.js'},
@@ -38,7 +38,14 @@
     {css:'./dashboard-v6.css',js:'./dashboard-v6.js'},
     {css:'./dashboard-v7.css',js:'./dashboard-v7.js'},
     {css:'./sports-shell-v3.css'},
-    {css:'./nfl-stadium-bg-v3.css',js:'./dashboard-v7-sanitize.js'}
+    {css:'./nfl-stadium-bg-v3.css',js:'./dashboard-v7-sanitize.js'},
+
+    /* Production authorities. Loaded last so legacy layers cannot reintroduce
+       the auth wall, PBEcast double-render, college-stadium treatment or raw labels. */
+    {css:'./paywall-funnel-v2.css',js:'./paywall-funnel-v2.js'},
+    {css:'./pbecast-v6.css',js:'./pbecast-v6.js'},
+    {css:'./stadium-selector-v1.css',js:'./stadium-selector-v1.js'},
+    {css:'./production-polish-v2.css',js:'./production-polish-v2.js'}
   ];
   function addCss(href){if(document.querySelector(`link[data-pbe-upgrade="${href}"]`))return;const link=document.createElement('link');link.rel='stylesheet';link.href=`${href}?v=${VERSION}`;link.dataset.pbeUpgrade=href;document.head.appendChild(link)}
   function addScript(src){return new Promise(resolve=>{if(!src)return resolve();if(document.querySelector(`script[data-pbe-upgrade="${src}"]`))return resolve();const script=document.createElement('script');script.src=`${src}?v=${VERSION}`;script.async=false;script.dataset.pbeUpgrade=src;script.onload=resolve;script.onerror=()=>{console.error('PBE product module failed to load',src);resolve()};document.body.appendChild(script)})}
