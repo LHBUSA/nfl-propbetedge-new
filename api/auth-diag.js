@@ -1,17 +1,4 @@
-/* PropBetEdge NFL — auth self-diagnosis.
- *
- * Proves the whole chain without ever emitting a secret or a token:
- *   worker_reachable   Worker answers /v1/auth/selftest
- *   secret_parity      the probe JWT the Worker signed verifies with THIS
- *                      deployment's SUPABASE_SERVICE_ROLE_KEY, i.e. both sides
- *                      hold the identical key under the identical namespace
- *   entitlement_store  Supabase REST accepts this deployment's key
- *   cookies            how many `pbe_nfl_session_v2` / legacy `pbe_nfl_session`
- *                      values this browser actually sent, and whether any of
- *                      them verifies as a session
- *
- * Nothing here echoes the probe token, the service-role key, the Resend key or
- * the Stripe key. Cookie values are reported only as counts and verdicts. */
+/* PropBetEdge NFL — auth self-diagnosis. */
 
 import {
   SESSION_COOKIE,
@@ -19,11 +6,24 @@ import {
   HMAC_NAMESPACE,
   readCookieValues,
   verifyWorkerJwt,
+  supabaseAdminHeaders,
 } from './_nfl-auth.js';
 
 const APP_ORIGIN = 'https://nfl.propbetedge.ai';
 const DEFAULT_AUTH_WORKER = 'https://propbetedge-nfl-auth.sales-fd3.workers.dev';
 const DEFAULT_SUPABASE_URL = 'https://tkmlnhmylqnttmnsnief.supabase.co';
+
+function decodeJwtPayload(token) {
+  try {
+    const parts = String(token || '').split('.');
+    if (parts.length !== 3) return null;
+    let s = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    while (s.length % 4) s += '=';
+    return JSON.parse(Buffer.from(s, 'base64').toString('utf8'));
+  } catch (_) {
+    return null;
+  }
+}
 
 export default async function handler(req, res) {
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -46,7 +46,6 @@ export default async function handler(req, res) {
     },
   };
 
-  /* 1. Worker reachability + secret parity via a non-session probe token. */
   let probeToken = '';
   try {
     const response = await fetch(`${workerBase}/v1/auth/selftest`, {
@@ -75,12 +74,6 @@ export default async function handler(req, res) {
     }
   }
 
-  /* 2. Does Supabase accept this deployment's key? No row data is returned.
-   *
-   * Probes BOTH the SUPABASE_URL env value and the hardcoded project URL that
-   * api/stripe-webhook.js already uses, because a wrong env URL and a rotated
-   * key produce the same 401 and are otherwise indistinguishable. The project
-   * URL and Supabase's own error text are not secrets; the key never is. */
   const envBase = String(process.env.SUPABASE_URL || '').trim().replace(/\/$/, '');
   const bases = [
     { label: 'env', url: envBase || null },
@@ -90,7 +83,7 @@ export default async function handler(req, res) {
   async function probeSupabase(url) {
     try {
       const response = await fetch(`${url}/rest/v1/nfl_subscriptions?select=status&limit=1`, {
-        headers: { apikey: secret, authorization: `Bearer ${secret}`, accept: 'application/json' },
+        headers: supabaseAdminHeaders(secret),
         cache: 'no-store',
       });
       const detail = response.ok ? '' : await response.text().catch(() => '');
@@ -106,12 +99,19 @@ export default async function handler(req, res) {
   }
 
   if (secret) {
-    /* Shape only, never the value. Distinguishes a legacy service_role JWT from
-     * the newer sb_secret_ format, which is what a key rotation looks like. */
     report.service_role_key_format = secret.startsWith('eyJ') ? 'legacy_jwt'
       : secret.startsWith('sb_secret_') ? 'sb_secret'
       : secret.startsWith('sb_publishable_') ? 'sb_publishable_WRONG_KEY'
       : 'unrecognized';
+
+    if (report.service_role_key_format === 'legacy_jwt') {
+      const payload = decodeJwtPayload(secret);
+      report.legacy_key_claims = {
+        ref: typeof payload?.ref === 'string' ? payload.ref : null,
+        role: typeof payload?.role === 'string' ? payload.role : null,
+        project_match: payload?.ref === 'tkmlnhmylqnttmnsnief',
+      };
+    }
 
     report.entitlement_store.probes = {};
     for (const { label, url } of bases) {
@@ -133,7 +133,6 @@ export default async function handler(req, res) {
     }
   }
 
-  /* 3. What this browser actually sent. Counts and verdicts only. */
   const header = req.headers?.cookie || '';
   for (const name of [SESSION_COOKIE, LEGACY_SESSION_COOKIE]) {
     const values = readCookieValues(header, name);
