@@ -92,7 +92,7 @@ jobs:
           set -euo pipefail
           required=(
             dashboard-v5.js
-            sports-shell-v1.js
+            sports-shell-v2.js
             pbecast-v4.js
             games-v2.js
             team-research-v3.js
