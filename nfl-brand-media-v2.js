@@ -20,12 +20,13 @@
     'new york jets':'NYJ','philadelphia eagles':'PHI','pittsburgh steelers':'PIT','san francisco 49ers':'SF',
     'seattle seahawks':'SEA','tampa bay buccaneers':'TB','tennessee titans':'TEN','washington commanders':'WSH'
   }));
+  const TEAM_PATH_ALIAS={WAS:'wsh'};
 
   const normalize=value=>String(value||'').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
-  const esc=value=>String(value??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 
   function teamLogo(abbr){
-    const clean=String(abbr||'').replace(/[^A-Za-z]/g,'').toLowerCase();
+    const raw=String(abbr||'').replace(/[^A-Za-z]/g,'').toUpperCase();
+    const clean=(TEAM_PATH_ALIAS[raw]||raw).toLowerCase();
     return clean?`https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/${clean}.png`:'';
   }
   function resolveAbbr(nameOrAbbr){
@@ -132,6 +133,17 @@
     });
   }
 
+  function repairArchiveCrests(){
+    document.querySelectorAll('.pbe6-podium svg,.pbe6-table svg,.pbe7-standings svg,.pbe11-sb svg').forEach(svg=>{
+      if(svg.dataset.pbeArchiveLogo==='1')return;
+      const abbr=String(svg.querySelector('text')?.textContent||'').trim().toUpperCase();
+      if(!/^[A-Z]{2,4}$/.test(abbr))return;
+      if(['OAK','STL','SD'].includes(abbr))return;
+      svg.dataset.pbeArchiveLogo='1';
+      svg.replaceWith(logoImg(abbr,abbr,false));
+    });
+  }
+
   function repairDirectPlayerImages(){
     document.querySelectorAll('.home5-player > img').forEach(img=>{
       if(img.dataset.pbeFallbackBound==='1')return;
@@ -154,6 +166,8 @@
 
   function cleanPlayerName(el){
     if(el.dataset.pbePlayerName)return el.dataset.pbePlayerName;
+    const explicit=el.dataset.player||el.closest?.('[data-player]')?.dataset?.player||'';
+    if(explicit){el.dataset.pbePlayerName=explicit;return explicit}
     const clone=el.cloneNode(true);
     clone.querySelectorAll('img,.pbe-player-media').forEach(node=>node.remove());
     const name=clone.textContent?.replace(/\s+/g,' ').trim()||'';
@@ -185,20 +199,41 @@
       '.pbe3-drawer-title',
       '.pbe16-model-player',
       '.pbe17-name',
-      '.pbe26-leader-name'
+      '.pbe26-leader-name',
+      '.pbe6-name',
+      '.pbe6-table td.player',
+      '.pbe9-member-name',
+      '.pbe10-feature-holder',
+      '.pbe10-card-holder',
+      '.pbe11-mvp [data-player]'
     ].join(','))];
   }
+
+  async function hydratePlayer(el){
+    if(!el||!el.isConnected||el.dataset.pbeMedia==='loading'||el.dataset.pbeMedia==='ready')return;
+    const name=cleanPlayerName(el);
+    if(!name)return;
+    el.dataset.pbeMedia='loading';
+    const src=await resolvePlayerImage(name);
+    if(!el.isConnected)return;
+    el.dataset.pbeMedia='ready';
+    el.classList.add('pbe-player-name-enhanced');
+    if(!el.querySelector(':scope > .pbe-player-headshot'))el.prepend(mediaImage(name,src));
+  }
+
+  const playerObserver='IntersectionObserver' in window?new IntersectionObserver(entries=>{
+    entries.forEach(entry=>{
+      if(!entry.isIntersecting)return;
+      playerObserver.unobserve(entry.target);
+      hydratePlayer(entry.target);
+    });
+  },{rootMargin:'220px 0px'}):null;
+
   function enhancePlayerMedia(){
-    playerTargets().forEach(async el=>{
-      if(el.dataset.pbeMedia==='loading'||el.dataset.pbeMedia==='ready')return;
-      const name=cleanPlayerName(el);
-      if(!name)return;
-      el.dataset.pbeMedia='loading';
-      const src=await resolvePlayerImage(name);
-      if(!el.isConnected)return;
-      el.dataset.pbeMedia='ready';
-      el.classList.add('pbe-player-name-enhanced');
-      if(!el.querySelector(':scope > .pbe-player-headshot'))el.prepend(mediaImage(name,src));
+    playerTargets().forEach(el=>{
+      if(el.dataset.pbeMedia==='loading'||el.dataset.pbeMedia==='ready'||el.dataset.pbeMedia==='queued')return;
+      if(playerObserver){el.dataset.pbeMedia='queued';playerObserver.observe(el)}
+      else hydratePlayer(el);
     });
   }
 
@@ -247,6 +282,7 @@
     repairPrimaryGameLogos();
     repairDashboardSlate();
     repairNamedTeamLogos();
+    repairArchiveCrests();
     repairDirectPlayerImages();
     enhancePlayerMedia();
   }
