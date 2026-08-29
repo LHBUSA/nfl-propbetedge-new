@@ -1,0 +1,36 @@
+name: Sync NFL OS Page Loader
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'page-loader-v2.js'
+      - '.github/workflows/sync-page-loader.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Promote ordered manifest
+        run: cp page-loader-v2.js page-loader.js
+
+      - name: Commit active loader if changed
+        run: |
+          if git diff --quiet -- page-loader.js; then
+            echo "Active loader already matches ordered manifest."
+            exit 0
+          fi
+          git config user.name "PropBetEdge Build"
+          git config user.email "sales@localhomebuyersusa.com"
+          git add page-loader.js
+          git commit -m "Sync active NFL OS page loader"
+          git push origin HEAD:main
