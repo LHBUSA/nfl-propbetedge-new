@@ -1,19 +1,62 @@
-/* PropBetEdge NFL — stadium selector + variable background authority */
+/* PropBetEdge NFL — stadium selector + visible background authority */
 :root{--pbe-stadium-image:url('https://commons.wikimedia.org/wiki/Special:Redirect/file/SofistadiumSept2022.jpg?width=2400')}
-body::before{background-image:var(--pbe-stadium-image)!important}
+
+/* The venue now lives on the actual document background. Previous pseudo-element
+   layers sat behind the document background and were then darkened again, which
+   made the stadium effectively invisible. */
+html{background:#090907!important}
+body{
+  min-height:100vh!important;
+  background-color:#090907!important;
+  background-image:
+    linear-gradient(180deg,rgba(5,6,7,.18) 0%,rgba(8,8,7,.28) 34%,rgba(9,8,6,.46) 72%,rgba(9,8,6,.62) 100%),
+    radial-gradient(ellipse 72% 34% at 18% 2%,rgba(216,183,91,.10),transparent 60%),
+    var(--pbe-stadium-image)!important;
+  background-size:cover,cover,cover!important;
+  background-position:center,center,center 44%!important;
+  background-repeat:no-repeat!important;
+  background-attachment:fixed!important;
+}
+
+/* Retire the old hidden negative-z stadium/overlay stack. */
+body::before,body::after{content:none!important;display:none!important;background:none!important}
+.main-content,#view-container,.view-container,.pbehome7{background:transparent!important}
+
+/* Product surfaces stay dark enough for contrast while allowing the venue to read. */
+.pbe7-hero{
+  background-color:rgba(12,11,9,.32)!important;
+  background-image:
+    linear-gradient(180deg,rgba(8,9,9,.20),rgba(9,8,6,.52)),
+    linear-gradient(90deg,color-mix(in srgb,var(--pbe7-away,#1d3150) 20%,transparent),transparent 38%,transparent 62%,color-mix(in srgb,var(--pbe7-home,#3a253c) 20%,transparent))!important;
+  backdrop-filter:blur(7px) saturate(112%)!important;
+  -webkit-backdrop-filter:blur(7px) saturate(112%)!important;
+}
+.pbe7-panel{background:linear-gradient(145deg,rgba(20,18,13,.78),rgba(11,10,8,.84))!important;backdrop-filter:blur(15px) saturate(108%)!important;-webkit-backdrop-filter:blur(15px) saturate(108%)!important}
+
 .pbe-stadium-control{position:fixed;right:18px;bottom:18px;z-index:4950;font-family:'DM Sans',system-ui,sans-serif}
-.pbe-stadium-toggle{min-height:42px;display:flex;align-items:center;gap:8px;padding:0 12px;border:1px solid rgba(216,183,91,.24);border-radius:12px;background:rgba(12,11,9,.90);color:#e9e2d6;box-shadow:0 16px 42px rgba(0,0,0,.34);backdrop-filter:blur(16px);cursor:pointer}
-.pbe-stadium-toggle>span{color:#d8b75b;font:800 8px/1 'DM Mono',monospace;letter-spacing:.10em;text-transform:uppercase}
+.pbe-stadium-toggle{min-height:44px;display:flex;align-items:center;gap:9px;padding:0 14px;border:1px solid rgba(216,183,91,.34);border-radius:12px;background:rgba(12,11,9,.84);color:#eee7dc;box-shadow:0 16px 42px rgba(0,0,0,.34);backdrop-filter:blur(16px);cursor:pointer}
+.pbe-stadium-toggle>span{color:#e5c45f;font:800 8px/1 'DM Mono',monospace;letter-spacing:.10em;text-transform:uppercase}
 .pbe-stadium-toggle>b{max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}
-.pbe-stadium-menu{position:absolute;right:0;bottom:52px;width:min(430px,calc(100vw - 24px));padding:12px;border:1px solid rgba(216,183,91,.20);border-radius:16px;background:rgba(12,11,9,.96);box-shadow:0 28px 80px rgba(0,0,0,.52);backdrop-filter:blur(20px);opacity:0;transform:translateY(8px) scale(.985);pointer-events:none;transition:.16s ease}
+.pbe-stadium-menu{position:absolute;right:0;bottom:54px;width:min(440px,calc(100vw - 24px));padding:12px;border:1px solid rgba(216,183,91,.26);border-radius:16px;background:rgba(12,11,9,.93);box-shadow:0 28px 80px rgba(0,0,0,.52);backdrop-filter:blur(20px);opacity:0;transform:translateY(8px) scale(.985);pointer-events:none;transition:.16s ease}
 .pbe-stadium-control.open .pbe-stadium-menu{opacity:1;transform:none;pointer-events:auto}
 .pbe-stadium-menu-head{padding:3px 4px 11px}
 .pbe-stadium-menu-head>span{display:block;color:#d8b75b;font:800 8px/1 'DM Mono',monospace;letter-spacing:.13em}
 .pbe-stadium-menu-head>strong{display:block;margin-top:6px;color:#fff;font:900 23px/.95 'Barlow Condensed',sans-serif;text-transform:uppercase}
-.pbe-stadium-menu-head>small{display:block;margin-top:6px;color:#817a6f;font-size:9px}
+.pbe-stadium-menu-head>small{display:block;margin-top:6px;color:#a69e91;font-size:9px}
 .pbe-stadium-grid{display:grid;gap:7px}
-.pbe-stadium-option{position:relative;min-height:72px;display:grid;grid-template-columns:94px minmax(0,1fr) 24px;align-items:center;gap:11px;padding:7px;border:1px solid rgba(255,255,255,.07);border-radius:10px;background:rgba(255,255,255,.018);color:inherit;text-align:left;cursor:pointer;overflow:hidden}
-.pbe-stadium-option:hover,.pbe-stadium-option.active{border-color:rgba(216,183,91,.30);background:rgba(216,183,91,.045)}
-.pbe-stadium-option>i{width:94px;height:58px;border-radius:8px;background-image:linear-gradient(rgba(0,0,0,.12),rgba(0,0,0,.34)),var(--thumb);background-size:cover;background-position:center;box-shadow:inset 0 0 0 1px rgba(255,255,255,.05)}
-.pbe-stadium-option span{min-width:0}.pbe-stadium-option span b{display:block;color:#eee8de;font-size:11px}.pbe-stadium-option span small{display:block;margin-top:4px;color:#797268;font:700 8px/1 'DM Mono',monospace;text-transform:uppercase}.pbe-stadium-option em{color:#d8b75b;font-style:normal;font-weight:900;text-align:center}
-@media(max-width:760px){.pbe-stadium-control{right:10px;bottom:74px}.pbe-stadium-toggle{min-height:40px}.pbe-stadium-toggle>b{display:none}.pbe-stadium-menu{bottom:48px}.pbe-stadium-option{grid-template-columns:82px minmax(0,1fr) 20px}.pbe-stadium-option>i{width:82px;height:54px}}
+.pbe-stadium-option{position:relative;min-height:78px;display:grid;grid-template-columns:108px minmax(0,1fr) 24px;align-items:center;gap:11px;padding:7px;border:1px solid rgba(255,255,255,.09);border-radius:10px;background:rgba(255,255,255,.025);color:inherit;text-align:left;cursor:pointer;overflow:hidden}
+.pbe-stadium-option:hover,.pbe-stadium-option.active{border-color:rgba(216,183,91,.38);background:rgba(216,183,91,.06)}
+.pbe-stadium-option>i{width:108px;height:64px;border-radius:8px;background-image:linear-gradient(rgba(0,0,0,.02),rgba(0,0,0,.18)),var(--thumb);background-size:cover;background-position:center;box-shadow:inset 0 0 0 1px rgba(255,255,255,.06)}
+.pbe-stadium-option span{min-width:0}.pbe-stadium-option span b{display:block;color:#f4eee5;font-size:11px}.pbe-stadium-option span small{display:block;margin-top:4px;color:#9b9387;font:700 8px/1 'DM Mono',monospace;text-transform:uppercase}.pbe-stadium-option em{color:#e3c35e;font-style:normal;font-weight:900;text-align:center}
+
+@media(max-width:760px){
+  body{
+    background-image:
+      linear-gradient(180deg,rgba(6,7,8,.28),rgba(9,8,6,.62)),
+      var(--pbe-stadium-image)!important;
+    background-size:cover,cover!important;
+    background-position:center,58% center!important;
+    background-attachment:scroll!important;
+  }
+  .pbe-stadium-control{right:10px;bottom:74px}.pbe-stadium-toggle{min-height:42px}.pbe-stadium-toggle>b{display:none}.pbe-stadium-menu{bottom:50px}.pbe-stadium-option{grid-template-columns:88px minmax(0,1fr) 20px}.pbe-stadium-option>i{width:88px;height:58px}
+}
