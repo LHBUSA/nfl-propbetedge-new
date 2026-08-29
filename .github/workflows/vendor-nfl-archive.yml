@@ -1,0 +1,65 @@
+name: Vendor Stable NFL Archive
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/vendor-nfl-archive.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  vendor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download frozen v5.5.33 archive-only assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p archive
+          base='https://nfl.propbetedge.ai'
+          stamp='202604071125'
+          curl -fsSL "$base/js/components/utils.js?v=$stamp" -o archive/utils.js
+          curl -fsSL "$base/js/data/teams.js?v=$stamp" -o archive/teams.js
+          curl -fsSL "$base/js/data/superbowls.js?v=$stamp" -o archive/superbowls.js
+          curl -fsSL "$base/js/data/hof.js?v=$stamp" -o archive/hof.js
+          curl -fsSL "$base/js/data/seasons.js?v=$stamp" -o archive/seasons.js
+          curl -fsSL "$base/js/data/records.js?v=$stamp" -o archive/records.js
+          curl -fsSL "$base/js/views/stats.js?v=$stamp" -o archive/stats-2025.js
+          curl -fsSL "$base/js/views/standings.js?v=$stamp" -o archive/standings-2025.js
+
+      - name: Verify only intended archive assets were captured
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s archive/utils.js
+          test -s archive/teams.js
+          test -s archive/superbowls.js
+          test -s archive/hof.js
+          test -s archive/seasons.js
+          test -s archive/records.js
+          test -s archive/stats-2025.js
+          test -s archive/standings-2025.js
+          if grep -R --line-number -E 'live-data\.js|views/pbecast|views/propchain|Math\.random' archive; then
+            echo 'Unexpected live/synthetic behavior found in archive vendor set.'
+            exit 1
+          fi
+
+      - name: Commit archive snapshot if changed
+        shell: bash
+        run: |
+          if git diff --quiet -- archive; then
+            echo 'Archive snapshot already current.'
+            exit 0
+          fi
+          git config user.name 'PropBetEdge Build'
+          git config user.email 'sales@localhomebuyersusa.com'
+          git add archive
+          git commit -m 'Vendor frozen NFL v5.5.33 archive datasets'
+          git push origin HEAD:main
