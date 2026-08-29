@@ -1,12 +1,61 @@
 const SUPABASE_URL = 'https://tkmlnhmylqnttmnsnief.supabase.co';
 const PBE_LOGO = 'https://propbetedge.ai/logo/pbe-full-400.png';
+const APP_ORIGIN = 'https://nfl.propbetedge.ai';
 
 export default async function handler(req, res) {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Cache-Control', 'no-store');
 
-  /* Supabase remains the identity/session issuer. Resend is the only customer-facing
-   * email transport. There is intentionally no Supabase-delivery fallback. */
+  const workerBase = String(process.env.NFL_AUTH_WORKER_URL || '').trim().replace(/\/$/, '');
+
+  /* Once NFL_AUTH_WORKER_URL is configured, Cloudflare is canonical and this
+   * Vercel endpoint becomes a same-origin gateway only. We never fall through
+   * to the legacy sender after a Worker request, which prevents duplicate mail. */
+  if (workerBase) return proxyToWorker(req, res, workerBase);
+
+  return legacyDirectAuth(req, res);
+}
+
+async function proxyToWorker(req, res, workerBase) {
+  if (req.method === 'GET') {
+    try {
+      const upstream = await fetch(`${workerBase}/health`, { headers: { accept: 'application/json' }, cache: 'no-store' });
+      const body = await upstream.json().catch(() => ({}));
+      return res.status(upstream.status).json({ ...body, transport: 'cloudflare-worker' });
+    } catch (error) {
+      console.error('[auth-email] Worker health failed', error?.message || error);
+      return res.status(503).json({ enabled: false, provider: 'resend', transport: 'cloudflare-worker', error: 'Auth service unavailable.' });
+    }
+  }
+
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', 'GET, POST');
+    return res.status(405).json({ error: 'Method not allowed.' });
+  }
+
+  const email = String(req.body?.email || '').trim().toLowerCase();
+  if (!/^\S+@\S+\.\S+$/.test(email) || email.length > 254) {
+    return res.status(400).json({ error: 'Enter a valid email address.' });
+  }
+
+  try {
+    const upstream = await fetch(`${workerBase}/v1/auth/email`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        origin: APP_ORIGIN,
+      },
+      body: JSON.stringify({ email }),
+    });
+    const body = await upstream.json().catch(() => ({}));
+    return res.status(upstream.status).json({ ...body, transport: 'cloudflare-worker' });
+  } catch (error) {
+    console.error('[auth-email] Worker request failed', error?.message || error);
+    return res.status(503).json({ error: 'PropBetEdge email sign-in is temporarily unavailable.', provider: 'resend', transport: 'cloudflare-worker' });
+  }
+}
+
+async function legacyDirectAuth(req, res) {
   const requirements = {
     RESEND_API_KEY: Boolean(process.env.RESEND_API_KEY),
     RESEND_FROM_EMAIL: Boolean(process.env.RESEND_FROM_EMAIL),
@@ -19,7 +68,8 @@ export default async function handler(req, res) {
       enabled,
       provider: enabled ? 'resend' : 'unconfigured',
       auth_issuer: 'supabase',
-      fallback: false,
+      transport: 'vercel-migration-fallback',
+      fallback: true,
       requirements,
     });
   }
@@ -33,13 +83,14 @@ export default async function handler(req, res) {
     return res.status(503).json({
       error: 'PropBetEdge email sign-in is temporarily unavailable.',
       provider: 'resend',
-      fallback: false,
+      transport: 'vercel-migration-fallback',
+      fallback: true,
       missing: Object.entries(requirements).filter(([, ok]) => !ok).map(([name]) => name),
     });
   }
 
   const email = String(req.body?.email || '').trim().toLowerCase();
-  const origin = safeOrigin(req.headers?.origin || req.headers?.referer) || 'https://nfl.propbetedge.ai';
+  const origin = safeOrigin(req.headers?.origin || req.headers?.referer) || APP_ORIGIN;
   const redirectTo = `${origin}/?auth=complete`;
 
   if (!/^\S+@\S+\.\S+$/.test(email) || email.length > 254) {
@@ -54,24 +105,17 @@ export default async function handler(req, res) {
         authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
         'content-type': 'application/json',
       },
-      body: JSON.stringify({
-        type: 'magiclink',
-        email,
-        options: { redirectTo },
-      }),
+      body: JSON.stringify({ type: 'magiclink', email, options: { redirectTo } }),
     });
 
     const linkPayload = await linkResponse.json().catch(() => ({}));
     if (!linkResponse.ok) {
-      console.warn('[auth-email] Supabase link issuance failed', linkResponse.status, linkPayload?.msg || linkPayload?.message || '');
+      console.warn('[auth-email] Supabase link issuance failed', linkResponse.status);
       return res.status(502).json({ error: 'Could not create a secure sign-in link.', provider: 'resend', fallback: false });
     }
 
     const actionLink = linkPayload?.action_link || linkPayload?.properties?.action_link;
-    if (!actionLink) {
-      console.warn('[auth-email] Supabase response did not include an action link.');
-      return res.status(502).json({ error: 'Could not create a secure sign-in link.', provider: 'resend', fallback: false });
-    }
+    if (!actionLink) return res.status(502).json({ error: 'Could not create a secure sign-in link.', provider: 'resend', fallback: false });
 
     const resendResponse = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -93,7 +137,7 @@ export default async function handler(req, res) {
       return res.status(502).json({ error: 'Could not send the sign-in email.', provider: 'resend', fallback: false });
     }
 
-    return res.status(200).json({ ok: true, provider: 'resend' });
+    return res.status(200).json({ ok: true, provider: 'resend', transport: 'vercel-migration-fallback' });
   } catch (error) {
     console.error('[auth-email] unexpected error', error?.message || error);
     return res.status(500).json({ error: 'Could not send the sign-in email.', provider: 'resend', fallback: false });
@@ -112,33 +156,9 @@ function safeOrigin(value) {
 
 function emailHtml(actionLink) {
   const href = escapeAttr(actionLink);
-  return `<!doctype html>
-<html>
-  <body style="margin:0;background:#14110d;color:#f5f1eb;font-family:Arial,Helvetica,sans-serif">
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#14110d;padding:34px 16px">
-      <tr><td align="center">
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:580px;background:#1d1914;border:1px solid rgba(212,175,55,.28);border-radius:18px;overflow:hidden">
-          <tr><td style="padding:28px 30px 18px;background:linear-gradient(135deg,#1d1914,#14110d)">
-            <img src="${PBE_LOGO}" width="190" alt="PropBetEdge" style="display:block;max-width:190px;height:auto">
-            <div style="margin-top:14px;color:#e9c75a;font-size:11px;font-weight:800;letter-spacing:2px;text-transform:uppercase">NFL Intelligence OS</div>
-          </td></tr>
-          <tr><td style="padding:8px 30px 32px">
-            <h1 style="margin:12px 0 10px;font-size:30px;line-height:1.1;color:#f5f1eb">Your secure NFL sign-in link</h1>
-            <p style="margin:0 0 22px;color:#b8b3a8;font-size:15px;line-height:1.6">Use this link to sign in to PropBetEdge NFL. Your NFL Pro entitlement remains tied to this account.</p>
-            <a href="${href}" style="display:inline-block;padding:14px 20px;border-radius:9px;background:#d4af37;color:#17120a;text-decoration:none;font-size:14px;font-weight:900">Open PropBetEdge NFL</a>
-            <p style="margin:24px 0 0;color:#7e7a72;font-size:11px;line-height:1.55">If you did not request this email, ignore it. For security, do not forward this sign-in link.</p>
-          </td></tr>
-        </table>
-      </td></tr>
-    </table>
-  </body>
-</html>`;
+  return `<!doctype html><html><body style="margin:0;background:#14110d;color:#f5f1eb;font-family:Arial,Helvetica,sans-serif"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#14110d;padding:34px 16px"><tr><td align="center"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:580px;background:#1d1914;border:1px solid rgba(212,175,55,.28);border-radius:18px;overflow:hidden"><tr><td style="padding:28px 30px 18px;background:linear-gradient(135deg,#1d1914,#14110d)"><img src="${PBE_LOGO}" width="190" alt="PropBetEdge" style="display:block;max-width:190px;height:auto"><div style="margin-top:14px;color:#e9c75a;font-size:11px;font-weight:800;letter-spacing:2px;text-transform:uppercase">NFL Intelligence OS</div></td></tr><tr><td style="padding:8px 30px 32px"><h1 style="margin:12px 0 10px;font-size:30px;line-height:1.1;color:#f5f1eb">Your secure NFL sign-in link</h1><p style="margin:0 0 22px;color:#b8b3a8;font-size:15px;line-height:1.6">Use this link to sign in to PropBetEdge NFL. Your NFL Pro entitlement remains tied to this account.</p><a href="${href}" style="display:inline-block;padding:14px 20px;border-radius:9px;background:#d4af37;color:#17120a;text-decoration:none;font-size:14px;font-weight:900">Open PropBetEdge NFL</a><p style="margin:24px 0 0;color:#7e7a72;font-size:11px;line-height:1.55">If you did not request this email, ignore it. For security, do not forward this sign-in link.</p></td></tr></table></td></tr></table></body></html>`;
 }
 
 function escapeAttr(value) {
-  return String(value || '')
-    .replace(/&/g, '&amp;')
-    .replace(/"/g, '&quot;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+  return String(value || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
