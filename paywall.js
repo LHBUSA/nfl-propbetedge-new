@@ -1,6 +1,6 @@
 /* PropBetEdge NFL Pro
  * Auth: Supabase passwordless email
- * Billing: Stripe Payment Link
+ * Billing: Stripe Checkout Session via /api/checkout
  * Entitlement: public.nfl_has_pro_access()
  * PBE model requests are rewritten through /api/pro-model and require NFL Pro.
  */
@@ -10,6 +10,10 @@
   const SUPABASE_URL = 'https://tkmlnhmylqnttmnsnief.supabase.co';
   const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_YkSuX7oXCxyTTMPtPqYIyw_qtbfA5c6';
   const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/fZueVd1rU0PYg8d8Ez7wA05';
+  const SEASON_PASS_PRICE_ID = 'price_1U9oVzF3CaVzg4ORnk5NiJFA';
+  /* Must match WEEKLY_PRICE_ID in api/checkout.js. Until the real id is filled
+   * in there, weekly checkout falls back to STRIPE_PAYMENT_LINK. */
+  const WEEKLY_PRICE_ID = 'price_REPLACE_ME_WEEKLY_999';
   const MODEL_UPSTREAM_PREFIX = 'https://nfl-api.propbetedge.ai/api/picks/pass';
 
   const state = {
@@ -187,12 +191,51 @@
     }
   }
 
-  function checkout() {
+  async function checkout(priceId) {
     if (!state.user) {
       open('signin');
       return;
     }
-    window.location.href = STRIPE_PAYMENT_LINK;
+
+    /* wireModalActions() hands this straight to addEventListener, so the first
+     * argument is a MouseEvent unless a caller passed a price explicitly. */
+    const price = typeof priceId === 'string' && priceId ? priceId : WEEKLY_PRICE_ID;
+
+    try {
+      const token = await getToken();
+      const response = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          accept: 'application/json',
+          ...(token ? { authorization: `Bearer ${token}` } : {})
+        },
+        cache: 'no-store',
+        body: JSON.stringify({ priceId: price })
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (response.ok && payload.url) {
+        window.location.href = payload.url;
+        return;
+      }
+
+      /* Weekly still has a working Payment Link, so a misconfigured endpoint
+       * must not block the checkout that currently converts. Remove this
+       * fallback once WEEKLY_PRICE_ID is the real Stripe id. */
+      if (price === WEEKLY_PRICE_ID) {
+        window.location.href = STRIPE_PAYMENT_LINK;
+        return;
+      }
+
+      message(payload.error ? `Checkout unavailable: ${payload.error}` : 'Checkout is unavailable right now. Please try again.');
+    } catch (_) {
+      if (price === WEEKLY_PRICE_ID) {
+        window.location.href = STRIPE_PAYMENT_LINK;
+        return;
+      }
+      message('Checkout could not be started. Please try again.');
+    }
   }
 
   async function signOut() {
@@ -423,6 +466,7 @@
 
   window.PBEPro = {
     state,
+    prices: { weekly: WEEKLY_PRICE_ID, seasonPass: SEASON_PASS_PRICE_ID },
     open,
     close,
     checkout,
