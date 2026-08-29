@@ -1,5 +1,6 @@
 const APP_ORIGIN = 'https://nfl.propbetedge.ai';
 const DEFAULT_AUTH_WORKER_URL = 'https://propbetedge-nfl-auth.sales-fd3.workers.dev';
+const VALID_PLANS = new Set(['season','weekly']);
 
 export default async function handler(req, res) {
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -11,12 +12,15 @@ export default async function handler(req, res) {
   }
 
   const token = typeof req.query?.token === 'string' ? req.query.token.trim() : '';
+  const plan = VALID_PLANS.has(String(req.query?.plan || '')) ? String(req.query.plan) : '';
   if (!token || token.length > 500) return res.redirect(302, `${APP_ORIGIN}/?auth=invalid`);
 
   const workerBase = String(process.env.NFL_AUTH_WORKER_URL || DEFAULT_AUTH_WORKER_URL).trim().replace(/\/$/, '');
 
   try {
-    const upstream = await fetch(`${workerBase}/v1/auth/verify?token=${encodeURIComponent(token)}`, {
+    const params = new URLSearchParams({ token });
+    if (plan) params.set('plan', plan);
+    const upstream = await fetch(`${workerBase}/v1/auth/verify?${params.toString()}`, {
       method: 'GET',
       headers: { accept: 'text/html,application/xhtml+xml' },
       redirect: 'manual',
