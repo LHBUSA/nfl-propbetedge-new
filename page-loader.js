@@ -4,11 +4,12 @@
 (() => {
   'use strict';
 
-  const VERSION = '20260828h1';
+  const VERSION = '20260828i1';
   const upgrades = [
     { css:'./teams-v2.css', js:'./teams-v2.js' },
     { css:'./stats-v2.css', js:'./stats-v2.js' },
-    { css:'./standings-v2.css', js:'./standings-v2.js' }
+    { css:'./standings-v2.css', js:'./standings-v2.js' },
+    { css:'./season-archive-v2.css', js:'./season-archive-v2.js' }
   ];
 
   function addCss(href) {
