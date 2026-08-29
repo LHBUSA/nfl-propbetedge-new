@@ -121,6 +121,24 @@ jobs:
           test -s sports-shell-v1.css
           test -s pbecast-v4.css
 
+      - name: Require custom production visual system
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s world-class-v1.css
+          grep -Fq 'world-class-v1.css' page-loader.js
+          required=(
+            assets/visuals/nfl-hero.webp
+            assets/visuals/pbecast-live.webp
+            assets/visuals/nfl-pro.webp
+          )
+          for file in "${required[@]}"; do
+            test -s "$file" || { echo "Missing custom visual asset: $file"; exit 1; }
+          done
+          grep -Fq "url('./assets/visuals/nfl-hero.webp')" world-class-v1.css
+          grep -Fq "url('./assets/visuals/pbecast-live.webp')" world-class-v1.css
+          grep -Fq "url('./assets/visuals/nfl-pro.webp')" world-class-v1.css
+
       - name: Require live PBEcast transport and visuals
         shell: bash
         run: |
