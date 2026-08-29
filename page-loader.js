@@ -1,10 +1,10 @@
-/* PropBetEdge NFL — ordered page/product upgrade loader v2
- * The shell stays stable. Product modules register here in dependency order.
+/* PropBetEdge NFL — ordered page/product upgrade loader v3
+ * Stable shell + versioned product modules. Loaded in dependency order.
  */
 (() => {
   'use strict';
 
-  const VERSION = '20260828s1';
+  const VERSION = '20260828t1';
   const upgrades = [
     { css:'./teams-v2.css', js:'./teams-v2.js' },
     { css:'./stats-v2.css', js:'./stats-v2.js' },
@@ -19,11 +19,13 @@
     { css:'./propchain-v2.css', js:'./propchain-v2.js' },
     { css:'./matchups-v2.css', js:'./matchups-v2.js' },
     { css:'./simulator-v2.css', js:'./simulator-v2.js' },
+    { css:'./sgp-lab-v2.css', js:'./sgp-lab-v2.js' },
     { css:'./usage-v2.css', js:'./usage-v2.js' },
+    { css:'./market-watch-v2.css', js:'./market-watch-v2.js' },
     { css:'./player-research-v2.css', js:'./player-research-v2.js' },
     { css:'./command-palette-v2.css', js:'./command-palette-v3.js' },
     { css:'./event-selector-v2.css', js:'./event-selector-v2.js' },
-    { css:'./global-polish-v2.css', js:'./global-polish-v2.js' }
+    { css:'./global-polish-v2.css', js:'./global-polish-v3.js' }
   ];
 
   function addCss(href) {
@@ -44,7 +46,7 @@
       script.dataset.pbeUpgrade = src;
       script.onload = resolve;
       script.onerror = () => {
-        console.error('PBE page upgrade failed to load', src);
+        console.error('PBE product module failed to load', src);
         resolve();
       };
       document.body.appendChild(script);
