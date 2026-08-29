@@ -1,25 +1,6 @@
 /* PropBetEdge NFL — single session authority.
  *
  * ONE cookie name, ONE scope, ONE verifier.
- *
- * History that made this file necessary:
- *   - workers/nfl-auth v1 and v4 issued `pbe_nfl_session` as an OPAQUE random
- *     token scoped `Domain=.propbetedge.ai`, and api/auth-verify.js proxied that
- *     Set-Cookie verbatim from nfl.propbetedge.ai. Browsers accept a parent-domain
- *     cookie from a subdomain, so those cookies are still in real cookie jars.
- *   - v5 issues a signed JWT and api/auth-verify.js sets it HOST-ONLY.
- *   Both are named `pbe_nfl_session`, both are Path=/, so RFC 6265 section 5.4
- *   sends the OLDER (opaque, unverifiable) one FIRST. A first-match cookie reader
- *   therefore reads the stale token forever -> permanent signed-out loop.
- *
- * Fixes applied here:
- *   1. Authoritative cookie is `pbe_nfl_session_v2`, host-only, so it can never
- *      collide with any historical `.propbetedge.ai` cookie.
- *   2. The reader returns EVERY value for a cookie name and verifies each one,
- *      so a duplicate can never shadow a good token again.
- *   3. No cross-origin session fallback. The Worker mints tokens; Vercel verifies
- *      them. Two partial authorities reading the same cookie jar is what hid this.
- *   4. Failures report an explicit stage instead of collapsing into "signed out".
  */
 
 import { createHmac, timingSafeEqual } from 'node:crypto';
@@ -31,8 +12,6 @@ export const LEGACY_SESSION_COOKIE = 'pbe_nfl_session';
 export const SESSION_MAX_AGE = 30 * 24 * 60 * 60;
 export const HMAC_NAMESPACE = 'pbe-nfl-auth-v5';
 
-/* Returns EVERY value for `name`, in the order the browser sent them.
- * The old single-value version of this function is the root cause of the loop. */
 export function readCookieValues(header, name) {
   const out = [];
   for (const part of String(header || '').split(';')) {
@@ -51,9 +30,6 @@ export function sessionCookie(token) {
   return `${SESSION_COOKIE}=${token}; Path=/; Max-Age=${SESSION_MAX_AGE}; HttpOnly; Secure; SameSite=Lax`;
 }
 
-/* Every historical variant of the session cookie, so a stale one can never be
- * left behind to shadow the authoritative one. Host-only AND domain-scoped,
- * because both were issued in production. */
 export function purgeCookies({ includeCurrent = false } = {}) {
   const names = includeCurrent ? [SESSION_COOKIE, LEGACY_SESSION_COOKIE] : [LEGACY_SESSION_COOKIE];
   const out = [];
@@ -70,8 +46,6 @@ function decodeBase64Url(value) {
   return Buffer.from(s, 'base64');
 }
 
-/* Must stay byte-identical to the Worker sign()/verify() pair in
- * workers/nfl-auth/src/index-v5.js. */
 export function verifyWorkerJwt(token, secret, expectedType = 'session') {
   const parts = String(token || '').split('.');
   if (parts.length !== 3) throw new Error('token_shape');
@@ -95,11 +69,21 @@ export function verifyWorkerJwt(token, secret, expectedType = 'session') {
   return { ...payload, email };
 }
 
+/* Supabase's modern sb_secret_* keys are API keys, not JWTs. They must be sent
+ * on `apikey` only. Legacy service_role JWTs still use both apikey and Bearer.
+ * This lets the NFL backend migrate keys without breaking PostgREST. */
+export function supabaseAdminHeaders(secret) {
+  const key = String(secret || '').trim();
+  const headers = { apikey: key, accept: 'application/json' };
+  if (key.startsWith('eyJ')) headers.authorization = `Bearer ${key}`;
+  return headers;
+}
+
 async function entitlementByEmail(email, secret) {
   const base = String(process.env.SUPABASE_URL || DEFAULT_SUPABASE_URL).replace(/\/$/, '');
   const q = `customer_email=ilike.${encodeURIComponent(email)}&select=status,current_period_end,cancel_at_period_end,stripe_price_id,created_at&order=created_at.desc&limit=10`;
   const response = await fetch(`${base}/rest/v1/nfl_subscriptions?${q}`, {
-    headers: { apikey: secret, authorization: `Bearer ${secret}`, accept: 'application/json' },
+    headers: supabaseAdminHeaders(secret),
     cache: 'no-store',
   });
   if (!response.ok) throw new Error(`entitlement_${response.status}`);
@@ -123,8 +107,6 @@ const SIGNED_OUT = {
   authority: 'vercel-local', degraded: false,
 };
 
-/* Never throws. Always reports which stage it reached so a backend failure is
- * distinguishable from a genuinely signed-out visitor. Never logs token bytes. */
 export async function getNflSession(req) {
   const header = req.headers?.cookie || '';
   const current = readCookieValues(header, SESSION_COOKIE);
@@ -143,8 +125,6 @@ export async function getNflSession(req) {
     };
   }
 
-  /* Try the authoritative cookie first, then any legacy value that still
-   * verifies as a v5 session, so live v5 sessions survive the rename. */
   let payload = null;
   let reason = '';
   for (const token of [...current, ...legacy]) {
@@ -164,8 +144,6 @@ export async function getNflSession(req) {
   try {
     subscription = await entitlementByEmail(payload.email, secret);
   } catch (error) {
-    /* Identity is proven; only the entitlement lookup failed. Say so explicitly
-     * instead of pretending the visitor is signed out. */
     return {
       valid: true, pro: false, user: { email: payload.email }, subscription: null,
       authority: 'vercel-local', stage: 'entitlement_lookup_failed', cookies,
