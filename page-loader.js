@@ -1,7 +1,7 @@
-/* PropBetEdge NFL — ordered page/product upgrade loader v25 */
+/* PropBetEdge NFL — ordered page/product upgrade loader v26 */
 (() => {
   'use strict';
-  const VERSION='20260829prosync2';
+  const VERSION='20260829prosync3';
   const upgrades=[
     {css:'./dashboard-v5.css',js:'./dashboard-v5.js'},
     {css:'./games-v2.css',js:'./games-v2.js'},
@@ -29,6 +29,7 @@
     {css:'./event-selector-v2.css',js:'./event-selector-v2.js'},
     {css:'./global-polish-v2.css',js:'./global-polish-v5.js'},
     {css:'./sports-shell-v1.css',js:'./sports-shell-v2.js'},
+    {js:'./sports-shell-auth-state.js'},
     {css:'./sports-shell-v2.css'},
     {css:'./world-class-v1.css'},
     {css:'./readability-v1.css'},
