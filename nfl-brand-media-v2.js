@@ -1,7 +1,6 @@
 /* PropBetEdge NFL — brand/media/auth integration v2
- * Media hydration is route-safe and rerender-safe. Player headshots are applied to
- * the Prop Board table, signal cards and player detail drawer. Team logos are
- * repaired anywhere a supported NFL abbreviation is visible.
+ * Route-safe media hydration for real NFL team logos and player headshots.
+ * All fallbacks are deterministic: official ESPN team marks, PBE mark for unresolved players.
  */
 (() => {
   'use strict';
@@ -46,29 +45,98 @@
     if(kicker)kicker.innerHTML=`<img class="pbe-paywall-logo" src="${PBE_FULL}" alt="PropBetEdge"><span class="pbe-paywall-label">NFL Pro</span>`;
   }
 
+  function logoImg(abbr,label,eager=false){
+    const img=document.createElement('img');
+    img.className='pbe-official-team-logo';
+    img.dataset.pbeOfficial='1';
+    img.dataset.teamAbbr=abbr;
+    img.src=teamLogo(abbr);
+    img.alt=`${label||abbr} logo`;
+    img.loading=eager?'eager':'lazy';
+    img.decoding='async';
+    img.addEventListener('error',()=>{
+      const fallback=document.createElement('strong');
+      fallback.className='pbe-team-logo-fallback';
+      fallback.textContent=abbr;
+      img.replaceWith(fallback);
+    },{once:true});
+    return img;
+  }
+
+  function fillLogo(holder,nameOrAbbr,eager=false){
+    if(!holder)return;
+    const abbr=resolveAbbr(nameOrAbbr);
+    if(!abbr)return;
+    const existing=holder.querySelector('img');
+    if(existing){
+      if(existing.dataset.pbeFallbackBound!=='1'){
+        existing.dataset.pbeFallbackBound='1';
+        existing.loading=eager?'eager':'lazy';
+        existing.decoding='async';
+        existing.addEventListener('error',()=>{
+          if(!existing.isConnected)return;
+          const fallback=logoImg(abbr,nameOrAbbr,eager);
+          if(fallback.src===existing.src){
+            const text=document.createElement('strong');text.className='pbe-team-logo-fallback';text.textContent=abbr;existing.replaceWith(text);
+          }else existing.replaceWith(fallback);
+        },{once:true});
+      }
+      return;
+    }
+    holder.replaceChildren(logoImg(abbr,nameOrAbbr,eager));
+  }
+
   function repairScheduleLogos(){
     document.querySelectorAll('.pbe25-team').forEach(row=>{
       const name=row.querySelector('.pbe25-team-name')?.textContent?.trim()||'';
-      const abbr=resolveAbbr(name);
-      const crest=row.querySelector('.pbe25-crest');
-      if(!crest||!abbr)return;
-      const current=crest.querySelector('img');
-      if(current?.dataset?.pbeOfficial==='1')return;
-      const src=teamLogo(abbr);
-      crest.innerHTML=`<img class="pbe-official-team-logo" data-pbe-official="1" src="${src}" alt="${esc(name||abbr)} logo" loading="eager">`;
-      crest.querySelector('img')?.addEventListener('error',()=>{crest.innerHTML=`<strong>${esc(abbr)}</strong>`},{once:true});
+      fillLogo(row.querySelector('.pbe25-crest'),name,false);
     });
   }
 
-  function repairGameLogos(){
+  function repairPrimaryGameLogos(){
     document.querySelectorAll('.cast4-team,.home5-team').forEach(team=>{
       const abbr=team.querySelector('.cast4-team-abbr,.home5-abbr')?.textContent?.trim()||'';
-      const holder=team.querySelector('.cast4-team-logo,.home5-logo');
-      if(!holder||!abbr)return;
-      const img=holder.querySelector('img');
-      if(img&&img.getAttribute('src'))return;
-      const src=teamLogo(resolveAbbr(abbr));
-      if(src)holder.innerHTML=`<img src="${src}" alt="${esc(abbr)} logo" loading="eager">`;
+      fillLogo(team.querySelector('.cast4-team-logo,.home5-logo'),abbr,true);
+    });
+  }
+
+  function repairDashboardSlate(){
+    document.querySelectorAll('.home5-card-row').forEach(row=>{
+      const abbr=row.querySelector('b')?.textContent?.trim()||'';
+      const resolved=resolveAbbr(abbr);
+      if(!resolved)return;
+      const existing=row.querySelector('img');
+      if(existing){
+        if(existing.dataset.pbeFallbackBound==='1')return;
+        existing.dataset.pbeFallbackBound='1';existing.loading='lazy';existing.decoding='async';
+        existing.addEventListener('error',()=>{if(existing.isConnected)existing.replaceWith(logoImg(resolved,abbr,false))},{once:true});
+        return;
+      }
+      const placeholder=row.querySelector(':scope > span');
+      if(placeholder)placeholder.replaceWith(logoImg(resolved,abbr,false));
+      else row.prepend(logoImg(resolved,abbr,false));
+    });
+  }
+
+  function repairNamedTeamLogos(){
+    const configs=[
+      ['.pbe16-team','.pbe16-team-name','.pbe16-crest',true],
+      ['.pbe26-card','.pbe26-card-name','.pbe26-crest',false],
+      ['.pbe26-brandline','.pbe26-drawer-name','.pbe26-drawer-crest',true]
+    ];
+    configs.forEach(([rootSel,nameSel,holderSel,eager])=>{
+      document.querySelectorAll(rootSel).forEach(root=>{
+        const name=root.querySelector(nameSel)?.textContent?.trim()||'';
+        fillLogo(root.querySelector(holderSel),name,eager);
+      });
+    });
+  }
+
+  function repairDirectPlayerImages(){
+    document.querySelectorAll('.home5-player > img').forEach(img=>{
+      if(img.dataset.pbeFallbackBound==='1')return;
+      img.dataset.pbeFallbackBound='1';img.loading='lazy';img.decoding='async';
+      img.addEventListener('error',()=>{if(img.isConnected){img.classList.add('is-fallback');img.src=PBE_MARK}}, {once:true});
     });
   }
 
@@ -97,19 +165,28 @@
     const img=document.createElement('img');
     img.className='pbe-player-headshot';
     img.src=src||PBE_MARK;
-    img.alt=src?`${name} headshot`:'';
-    img.loading='eager';
+    img.alt=src?`${name} headshot`:'PropBetEdge';
+    img.loading='lazy';
+    img.decoding='async';
     if(!src)img.classList.add('is-fallback');
     img.addEventListener('error',()=>{
       if(img.classList.contains('is-fallback'))return;
       img.classList.add('is-fallback');
+      img.alt='PropBetEdge';
       img.src=PBE_MARK;
     },{once:true});
     return img;
   }
 
   function playerTargets(){
-    return [...document.querySelectorAll('.pbe3-player-name,.pbe3-signal-player,.pbe3-drawer-title')];
+    return [...document.querySelectorAll([
+      '.pbe3-player-name',
+      '.pbe3-signal-player',
+      '.pbe3-drawer-title',
+      '.pbe16-model-player',
+      '.pbe17-name',
+      '.pbe26-leader-name'
+    ].join(','))];
   }
   function enhancePlayerMedia(){
     playerTargets().forEach(async el=>{
@@ -128,8 +205,9 @@
   function setPaywallMessage(text,type=''){
     const el=document.getElementById('pbe-pro-message');
     if(!el)return;
-    el.className=`pbe-pro-message ${type}`.trim();
-    el.textContent=text||'';
+    const cls=`pbe-pro-message ${type}`.trim();
+    if(el.className!==cls)el.className=cls;
+    if(el.textContent!==text)el.textContent=text||'';
   }
   async function supabaseFallback(email){
     const client=window.PBEPro?.state?.client;
@@ -163,16 +241,26 @@
     },true);
   }
 
-  function scan(){brandPaywall();repairScheduleLogos();repairGameLogos();enhancePlayerMedia()}
-  function scheduleScan(){clearTimeout(scanTimer);scanTimer=setTimeout(scan,25)}
+  function scan(){
+    brandPaywall();
+    repairScheduleLogos();
+    repairPrimaryGameLogos();
+    repairDashboardSlate();
+    repairNamedTeamLogos();
+    repairDirectPlayerImages();
+    enhancePlayerMedia();
+  }
+  function scheduleScan(){clearTimeout(scanTimer);scanTimer=setTimeout(scan,35)}
+  function burstScan(){[0,120,420,1100,2400].forEach(delay=>setTimeout(scan,delay))}
   function init(){
     installAuthIntercept();
-    scheduleScan();
-    new MutationObserver(scheduleScan).observe(document.documentElement,{childList:true,subtree:true});
-    window.addEventListener('pbe:upgrades-ready',scheduleScan);
+    burstScan();
+    new MutationObserver(scheduleScan).observe(document.getElementById('view-container')||document.documentElement,{childList:true,subtree:true});
+    window.addEventListener('pbe:upgrades-ready',burstScan);
+    window.addEventListener('pbe:route-changed',burstScan);
     window.addEventListener('pbe:pro-state',scheduleScan);
   }
 
-  window.PBENFLMediaV2={scan,resolvePlayerImage};
+  window.PBENFLMediaV2={scan,resolvePlayerImage,teamLogo,resolveAbbr};
   init();
 })();
