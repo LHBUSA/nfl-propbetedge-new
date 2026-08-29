@@ -1,5 +1,5 @@
 /* PropBetEdge NFL — stadium selector + variable background authority */
-:root{--pbe-stadium-image:url('https://upload.wikimedia.org/wikipedia/commons/8/89/LucasOilStadiumTheLuke.jpg')}
+:root{--pbe-stadium-image:url('https://commons.wikimedia.org/wiki/Special:Redirect/file/SofistadiumSept2022.jpg?width=2400')}
 body::before{background-image:var(--pbe-stadium-image)!important}
 .pbe-stadium-control{position:fixed;right:18px;bottom:18px;z-index:4950;font-family:'DM Sans',system-ui,sans-serif}
 .pbe-stadium-toggle{min-height:42px;display:flex;align-items:center;gap:8px;padding:0 12px;border:1px solid rgba(216,183,91,.24);border-radius:12px;background:rgba(12,11,9,.90);color:#e9e2d6;box-shadow:0 16px 42px rgba(0,0,0,.34);backdrop-filter:blur(16px);cursor:pointer}
