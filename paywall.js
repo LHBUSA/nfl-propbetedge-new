@@ -34,6 +34,18 @@
       .replace(/'/g,'&#39;');
   }
 
+  function setHtml(el,html) {
+    if (!el || el.innerHTML === html) return false;
+    el.innerHTML = html;
+    return true;
+  }
+
+  function setText(el,text) {
+    if (!el || el.textContent === text) return false;
+    el.textContent = text;
+    return true;
+  }
+
   function createClient() {
     if (!window.supabase || typeof window.supabase.createClient !== 'function') return null;
     return window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
@@ -160,19 +172,18 @@
   function renderModal() {
     const host = document.getElementById('pbe-pro-checkout');
     if (!host) return;
-    if (state.loading) {
-      host.innerHTML = `<div class="pbe-pro-market-empty">Checking your account and NFL Pro access…</div>`;
-      return;
-    }
-    host.innerHTML = state.pro ? proUserHtml() : (state.user ? freeUserHtml() : signedOutHtml());
-    wireModalActions();
+    const next = state.loading
+      ? `<div class="pbe-pro-market-empty">Checking your account and NFL Pro access…</div>`
+      : (state.pro ? proUserHtml() : (state.user ? freeUserHtml() : signedOutHtml()));
+    if (setHtml(host,next)) wireModalActions();
   }
 
   function message(text,type='') {
     const el = document.getElementById('pbe-pro-message');
     if (!el) return;
-    el.className = `pbe-pro-message ${type}`.trim();
-    el.textContent = text || '';
+    const className = `pbe-pro-message ${type}`.trim();
+    if (el.className !== className) el.className = className;
+    setText(el,text || '');
   }
 
   async function signIn() {
@@ -204,8 +215,6 @@
       return;
     }
 
-    /* wireModalActions() hands this straight to addEventListener, so the first
-     * argument is a MouseEvent unless a caller passed a price explicitly. */
     const price = typeof priceId === 'string' && priceId ? priceId : WEEKLY_PRICE_ID;
 
     try {
@@ -317,8 +326,9 @@
       button.onclick = () => open('account');
       nav.appendChild(button);
     }
-    button.className = `pbe-pro-account ${state.pro ? 'pro' : ''} ${state.user ? 'signed-in' : ''}`.trim();
-    button.innerHTML = accountButtonHtml();
+    const nextClass = `pbe-pro-account ${state.pro ? 'pro' : ''} ${state.user ? 'signed-in' : ''}`.trim();
+    if (button.className !== nextClass) button.className = nextClass;
+    setHtml(button,accountButtonHtml());
     return true;
   }
 
@@ -331,12 +341,12 @@
       strip = document.createElement('section');
       hero.insertAdjacentElement('afterend',strip);
     }
-    strip.className = `pbe-pro-dashboard-strip ${state.pro ? 'pro' : ''}`;
-    if (state.pro) {
-      strip.innerHTML = `<div><div class="pbe-pro-dashboard-title"><span>NFL PRO ACTIVE</span> · Proprietary PBE model intelligence is unlocked.</div><div class="pbe-pro-dashboard-copy">Fair lines, probability and model-gap output are available anywhere the production model supports the current market.</div></div><button class="pbe-pro-mini-cta" onclick="App.nav('propboard')">Open Pro Board</button>`;
-    } else {
-      strip.innerHTML = `<div><div class="pbe-pro-dashboard-title"><span>NFL PRO</span> · Unlock the proprietary layer above the sportsbook market.</div><div class="pbe-pro-dashboard-copy">Free access keeps current book numbers useful. Pro adds PBE fair line, model probability, model gap and premium tools as they launch.</div></div><button class="pbe-pro-mini-cta" onclick="PBEPro.open('upgrade')">Unlock for $9.99/week</button>`;
-    }
+    const nextClass = `pbe-pro-dashboard-strip ${state.pro ? 'pro' : ''}`.trim();
+    if (strip.className !== nextClass) strip.className = nextClass;
+    const next = state.pro
+      ? `<div><div class="pbe-pro-dashboard-title"><span>NFL PRO ACTIVE</span> · Proprietary PBE model intelligence is unlocked.</div><div class="pbe-pro-dashboard-copy">Fair lines, probability and model-gap output are available anywhere the production model supports the current market.</div></div><button class="pbe-pro-mini-cta" onclick="App.nav('propboard')">Open Pro Board</button>`
+      : `<div><div class="pbe-pro-dashboard-title"><span>NFL PRO</span> · Unlock the proprietary layer above the sportsbook market.</div><div class="pbe-pro-dashboard-copy">Free access keeps current book numbers useful. Pro adds PBE fair line, model probability, model gap and premium tools as they launch.</div></div><button class="pbe-pro-mini-cta" onclick="PBEPro.open('upgrade')">Unlock for $9.99/week</button>`;
+    setHtml(strip,next);
   }
 
   function propBoardBanner() {
@@ -348,16 +358,16 @@
       banner = document.createElement('section');
       anchor.insertAdjacentElement('beforebegin',banner);
     }
-    banner.className = `pbe-pro-board-banner ${state.pro ? 'pro' : ''}`;
-    if (state.pro) {
-      banner.innerHTML = `<div><strong>NFL Pro is active.</strong><span>PBE fair line, probability and model gap are unlocked for supported props. Market and model provenance remain separate.</span></div><span class="pbe-pro-active-badge">◆ PRO UNLOCKED</span>`;
-    } else {
-      banner.innerHTML = `<div><strong>Current sportsbook pricing is free. PBE model intelligence is NFL Pro.</strong><span>Sign in and upgrade to unlock fair line, model probability and model gap without hiding the underlying market.</span></div><button class="pbe-pro-mini-cta" onclick="PBEPro.open('upgrade')">Unlock NFL Pro</button>`;
-    }
+    const nextClass = `pbe-pro-board-banner ${state.pro ? 'pro' : ''}`.trim();
+    if (banner.className !== nextClass) banner.className = nextClass;
+    const next = state.pro
+      ? `<div><strong>NFL Pro is active.</strong><span>PBE fair line, probability and model gap are unlocked for supported props. Market and model provenance remain separate.</span></div><span class="pbe-pro-active-badge">◆ PRO UNLOCKED</span>`
+      : `<div><strong>Current sportsbook pricing is free. PBE model intelligence is NFL Pro.</strong><span>Sign in and upgrade to unlock fair line, model probability and model gap without hiding the underlying market.</span></div><button class="pbe-pro-mini-cta" onclick="PBEPro.open('upgrade')">Unlock NFL Pro</button>`;
+    setHtml(banner,next);
     const modelPill = board.querySelector('.pbe2-pill.model');
-    if (modelPill && !state.pro) modelPill.textContent = 'NFL PRO · MODEL LOCKED';
+    if (modelPill && !state.pro) setText(modelPill,'NFL PRO · MODEL LOCKED');
     const footer = board.querySelector('.pbe2-board-foot span:last-child');
-    if (footer && !state.pro) footer.textContent = 'NFL PRO MODEL LOCKED · MARKET DATA REMAINS AVAILABLE';
+    if (footer && !state.pro) setText(footer,'NFL PRO MODEL LOCKED · MARKET DATA REMAINS AVAILABLE');
   }
 
   function marketPulsePaywall() {
@@ -373,7 +383,7 @@
       tease.onclick = () => open('upgrade');
       content.appendChild(tease);
     }
-    tease.textContent = 'Unlock PBE Fair Line + Model Gap · NFL Pro';
+    setText(tease,'Unlock PBE Fair Line + Model Gap · NFL Pro');
   }
 
   function applyState() {
@@ -389,8 +399,12 @@
 
   function decorateContinuously() {
     let queued = false;
-    const observer = new MutationObserver(() => {
-      if (queued) return;
+    const observer = new MutationObserver(records => {
+      const relevant = records.some(record => {
+        const target = record.target?.nodeType === 1 ? record.target : record.target?.parentElement;
+        return !target?.closest?.('#pbe-pro-backdrop,.pbe-pro-dashboard-strip,.pbe-pro-board-banner,.pbe-pro-market-tease');
+      });
+      if (!relevant || queued) return;
       queued = true;
       requestAnimationFrame(() => {
         queued = false;
@@ -400,7 +414,8 @@
         marketPulsePaywall();
       });
     });
-    observer.observe(document.documentElement,{subtree:true,childList:true});
+    const root = document.getElementById('view-container') || document.documentElement;
+    observer.observe(root,{subtree:true,childList:true});
   }
 
   function wireModalActions() {
