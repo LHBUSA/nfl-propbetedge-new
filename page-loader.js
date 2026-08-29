@@ -1,7 +1,7 @@
-/* PropBetEdge NFL — ordered page/product upgrade loader v24 */
+/* PropBetEdge NFL — ordered page/product upgrade loader v25 */
 (() => {
   'use strict';
-  const VERSION='20260829prosync1';
+  const VERSION='20260829prosync2';
   const upgrades=[
     {css:'./dashboard-v5.css',js:'./dashboard-v5.js'},
     {css:'./games-v2.css',js:'./games-v2.js'},
@@ -46,8 +46,89 @@
     {css:'./stadium-selector-v1.css',js:'./stadium-selector-v1.js'},
     {css:'./production-polish-v2.css',js:'./production-polish-v2.js'}
   ];
-  function addCss(href){if(document.querySelector(`link[data-pbe-upgrade="${href}"]`))return;const link=document.createElement('link');link.rel='stylesheet';link.href=`${href}?v=${VERSION}`;link.dataset.pbeUpgrade=href;document.head.appendChild(link)}
-  function addScript(src){return new Promise(resolve=>{if(!src)return resolve();if(document.querySelector(`script[data-pbe-upgrade="${src}"]`))return resolve();const script=document.createElement('script');script.src=`${src}?v=${VERSION}`;script.async=false;script.dataset.pbeUpgrade=src;script.onload=resolve;script.onerror=()=>{console.error('PBE product module failed to load',src);resolve()};document.body.appendChild(script)})}
-  async function load(){upgrades.forEach(item=>{if(item.css)addCss(item.css)});for(const item of upgrades)await addScript(item.js);window.dispatchEvent(new CustomEvent('pbe:upgrades-ready',{detail:{version:VERSION}}))}
+
+  const PRO_MODULES=[
+    {selector:'.pbe22-watch',global:'PBEMarketWatch'},
+    {selector:'.pbe20-sim',global:'PBELineSimulator'},
+    {selector:'.pbe23-sgp',global:'PBESGPLab'},
+    {selector:'.pbe4-model-lab',global:'PBEModelLab'}
+  ];
+
+  let proSyncRun=0;
+
+  function addCss(href){
+    if(document.querySelector(`link[data-pbe-upgrade="${href}"]`))return;
+    const link=document.createElement('link');
+    link.rel='stylesheet';
+    link.href=`${href}?v=${VERSION}`;
+    link.dataset.pbeUpgrade=href;
+    document.head.appendChild(link);
+  }
+
+  function addScript(src){
+    return new Promise(resolve=>{
+      if(!src)return resolve();
+      if(document.querySelector(`script[data-pbe-upgrade="${src}"]`))return resolve();
+      const script=document.createElement('script');
+      script.src=`${src}?v=${VERSION}`;
+      script.async=false;
+      script.dataset.pbeUpgrade=src;
+      script.onload=resolve;
+      script.onerror=()=>{
+        console.error('PBE product module failed to load',src);
+        resolve();
+      };
+      document.body.appendChild(script);
+    });
+  }
+
+  function forceVisibleProRender(){
+    const runId=++proSyncRun;
+    let attempt=0;
+
+    const run=()=>{
+      if(runId!==proSyncRun)return;
+      attempt+=1;
+      let waiting=false;
+
+      document.documentElement.dataset.pbePro=window.PBEPro?.state?.pro===true?'1':'0';
+
+      for(const spec of PRO_MODULES){
+        if(!document.querySelector(spec.selector))continue;
+        const module=window[spec.global];
+        if(!module||typeof module.render!=='function')continue;
+        if(module.state?.loading){
+          waiting=true;
+          continue;
+        }
+        try{
+          module.render();
+        }catch(error){
+          console.error('[pbe-loader-pro-sync]',spec.global,error?.message||error);
+        }
+      }
+
+      if(waiting&&attempt<60)setTimeout(run,100);
+    };
+
+    queueMicrotask(run);
+  }
+
+  function installProSync(){
+    window.addEventListener('pbe:pro-state',forceVisibleProRender);
+    window.addEventListener('pbe:route-changed',forceVisibleProRender);
+    setTimeout(forceVisibleProRender,0);
+    setTimeout(forceVisibleProRender,250);
+    setTimeout(forceVisibleProRender,1000);
+  }
+
+  async function load(){
+    upgrades.forEach(item=>{if(item.css)addCss(item.css)});
+    for(const item of upgrades)await addScript(item.js);
+    installProSync();
+    window.dispatchEvent(new CustomEvent('pbe:upgrades-ready',{detail:{version:VERSION}}));
+    forceVisibleProRender();
+  }
+
   load();
 })();
