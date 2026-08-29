@@ -8,6 +8,7 @@ on:
 permissions:
   contents: read
 
+# Canonical validation gate for the broadcast-first NFL build and committed archive snapshot.
 jobs:
   validate:
     runs-on: ubuntu-latest
