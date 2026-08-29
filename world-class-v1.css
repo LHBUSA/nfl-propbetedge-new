@@ -1,0 +1,267 @@
+/* PropBetEdge NFL — world-class visual layer v1
+   Loaded last. Keeps factual HTML/data above custom cinematic brand artwork. */
+:root{
+  --wc-bg:#0b1623;
+  --wc-bg-2:#101e2e;
+  --wc-panel:rgba(19,34,51,.88);
+  --wc-panel-2:rgba(25,44,65,.82);
+  --wc-panel-soft:rgba(236,245,255,.055);
+  --wc-line:rgba(180,211,241,.16);
+  --wc-line-soft:rgba(180,211,241,.10);
+  --wc-text:#f7fbff;
+  --wc-muted:#a9bacb;
+  --wc-dim:#70869a;
+  --wc-blue:#54b7ff;
+  --wc-cyan:#62ddff;
+  --wc-gold:#f2c85f;
+  --wc-green:#62e2a1;
+  --wc-shadow:0 28px 85px rgba(1,8,18,.30);
+}
+
+html{background:var(--wc-bg)!important}
+body{
+  background:
+    radial-gradient(circle at 82% 2%,rgba(86,170,255,.18),transparent 32rem),
+    radial-gradient(circle at 14% 18%,rgba(61,126,205,.14),transparent 30rem),
+    linear-gradient(180deg,#122235 0,#0d1928 42rem,#0a1420 100%)!important;
+  color:var(--wc-text)!important;
+}
+body:before{
+  opacity:.07!important;
+  background-size:64px 64px!important;
+}
+.main-content{background:transparent!important}
+.view-container{padding-top:16px!important}
+
+/* ---------- global sports shell: brighter broadcast glass ---------- */
+#pbe-sports-shell{
+  background:rgba(12,23,36,.94)!important;
+  border-bottom-color:var(--wc-line)!important;
+  box-shadow:0 14px 44px rgba(1,7,16,.22)!important;
+  backdrop-filter:blur(22px) saturate(135%);
+}
+.pbes-top{
+  min-height:68px!important;
+  border-bottom-color:var(--wc-line-soft)!important;
+  background:linear-gradient(90deg,rgba(18,35,54,.94),rgba(12,26,43,.90),rgba(22,43,65,.94))!important;
+}
+.pbes-mark{
+  border-color:rgba(242,200,95,.42)!important;
+  background:linear-gradient(145deg,rgba(242,200,95,.22),rgba(84,183,255,.08))!important;
+  box-shadow:0 12px 28px rgba(0,0,0,.15),inset 0 1px 0 rgba(255,255,255,.10)!important;
+}
+.pbes-brand-name{color:#fff!important;text-shadow:0 4px 20px rgba(0,0,0,.18)}
+.pbes-brand-sub{color:#8197ab!important}
+.pbes-live-pill{
+  border-color:rgba(145,195,235,.18)!important;
+  background:rgba(255,255,255,.055)!important;
+  color:#a6b8c8!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.04)!important;
+}
+.pbes-live-pill.is-live{color:var(--wc-green)!important;border-color:rgba(98,226,161,.34)!important;background:rgba(98,226,161,.09)!important}
+.pbes-date strong{color:#eef7ff!important}.pbes-date span{color:#7890a5!important}
+.pbes-head-btn{
+  border-color:rgba(173,208,239,.17)!important;
+  background:rgba(255,255,255,.055)!important;
+  color:#bdd0df!important;
+}
+.pbes-head-btn:hover{background:rgba(255,255,255,.10)!important;border-color:rgba(197,225,249,.28)!important}
+.pbes-head-btn.pro{color:var(--wc-gold)!important;border-color:rgba(242,200,95,.34)!important;background:linear-gradient(135deg,rgba(242,200,95,.14),rgba(84,183,255,.06))!important}
+
+.pbes-news{
+  background:linear-gradient(90deg,#16283b,#102033 55%,#142b42)!important;
+  border-bottom-color:var(--wc-line-soft)!important;
+}
+.pbes-news-badge{background:rgba(242,200,95,.16)!important;border-right-color:rgba(242,200,95,.28)!important}
+.pbes-news-item{border-right-color:rgba(194,221,245,.10)!important;color:#9fb1c2!important}
+.pbes-news-item strong{color:#e4edf6!important}.pbes-news-item span{color:#7990a4!important}
+
+.pbes-scorebar{
+  background:linear-gradient(90deg,#13263a,#0f2033 48%,#142b42)!important;
+  border-bottom-color:var(--wc-line)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.025)!important;
+}
+.pbes-score-label{border-right-color:var(--wc-line-soft)!important;color:#a4b7c8!important}
+.pbes-score{border-right-color:rgba(180,211,241,.10)!important}
+.pbes-score:hover{background:rgba(91,178,245,.075)!important}
+.pbes-score-team{color:#e5eef6!important}.pbes-score-meta{color:#7990a4!important}
+
+.pbes-primary,.pbes-research{
+  background:rgba(14,29,46,.96)!important;
+  border-bottom-color:var(--wc-line-soft)!important;
+}
+.pbes-research{background:rgba(17,34,52,.96)!important}
+.pbes-nav-label{color:#7890a5!important}
+.pbes-nav-btn{color:#9fb2c3!important}
+.pbes-nav-btn:hover{color:#fff!important;background:rgba(84,183,255,.08)!important}
+.pbes-nav-btn.active{color:#fff!important;background:linear-gradient(135deg,rgba(84,183,255,.17),rgba(98,221,255,.08))!important;border-color:rgba(111,193,255,.18)!important}
+.pbes-research .pbes-nav-btn{color:#8fa4b7!important}.pbes-research .pbes-nav-btn.active{color:#edf7ff!important}
+
+/* ---------- shared card language ---------- */
+.home5-section,.cast4-panel,.cast4-rail-wrap,.pbe3-panel,.pbe3-desk,.pbe-v2-panel,.pbe-pro-price-card,
+.pbe-news2-panel,.pbe-match2-panel,.pbe-usage2-panel,.pbe-game2-panel{
+  border-color:var(--wc-line-soft)!important;
+  background:linear-gradient(145deg,rgba(24,43,63,.89),rgba(14,29,46,.92))!important;
+  box-shadow:0 16px 42px rgba(2,8,18,.13),inset 0 1px 0 rgba(255,255,255,.025)!important;
+}
+.home5-head,.cast4-panel-head,.cast4-rail-head,.pbe3-panel-head{
+  border-bottom-color:var(--wc-line-soft)!important;
+  background:rgba(255,255,255,.018)!important;
+}
+.home5-head strong,.cast4-panel-head strong,.cast4-rail-head strong{color:#f3f8fc!important}
+.home5-head span,.cast4-panel-head span,.cast4-rail-head span{color:#7f95a8!important}
+
+/* ---------- Home: custom cinematic hero underneath factual data ---------- */
+.home5-hero{
+  min-height:640px!important;
+  border-color:rgba(182,216,246,.20)!important;
+  background-image:
+    linear-gradient(90deg,rgba(8,21,36,.74) 0%,rgba(8,21,36,.48) 32%,rgba(7,19,32,.28) 58%,rgba(7,17,29,.53) 100%),
+    linear-gradient(180deg,rgba(7,19,32,.06) 0%,rgba(7,18,31,.12) 48%,rgba(8,20,33,.88) 91%,#0d1b2b 100%),
+    url('./assets/visuals/nfl-hero.webp')!important;
+  background-size:cover!important;
+  background-position:center center!important;
+  box-shadow:0 35px 100px rgba(3,11,24,.31),inset 0 1px 0 rgba(255,255,255,.08)!important;
+}
+.home5-hero:before{
+  background:
+    radial-gradient(circle at 15% 30%,var(--h5-away,rgba(100,130,170,.12)),transparent 34%),
+    radial-gradient(circle at 85% 30%,var(--h5-home,rgba(100,130,170,.12)),transparent 34%),
+    linear-gradient(180deg,rgba(8,21,35,.04),rgba(7,17,29,.38) 64%,rgba(9,22,36,.92) 100%)!important;
+}
+.home5-hero:after{opacity:.40!important}
+.home5-ghost{display:none!important}
+.home5-inner{padding:27px 31px 30px!important}
+.home5-state,.home5-btn,.home5-sit{
+  background:rgba(12,29,46,.70)!important;
+  border-color:rgba(190,220,246,.17)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.035)!important;
+  backdrop-filter:blur(15px) saturate(125%)!important;
+}
+.home5-state{color:#c3d2df!important}
+.home5-source{color:#9aacbb!important;text-shadow:0 2px 10px rgba(0,0,0,.44)}
+.home5-abbr,.home5-score{filter:drop-shadow(0 9px 22px rgba(0,0,0,.35))}
+.home5-name{color:#d4e1eb!important}.home5-record{color:#94a9bb!important}.home5-venue{color:#a5b7c7!important;text-shadow:0 2px 8px rgba(0,0,0,.45)}
+.home5-sit span{color:#8da3b5!important}
+.home5-player-stage{background:linear-gradient(180deg,transparent,rgba(8,21,35,.22))!important;border-radius:14px!important}
+.home5-player{border-color:rgba(183,214,240,.12)!important}
+.home5-player-copy span{color:#91a7ba!important}
+.home5-game-card{background:rgba(255,255,255,.035)!important;border-color:rgba(183,214,240,.12)!important}
+.home5-game-card:hover{background:rgba(84,183,255,.065)!important;border-color:rgba(109,191,255,.25)!important}
+.home5-card-state,.home5-card-meta{color:#8399ac!important}
+.home5-news-row{border-bottom-color:rgba(183,214,240,.09)!important}
+.home5-news-row b{color:#edf5fb!important}.home5-news-row p{color:#91a5b7!important}.home5-news-row time{color:#71889d!important}
+.home5-tool{background:rgba(255,255,255,.035)!important;border-color:rgba(183,214,240,.12)!important}
+.home5-tool:hover{background:rgba(84,183,255,.075)!important;border-color:rgba(100,190,255,.25)!important}
+.home5-tool span{color:#8fa4b6!important}
+
+/* ---------- PBEcast: action photography is now the stage ---------- */
+:root{--cast-bg:#0c1a29!important;--cast-panel:#14263a!important;--cast-card:#183049!important;--cast-line:rgba(180,211,241,.16)!important;--cast-soft:rgba(180,211,241,.095)!important;--cast-muted:#a8b9c8!important;--cast-dim:#748ba0!important;--cast-blue:#68bfff!important}
+.pbecast4{color:#f7fbff!important}
+.cast4-topbar{padding-top:16px!important}
+.cast4-bolt{background:linear-gradient(145deg,rgba(242,200,95,.24),rgba(84,183,255,.10))!important;box-shadow:0 10px 26px rgba(2,8,18,.15)!important}
+.cast4-btn{background:rgba(255,255,255,.055)!important;border-color:var(--wc-line)!important;color:#cfe0ed!important}
+.cast4-btn:hover{background:rgba(255,255,255,.10)!important}
+.cast4-rail-wrap{background:linear-gradient(145deg,rgba(23,43,63,.92),rgba(13,29,46,.94))!important}
+.cast4-game-chip{background:rgba(255,255,255,.035)!important;border-color:rgba(180,211,241,.11)!important}
+.cast4-game-chip:hover{background:rgba(84,183,255,.07)!important}.cast4-game-chip.active{background:rgba(242,200,95,.09)!important}
+
+.cast4-hero{
+  min-height:650px!important;
+  border-color:rgba(182,216,246,.20)!important;
+  background-image:
+    linear-gradient(90deg,rgba(8,23,38,.64),rgba(8,22,36,.18) 47%,rgba(8,22,36,.45) 100%),
+    linear-gradient(180deg,rgba(4,15,28,.02),rgba(8,21,35,.20) 56%,rgba(8,22,36,.91) 100%),
+    url('./assets/visuals/pbecast-live.webp')!important;
+  background-size:cover!important;
+  background-position:center center!important;
+  box-shadow:0 36px 105px rgba(1,8,18,.29),inset 0 1px 0 rgba(255,255,255,.08)!important;
+}
+.cast4-hero:before{
+  background:linear-gradient(180deg,rgba(5,18,31,.02),rgba(5,18,31,.12) 56%,rgba(7,21,35,.78) 100%)!important;
+}
+.cast4-hero:after{opacity:.27!important}
+.cast4-ghost-logo{display:none!important}
+.cast4-live-tag,.cast4-sit{
+  background:rgba(11,29,47,.70)!important;
+  border-color:rgba(190,220,246,.18)!important;
+  backdrop-filter:blur(15px) saturate(125%)!important;
+}
+.cast4-source{color:#a6b7c6!important;text-shadow:0 2px 10px rgba(0,0,0,.42)}
+.cast4-team-name{color:#d1deea!important}.cast4-record,.cast4-venue{color:#94a9bb!important}
+.cast4-field-wrap{background:rgba(8,32,31,.76)!important;border-color:rgba(164,226,210,.16)!important;box-shadow:0 15px 40px rgba(0,0,0,.13),inset 0 0 40px rgba(0,0,0,.17)!important}
+.cast4-panel{background:linear-gradient(145deg,rgba(24,44,65,.91),rgba(13,29,46,.94))!important}
+.cast4-current-text{color:#c8d7e3!important}.cast4-person{background:rgba(255,255,255,.04)!important;border-color:rgba(185,215,240,.12)!important}.cast4-person span{color:#849bae!important}
+
+/* ---------- NFL Pro: cinematic premium art, readable glass checkout ---------- */
+.pbe-pro-backdrop{background:rgba(7,18,31,.64)!important;backdrop-filter:blur(15px) saturate(125%)!important}
+.pbe-pro-modal{
+  width:min(1080px,100%)!important;
+  border-color:rgba(192,221,246,.20)!important;
+  background-image:
+    linear-gradient(90deg,rgba(7,20,34,.84) 0%,rgba(8,22,37,.70) 37%,rgba(8,22,37,.38) 64%,rgba(9,24,40,.64) 100%),
+    linear-gradient(180deg,rgba(7,20,34,.05),rgba(8,22,37,.16) 52%,rgba(8,22,37,.80) 100%),
+    url('./assets/visuals/nfl-pro.webp')!important;
+  background-size:cover!important;
+  background-position:center!important;
+  box-shadow:0 45px 130px rgba(1,7,16,.43),inset 0 1px 0 rgba(255,255,255,.10)!important;
+}
+.pbe-pro-pitch{border-right-color:rgba(194,222,247,.14)!important;background:linear-gradient(90deg,rgba(8,22,37,.26),rgba(8,22,37,.05))!important}
+.pbe-pro-pitch:after{opacity:.45!important}
+.pbe-pro-pitch>p{color:#b2c2d0!important;text-shadow:0 2px 9px rgba(0,0,0,.42)}
+.pbe-pro-feature{background:rgba(12,31,50,.64)!important;border-color:rgba(191,220,245,.14)!important;backdrop-filter:blur(12px)!important}
+.pbe-pro-feature strong{color:#f3f8fc!important}.pbe-pro-feature span{color:#9cafbf!important}
+.pbe-pro-checkout{
+  margin:18px!important;
+  padding:30px!important;
+  border:1px solid rgba(193,222,247,.18)!important;
+  border-radius:16px!important;
+  background:linear-gradient(145deg,rgba(22,43,64,.86),rgba(12,28,46,.88))!important;
+  backdrop-filter:blur(20px) saturate(125%)!important;
+  box-shadow:0 22px 55px rgba(2,8,18,.24),inset 0 1px 0 rgba(255,255,255,.05)!important;
+}
+.pbe-pro-price-card{background:linear-gradient(145deg,rgba(242,200,95,.13),rgba(84,183,255,.055))!important;border-color:rgba(242,200,95,.27)!important}
+.pbe-pro-plan-label{color:#d6b861!important}.pbe-pro-renew,.pbe-pro-auth-copy,.pbe-pro-secure{color:#8ea3b5!important}
+.pbe-pro-email{background:rgba(6,21,36,.62)!important;border-color:rgba(190,220,246,.17)!important;color:#fff!important}.pbe-pro-email::placeholder{color:#7890a4!important}
+.pbe-pro-user-card{background:rgba(255,255,255,.04)!important;border-color:rgba(190,220,246,.13)!important}
+
+/* ---------- generic page lift ---------- */
+.pbe3-top,.pbe2-head,.pbe-v2-hero,.pbe-news2-hero,.pbe-match2-hero,.pbe-usage2-hero,
+.pbe-stats2-hero,.pbe-team3-hero,.pbe-season2-hero,.pbe-records2-hero,.pbe-hof2-hero{
+  border-color:rgba(180,211,241,.16)!important;
+  background-color:rgba(16,33,51,.90)!important;
+  box-shadow:var(--wc-shadow)!important;
+}
+.pbe3-event-bar,.pbe3-kpi,.pbe3-panel,.pbe3-desk,.pbe3-empty{
+  border-color:rgba(180,211,241,.13)!important;
+  background-color:rgba(17,35,54,.90)!important;
+}
+.pbe3-desk,.pbe3-tabsbar,.pbe3-table th,.pbe3-foot{background:#12263a!important}
+.pbe3-table td{border-bottom-color:rgba(180,211,241,.08)!important}.pbe3-table tbody tr:hover{background:rgba(84,183,255,.055)!important}
+
+/* decorative-art disclosure: factual data is the HTML layer */
+.home5-hero:focus-within:before,.cast4-hero:focus-within:before{transition:background .2s ease}
+
+@media(max-width:900px){
+  body{background:linear-gradient(180deg,#11243a,#0b1827 52rem,#091522)!important}
+  .home5-hero{min-height:auto!important;background-position:58% center!important}
+  .cast4-hero{min-height:auto!important;background-position:56% center!important}
+  .pbe-pro-modal{background-position:62% center!important}
+  .pbe-pro-checkout{margin:0!important;border-radius:0 0 14px 14px!important}
+}
+@media(max-width:620px){
+  .home5-hero{
+    background-image:linear-gradient(180deg,rgba(7,20,34,.32),rgba(7,20,34,.88) 72%,#0c1c2d 100%),url('./assets/visuals/nfl-hero.webp')!important;
+    background-position:62% top!important;
+  }
+  .cast4-hero{
+    background-image:linear-gradient(180deg,rgba(6,20,34,.26),rgba(6,20,34,.88) 70%,#0c1c2d 100%),url('./assets/visuals/pbecast-live.webp')!important;
+    background-position:54% top!important;
+  }
+  .pbe-pro-modal{
+    background-image:linear-gradient(180deg,rgba(7,20,34,.56),rgba(8,22,37,.91) 62%,#0c1c2d 100%),url('./assets/visuals/nfl-pro.webp')!important;
+    background-position:70% top!important;
+  }
+  .pbes-top{background:linear-gradient(90deg,#172c42,#10243a)!important}
+  .pbes-news,.pbes-scorebar,.pbes-primary,.pbes-research{background:#11263b!important}
+}
