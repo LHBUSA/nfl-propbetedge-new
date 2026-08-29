@@ -25,7 +25,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p .asset-staging
-          declare -A expected=( [nfl-hero]=6 [pbecast-live]=8 [nfl-pro]=5 )
+          declare -A expected=( [nfl-hero]=3 [pbecast-live]=3 [nfl-pro]=2 )
           ready=1
           for name in nfl-hero pbecast-live nfl-pro; do
             count=$(find .asset-staging -maxdepth 1 -type f -name "${name}.[0-9][0-9]" | wc -l | tr -d ' ')
