@@ -1,0 +1,12 @@
+/* PropBetEdge NFL Pro — conversion / contrast polish */
+.pbe-pro-modal{overflow:hidden!important}
+.pbe-pro-modal-grid{grid-template-columns:minmax(0,1.12fr) minmax(360px,.88fr)!important}
+.pbe-pro-pitch{padding:42px 38px 36px!important}.pbe-pro-checkout{align-self:center!important}
+.pbe-pro-pitch h2{max-width:650px!important;font-size:clamp(52px,6vw,82px)!important;line-height:.84!important;text-shadow:0 8px 30px rgba(0,0,0,.27)}
+.pbe-pro-today{margin-top:22px;padding:13px 14px;border:1px solid rgba(103,196,255,.22);border-radius:10px;background:linear-gradient(135deg,rgba(84,183,255,.12),rgba(98,221,255,.045));backdrop-filter:blur(12px)}
+.pbe-pro-today b{display:block;color:#79d2ff;font:900 11px/1 'DM Mono',monospace;letter-spacing:.11em}.pbe-pro-today span{display:block;margin-top:7px;max-width:590px;color:#d5e1eb;font-size:12px;line-height:1.55}
+.pbe-pro-feature-list{gap:10px!important}.pbe-pro-feature{padding:12px 13px!important;grid-template-columns:34px 1fr!important;gap:12px!important}.pbe-pro-feature-icon{width:34px!important;height:34px!important;font-size:15px!important}.pbe-pro-feature strong{font-size:14px!important}.pbe-pro-feature span{font-size:12px!important;line-height:1.52!important}
+.pbe-pro-price-card{padding:22px!important}.pbe-pro-price strong{font-size:58px!important}.pbe-pro-price span{font-size:11px!important}.pbe-pro-renew{margin-top:10px!important;font-weight:700!important;color:#c5d4df!important}
+.pbe-pro-auth-copy{color:#b2c4d2!important}.pbe-pro-secure{color:#a8bac8!important}.pbe-pro-message{min-height:22px!important}
+.pbe-pro-checkout:before{content:'NFL PRO ACCESS';display:block;margin-bottom:12px;color:#7d92a6;font:900 10px/1 'DM Mono',monospace;letter-spacing:.12em}
+@media(max-width:820px){.pbe-pro-modal-grid{grid-template-columns:1fr!important}.pbe-pro-pitch{padding:32px 24px 24px!important;border-right:0!important;border-bottom:1px solid rgba(190,220,245,.14)!important}.pbe-pro-checkout{margin:0 18px 18px!important;padding:24px!important}.pbe-pro-pitch h2{font-size:clamp(46px,13vw,70px)!important}}
