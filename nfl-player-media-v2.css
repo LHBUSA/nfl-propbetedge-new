@@ -4,7 +4,13 @@
 .pbe3-drawer-title.pbe-player-name-enhanced,
 .pbe16-model-player.pbe-player-name-enhanced,
 .pbe17-name.pbe-player-name-enhanced,
-.pbe26-leader-name.pbe-player-name-enhanced{
+.pbe26-leader-name.pbe-player-name-enhanced,
+.pbe6-name.pbe-player-name-enhanced,
+.pbe6-table td.player.pbe-player-name-enhanced,
+.pbe9-member-name.pbe-player-name-enhanced,
+.pbe10-feature-holder.pbe-player-name-enhanced,
+.pbe10-card-holder.pbe-player-name-enhanced,
+.pbe11-mvp [data-player].pbe-player-name-enhanced{
   display:flex!important;
   align-items:center!important;
   gap:10px!important;
@@ -31,6 +37,28 @@
 .pbe17-name .pbe-player-headshot{
   width:64px!important;height:64px!important;flex:0 0 64px!important;border-radius:14px!important;
 }
+.pbe6-name .pbe-player-headshot{
+  width:48px!important;height:48px!important;flex:0 0 48px!important;border-radius:12px!important;
+}
+.pbe6-table td.player .pbe-player-headshot{
+  width:30px!important;height:30px!important;flex:0 0 30px!important;border-radius:8px!important;
+}
+.pbe9-member-name .pbe-player-headshot{
+  width:52px!important;height:52px!important;flex:0 0 52px!important;border-radius:12px!important;
+}
+.pbe10-feature-holder .pbe-player-headshot{
+  width:50px!important;height:50px!important;flex:0 0 50px!important;border-radius:12px!important;
+}
+.pbe10-card-holder .pbe-player-headshot{
+  width:44px!important;height:44px!important;flex:0 0 44px!important;border-radius:11px!important;
+}
+.pbe11-mvp [data-player] .pbe-player-headshot{
+  width:30px!important;height:30px!important;flex:0 0 30px!important;border-radius:8px!important;
+}
+.pbe6-podium .pbe-official-team-logo{width:34px!important;height:34px!important;object-fit:contain!important}
+.pbe6-table .pbe-official-team-logo{width:22px!important;height:22px!important;object-fit:contain!important}
+.pbe7-standings .pbe-official-team-logo{width:25px!important;height:25px!important;object-fit:contain!important}
+.pbe11-sb .pbe-official-team-logo{width:26px!important;height:26px!important;object-fit:contain!important}
 .pbe-player-headshot.is-fallback{object-fit:contain!important;padding:7px;background:#14110d}
 .home5-player>img.is-fallback{object-fit:contain!important;padding:8px;background:#14110d}
 
@@ -41,4 +69,10 @@
   .pbe26-leader-name .pbe-player-headshot{width:30px!important;height:30px!important;flex-basis:30px!important}
   .pbe3-drawer-title .pbe-player-headshot{width:46px!important;height:46px!important;flex-basis:46px!important}
   .pbe17-name .pbe-player-headshot{width:50px!important;height:50px!important;flex-basis:50px!important}
+  .pbe6-name .pbe-player-headshot{width:40px!important;height:40px!important;flex-basis:40px!important}
+  .pbe6-table td.player .pbe-player-headshot{width:26px!important;height:26px!important;flex-basis:26px!important}
+  .pbe9-member-name .pbe-player-headshot{width:44px!important;height:44px!important;flex-basis:44px!important}
+  .pbe10-feature-holder .pbe-player-headshot{width:44px!important;height:44px!important;flex-basis:44px!important}
+  .pbe10-card-holder .pbe-player-headshot{width:38px!important;height:38px!important;flex-basis:38px!important}
+  .pbe11-mvp [data-player] .pbe-player-headshot{width:26px!important;height:26px!important;flex-basis:26px!important}
 }
