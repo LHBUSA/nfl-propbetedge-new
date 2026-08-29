@@ -1,7 +1,7 @@
-/* PropBetEdge NFL — ordered page/product upgrade loader v22 */
+/* PropBetEdge NFL — ordered page/product upgrade loader v23 */
 (() => {
   'use strict';
-  const VERSION='20260829prod13';
+  const VERSION='20260829prod14';
   const upgrades=[
     {css:'./dashboard-v5.css',js:'./dashboard-v5.js'},
     {css:'./games-v2.css',js:'./games-v2.js'},
