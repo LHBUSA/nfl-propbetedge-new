@@ -1,4 +1,4 @@
-/* PropBetEdge NFL — plan-first checkout funnel v2 */
+/* PropBetEdge NFL — purchase funnel v3 */
 .pbe-funnel-head{margin-bottom:14px}
 .pbe-funnel-head>span{display:block;color:#d8b75b;font:800 9px/1 'DM Mono',monospace;letter-spacing:.14em;text-transform:uppercase}
 .pbe-funnel-head>strong{display:block;margin-top:7px;color:#fff;font:900 30px/.95 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:-.015em}
@@ -16,7 +16,11 @@
 .pbe-funnel-step b{display:block;color:#ede8df;font-size:11px}
 .pbe-funnel-step small{display:block;margin-top:4px;color:#777166;font-size:9px;line-height:1.45}
 .pbe-funnel-auth{margin-top:11px!important}
-#pbe-funnel-continue{min-height:48px;font-size:9px}
+#pbe-funnel-checkout{min-height:50px;font-size:9px}
+#pbe-funnel-signin{min-height:42px;margin-top:0}
+.pbe-funnel-divider{position:relative;display:flex;align-items:center;justify-content:center;margin:15px 0 11px;color:#686257;font:700 7px/1 'DM Mono',monospace;letter-spacing:.06em;text-transform:uppercase;text-align:center}
+.pbe-funnel-divider::before,.pbe-funnel-divider::after{content:'';height:1px;flex:1;background:rgba(255,255,255,.07)}
+.pbe-funnel-divider span{padding:0 9px}
 .pbe-pro-checkout{justify-content:flex-start!important}
 @media(max-width:760px){.pbe-funnel-head>strong{font-size:26px}.pbe-funnel-plan{min-height:160px}.pbe-funnel-step{grid-template-columns:28px 1fr}.pbe-funnel-step>span{width:28px;height:28px}}
 @media(max-width:560px){.pbe-funnel-plans{grid-template-columns:1fr!important}.pbe-funnel-plan{min-height:auto}.pbe-pro-modal-grid{grid-template-columns:1fr!important}.pbe-pro-pitch{border-right:0!important;border-bottom:1px solid rgba(255,255,255,.07)!important}}
