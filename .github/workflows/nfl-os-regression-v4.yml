@@ -127,17 +127,56 @@ jobs:
           set -euo pipefail
           test -s world-class-v1.css
           grep -Fq 'world-class-v1.css' page-loader.js
-          required=(
-            assets/visuals/nfl-hero.webp
-            assets/visuals/pbecast-live.webp
-            assets/visuals/nfl-pro.webp
+
+          # Every url() in the visual stylesheet must resolve to a real file
+          # that is at least 40 KB. The failure mode this guards is a missing
+          # or truncated image, not a renamed one, so no filename is pinned.
+          MIN_BYTES=40960
+          CSS=world-class-v1.css
+          BASE=$(dirname "$CSS")
+
+          mapfile -t refs < <(
+            grep -o 'url([^)]*)' "$CSS" \
+              | sed -e 's/^url(//' -e 's/)$//' -e "s/^[[:space:]]*['\"]\?//" -e "s/['\"]\?[[:space:]]*$//" \
+              | sort -u
           )
-          for file in "${required[@]}"; do
-            test -s "$file" || { echo "Missing custom visual asset: $file"; exit 1; }
+
+          if [ "${#refs[@]}" -eq 0 ]; then
+            echo "No url() references found in $CSS"
+            exit 1
+          fi
+
+          fail=0
+          for ref in "${refs[@]}"; do
+            case "$ref" in
+              data:*|http://*|https://*|//*)
+                echo "SKIP      $ref (remote or inline)"
+                continue
+                ;;
+              /*)  path="${ref#/}" ;;
+              *)   path="$BASE/${ref#./}" ;;
+            esac
+
+            if [ ! -f "$path" ]; then
+              echo "MISSING   $ref -> $path"
+              fail=1
+              continue
+            fi
+
+            bytes=$(stat -c%s "$path")
+            if [ "$bytes" -lt "$MIN_BYTES" ]; then
+              echo "UNDERSIZE $path is ${bytes}B, floor is ${MIN_BYTES}B"
+              fail=1
+              continue
+            fi
+
+            echo "OK        $path (${bytes}B)"
           done
-          grep -Fq "url('./assets/visuals/nfl-hero.webp')" world-class-v1.css
-          grep -Fq "url('./assets/visuals/pbecast-live.webp')" world-class-v1.css
-          grep -Fq "url('./assets/visuals/nfl-pro.webp')" world-class-v1.css
+
+          if [ "$fail" -ne 0 ]; then
+            echo "$CSS references missing or undersized visual assets"
+            exit 1
+          fi
 
       - name: Require live PBEcast transport and visuals
         shell: bash
