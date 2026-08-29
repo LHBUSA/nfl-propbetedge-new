@@ -1,5 +1,6 @@
 const APP_ORIGIN = 'https://nfl.propbetedge.ai';
 const DEFAULT_AUTH_WORKER_URL = 'https://propbetedge-nfl-auth.sales-fd3.workers.dev';
+const VALID_PLANS = new Set(['season','weekly']);
 
 export default async function handler(req, res) {
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -24,6 +25,7 @@ export default async function handler(req, res) {
   }
 
   const email = String(req.body?.email || '').trim().toLowerCase();
+  const plan = VALID_PLANS.has(String(req.body?.plan || '')) ? String(req.body.plan) : '';
   if (!/^\S+@\S+\.\S+$/.test(email) || email.length > 254) {
     return res.status(400).json({ error: 'Enter a valid email address.' });
   }
@@ -37,7 +39,7 @@ export default async function handler(req, res) {
         origin: APP_ORIGIN,
       },
       cache: 'no-store',
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ email, plan: plan || undefined }),
     });
     const body = await upstream.json().catch(() => ({}));
     return res.status(upstream.status).json({ ...body, transport: 'cloudflare-worker' });
