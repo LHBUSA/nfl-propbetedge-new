@@ -4,7 +4,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '20260828l1';
+  const VERSION = '20260828m1';
   const upgrades = [
     { css:'./teams-v2.css', js:'./teams-v2.js' },
     { css:'./stats-v2.css', js:'./stats-v2.js' },
@@ -12,7 +12,8 @@
     { css:'./season-archive-v2.css', js:'./season-archive-v2.js' },
     { css:'./hof-v2.css', js:'./hof-v2.js' },
     { css:'./records-v2.css', js:'./records-v2.js' },
-    { css:'./super-bowls-v2.css', js:'./super-bowls-v2.js' }
+    { css:'./super-bowls-v2.css', js:'./super-bowls-v2.js' },
+    { css:'./draft-review-v2.css', js:'./draft-review-v2.js' }
   ];
 
   function addCss(href) {
