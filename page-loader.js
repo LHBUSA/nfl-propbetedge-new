@@ -1,11 +1,10 @@
-/* PropBetEdge NFL — ordered page/product upgrade loader v3
- * Stable shell + versioned product modules. Loaded in dependency order.
- */
+/* PropBetEdge NFL — ordered page/product upgrade loader v4 */
 (() => {
   'use strict';
 
-  const VERSION = '20260828t1';
+  const VERSION = '20260828v1';
   const upgrades = [
+    { css:'./dashboard-v4.css', js:'./dashboard-v4.js' },
     { css:'./teams-v2.css', js:'./teams-v2.js' },
     { css:'./stats-v2.css', js:'./stats-v2.js' },
     { css:'./standings-v2.css', js:'./standings-v2.js' },
@@ -28,36 +27,8 @@
     { css:'./global-polish-v2.css', js:'./global-polish-v3.js' }
   ];
 
-  function addCss(href) {
-    if (document.querySelector(`link[data-pbe-upgrade="${href}"]`)) return;
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = `${href}?v=${VERSION}`;
-    link.dataset.pbeUpgrade = href;
-    document.head.appendChild(link);
-  }
-
-  function addScript(src) {
-    return new Promise(resolve => {
-      if (document.querySelector(`script[data-pbe-upgrade="${src}"]`)) return resolve();
-      const script = document.createElement('script');
-      script.src = `${src}?v=${VERSION}`;
-      script.async = false;
-      script.dataset.pbeUpgrade = src;
-      script.onload = resolve;
-      script.onerror = () => {
-        console.error('PBE product module failed to load', src);
-        resolve();
-      };
-      document.body.appendChild(script);
-    });
-  }
-
-  async function load() {
-    upgrades.forEach(item => addCss(item.css));
-    for (const item of upgrades) await addScript(item.js);
-    window.dispatchEvent(new CustomEvent('pbe:upgrades-ready', { detail: { version: VERSION } }));
-  }
-
+  function addCss(href){if(document.querySelector(`link[data-pbe-upgrade="${href}"]`))return;const link=document.createElement('link');link.rel='stylesheet';link.href=`${href}?v=${VERSION}`;link.dataset.pbeUpgrade=href;document.head.appendChild(link)}
+  function addScript(src){return new Promise(resolve=>{if(document.querySelector(`script[data-pbe-upgrade="${src}"]`))return resolve();const script=document.createElement('script');script.src=`${src}?v=${VERSION}`;script.async=false;script.dataset.pbeUpgrade=src;script.onload=resolve;script.onerror=()=>{console.error('PBE product module failed to load',src);resolve()};document.body.appendChild(script)})}
+  async function load(){upgrades.forEach(item=>addCss(item.css));for(const item of upgrades)await addScript(item.js);window.dispatchEvent(new CustomEvent('pbe:upgrades-ready',{detail:{version:VERSION}}))}
   load();
 })();
