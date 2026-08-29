@@ -1,11 +1,12 @@
-/* PropBetEdge NFL — ordered page/product upgrade loader v4 */
+/* PropBetEdge NFL — ordered page/product upgrade loader v5 */
 (() => {
   'use strict';
 
-  const VERSION = '20260828v1';
+  const VERSION = '20260828w1';
   const upgrades = [
     { css:'./dashboard-v4.css', js:'./dashboard-v4.js' },
-    { css:'./teams-v2.css', js:'./teams-v2.js' },
+    { css:'./games-v2.css', js:'./games-v2.js' },
+    { css:'./team-research-v3.css', js:'./team-research-v3.js' },
     { css:'./stats-v2.css', js:'./stats-v2.js' },
     { css:'./standings-v2.css', js:'./standings-v2.js' },
     { css:'./season-archive-v2.css', js:'./season-archive-v2.js' },
@@ -24,11 +25,24 @@
     { css:'./player-research-v2.css', js:'./player-research-v2.js' },
     { css:'./command-palette-v2.css', js:'./command-palette-v3.js' },
     { css:'./event-selector-v2.css', js:'./event-selector-v2.js' },
-    { css:'./global-polish-v2.css', js:'./global-polish-v3.js' }
+    { css:'./global-polish-v2.css', js:'./global-polish-v4.js' }
   ];
 
-  function addCss(href){if(document.querySelector(`link[data-pbe-upgrade="${href}"]`))return;const link=document.createElement('link');link.rel='stylesheet';link.href=`${href}?v=${VERSION}`;link.dataset.pbeUpgrade=href;document.head.appendChild(link)}
-  function addScript(src){return new Promise(resolve=>{if(document.querySelector(`script[data-pbe-upgrade="${src}"]`))return resolve();const script=document.createElement('script');script.src=`${src}?v=${VERSION}`;script.async=false;script.dataset.pbeUpgrade=src;script.onload=resolve;script.onerror=()=>{console.error('PBE product module failed to load',src);resolve()};document.body.appendChild(script)})}
-  async function load(){upgrades.forEach(item=>addCss(item.css));for(const item of upgrades)await addScript(item.js);window.dispatchEvent(new CustomEvent('pbe:upgrades-ready',{detail:{version:VERSION}}))}
+  function addCss(href){
+    if(document.querySelector(`link[data-pbe-upgrade="${href}"]`))return;
+    const link=document.createElement('link');link.rel='stylesheet';link.href=`${href}?v=${VERSION}`;link.dataset.pbeUpgrade=href;document.head.appendChild(link);
+  }
+  function addScript(src){
+    return new Promise(resolve=>{
+      if(document.querySelector(`script[data-pbe-upgrade="${src}"]`))return resolve();
+      const script=document.createElement('script');script.src=`${src}?v=${VERSION}`;script.async=false;script.dataset.pbeUpgrade=src;
+      script.onload=resolve;script.onerror=()=>{console.error('PBE product module failed to load',src);resolve()};document.body.appendChild(script);
+    });
+  }
+  async function load(){
+    upgrades.forEach(item=>addCss(item.css));
+    for(const item of upgrades)await addScript(item.js);
+    window.dispatchEvent(new CustomEvent('pbe:upgrades-ready',{detail:{version:VERSION}}));
+  }
   load();
 })();
