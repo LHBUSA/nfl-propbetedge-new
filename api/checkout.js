@@ -1,13 +1,11 @@
 /* PropBetEdge NFL — authenticated checkout router
- * Preferred path: server-created Stripe Checkout Session when STRIPE_SECRET_KEY exists.
- * Production-safe fallback: live Stripe Payment Links with the signed-in email locked.
- * Both paths feed the canonical Supabase NFL Stripe webhook and entitlement table.
+ * Identity: first-party PropBetEdge NFL Worker session cookie.
+ * Billing: Stripe Checkout Session, with locked-email Payment Link fallback.
+ * Entitlement: canonical Supabase nfl-stripe-webhook keyed by verified email.
  */
 
 import Stripe from 'stripe';
-
-const SUPABASE_URL = 'https://tkmlnhmylqnttmnsnief.supabase.co';
-const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_YkSuX7oXCxyTTMPtPqYIyw_qtbfA5c6';
+import { getNflSession, verifiedEmail } from './_nfl-auth.js';
 
 const SEASON_PASS_PRICE_ID = 'price_1U9oVzF3CaVzg4ORnk5NiJFA';
 const SEASON_PASS_EXPIRES_AT = '2027-02-14T23:59:59-06:00';
@@ -21,11 +19,10 @@ const VALID_PRICES = {
   [WEEKLY_PRICE_ID]: { tier: 'weekly', mode: 'subscription', paymentLink: WEEKLY_PAYMENT_LINK }
 };
 
-function paymentLinkUrl(base, email, userId) {
+function paymentLinkUrl(base, email) {
   try {
     const url = new URL(base);
     if (email) url.searchParams.set('locked_prefilled_email', email);
-    if (userId) url.searchParams.set('client_reference_id', userId);
     return url.toString();
   } catch (_) {
     return base;
@@ -33,64 +30,53 @@ function paymentLinkUrl(base, email, userId) {
 }
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Origin', 'https://nfl.propbetedge.ai');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   res.setHeader('Cache-Control', 'no-store');
-  if (req.method === 'OPTIONS') return res.status(200).end();
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+
+  if (req.method === 'OPTIONS') return res.status(204).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const { priceId } = req.body || {};
   const plan = VALID_PRICES[priceId];
   if (!plan) return res.status(400).json({ error: `Invalid price ID: ${priceId}` });
 
-  const authHeader = req.headers.authorization || '';
-  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
-  if (!token) return res.status(401).json({ error: 'sign_in_required', entitlement: 'nfl_pro' });
-
-  let user;
+  let auth;
   try {
-    const userResponse = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
-      headers: {
-        apikey: SUPABASE_PUBLISHABLE_KEY,
-        authorization: `Bearer ${token}`,
-        accept: 'application/json'
-      },
-      cache: 'no-store'
-    });
-    if (!userResponse.ok) return res.status(401).json({ error: 'invalid_session', entitlement: 'nfl_pro' });
-    user = await userResponse.json();
+    auth = await getNflSession(req);
   } catch (error) {
-    console.error('[checkout] Supabase session check failed:', error?.message || error);
-    return res.status(502).json({ error: 'session_check_failed' });
+    console.error('[checkout] NFL session service failed:', error?.message || error);
+    return res.status(503).json({ error: 'session_unavailable', entitlement: 'nfl_pro' });
   }
 
-  const userId = user?.id;
-  const email = String(user?.email || '').trim().toLowerCase();
-  if (!userId || !email) return res.status(401).json({ error: 'invalid_session', entitlement: 'nfl_pro' });
+  const email = verifiedEmail(auth);
+  if (!email) return res.status(401).json({ error: 'sign_in_required', entitlement: 'nfl_pro' });
 
   const { tier, mode, paymentLink } = plan;
 
-  /* Live Payment Links are the production fallback until Vercel has the Stripe
-   * secret. The email is locked to the authenticated Supabase account so the
-   * webhook can deterministically grant the entitlement by email. */
+  /* Payment Links remain a real production fallback. The live NFL links already
+   * carry canonical product/plan metadata and the customer email is locked to
+   * the verified PropBetEdge session email. */
   if (!process.env.STRIPE_SECRET_KEY) {
     return res.status(200).json({
-      url: paymentLinkUrl(paymentLink, email, userId),
+      url: paymentLinkUrl(paymentLink, email),
       provider: 'stripe_payment_link',
-      tier
+      tier,
+      identity: 'propbetedge_nfl_session'
     });
   }
 
   const siteUrl = process.env.SITE_URL || 'https://nfl.propbetedge.ai';
 
   try {
-    const stripe = Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2023-10-16' });
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2023-10-16' });
     const params = {
       mode,
       payment_method_types: ['card'],
       customer_email: email,
-      client_reference_id: userId,
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${siteUrl}/?checkout=success&session_id={CHECKOUT_SESSION_ID}&tier=${tier}`,
       cancel_url: `${siteUrl}/?checkout=cancelled`,
@@ -99,10 +85,10 @@ export default async function handler(req, res) {
       metadata: {
         price_id: priceId,
         tier,
-        user_id: userId,
         email,
         acquired_sport: 'nfl',
-        product: 'propbetedge_nfl'
+        product: 'propbetedge_nfl',
+        identity_source: 'propbetedge_nfl_session'
       }
     };
 
@@ -110,10 +96,10 @@ export default async function handler(req, res) {
       params.subscription_data = {
         metadata: {
           tier,
-          user_id: userId,
           email,
           acquired_sport: 'nfl',
-          product: 'propbetedge_nfl'
+          product: 'propbetedge_nfl',
+          identity_source: 'propbetedge_nfl_session'
         }
       };
     }
@@ -126,13 +112,19 @@ export default async function handler(req, res) {
     }
 
     const session = await stripe.checkout.sessions.create(params);
-    return res.status(200).json({ url: session.url, provider: 'stripe_checkout_session', tier });
-  } catch (err) {
-    console.error('[checkout] Stripe session failed; returning Payment Link fallback:', err?.message || err);
     return res.status(200).json({
-      url: paymentLinkUrl(paymentLink, email, userId),
+      url: session.url,
+      provider: 'stripe_checkout_session',
+      tier,
+      identity: 'propbetedge_nfl_session'
+    });
+  } catch (error) {
+    console.error('[checkout] Stripe session failed; returning locked Payment Link fallback:', error?.message || error);
+    return res.status(200).json({
+      url: paymentLinkUrl(paymentLink, email),
       provider: 'stripe_payment_link_fallback',
-      tier
+      tier,
+      identity: 'propbetedge_nfl_session'
     });
   }
 }
