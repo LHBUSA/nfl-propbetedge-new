@@ -1,0 +1,39 @@
+name: Retire Obsolete NFL Truth Gates
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/cleanup-obsolete-truth-gates.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Remove obsolete duplicate gates and this one-shot workflow
+        shell: bash
+        run: |
+          rm -f .github/workflows/nfl-truth-gate-v2.yml
+          rm -f .github/workflows/nfl-os-regression-v3.yml
+          rm -f .github/workflows/cleanup-obsolete-truth-gates.yml
+
+      - name: Commit cleanup if changed
+        shell: bash
+        run: |
+          if git diff --quiet -- .github/workflows; then
+            echo 'Nothing to clean up.'
+            exit 0
+          fi
+          git config user.name 'PropBetEdge Build'
+          git config user.email 'sales@localhomebuyersusa.com'
+          git add -A .github/workflows
+          git commit -m 'Retire obsolete duplicate NFL truth gates'
+          git push origin HEAD:main
