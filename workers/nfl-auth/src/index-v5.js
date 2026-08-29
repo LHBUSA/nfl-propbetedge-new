@@ -1,5 +1,5 @@
 const SERVICE='propbetedge-nfl-auth';
-const VERSION='v5.0';
+const VERSION='v5.1';
 const APP_ORIGIN_DEFAULT='https://nfl.propbetedge.ai';
 const SUPABASE_URL_DEFAULT='https://tkmlnhmylqnttmnsnief.supabase.co';
 const FROM_EMAIL='PropBetEdge Picks <picks@propbetedge.ai>';
@@ -11,8 +11,9 @@ const SESSION_TTL=30*24*60*60;
 export default{async fetch(req,env){
   const url=new URL(req.url),origin=req.headers.get('Origin')||'',app=String(env.APP_ORIGIN||APP_ORIGIN_DEFAULT).replace(/\/$/,'');
   if(req.method==='OPTIONS')return new Response(null,{status:204,headers:cors(origin,app)});
-  if(url.pathname==='/health')return out({ok:Boolean(env.RESEND_API_KEY&&env.SUPABASE_SERVICE_ROLE_KEY),service:SERVICE,version:VERSION,auth_issuer:'propbetedge',session:'signed_worker_cookie',entitlement_store:'supabase_nfl_subscriptions',email_transport:'resend',sender:FROM_EMAIL,fallback:false,requirements:{RESEND_API_KEY:Boolean(env.RESEND_API_KEY),SUPABASE_SERVICE_ROLE_KEY:Boolean(env.SUPABASE_SERVICE_ROLE_KEY)}},200,origin,app);
+  if(url.pathname==='/health')return out({ok:Boolean(env.RESEND_API_KEY&&env.SUPABASE_SERVICE_ROLE_KEY),service:SERVICE,version:VERSION,auth_issuer:'propbetedge',session:'signed_worker_cookie',exchange:'signed_magic_to_session',entitlement_store:'supabase_nfl_subscriptions',email_transport:'resend',sender:FROM_EMAIL,fallback:false,requirements:{RESEND_API_KEY:Boolean(env.RESEND_API_KEY),SUPABASE_SERVICE_ROLE_KEY:Boolean(env.SUPABASE_SERVICE_ROLE_KEY)}},200,origin,app);
   if((url.pathname==='/v1/auth/request'||url.pathname==='/v1/auth/email')&&req.method==='POST')return requestLink(req,env,origin,app);
+  if(url.pathname==='/v1/auth/exchange'&&req.method==='POST')return exchangeLink(req,env,origin,app);
   if(url.pathname==='/v1/auth/verify'&&req.method==='GET')return verifyLink(req,env,app);
   if(url.pathname==='/v1/auth/session'&&req.method==='GET')return sessionState(req,env,origin,app);
   if(url.pathname==='/v1/auth/logout'&&req.method==='POST')return out({ok:true},200,origin,app,{'set-cookie':clearCookie()});
@@ -28,10 +29,30 @@ async function requestLink(req,env,origin,app){
   try{
     const now=Math.floor(Date.now()/1000),token=await sign({email,type:'magic',purpose,iat:now,exp:now+MAGIC_TTL,jti:crypto.randomUUID()},env.SUPABASE_SERVICE_ROLE_KEY);
     const link=`${app}/api/auth-verify?token=${encodeURIComponent(token)}`;
-    const r=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:`Bearer ${env.RESEND_API_KEY}`,'Content-Type':'application/json'},body:JSON.stringify({from:FROM_EMAIL,to:[email],subject:purpose==='purchase'?'PropBetEdge NFL Pro — your access is ready':'PropBetEdge NFL — secure sign-in',html:mailHtml(link,purpose),text:mailText(link,purpose),tags:[{name:'product',value:'nfl'},{name:'message',value:purpose==='purchase'?'purchase-access':'secure-signin'}]})});
-    if(!r.ok){const detail=await r.text().catch(()=>'');console.error('[nfl-auth] resend',r.status,detail.slice(0,240));return out({error:'Could not send the sign-in email.',stage:'resend'},502,origin,app)}
+    const r=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:`Bearer ${env.RESEND_API_KEY}`,'Content-Type':'application/json'},body:JSON.stringify({from:FROM_EMAIL,to:[email],subject:purpose==='purchase'?'PropBetEdge NFL Pro — your access is ready':'PropBetEdge NFL — secure sign-in',html:mailHtml(link,purpose),text:mailText(link,purpose)})});
+    if(!r.ok){const detail=await r.text().catch(()=>'');console.error('[nfl-auth] resend',r.status,detail.slice(0,360));return out({error:'Could not send the sign-in email.',stage:'resend',provider_status:r.status,provider_message:safeProviderMessage(detail)},502,origin,app)}
     return out({ok:true,provider:'resend',auth_issuer:'propbetedge',purpose,message:purpose==='purchase'?'NFL Pro access email sent.':'Check your inbox. Your secure PropBetEdge NFL sign-in link is on the way.'},200,origin,app);
   }catch(e){console.error('[nfl-auth] request',e?.message||e);return out({error:'Could not send the sign-in email.',stage:'worker'},502,origin,app)}
+}
+
+async function exchangeLink(req,env,origin,app){
+  if(origin&&origin!==app)return out({error:'origin_not_allowed'},403,origin,app);
+  if(!env.SUPABASE_SERVICE_ROLE_KEY)return out({error:'service_unavailable'},503,origin,app);
+  let body;try{body=await req.json()}catch{return out({error:'invalid_json'},400,origin,app)}
+  const token=String(body?.token||'').trim();
+  if(!token||token.length>1200)return out({error:'invalid_token'},400,origin,app);
+  try{
+    const p=await verify(token,env.SUPABASE_SERVICE_ROLE_KEY);
+    const email=normEmail(p?.email);
+    if(p?.type!=='magic'||!email)throw new Error('invalid_magic');
+    const now=Math.floor(Date.now()/1000);
+    const session=await sign({email,type:'session',iat:now,exp:now+SESSION_TTL,jti:crypto.randomUUID()},env.SUPABASE_SERVICE_ROLE_KEY);
+    return out({ok:true,email,session_token:session,expires_in:SESSION_TTL,auth_issuer:'propbetedge'},200,origin,app);
+  }catch(e){
+    const reason=e?.message||'invalid_magic';
+    console.error('[nfl-auth] exchange',reason);
+    return out({error:reason},401,origin,app);
+  }
 }
 
 async function verifyLink(req,env,app){
@@ -64,6 +85,7 @@ async function entitlement(env,email){
   return row?{status:row.status,current_period_end:row.current_period_end||null,cancel_at_period_end:Boolean(row.cancel_at_period_end),stripe_price_id:row.stripe_price_id||null}:null;
 }
 
+function safeProviderMessage(detail){try{const body=JSON.parse(detail);return String(body?.message||body?.error||'').slice(0,220)}catch{return String(detail||'').slice(0,220)}}
 function normEmail(v){const e=String(v||'').trim().toLowerCase();return /^\S+@\S+\.\S+$/.test(e)&&e.length<=254?e:''}
 function b64url(bytes){let s='';for(const b of bytes)s+=String.fromCharCode(b);return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}
 function enc(v){return b64url(new TextEncoder().encode(JSON.stringify(v)))}
