@@ -1,7 +1,7 @@
-/* PropBetEdge NFL — ordered page/product upgrade loader v6 */
+/* PropBetEdge NFL — ordered page/product upgrade loader v7 */
 (() => {
   'use strict';
-  const VERSION='20260828x1';
+  const VERSION='20260828cast4';
   const upgrades=[
     {css:'./dashboard-v4.css',js:'./dashboard-v4.js'},
     {css:'./games-v2.css',js:'./games-v2.js'},
@@ -15,7 +15,7 @@
     {css:'./draft-review-v2.css',js:'./draft-review-v2.js'},
     {css:'./newsroom-v2.css',js:'./newsroom-v2.js'},
     {css:'./news-intelligence-v2.css',js:'./news-intelligence-v2.js'},
-    {css:'./game-center-v2.css',js:'./game-center-v2.js'},
+    {css:'./pbecast-v4.css',js:'./pbecast-v4.js'},
     {css:'./propchain-v2.css',js:'./propchain-v2.js'},
     {css:'./matchups-v2.css',js:'./matchups-v2.js'},
     {css:'./simulator-v2.css',js:'./simulator-v2.js'},
@@ -29,6 +29,6 @@
   ];
   function addCss(href){if(document.querySelector(`link[data-pbe-upgrade="${href}"]`))return;const link=document.createElement('link');link.rel='stylesheet';link.href=`${href}?v=${VERSION}`;link.dataset.pbeUpgrade=href;document.head.appendChild(link)}
   function addScript(src){return new Promise(resolve=>{if(document.querySelector(`script[data-pbe-upgrade="${src}"]`))return resolve();const script=document.createElement('script');script.src=`${src}?v=${VERSION}`;script.async=false;script.dataset.pbeUpgrade=src;script.onload=resolve;script.onerror=()=>{console.error('PBE product module failed to load',src);resolve()};document.body.appendChild(script)})}
-  async function load(){upgrades.forEach(item=>addCss(item.css));for(const item of upgrades)await addScript(item.js);window.dispatchEvent(new CustomEvent('pbe:upgrades-ready',{detail:{version:VERSION}}))}
+  async function load(){upgrades.forEach(item=>{if(item.css)addCss(item.css)});for(const item of upgrades)await addScript(item.js);window.dispatchEvent(new CustomEvent('pbe:upgrades-ready',{detail:{version:VERSION}}))}
   load();
 })();
