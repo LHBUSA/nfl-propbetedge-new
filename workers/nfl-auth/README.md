@@ -1,77 +1,76 @@
 # PropBetEdge NFL Auth Worker
 
-Canonical auth-mail orchestration for `nfl.propbetedge.ai`.
+Canonical passwordless access service for `nfl.propbetedge.ai`.
 
-## Responsibilities
+## Production flow
 
-- Accept passwordless email sign-in requests for the NFL product.
-- Ask Supabase Auth to issue the secure sign-in action link.
-- Send the customer-facing branded email through Resend.
-- Enforce the NFL production origin.
-- Expose a non-secret `/health` endpoint.
-- Keep Supabase as identity/session authority and Resend as the only mail transport.
+New purchase:
+
+`email -> Stripe Checkout -> paid return -> Resend access email -> signed PropBetEdge session -> NFL Pro entitlement`
+
+Existing subscriber / internal owner:
+
+`email -> Resend sign-in link -> signed PropBetEdge session -> NFL Pro entitlement`
+
+The Worker does **not** use Supabase Auth magic links. It signs its own short-lived access links and 30-day secure session cookie. Supabase is used only as the NFL entitlement store (`nfl_subscriptions`).
 
 ## Required Worker secrets
-
-Set these with Wrangler. Never commit secret values.
 
 ```powershell
 cd workers\nfl-auth
 wrangler secret put RESEND_API_KEY
-wrangler secret put RESEND_FROM_EMAIL
 wrangler secret put SUPABASE_SERVICE_ROLE_KEY
 ```
 
-`RESEND_FROM_EMAIL` should be the verified Resend sender, for example:
+No `RESEND_FROM_EMAIL` secret is required. The Worker deliberately uses the existing verified PropBetEdge sender:
 
 ```text
-PropBetEdge NFL <noreply@propbetedge.ai>
+PropBetEdge Picks <picks@propbetedge.ai>
 ```
 
 ## Deploy
 
 ```powershell
-cd workers\nfl-auth
+cd C:\Workers\nfl-propbetedge-new
+git pull
+cd .\workers\nfl-auth
 wrangler deploy
 ```
 
-Wrangler will print a URL similar to:
+Production Worker URL:
 
 ```text
-https://propbetedge-nfl-auth.<account-subdomain>.workers.dev
+https://propbetedge-nfl-auth.sales-fd3.workers.dev
 ```
 
-Verify health:
+Health check:
 
 ```powershell
-curl.exe https://propbetedge-nfl-auth.<account-subdomain>.workers.dev/health
+curl.exe https://propbetedge-nfl-auth.sales-fd3.workers.dev/health
 ```
 
-Expected shape:
+Expected v5 markers:
 
 ```json
 {
   "ok": true,
   "service": "propbetedge-nfl-auth",
-  "auth_issuer": "supabase",
+  "version": "v5.0",
+  "auth_issuer": "propbetedge",
+  "session": "signed_worker_cookie",
+  "entitlement_store": "supabase_nfl_subscriptions",
   "email_transport": "resend",
-  "fallback": false
+  "sender": "PropBetEdge Picks <picks@propbetedge.ai>"
 }
 ```
-
-## Vercel handoff
-
-Add the Worker base URL to the `nfl-propbetedge-new` Vercel project:
-
-```text
-NFL_AUTH_WORKER_URL=https://propbetedge-nfl-auth.<account-subdomain>.workers.dev
-```
-
-Then redeploy production. `/api/auth-email` will use the Worker as the upstream auth service while preserving same-origin browser requests.
 
 ## Endpoints
 
 - `GET /health`
-- `POST /v1/auth/email` with JSON `{ "email": "user@example.com" }`
+- `POST /v1/auth/request` `{ "email": "user@example.com", "purpose": "signin" }`
+- `POST /v1/auth/request` `{ "email": "user@example.com", "purpose": "purchase" }`
+- `GET /v1/auth/verify?token=...`
+- `GET /v1/auth/session`
+- `POST /v1/auth/logout`
 
-The Worker intentionally has no Supabase-delivery fallback.
+The customer-facing email transport is Resend only. There is no Supabase email fallback.
