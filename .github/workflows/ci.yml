@@ -20,12 +20,31 @@ jobs:
         with:
           node-version: '22'
 
+      # `node --check` on a .js file containing ESM import/export does NOT
+      # reliably fail: an error placed AFTER an import statement exits 0.
+      # Verified against api/auth-session.js with an injected error — the old
+      # gate passed it, scripts/check-syntax.mjs caught it. package.json sets
+      # "type": "module", so every api/*.js file sat in that blind spot.
       - name: JavaScript syntax
         run: |
           set -euo pipefail
-          for f in app-core-v3.js page-loader.js paywall.js ui-v2.js prop-board-v3.js model-lab.js api/*.js; do
-            node --check "$f"
-          done
+          node scripts/check-syntax.mjs \
+            app-core-v3.js page-loader.js paywall.js ui-v2.js \
+            prop-board-v3.js model-lab.js api/*.js
+
+      - name: Syntax gate self-test
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The gate must actually reject a broken ESM file. If this starts
+          # passing, the syntax step has silently stopped working.
+          tmp=$(mktemp -d)
+          printf 'import x from "./y.js";\n/* b */15 oops\n' > "$tmp/broken.js"
+          if node scripts/check-syntax.mjs "$tmp/broken.js" >/dev/null 2>&1; then
+            echo "syntax gate failed to reject a known-broken ESM file"
+            exit 1
+          fi
+          echo "syntax gate correctly rejects broken ESM"
 
       - name: NFL auth regression suite
         run: node --test tests/nfl-auth*.test.mjs

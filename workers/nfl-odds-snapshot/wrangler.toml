@@ -1,0 +1,29 @@
+name = "nfl-odds-snapshot"
+main = "src/index.js"
+compatibility_date = "2026-08-29"
+account_id = "fd3a233edadd0a60916413c1199f71ee"
+workers_dev = true
+
+# SUPABASE_URL is not a secret. It is already committed in the repo and in
+# nfl-auth/wrangler.toml, so it lives in [vars] where --dry-run can show it.
+# The build brief said "secret"; flagged and deviated deliberately.
+[vars]
+SUPABASE_URL = "https://tkmlnhmylqnttmnsnief.supabase.co"
+NFL_GATEWAY = "https://nfl-api.propbetedge.ai"
+
+# Odds come through the EXISTING nfl-odds Worker, not a second provider key.
+# nfl-odds already serves h2h/spreads/totals on /api/odds for all 272 events
+# and caches them (verified: cache "hit", usage.last_cost 3). A service binding
+# therefore keeps one provider authority and one quota-control point, and adds
+# ZERO provider credits on a cache hit. No ODDS_API_KEY is duplicated.
+[[services]]
+binding = "NFL_ODDS"
+service = "nfl-odds"
+
+# Two expressions rather than one */15 gated in code. Cloudflare exposes
+# event.cron, so the kickoff-window logic stays declarative instead of burning
+# ~2,880 invocations/day to perform ~30 useful ones.
+[triggers]
+crons = ["0 */6 * * *", "*/15 * * * *"]
+
+# Secrets (wrangler secret put): SUPABASE_SERVICE_ROLE_KEY

@@ -1,0 +1,15 @@
+name = "nfl-game-grader"
+main = "src/index.js"
+compatibility_date = "2026-08-29"
+account_id = "fd3a233edadd0a60916413c1199f71ee"
+workers_dev = true
+
+[vars]
+SUPABASE_URL = "https://tkmlnhmylqnttmnsnief.supabase.co"
+NFL_GATEWAY = "https://nfl-api.propbetedge.ai"
+
+# Mon + Fri, per the brief. Monday catches MNF, Friday catches TNF.
+[triggers]
+crons = ["0 12 * * 1,5"]
+
+# Secrets (wrangler secret put): SUPABASE_SERVICE_ROLE_KEY

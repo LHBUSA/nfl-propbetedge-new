@@ -1,0 +1,5 @@
+{
+  "name": "nfl-picks-engine-shared",
+  "private": true,
+  "type": "module"
+}
