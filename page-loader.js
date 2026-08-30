@@ -1,7 +1,7 @@
-/* PropBetEdge NFL - ordered page/product upgrade loader v40 */
+/* PropBetEdge NFL - ordered page/product upgrade loader v41 */
 (() => {
   'use strict';
-  const VERSION='20260830command4';
+  const VERSION='20260830propfit1';
   const upgrades=[
     /* archive/teams.js is a classic script with lexical const bindings; expose
        the verified directory before newer runtime modules resolve teams. */
@@ -68,9 +68,10 @@
     {css:'./games-worldclass-v3.css'},
     {css:'./games-command-v4.css',js:'./games-command-v4.js'},
 
-    /* Prop Board: signal-first institutional workspace. v3 remains the source
-       of truth; this v4 layer only changes workflow and presentation. */
+    /* Prop Board: v3 remains data authority, v4 owns the signal workflow, and
+       responsive v5 removes the old 1220px table assumption instead of hiding overflow. */
     {css:'./prop-board-v4.css',js:'./prop-board-v4.js'},
+    {css:'./prop-board-responsive-v5.css'},
 
     /* PBE Picks + Verified Track Record v2 is the sole UI authority. The old
        v1 file remains historical source only and is intentionally not loaded. */
@@ -79,8 +80,8 @@
     /* Gated validation telemetry is aggregate/public-safe. */
     {css:'./pbe-validation-v1.css',js:'./pbe-validation-v1.js'},
 
-    /* Last by design: hide intrusive nested scrollbar chrome without disabling
-       intended horizontal/touch scrolling inside terminal surfaces. */
+    /* Last by design: scrollbar policy may style true scrollers, but it must
+       never conceal overflow or substitute for responsive component layout. */
     {css:'./scrollbar-clean-v1.css'}
   ];
 
