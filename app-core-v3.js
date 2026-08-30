@@ -1,4 +1,4 @@
-/* PropBetEdge NFL — standalone app core v3 */
+/* PropBetEdge NFL — standalone app core v3.1 */
 (() => {
   'use strict';
 
@@ -45,7 +45,7 @@
           renderer();
           window.scrollTo({ top:0, behavior:'instant' });
           window.dispatchEvent(new CustomEvent('pbe:route-changed',{ detail:{ route:view } }));
-          return;
+          return true;
         } catch (error) {
           console.error('PBE route render failed',view,error);
         }
@@ -53,6 +53,7 @@
 
       const vc = document.getElementById('view-container');
       if (vc) vc.innerHTML = `<div class="view-loading"><div><div class="loading-mark"></div><div class="loading-text">Loading ${view.replace(/-/g,' ')}…</div></div></div>`;
+      return false;
     },
 
     toggleMobile() {
@@ -63,23 +64,40 @@
     boot() {
       if (this.booted) return;
       this.booted = true;
-      const hash = String(location.hash || '').replace(/^#/,'');
-      const route = this.normalize(hash || 'home');
+      const route = routeFromLocation();
       setTimeout(() => this.nav(route,{ history:false }),0);
     }
   };
 
+  function routeFromLocation() {
+    const hash = String(location.hash || '').replace(/^#/,'');
+    return App.normalize(hash || App.current || 'home');
+  }
+
   window.App = App;
 
-  // Compatibility stubs for upgrade modules that expect the historical globals to exist.
+  // Compatibility stub for upgrade modules that expect the historical global.
   window.HomeView = window.HomeView || { render() {} };
 
-  window.addEventListener('pbe:upgrades-ready',() => App.boot(),{ once:true });
+  /* A deep-link can boot before page-loader has registered that route's renderer.
+   * When the ordered upgrade loader finishes, ALWAYS render the requested route
+   * again. Previously App.boot() returned early once booted, leaving the user on
+   * a permanent Loading... shell after a hard refresh of #marketwatch, #pbecast,
+   * #pbepicks and other late-loaded routes. */
+  window.addEventListener('pbe:upgrades-ready',() => {
+    if (!App.booted) {
+      App.boot();
+      return;
+    }
+    App.nav(routeFromLocation(),{ history:false });
+  },{ once:true });
+
   document.addEventListener('DOMContentLoaded',() => {
     setTimeout(() => {
       if (!App.booted && typeof App.VIEWS.home === 'function') App.boot();
     },450);
   },{ once:true });
+
   window.addEventListener('hashchange',() => {
     const route = App.normalize(location.hash);
     if (route !== App.current) App.nav(route,{ history:false });
