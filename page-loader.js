@@ -1,7 +1,7 @@
-/* PropBetEdge NFL - ordered page/product upgrade loader v46 */
+/* PropBetEdge NFL - ordered page/product upgrade loader v47 */
 (() => {
   'use strict';
-  const VERSION='20260830bootfix1';
+  const VERSION='20260830freezefix2';
   const upgrades=[
     {js:'./team-globals-v1.js'},
 
