@@ -130,10 +130,12 @@
   }
 
   const observer = new MutationObserver(() => {
-    if (active()) {
-      if (last) render(last);
-      else refresh();
-    }
+    if (!active()) return;
+    /* Only restore the telemetry when the base PBE Picks view has been
+       re-rendered and removed it. Polling owns ordinary content refreshes. */
+    if (document.getElementById('pbe-validation-telemetry')) return;
+    if (last) render(last);
+    else refresh();
   });
   observer.observe(document.documentElement, { childList:true, subtree:true });
   window.addEventListener('pbe:route-changed', schedule);
