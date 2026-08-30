@@ -33,13 +33,26 @@
   }
 
   function team(name){
-    const text=String(name||'').toLowerCase();
-    return Object.values(window.NFL_TEAMS||{}).find(t=>
-      text===String(t.name||'').toLowerCase()||
-      text===String(t.abbr||'').toLowerCase()||
-      text.includes(String(t.city||'').toLowerCase())||
-      text.includes(String(t.name||'').toLowerCase().split(' ').pop())
-    )||null;
+    const text=String(name||'').trim().toLowerCase();
+    const values=Object.values(window.NFL_TEAMS||{});
+    if(!text)return null;
+
+    // Exact identity always wins. This avoids ambiguous city matches such as
+    // Los Angeles (Rams/Chargers) and New York (Giants/Jets).
+    let found=values.find(t=>text===String(t.name||'').toLowerCase()||text===String(t.abbr||'').toLowerCase());
+    if(found)return found;
+
+    const alias={la:'LAR',rams:'LAR',chargers:'LAC',washington:'WAS',commanders:'WAS',niners:'SF','49ers':'SF'}[text];
+    if(alias&&window.NFL_TEAMS?.[alias])return window.NFL_TEAMS[alias];
+
+    found=values.find(t=>text===String(t.name||'').toLowerCase().split(' ').pop());
+    if(found)return found;
+
+    const fullMatches=values.filter(t=>text.includes(String(t.name||'').toLowerCase())||String(t.name||'').toLowerCase().includes(text));
+    if(fullMatches.length===1)return fullMatches[0];
+
+    const cityMatches=values.filter(t=>text===String(t.city||'').toLowerCase());
+    return cityMatches.length===1?cityMatches[0]:null;
   }
   function crest(t,size=42){try{if(t?.abbr&&typeof teamCrest==='function')return teamCrest(t.abbr,size)}catch(_){}return `<strong style="color:#fff;font:900 13px 'Barlow Condensed',sans-serif">${esc(t?.abbr||'NFL')}</strong>`;}
   function date(value){const d=new Date(value);return Number.isNaN(d.getTime())?null:d;}
@@ -257,7 +270,8 @@
       state.scores=scores;
       renderShell();
       if(window.PBEEventSelector?.discover){
-        PBEEventSelector.discover().then(()=>{if(document.querySelector('.pbe25-games')&&!state.loading)renderShell();}).catch(()=>{});
+        const discovery=PBEEventSelector.discover();
+        if(discovery?.then)discovery.then(()=>{if(document.querySelector('.pbe25-games')&&!state.loading)renderShell();}).catch(()=>{});
       }
     }catch(error){
       vc.innerHTML=`<section class="pbe25-games"><div class="pbe25-empty">Schedule unavailable: ${esc(error instanceof Error?error.message:String(error))}</div></section>`;
@@ -280,4 +294,5 @@
   install();
   document.addEventListener('DOMContentLoaded',install,{once:true});
   window.addEventListener('pbe:event-changed',()=>{if(document.querySelector('.pbe25-games')&&!state.loading)renderShell();});
+  window.addEventListener('pbe:events-loaded',()=>{if(document.querySelector('.pbe25-games')&&!state.loading)renderShell();});
 })();
