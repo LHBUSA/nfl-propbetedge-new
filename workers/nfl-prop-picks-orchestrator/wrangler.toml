@@ -10,7 +10,7 @@ NFL_GATEWAY = "https://nfl-api.propbetedge.ai"
 NFL_INTELLIGENCE_URL = "https://pbe-nfl-intelligence.sales-fd3.workers.dev"
 
 [triggers]
-crons = ["7 * * * *"]
+crons = ["7 * * * *", "*/15 * * * *"]
 
 # Required secret:
 # SUPABASE_SERVICE_ROLE_KEY
