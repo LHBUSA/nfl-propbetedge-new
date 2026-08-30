@@ -69,6 +69,39 @@ export function verifyWorkerJwt(token, secret, expectedType = 'session') {
   return { ...payload, email };
 }
 
+/* Session signing is deliberately separate from database authorization.
+ * Until NFL_SESSION_SIGNING_SECRET is configured on BOTH Vercel and the auth
+ * Worker, the existing service-role key remains the primary signing key.
+ * After cutover, the service-role key stays verify-only as a migration fallback
+ * so existing 30-day sessions and recently issued magic links keep working. */
+export function getSessionSigningSecrets() {
+  const dedicated = String(process.env.NFL_SESSION_SIGNING_SECRET || '').trim();
+  const legacy = String(process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+  return {
+    primary: dedicated || legacy,
+    fallback: dedicated && legacy && dedicated !== legacy ? legacy : '',
+    mode: dedicated ? 'dedicated' : 'legacy_service_role',
+    dedicatedConfigured: Boolean(dedicated),
+    legacyConfigured: Boolean(legacy),
+  };
+}
+
+export function verifyWorkerJwtWithSecrets(token, secrets, expectedType = 'session') {
+  const candidates = [secrets?.primary, secrets?.fallback].filter(Boolean);
+  let reason = 'token_invalid';
+  for (let i = 0; i < candidates.length; i += 1) {
+    try {
+      return {
+        payload: verifyWorkerJwt(token, candidates[i], expectedType),
+        matched: i === 0 ? 'primary' : 'fallback',
+      };
+    } catch (error) {
+      reason = error?.message || reason;
+    }
+  }
+  throw new Error(reason);
+}
+
 /* Supabase's modern sb_secret_* keys are API keys, not JWTs. They must be sent
  * on `apikey` only. Legacy service_role JWTs still use both apikey and Bearer.
  * This lets the NFL backend migrate keys without breaking PostgREST. */
@@ -117,8 +150,8 @@ export async function getNflSession(req) {
     return { ...SIGNED_OUT, stage: 'no_cookie', cookies };
   }
 
-  const secret = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!secret) {
+  const signing = getSessionSigningSecrets();
+  if (!signing.primary) {
     return {
       ...SIGNED_OUT, stage: 'secret_missing', cookies,
       degraded: true, error: 'session_secret_not_configured',
@@ -127,9 +160,12 @@ export async function getNflSession(req) {
 
   let payload = null;
   let reason = '';
+  let signatureSource = null;
   for (const token of [...current, ...legacy]) {
     try {
-      payload = verifyWorkerJwt(token, secret, 'session');
+      const verified = verifyWorkerJwtWithSecrets(token, signing, 'session');
+      payload = verified.payload;
+      signatureSource = verified.matched;
       break;
     } catch (error) {
       reason = error?.message || 'token_invalid';
@@ -140,14 +176,25 @@ export async function getNflSession(req) {
     return { ...SIGNED_OUT, stage: 'cookie_present_invalid', cookies, reason };
   }
 
+  const entitlementSecret = String(process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+  if (!entitlementSecret) {
+    return {
+      valid: true, pro: false, user: { email: payload.email }, subscription: null,
+      authority: 'vercel-local', stage: 'entitlement_secret_missing', cookies,
+      degraded: true, error: 'entitlement_secret_not_configured',
+      signing: { mode: signing.mode, verified_by: signatureSource },
+    };
+  }
+
   let subscription = null;
   try {
-    subscription = await entitlementByEmail(payload.email, secret);
+    subscription = await entitlementByEmail(payload.email, entitlementSecret);
   } catch (error) {
     return {
       valid: true, pro: false, user: { email: payload.email }, subscription: null,
       authority: 'vercel-local', stage: 'entitlement_lookup_failed', cookies,
       degraded: true, error: String(error?.message || 'entitlement_unavailable'),
+      signing: { mode: signing.mode, verified_by: signatureSource },
     };
   }
 
@@ -160,6 +207,7 @@ export async function getNflSession(req) {
     stage: subscription ? 'entitlement_active' : 'entitlement_missing',
     cookies,
     degraded: false,
+    signing: { mode: signing.mode, verified_by: signatureSource },
   };
 }
 
