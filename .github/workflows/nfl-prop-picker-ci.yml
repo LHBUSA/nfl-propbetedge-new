@@ -20,19 +20,25 @@ jobs:
       - name: Prop selector unit tests
         run: node --test tests/nfl-prop-picker.test.mjs
 
+      - name: Prop grader unit tests
+        run: node --test tests/nfl-prop-grader.test.mjs
+
       - name: Prop engine syntax
         shell: bash
         run: |
           set -euo pipefail
           node --check workers/nfl-prop-picks-shared/prop-math.mjs
           node scripts/check-syntax.mjs workers/nfl-prop-picks-orchestrator/src/index.js
+          node scripts/check-syntax.mjs workers/nfl-prop-picks-grader/src/index.js
 
       - name: Truth and determinism guard
         shell: bash
         run: |
           set -euo pipefail
-          ! grep -R --line-number 'Math\.random' workers/nfl-prop-picks-shared workers/nfl-prop-picks-orchestrator
+          ! grep -R --line-number 'Math\.random' workers/nfl-prop-picks-shared workers/nfl-prop-picks-orchestrator workers/nfl-prop-picks-grader
           grep -Fq "player_pass_yds" workers/nfl-prop-picks-orchestrator/src/index.js
           grep -Fq "TRACKING_BOOTSTRAP" workers/nfl-prop-picks-orchestrator/src/index.js
           grep -Fq "nfl_replace_open_prop_pick" workers/nfl-prop-picks-orchestrator/src/index.js
+          grep -Fq "nfl_prop_closing_snapshots" workers/nfl-prop-picks-grader/src/index.js
           grep -Fq "publication_scope" migrations/nfl_prop_picks_engine_v1.sql
+          grep -Fq "append-only" migrations/nfl_prop_picks_engine_v1_closing_tape.sql
