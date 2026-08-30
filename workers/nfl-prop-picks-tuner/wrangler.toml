@@ -1,0 +1,16 @@
+name = "nfl-prop-picks-tuner"
+main = "src/index.js"
+compatibility_date = "2026-08-30"
+workers_dev = true
+preview_urls = false
+
+[vars]
+SUPABASE_URL = "https://tkmlnhmylqnttmnsnief.supabase.co"
+
+[triggers]
+crons = ["0 18 * * 2"]
+
+# Required secret:
+# SUPABASE_SERVICE_ROLE_KEY
+#
+# No manual train or promote route. The hard sample gate lives in code.
