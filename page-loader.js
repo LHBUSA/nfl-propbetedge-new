@@ -1,7 +1,7 @@
-/* PropBetEdge NFL - ordered page/product upgrade loader v37 */
+/* PropBetEdge NFL - ordered page/product upgrade loader v38 */
 (() => {
   'use strict';
-  const VERSION='20260830quant1';
+  const VERSION='20260830quant2';
   const upgrades=[
     /* archive/teams.js is a classic script with lexical const bindings; expose
        the verified directory before newer runtime modules resolve teams. */
