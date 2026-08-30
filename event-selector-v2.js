@@ -35,7 +35,13 @@
       }
       const seen=new Set();state.events=rows.filter(e=>{if(seen.has(e.id))return false;seen.add(e.id);return true;}).sort((a,b)=>new Date(a.start||0)-new Date(b.start||0));
       if(!state.events.some(e=>e.id===state.selectedId)&&state.current)state.events.push(state.current);
-    }catch(error){state.error=error instanceof Error?error.message:String(error);}finally{state.loading=false;updateButton();}
+    }catch(error){
+      state.error=error instanceof Error?error.message:String(error);
+    }finally{
+      state.loading=false;
+      updateButton();
+      window.dispatchEvent(new CustomEvent('pbe:events-loaded',{detail:{count:state.events.length,error:state.error||null}}));
+    }
   }
 
   function buttonHtml(){const e=selected();return `<button class="pbe19-event-button" id="pbe19-event-button" type="button"><span class="pbe19-event-dot"></span><span class="pbe19-event-copy"><span class="pbe19-event-title">${esc(e?`${e.away} @ ${e.home}`:'Selected NFL Event')}</span><span class="pbe19-event-sub">${esc(e?.start?fmtDate(e.start):state.selectedId.slice(0,12))}</span></span><span class="pbe19-event-chevron">⌄</span></button>`;}
@@ -54,5 +60,5 @@
   function wire(){document.getElementById('pbe19-search')?.addEventListener('input',e=>{state.query=e.currentTarget.value||'';const list=document.getElementById('pbe19-list');if(list)list.innerHTML=listHtml();wireGames();});document.getElementById('pbe19-manual')?.addEventListener('click',manual);wireGames();}
   function wireGames(){document.querySelectorAll('.pbe19-game[data-event-id]').forEach(btn=>btn.addEventListener('click',()=>choose(btn.dataset.eventId)));}
   async function install(){installButton();await loadCurrent();updateButton();discover();}
-  window.PBEEventSelector={open,close,choose,state};install();document.addEventListener('DOMContentLoaded',install,{once:true});document.addEventListener('keydown',e=>{if(e.shiftKey&&e.key.toLowerCase()==='e'&&!['INPUT','TEXTAREA'].includes(e.target?.tagName)){e.preventDefault();open();}if(e.key==='Escape')close();});
+  window.PBEEventSelector={open,close,choose,discover,state};install();document.addEventListener('DOMContentLoaded',install,{once:true});document.addEventListener('keydown',e=>{if(e.shiftKey&&e.key.toLowerCase()==='e'&&!['INPUT','TEXTAREA'].includes(e.target?.tagName)){e.preventDefault();open();}if(e.key==='Escape')close();});
 })();
