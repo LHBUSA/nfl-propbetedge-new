@@ -3,6 +3,10 @@
  * Projection authority stays upstream. This module never invents a player
  * projection; it converts a supplied fair-line distribution + an executable
  * two-way sportsbook quote into probability, fair odds, edge, EV and sizing.
+ *
+ * Once a selector champion is trained, a second-stage logistic quality model
+ * becomes an additional publication gate. It filters decisions; it never
+ * replaces the upstream outcome probability used for fair odds or Kelly.
  */
 import { americanToDecimal, devigTwoWay } from '../nfl-picks-engine-shared/pick-math.mjs';
 
@@ -21,14 +25,20 @@ export function playerKey(value) {
 export function normalCdf(z) {
   const x = Number(z);
   if (!Number.isFinite(x)) throw new Error('bad_z');
-  // Abramowitz & Stegun 7.1.26 erf approximation. Deterministic and more than
-  // sufficient for sportsbook probability precision at displayed 0.1% levels.
   const sign = x < 0 ? -1 : 1;
   const a = Math.abs(x) / Math.sqrt(2);
   const t = 1 / (1 + 0.3275911 * a);
   const erf = sign * (1 - (((((1.061405429 * t - 1.453152027) * t)
     + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-a * a));
   return 0.5 * (1 + erf);
+}
+
+export function logistic(z) {
+  const value = Number(z);
+  if (!Number.isFinite(value)) throw new Error('bad_logit');
+  if (value >= 0) return 1 / (1 + Math.exp(-value));
+  const e = Math.exp(value);
+  return e / (1 + e);
 }
 
 export function modelSideProbability({ fairLine, predictiveSd, line, side }) {
@@ -60,7 +70,6 @@ export function kellyUnits(modelProb, americanPrice, config = {}) {
   const fraction = finite(config.kelly_fraction, 0.25);
   const floor = finite(config.stake_floor_units, 0.5);
   const cap = finite(config.stake_cap_units, 2.0);
-  // 1 unit = 1% of bankroll, matching the governed game picker.
   const units = full * fraction * 100;
   return Math.min(cap, Math.max(floor, Number(units.toFixed(4))));
 }
@@ -83,8 +92,6 @@ export function issuancePhase(kickoffTs, nowMs = Date.now(), config = {}) {
   const earlyMin = finite(config.early_bird_min_hours, 12);
   if (hours <= lockedMax) return { phase: 'locked', hours_to_kickoff: hours };
   if (hours >= earlyMin) return { phase: 'early_bird', hours_to_kickoff: hours };
-  // Deliberate quiet zone: do not churn an early decision just because kickoff
-  // is approaching. The next governed re-check is the locked window.
   return { phase: null, hours_to_kickoff: hours };
 }
 
@@ -102,7 +109,12 @@ export function pairCurrentQuotes(rows) {
     if (!groups.has(key)) groups.set(key, { player, player_key: playerKey(player), book, point, rows: {} });
     const group = groups.get(key);
     group.rows[side] = {
-      player, player_key: group.player_key, book, side, point, price: Math.round(price),
+      player,
+      player_key: group.player_key,
+      book,
+      side,
+      point,
+      price: Math.round(price),
       captured_at: current?.captured_at || row?.captured_at || null,
       open_point: finiteOrNull(row?.open?.point),
       open_price: finiteOrNull(row?.open?.price),
@@ -117,6 +129,42 @@ export function pairCurrentQuotes(rows) {
     paired.push({ ...under, opposite_price: over.price });
   }
   return paired;
+}
+
+export const SELECTOR_FEATURE_ORDER = Object.freeze([
+  'model_prob', 'market_prob', 'edge_pct', 'ev_pct', 'signed_gap_z',
+  'book_count_scaled', 'hours_to_kickoff_scaled', 'locked',
+]);
+
+export function selectorFeatures(decision) {
+  return {
+    model_prob: finite(decision?.model_prob, 0),
+    market_prob: finite(decision?.market_prob, 0),
+    edge_pct: finite(decision?.edge_pct, 0),
+    ev_pct: finite(decision?.ev_pct, 0) / 100,
+    signed_gap_z: finite(decision?.signed_gap_z, 0),
+    book_count_scaled: Math.min(1, Math.max(0, finite(decision?.book_count, 0) / 10)),
+    hours_to_kickoff_scaled: Math.min(1, Math.max(0, finite(decision?.hours_to_kickoff, 0) / 36)),
+    locked: decision?.phase === 'locked' ? 1 : 0,
+  };
+}
+
+export function selectorQualityProbability(selector, decision) {
+  if (selector?.trained !== true) return null;
+  const model = selector?.config?.selector_model;
+  if (!model || typeof model !== 'object') return null;
+  const features = selectorFeatures(decision);
+  const order = Array.isArray(model.feature_order) && model.feature_order.length
+    ? model.feature_order
+    : SELECTOR_FEATURE_ORDER;
+  let z = finite(model.intercept, 0);
+  for (const name of order) {
+    const coefficient = Number(model?.coef?.[name]);
+    const value = Number(features?.[name]);
+    if (!Number.isFinite(coefficient) || !Number.isFinite(value)) return null;
+    z += coefficient * value;
+  }
+  return logistic(z);
 }
 
 export function evaluatePropQuote({ projection, quote, bookCount, selector, kickoffTs, nowMs = Date.now() }) {
@@ -140,20 +188,11 @@ export function evaluatePropQuote({ projection, quote, bookCount, selector, kick
   const bucket = confidenceBucket(edge, config);
   const stake = bucket ? kellyUnits(modelProb, price, config) : 0;
   const enoughBooks = Number(bookCount || 0) >= finite(config.min_books, 4);
-  const qualifies = enoughBooks
-    && edge >= finite(config.min_edge, 0.04)
-    && evPct >= finite(config.min_ev_pct, 5.0)
-    && bucket !== null
-    && stake > 0;
-
   const signedGapZ = quote.side === 'OVER'
     ? (fairLine - line) / predictiveSd
     : (line - fairLine) / predictiveSd;
 
-  return {
-    qualifies,
-    available: true,
-    unavailable_reason: null,
+  const base = {
     phase: phase.phase,
     hours_to_kickoff: Number(phase.hours_to_kickoff.toFixed(4)),
     player_name: quote.player,
@@ -177,36 +216,45 @@ export function evaluatePropQuote({ projection, quote, bookCount, selector, kick
     open_point: quote.open_point ?? null,
     open_price: quote.open_price ?? null,
   };
-}
 
-export function selectorFeatures(decision) {
+  const quality = selectorQualityProbability(selector, base);
+  const qualityPass = selector?.trained === true
+    ? quality !== null && quality >= finite(config.min_quality_prob, 0.55)
+    : true;
+  const qualifies = enoughBooks
+    && edge >= finite(config.min_edge, 0.04)
+    && evPct >= finite(config.min_ev_pct, 5.0)
+    && bucket !== null
+    && stake > 0
+    && qualityPass;
+
   return {
-    model_prob: finite(decision?.model_prob, 0),
-    market_prob: finite(decision?.market_prob, 0),
-    edge_pct: finite(decision?.edge_pct, 0),
-    ev_pct: finite(decision?.ev_pct, 0) / 100,
-    signed_gap_z: finite(decision?.signed_gap_z, 0),
-    book_count_scaled: Math.min(1, Math.max(0, finite(decision?.book_count, 0) / 10)),
-    hours_to_kickoff_scaled: Math.min(1, Math.max(0, finite(decision?.hours_to_kickoff, 0) / 36)),
-    locked: decision?.phase === 'locked' ? 1 : 0,
+    ...base,
+    qualifies,
+    selector_quality_prob: quality === null ? null : Number(quality.toFixed(6)),
+    available: true,
+    unavailable_reason: selector?.trained === true && quality === null
+      ? 'trained_selector_model_unavailable'
+      : null,
   };
 }
 
-export const SELECTOR_FEATURE_ORDER = Object.freeze([
-  'model_prob', 'market_prob', 'edge_pct', 'ev_pct', 'signed_gap_z',
-  'book_count_scaled', 'hours_to_kickoff_scaled', 'locked',
-]);
-
 function unavailable(reason, quote, phase) {
   return {
-    qualifies: false, available: false, unavailable_reason: reason,
+    qualifies: false,
+    available: false,
+    unavailable_reason: reason,
     phase: phase?.phase || null,
     hours_to_kickoff: phase?.hours_to_kickoff ?? null,
     player_name: quote?.player || null,
     player_key: quote?.player_key || playerKey(quote?.player),
     side: quote?.side || null,
     book: quote?.book || null,
-    edge_pct: 0, ev_pct: 0, stake_units: 0, confidence_bucket: null,
+    edge_pct: 0,
+    ev_pct: 0,
+    stake_units: 0,
+    confidence_bucket: null,
+    selector_quality_prob: null,
   };
 }
 
