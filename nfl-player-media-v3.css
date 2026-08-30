@@ -5,7 +5,8 @@
 .pbe4-player.pbe-player-name-universal,
 .pbe23-player.pbe-player-name-universal,
 .pbe23-leg-player.pbe-player-name-universal,
-.pbe4-mobile-card>header>div>span:first-child.pbe-player-name-universal{
+.pbe4-mobile-card>header>div>span:first-child.pbe-player-name-universal,
+[data-pbe-player-media="1"].pbe-player-name-universal{
   display:flex!important;
   align-items:center!important;
   gap:8px!important;
@@ -25,6 +26,15 @@
 .pbe4-mobile-card>header>div>span:first-child .pbe-player-headshot-v3{
   width:34px!important;height:34px!important;flex:0 0 34px!important;border-radius:9px!important;
 }
+[data-pbe-player-media="1"]>.pbe-player-headshot-v3{
+  width:24px!important;height:24px!important;flex:0 0 24px!important;border-radius:7px!important;
+}
+.pbe13-tag[data-pbe-player-media="1"]>.pbe-player-headshot-v3,
+.pbe27-tag[data-pbe-player-media="1"]>.pbe-player-headshot-v3,
+.pbe21-tag[data-pbe-player-media="1"]>.pbe-player-headshot-v3{
+  width:18px!important;height:18px!important;flex-basis:18px!important;border-radius:5px!important;margin-left:-3px;
+}
+.pbe15-node h3[data-pbe-player-media="1"]>.pbe-player-headshot-v3{width:30px!important;height:30px!important;flex-basis:30px!important}
 .pbe20-player-tab.pbe-player-name-universal{justify-content:flex-start!important;padding-left:8px!important}
 .pbe4-model-row .pbe4-player.pbe-player-name-universal{font-size:inherit}
 .pbe21-player .pbe-player-headshot-v3.is-fallback,
@@ -32,7 +42,8 @@
 .pbe20-player-tab .pbe-player-headshot-v3.is-fallback,
 .pbe4-player .pbe-player-headshot-v3.is-fallback,
 .pbe23-player .pbe-player-headshot-v3.is-fallback,
-.pbe23-leg-player .pbe-player-headshot-v3.is-fallback{padding:6px}
+.pbe23-leg-player .pbe-player-headshot-v3.is-fallback,
+[data-pbe-player-media="1"]>.pbe-player-headshot-v3.is-fallback{padding:5px}
 
 @media(max-width:640px){
   .pbe21-player .pbe-player-headshot-v3,
