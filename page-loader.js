@@ -1,8 +1,12 @@
-/* PropBetEdge NFL — ordered page/product upgrade loader v28 */
+/* PropBetEdge NFL — ordered page/product upgrade loader v29 */
 (() => {
   'use strict';
-  const VERSION='20260830gamesworld3';
+  const VERSION='20260830gamescommand4';
   const upgrades=[
+    /* archive/teams.js is a classic script with lexical const bindings; expose
+       the verified directory before newer runtime modules resolve teams. */
+    {js:'./team-globals-v1.js'},
+
     {css:'./dashboard-v5.css',js:'./dashboard-v5.js'},
     {css:'./games-v2.css',js:'./games-v2.js'},
     {css:'./team-research-v3.css',js:'./team-research-v3.js'},
@@ -50,8 +54,9 @@
     {css:'./stadium-selector-v1.css',js:'./stadium-selector-v1.js'},
     {css:'./production-polish-v2.css',js:'./production-polish-v2.js'},
 
-    /* Games is a primary NFL conversion surface; keep its visual authority last. */
-    {css:'./games-worldclass-v3.css'}
+    /* Games is a primary NFL conversion surface. */
+    {css:'./games-worldclass-v3.css'},
+    {css:'./games-command-v4.css',js:'./games-command-v4.js'}
   ];
 
   const PRO_MODULES=[
