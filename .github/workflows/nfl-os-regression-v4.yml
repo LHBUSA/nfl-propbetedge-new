@@ -28,16 +28,6 @@ jobs:
           mapfile -t files < <(find . -type f -name '*.js' -not -path './node_modules/*' -not -path './.git/*')
           node scripts/check-syntax.mjs "${files[@]}"
 
-      # STALE ASSERTION REPLACED.
-      # The old gate required the literal build marker
-      # 'nfl-intelligence-os-standalone-v3-local-archive' in index.html. That
-      # marker no longer exists, so the workflow failed on an obsolete string
-      # rather than on a real product defect.
-      #
-      # The intent behind it was "the root is fully standalone: it boots from
-      # local runtime + the frozen local archive, with no dependency on the old
-      # hosted runtime". That intent is asserted directly below, which is
-      # strictly stronger than matching one exact comment.
       - name: Require fully standalone root
         shell: bash
         run: |
@@ -47,13 +37,11 @@ jobs:
           grep -Fq './paywall.js' index.html
           grep -Fq './archive/teams.js' index.html
 
-          # Every frozen archive dataset must be loaded LOCALLY from ./archive/.
           for dataset in utils teams superbowls hof seasons records stats-2025 standings-2025; do
             grep -Eq "src=\"\./archive/${dataset}\.js" index.html \
               || { echo "index.html does not load ./archive/${dataset}.js locally"; exit 1; }
           done
 
-          # And no archive dataset may be pulled from a remote origin.
           if grep -Eq 'src="https?://[^"]*/archive/' index.html; then
             echo 'Archive dataset loaded from a remote origin; root is not standalone.'
             exit 1
@@ -114,7 +102,8 @@ jobs:
           required=(
             dashboard-v5.js
             sports-shell-v2.js
-            pbecast-v4.js
+            pbecast-v6.js
+            pbecast-v7-enhance.js
             games-v2.js
             team-research-v3.js
             prop-board-v3.js
@@ -140,7 +129,24 @@ jobs:
           done
           test -s dashboard-v5.css
           test -s sports-shell-v1.css
-          test -s pbecast-v4.css
+          test -s pbecast-v6.css
+
+          # PBEcast v6 is the sole live-game renderer/poller. Historical v4/v5
+          # source may remain in the repository, but none may be loaded.
+          grep -Fq "js:'./pbecast-v6.js'" page-loader.js
+          grep -Fq "js:'./pbecast-v7-enhance.js'" page-loader.js
+          if grep -Eq "js:'\./pbecast-v(4|5)\.js'|js:'\./pbecast-v5-renderer\.js'" page-loader.js; then
+            echo 'Legacy PBEcast v4/v5 runtime must remain inactive under v6 authority.'
+            exit 1
+          fi
+
+          # Dashboard and scorebar game-focus actions must target the same v6 authority.
+          grep -Fq 'PBEcastV6?.focus' dashboard-v5.js
+          grep -Fq 'PBEcastV6?.focus' sports-shell-v2.js
+          if grep -Fq 'PBEcastV4?.focus' dashboard-v5.js || grep -Fq 'PBEcastV4?.focus' sports-shell-v2.js; then
+            echo 'Active navigation still targets retired PBEcast v4.'
+            exit 1
+          fi
 
           # Market Watch v3 is the sole JS runtime authority. v2 CSS remains
           # intentionally active as the structural base beneath the v3 terminal
@@ -159,16 +165,14 @@ jobs:
           test -s world-class-v1.css
           grep -Fq 'world-class-v1.css' page-loader.js
 
-          # Every local url() in the visual stylesheet must resolve, be large
-          # enough to be real, and (for WebP) not be truncated. Hero imagery is
-          # optional: zero references is a valid, passing state. The gradient-only
-          # design is deliberate until approved photography exists.
           MIN_BYTES=40960
           CSS=world-class-v1.css
           BASE=$(dirname "$CSS")
 
           mapfile -t refs < <(
-            grep -o 'url([^)]*)' "$CSS"               | sed -e 's/^url(//' -e 's/)$//' -e "s/^[[:space:]]*['\"]\?//" -e "s/['\"]\?[[:space:]]*$//"               | sort -u
+            grep -o 'url([^)]*)' "$CSS" \
+              | sed -e 's/^url(//' -e 's/)$//' -e "s/^[[:space:]]*['\"]\?//" -e "s/['\"]\?[[:space:]]*$//" \
+              | sort -u
           )
 
           if [ "${#refs[@]}" -eq 0 ]; then
@@ -200,9 +204,6 @@ jobs:
               continue
             fi
 
-            # WebP carries its own length in the RIFF header. If the file on
-            # disk is shorter, it was truncated in transit - the exact defect
-            # that shipped three undecodable heroes past a bare -s check.
             if [ "${path##*.}" = "webp" ]; then
               declared=$(python3 -c "import struct,sys; f=open(sys.argv[1],'rb'); f.seek(4); print(struct.unpack('<I', f.read(4))[0] + 8)" "$path")
               if [ "$bytes" -lt "$declared" ]; then
@@ -225,10 +226,13 @@ jobs:
         run: |
           set -euo pipefail
           test -s api/nfl-live.js
-          grep -Fq 'Full Play-by-Play' pbecast-v4.js
-          grep -Fq 'current_drive' pbecast-v4.js
-          grep -Fq 'current_play' pbecast-v4.js
-          grep -Fq 'player_stats' pbecast-v4.js
+          test -s pbecast-v6.js
+          grep -Fq "const LIVE_API='/api/nfl-live'" pbecast-v6.js
+          grep -Fq 'current_play' pbecast-v6.js
+          grep -Fq 'player_stats' pbecast-v6.js
+          grep -Fq 'current_drive' pbecast-v6.js
+          grep -Fq "function isLive(d=state.detail){return semantics(d)==='LIVE'}" pbecast-v6.js
+          grep -Fq "const delay=isLive()?5000:15000" pbecast-v6.js
           grep -Fq 'espn_cdn_gamepackage' api/nfl-live.js
           grep -Fq "return'LIVE'" api/nfl-live.js
           grep -Fq "transport:'poll'" api/nfl-live.js
@@ -242,16 +246,8 @@ jobs:
           grep -Fq 'Tonight in the NFL' dashboard-v5.js
           grep -Fq 'FEATURED GAME' dashboard-v5.js
           grep -Fq 'headshot' dashboard-v5.js
-          grep -Fq 'PBEcastV4' dashboard-v5.js
+          grep -Fq 'PBEcastV6' dashboard-v5.js
 
-      # STALE ASSERTION REPLACED.
-      # The old gate grepped api/pro-model.js for 'nfl_has_pro_access', the
-      # Supabase RPC the premium gate used to call. pro-model.js now enforces
-      # entitlement through the single session authority in api/_nfl-auth.js,
-      # so the RPC name is gone from that file (the DB function still exists).
-      # The assertions below check the CURRENT server-gate contract, which is
-      # a stronger guarantee than the old string match: the endpoint must
-      # verify a session AND require Pro, server-side.
       - name: Require premium and newsroom server gates
         shell: bash
         run: |
@@ -259,24 +255,16 @@ jobs:
           test -s api/pro-model.js
           test -s api/news-feed.js
 
-          # Premium model output must go through the shared session authority,
-          # never a duplicated auth path.
           grep -Fq "from './_nfl-auth.js'" api/pro-model.js
           grep -Fq 'getNflSession' api/pro-model.js
-
-          # It must reject both the signed-out AND the signed-in-but-not-Pro
-          # case, server-side.
           grep -Fq 'sign_in_required' api/pro-model.js
           grep -Fq 'nfl_pro_required' api/pro-model.js
-
           grep -Fq 'propbet-news-api' api/news-feed.js
 
       - name: Forbid duplicated auth logic outside the session authority
         shell: bash
         run: |
           set -euo pipefail
-          # Only _nfl-auth.js may verify session tokens. Any other api/ file
-          # doing its own HMAC verification is a second source of truth.
           for f in api/*.js; do
             case "$(basename "$f")" in
               _nfl-auth.js|auth-diag.js) continue ;;
@@ -299,29 +287,30 @@ jobs:
           grep -Fiq 'no fake board' draft-review-v2.js
           grep -Fiq 'local baseline' market-watch-v3.js
           grep -Fiq 'current roster is not inferred' team-research-v3.js
-          grep -Fiq 'LIVE is rendered only' pbecast-v4.js
+          # LIVE remains source-declared: v6 only treats the detail as live when
+          # api/nfl-live returns explicit LIVE semantics.
+          grep -Fq "function isLive(d=state.detail){return semantics(d)==='LIVE'}" pbecast-v6.js
+          grep -Fq "function semantics(status)" api/nfl-live.js
 
-      # STALE ASSERTION REPLACED — NOT WEAKENED.
-      # games-v2.js used to carry the prose "score feed says so". The rewrite
-      # in the games intelligence launchpad removed the comment but made the
-      # guarantee STRUCTURAL: game state is derived from the score feed's own
-      # semantics, and a score is only rendered once the feed declares LIVE or
-      # FINAL. Asserting the mechanism is stronger than asserting the sentence.
       - name: Require games state to derive from feed semantics
         shell: bash
         run: |
           set -euo pipefail
-          # State is read from the feed's declared semantics, not inferred.
           grep -Fq 'scoreSemantics' games-v2.js
           grep -Fq 'scoreStatus' games-v2.js
-          # LIVE and FINAL are gated on what the feed actually says.
           grep -Eq "sem===?'LIVE'" games-v2.js
           grep -Eq "sem===?'FINAL'|FINAL\|COMPLETE" games-v2.js
-          # A score is only shown when the feed supports it.
           grep -Fq 'scoreReady' games-v2.js
-          # A future kickoff is SCHEDULE, never a fabricated in-progress state.
           grep -Fq "kind:'SCHEDULE'" games-v2.js
           echo 'games-v2 feed-semantics contract OK'
+
+      - name: Require deep routes to recover after ordered upgrades
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq "window.addEventListener('pbe:upgrades-ready'" app-core-v3.js
+          grep -Fq "App.nav(routeFromLocation(),{ history:false })" app-core-v3.js
+          grep -Fq "const VERSION='20260830bootfix1'" page-loader.js
 
       - name: Validate Vercel configuration
         shell: bash
