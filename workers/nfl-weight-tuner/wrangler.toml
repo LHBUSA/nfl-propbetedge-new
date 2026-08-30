@@ -1,0 +1,16 @@
+name = "nfl-weight-tuner"
+main = "src/index.js"
+compatibility_date = "2026-08-29"
+account_id = "fd3a233edadd0a60916413c1199f71ee"
+workers_dev = true
+
+[vars]
+SUPABASE_URL = "https://tkmlnhmylqnttmnsnief.supabase.co"
+
+# Tuesday, after Monday-night grading. The cron is live from Phase 0, but the
+# hard data gate inside the Worker keeps it inert until the thresholds are met.
+# Deployed but gated shut, exactly as the brief requires.
+[triggers]
+crons = ["0 16 * * 2"]
+
+# Secrets (wrangler secret put): SUPABASE_SERVICE_ROLE_KEY

@@ -23,20 +23,41 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          while IFS= read -r -d '' file; do
-            echo "Checking $file"
-            node --check "$file"
-          done < <(find . -type f -name '*.js' -not -path './node_modules/*' -not -path './.git/*' -print0)
+          # node --check silently passes a .js file whose syntax error follows
+          # an ESM import. scripts/check-syntax.mjs parses as a module.
+          mapfile -t files < <(find . -type f -name '*.js' -not -path './node_modules/*' -not -path './.git/*')
+          node scripts/check-syntax.mjs "${files[@]}"
 
+      # STALE ASSERTION REPLACED.
+      # The old gate required the literal build marker
+      # 'nfl-intelligence-os-standalone-v3-local-archive' in index.html. That
+      # marker no longer exists, so the workflow failed on an obsolete string
+      # rather than on a real product defect.
+      #
+      # The intent behind it was "the root is fully standalone: it boots from
+      # local runtime + the frozen local archive, with no dependency on the old
+      # hosted runtime". That intent is asserted directly below, which is
+      # strictly stronger than matching one exact comment.
       - name: Require fully standalone root
         shell: bash
         run: |
           set -euo pipefail
-          grep -Fq 'nfl-intelligence-os-standalone-v3-local-archive' index.html
           grep -Fq './app-core-v3.js' index.html
           grep -Fq './page-loader.js' index.html
           grep -Fq './paywall.js' index.html
           grep -Fq './archive/teams.js' index.html
+
+          # Every frozen archive dataset must be loaded LOCALLY from ./archive/.
+          for dataset in utils teams superbowls hof seasons records stats-2025 standings-2025; do
+            grep -Eq "src=\"\./archive/${dataset}\.js" index.html \
+              || { echo "index.html does not load ./archive/${dataset}.js locally"; exit 1; }
+          done
+
+          # And no archive dataset may be pulled from a remote origin.
+          if grep -Eq 'src="https?://[^"]*/archive/' index.html; then
+            echo 'Archive dataset loaded from a remote origin; root is not standalone.'
+            exit 1
+          fi
           if grep -Fq 'https://nfl.propbetedge.ai/js/' index.html; then
             echo 'Old NFL production runtime dependency found in active root.'
             exit 1
@@ -213,14 +234,49 @@ jobs:
           grep -Fq 'headshot' dashboard-v5.js
           grep -Fq 'PBEcastV4' dashboard-v5.js
 
+      # STALE ASSERTION REPLACED.
+      # The old gate grepped api/pro-model.js for 'nfl_has_pro_access', the
+      # Supabase RPC the premium gate used to call. pro-model.js now enforces
+      # entitlement through the single session authority in api/_nfl-auth.js,
+      # so the RPC name is gone from that file (the DB function still exists).
+      # The assertions below check the CURRENT server-gate contract, which is
+      # a stronger guarantee than the old string match: the endpoint must
+      # verify a session AND require Pro, server-side.
       - name: Require premium and newsroom server gates
         shell: bash
         run: |
           set -euo pipefail
           test -s api/pro-model.js
           test -s api/news-feed.js
-          grep -Fq 'nfl_has_pro_access' api/pro-model.js
+
+          # Premium model output must go through the shared session authority,
+          # never a duplicated auth path.
+          grep -Fq "from './_nfl-auth.js'" api/pro-model.js
+          grep -Fq 'getNflSession' api/pro-model.js
+
+          # It must reject both the signed-out AND the signed-in-but-not-Pro
+          # case, server-side.
+          grep -Fq 'sign_in_required' api/pro-model.js
+          grep -Fq 'nfl_pro_required' api/pro-model.js
+
           grep -Fq 'propbet-news-api' api/news-feed.js
+
+      - name: Forbid duplicated auth logic outside the session authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Only _nfl-auth.js may verify session tokens. Any other api/ file
+          # doing its own HMAC verification is a second source of truth.
+          for f in api/*.js; do
+            case "$(basename "$f")" in
+              _nfl-auth.js|auth-diag.js) continue ;;
+            esac
+            if grep -Fq 'createHmac' "$f"; then
+              echo "Duplicate auth logic in $f: session verification belongs in api/_nfl-auth.js"
+              exit 1
+            fi
+          done
+          echo 'Single session authority OK'
 
       - name: Require truth boundaries
         shell: bash
@@ -232,9 +288,30 @@ jobs:
           grep -Fiq 'target share' usage-v2.js
           grep -Fiq 'no fake board' draft-review-v2.js
           grep -Fiq 'local baseline' market-watch-v2.js
-          grep -Fiq 'score feed says so' games-v2.js
           grep -Fiq 'current roster is not inferred' team-research-v3.js
           grep -Fiq 'LIVE is rendered only' pbecast-v4.js
+
+      # STALE ASSERTION REPLACED — NOT WEAKENED.
+      # games-v2.js used to carry the prose "score feed says so". The rewrite
+      # in the games intelligence launchpad removed the comment but made the
+      # guarantee STRUCTURAL: game state is derived from the score feed's own
+      # semantics, and a score is only rendered once the feed declares LIVE or
+      # FINAL. Asserting the mechanism is stronger than asserting the sentence.
+      - name: Require games state to derive from feed semantics
+        shell: bash
+        run: |
+          set -euo pipefail
+          # State is read from the feed's declared semantics, not inferred.
+          grep -Fq 'scoreSemantics' games-v2.js
+          grep -Fq 'scoreStatus' games-v2.js
+          # LIVE and FINAL are gated on what the feed actually says.
+          grep -Eq "sem===?'LIVE'" games-v2.js
+          grep -Eq "sem===?'FINAL'|FINAL\|COMPLETE" games-v2.js
+          # A score is only shown when the feed supports it.
+          grep -Fq 'scoreReady' games-v2.js
+          # A future kickoff is SCHEDULE, never a fabricated in-progress state.
+          grep -Fq "kind:'SCHEDULE'" games-v2.js
+          echo 'games-v2 feed-semantics contract OK'
 
       - name: Validate Vercel configuration
         shell: bash

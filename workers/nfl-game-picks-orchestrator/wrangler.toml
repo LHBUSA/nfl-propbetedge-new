@@ -1,0 +1,20 @@
+name = "nfl-game-picks-orchestrator"
+main = "src/index.js"
+compatibility_date = "2026-08-29"
+account_id = "fd3a233edadd0a60916413c1199f71ee"
+workers_dev = true
+
+[vars]
+SUPABASE_URL = "https://tkmlnhmylqnttmnsnief.supabase.co"
+APP_ORIGIN = "https://nfl.propbetedge.ai"
+NFL_GATEWAY = "https://nfl-api.propbetedge.ai"
+
+# Daily at 14:00 UTC (~9am CT), per the brief.
+[triggers]
+crons = ["0 14 * * *"]
+
+# Secrets (wrangler secret put):
+#   SUPABASE_SERVICE_ROLE_KEY  - database access
+#   PICKS_INTERNAL_TOKEN       - server-to-server token presented by the Vercel
+#                                proxy to unlock proprietary fields. NOT a user
+#                                session and NOT the session signing secret.
