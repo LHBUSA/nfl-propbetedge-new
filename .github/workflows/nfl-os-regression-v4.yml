@@ -118,7 +118,7 @@ jobs:
             games-v2.js
             team-research-v3.js
             prop-board-v3.js
-            market-watch-v2.js
+            market-watch-v3.js
             matchups-v2.js
             model-lab.js
             simulator-v2.js
@@ -141,6 +141,16 @@ jobs:
           test -s dashboard-v5.css
           test -s sports-shell-v1.css
           test -s pbecast-v4.css
+
+          # Market Watch v3 is the sole JS runtime authority. v2 CSS remains
+          # intentionally active as the structural base beneath the v3 terminal
+          # override; v2 JS must not be loaded alongside it.
+          test -s market-watch-v2.css
+          grep -Fq 'market-watch-v2.css' page-loader.js
+          if grep -Fq "js:'./market-watch-v2.js'" page-loader.js; then
+            echo 'Market Watch v2 JS must remain inactive under the v3 authority.'
+            exit 1
+          fi
 
       - name: Validate CSS-referenced local assets
         shell: bash
@@ -287,7 +297,7 @@ jobs:
           grep -Fiq 'correlation model unavailable' sgp-lab-v2.js
           grep -Fiq 'target share' usage-v2.js
           grep -Fiq 'no fake board' draft-review-v2.js
-          grep -Fiq 'local baseline' market-watch-v2.js
+          grep -Fiq 'local baseline' market-watch-v3.js
           grep -Fiq 'current roster is not inferred' team-research-v3.js
           grep -Fiq 'LIVE is rendered only' pbecast-v4.js
 
