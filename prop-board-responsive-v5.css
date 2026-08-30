@@ -1,0 +1,150 @@
+/* PropBetEdge NFL — Prop Board responsive v5
+ * Fix the layout, not the scrollbar.
+ *
+ * Contract:
+ * - Wide desktop: all 11 columns remain visible.
+ * - Standard desktop: Depth + Status collapse because book depth is already
+ *   repeated under Player and model state is already expressed by the row.
+ * - Narrow desktop/tablet: use the existing information-complete card renderer
+ *   instead of squeezing or horizontally clipping the table.
+ * - Mobile: one-column cards. No horizontal board scrolling required.
+ */
+
+.pbe4-worldclass .pbe3-desk{
+  width:100%;
+  max-width:100%;
+}
+
+/* Do not create a hidden internal viewport. Let the document own vertical scroll. */
+.pbe4-worldclass .pbe3-table-scroll{
+  width:100%;
+  max-width:100%;
+  max-height:none!important;
+  overflow:visible!important;
+}
+
+/* v3 hard-coded min-width:1220px. That is what was pushing Status off-screen. */
+.pbe4-worldclass .pbe3-table{
+  width:100%!important;
+  min-width:0!important;
+  max-width:100%!important;
+  table-layout:fixed;
+}
+
+.pbe4-worldclass .pbe3-table th,
+.pbe4-worldclass .pbe3-table td{
+  min-width:0;
+  max-width:none;
+  overflow:hidden;
+  padding-left:clamp(6px,.68vw,10px);
+  padding-right:clamp(6px,.68vw,10px);
+}
+
+.pbe4-worldclass .pbe3-table th{
+  white-space:nowrap;
+  text-overflow:ellipsis;
+}
+
+.pbe4-worldclass .pbe3-player-name,
+.pbe4-worldclass .pbe3-market-name,
+.pbe4-worldclass .pbe3-book,
+.pbe4-worldclass .pbe3-sub{
+  max-width:100%;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.pbe4-worldclass .pbe3-player-name,
+.pbe4-worldclass .pbe3-market-name,
+.pbe4-worldclass .pbe3-book{white-space:nowrap}
+
+.pbe4-worldclass .pbe3-range,
+.pbe4-worldclass .pbe4-micro-wrap,
+.pbe4-worldclass .pbe4-prob{
+  width:100%;
+  min-width:0!important;
+  max-width:100%;
+}
+.pbe4-worldclass .pbe3-side{gap:4px}
+.pbe4-worldclass .pbe3-line{font-size:clamp(8px,.72vw,10px)}
+.pbe4-worldclass .pbe3-price{font-size:clamp(6px,.56vw,7.5px)}
+.pbe4-worldclass .pbe4-edge-badge{
+  min-width:0;
+  width:min(100%,68px);
+  padding-inline:6px;
+  font-size:clamp(17px,1.5vw,21px)!important;
+}
+.pbe4-worldclass .pbe4-prob-top{gap:3px;min-width:0}
+.pbe4-worldclass .pbe4-prob-top strong{font-size:clamp(9px,.88vw,12px)}
+.pbe4-worldclass .pbe4-prob-top span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* Full institutional desktop: every field remains on-screen. */
+@media (min-width:1441px){
+  .pbe4-worldclass .pbe3-table th:nth-child(1),.pbe4-worldclass .pbe3-table td:nth-child(1){width:16%}
+  .pbe4-worldclass .pbe3-table th:nth-child(2),.pbe4-worldclass .pbe3-table td:nth-child(2){width:10%}
+  .pbe4-worldclass .pbe3-table th:nth-child(3),.pbe4-worldclass .pbe3-table td:nth-child(3){width:8%}
+  .pbe4-worldclass .pbe3-table th:nth-child(4),.pbe4-worldclass .pbe3-table td:nth-child(4){width:8%}
+  .pbe4-worldclass .pbe3-table th:nth-child(5),.pbe4-worldclass .pbe3-table td:nth-child(5){width:6%}
+  .pbe4-worldclass .pbe3-table th:nth-child(6),.pbe4-worldclass .pbe3-table td:nth-child(6){width:13%}
+  .pbe4-worldclass .pbe3-table th:nth-child(7),.pbe4-worldclass .pbe3-table td:nth-child(7){width:7%}
+  .pbe4-worldclass .pbe3-table th:nth-child(8),.pbe4-worldclass .pbe3-table td:nth-child(8){width:9%}
+  .pbe4-worldclass .pbe3-table th:nth-child(9),.pbe4-worldclass .pbe3-table td:nth-child(9){width:8%}
+  .pbe4-worldclass .pbe3-table th:nth-child(10),.pbe4-worldclass .pbe3-table td:nth-child(10){width:5%}
+  .pbe4-worldclass .pbe3-table th:nth-child(11),.pbe4-worldclass .pbe3-table td:nth-child(11){width:10%}
+}
+
+/* Standard desktop: preserve the nine decision fields. Depth is already shown
+ * beneath Player as “N books”; Status is already encoded by modeled state/gap. */
+@media (min-width:1241px) and (max-width:1440px){
+  .pbe4-worldclass .pbe3-table th:nth-child(10),
+  .pbe4-worldclass .pbe3-table td:nth-child(10),
+  .pbe4-worldclass .pbe3-table th:nth-child(11),
+  .pbe4-worldclass .pbe3-table td:nth-child(11){display:none!important}
+
+  .pbe4-worldclass .pbe3-table th:nth-child(1),.pbe4-worldclass .pbe3-table td:nth-child(1){width:18%}
+  .pbe4-worldclass .pbe3-table th:nth-child(2),.pbe4-worldclass .pbe3-table td:nth-child(2){width:12%}
+  .pbe4-worldclass .pbe3-table th:nth-child(3),.pbe4-worldclass .pbe3-table td:nth-child(3){width:10%}
+  .pbe4-worldclass .pbe3-table th:nth-child(4),.pbe4-worldclass .pbe3-table td:nth-child(4){width:10%}
+  .pbe4-worldclass .pbe3-table th:nth-child(5),.pbe4-worldclass .pbe3-table td:nth-child(5){width:8%}
+  .pbe4-worldclass .pbe3-table th:nth-child(6),.pbe4-worldclass .pbe3-table td:nth-child(6){width:16%}
+  .pbe4-worldclass .pbe3-table th:nth-child(7),.pbe4-worldclass .pbe3-table td:nth-child(7){width:8%}
+  .pbe4-worldclass .pbe3-table th:nth-child(8),.pbe4-worldclass .pbe3-table td:nth-child(8){width:10%}
+  .pbe4-worldclass .pbe3-table th:nth-child(9),.pbe4-worldclass .pbe3-table td:nth-child(9){width:8%}
+}
+
+/* Before the table becomes a postage stamp, switch presentation entirely.
+ * This reuses the v4 cards, so no data is lost or hidden behind horizontal scroll. */
+@media (max-width:1240px){
+  .pbe4-worldclass .pbe3-table-scroll{display:none!important}
+  .pbe4-worldclass .pbe4-mobile-board{
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:10px;
+    padding:11px 11px 15px;
+    overflow:visible!important;
+    scroll-snap-type:none!important;
+  }
+  .pbe4-worldclass .pbe4-mobile-card{
+    width:100%;
+    min-width:0!important;
+    max-width:none;
+    flex:none!important;
+  }
+  .pbe4-worldclass .pbe4-mobile-market{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+
+@media (max-width:760px){
+  .pbe4-worldclass .pbe4-mobile-board{
+    grid-template-columns:1fr;
+    padding:10px 0 14px;
+    gap:9px;
+  }
+  .pbe4-worldclass .pbe4-mobile-card{border-radius:11px}
+  .pbe4-worldclass .pbe4-mobile-market{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .pbe4-worldclass .pbe4-mobile-market>div:last-child{grid-column:1/-1}
+}
+
+@media (max-width:520px){
+  .pbe4-worldclass .pbe4-mobile-board{gap:8px}
+  .pbe4-worldclass .pbe4-mobile-card>header{padding:12px 11px 10px}
+  .pbe4-worldclass .pbe4-mobile-market{padding:8px;gap:5px}
+}
