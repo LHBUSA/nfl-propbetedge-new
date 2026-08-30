@@ -337,3 +337,33 @@ test('attribution is required per market by a database constraint', () => {
   assert.match(c, /market = 'total'/);
   assert.match(c, /selection_over_under in \('OVER','UNDER'\)/);
 });
+
+/* ------------------------------------------------------------------------
+ * Observability: ratings failure vs grading failure must be distinguishable
+ * --------------------------------------------------------------------- */
+
+test('health exposes last_ratings_error_class separately from last_error_class', () => {
+  assert.match(grader, /last_ratings_error_class:\s*null/, 'must be initialized');
+  assert.match(grader, /last_ratings_error_class:\s*health\.last_ratings_error_class \|\| null/,
+    'must be exposed on /health');
+});
+
+test('a successful ratings refresh clears any previous ratings error', () => {
+  const block = grader.slice(grader.indexOf("let ratings = 'skipped'"),
+    grader.indexOf('health.last_result = `graded='));
+  assert.match(block, /health\.last_ratings_error_class = null/, 'must clear on success');
+  assert.match(block, /health\.last_ratings_error_class = errorClass\(error\)/,
+    'must record the class on failure');
+  // The two error channels stay independent.
+  assert.equal(/health\.last_error_class = errorClass\(error\)/.test(block), false,
+    'a ratings failure must not overwrite the grading error class');
+});
+
+test('the grader still exposes no manual grading trigger', () => {
+  const routes = grader.match(/url\.pathname === '[^']+'/g) || [];
+  assert.deepEqual(routes, ["url.pathname === '/health'"],
+    'only /health may be routed; a grading trigger would be a bypass');
+  assert.equal(/runGrading\(env\)/.test(grader.slice(grader.indexOf('async fetch'),
+    grader.indexOf('async scheduled'))), false,
+    'fetch() must never invoke grading');
+});

@@ -29,7 +29,14 @@ import {
 const SERVICE = 'nfl-game-grader';
 const VERSION = 'v1.0.0';
 
-const health = { last_cron_run: null, last_error_class: null, last_result: null };
+const health = {
+  last_cron_run: null,
+  last_error_class: null,
+  /* Kept separate from last_error_class so a ratings-source failure is
+   * distinguishable from a grading/runtime failure at a glance. */
+  last_ratings_error_class: null,
+  last_result: null,
+};
 
 export default {
   async fetch(req, env) {
@@ -39,6 +46,7 @@ export default {
         service: SERVICE, version: VERSION,
         last_cron_run: health.last_cron_run,
         last_error_class: health.last_error_class,
+        last_ratings_error_class: health.last_ratings_error_class || null,
         last_result: health.last_result,
         requirements: {
           SUPABASE_URL: Boolean(env.SUPABASE_URL),
@@ -85,6 +93,9 @@ async function runGrading(env) {
     let ratings = 'skipped';
     try {
       ratings = await refreshRatings(env);
+      /* Explicitly cleared so a stale failure from a previous run cannot make
+       * a healthy run look degraded. */
+      health.last_ratings_error_class = null;
     } catch (error) {
       ratings = `failed:${errorClass(error)}`;
       health.last_ratings_error_class = errorClass(error);
