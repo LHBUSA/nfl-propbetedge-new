@@ -1,35 +1,59 @@
-/* PropBetEdge NFL — global nested-scrollbar cleanup
- * Preserve touch / wheel / trackpad scrolling, remove the heavy in-surface bars.
- * The document scrollbar remains visible and intentionally understated.
+/* PropBetEdge NFL — scrollbar policy v2
+ * Do not hide layout bugs. Components must fit their viewport first.
+ *
+ * The document scrollbar stays understated. Scrollbar chrome is hidden only on
+ * deliberate carousels/rails that have another obvious interaction model.
+ * Generic table/scroll containers keep a thin fallback scrollbar if a future
+ * data shape legitimately needs one.
  */
-html{scrollbar-width:thin;scrollbar-color:rgba(216,183,91,.28) rgba(8,8,8,.34)}
+html{
+  scrollbar-width:thin;
+  scrollbar-color:rgba(216,183,91,.28) rgba(8,8,8,.34);
+}
 body::-webkit-scrollbar{width:10px}
 body::-webkit-scrollbar-track{background:rgba(8,8,8,.34)}
 body::-webkit-scrollbar-thumb{background:rgba(216,183,91,.24);border:3px solid rgba(8,8,8,.34);border-radius:999px}
 body::-webkit-scrollbar-thumb:hover{background:rgba(216,183,91,.42)}
 
-/* Every product surface can still scroll, but its internal scrollbar chrome is hidden. */
-#view-container *,
-#pbe-sports-shell *,
-.pbe-network-footer *{
+/* Deliberate rails/carousels: scrolling remains enabled, chrome stays out of the UI. */
+.pbe3-tabs,
+.pbe4-alert-list,
+.pbe4-mobile-board,
+.pbes-scores,
+.pbes-news-track,
+.mbn-scroll,
+.pbe-network-footer [class*="rail"]{
   scrollbar-width:none;
   -ms-overflow-style:none;
+  -webkit-overflow-scrolling:touch;
 }
-#view-container *::-webkit-scrollbar,
-#pbe-sports-shell *::-webkit-scrollbar,
-.pbe-network-footer *::-webkit-scrollbar{
-  width:0!important;
-  height:0!important;
-  display:none!important;
-  background:transparent!important;
+.pbe3-tabs::-webkit-scrollbar,
+.pbe4-alert-list::-webkit-scrollbar,
+.pbe4-mobile-board::-webkit-scrollbar,
+.pbes-scores::-webkit-scrollbar,
+.pbes-news-track::-webkit-scrollbar,
+.mbn-scroll::-webkit-scrollbar,
+.pbe-network-footer [class*="rail"]::-webkit-scrollbar{
+  width:0;
+  height:0;
+  display:none;
 }
 
-/* Avoid accidental page-wide horizontal overflow while keeping intended inner scrollers usable. */
-html,body,#main-content,#view-container{max-width:100%;overflow-x:hidden}
+/* Any remaining intentional internal scroller gets a subtle usable fallback.
+ * This is preferable to silently clipping content. */
 #view-container [class*="scroll"],
-#view-container [class*="rail"],
-#view-container [class*="table"],
 #view-container [style*="overflow-x"]{
+  scrollbar-width:thin;
+  scrollbar-color:rgba(216,183,91,.22) transparent;
   overscroll-behavior-inline:contain;
   -webkit-overflow-scrolling:touch;
 }
+#view-container [class*="scroll"]::-webkit-scrollbar,
+#view-container [style*="overflow-x"]::-webkit-scrollbar{height:5px;width:5px}
+#view-container [class*="scroll"]::-webkit-scrollbar-track,
+#view-container [style*="overflow-x"]::-webkit-scrollbar-track{background:transparent}
+#view-container [class*="scroll"]::-webkit-scrollbar-thumb,
+#view-container [style*="overflow-x"]::-webkit-scrollbar-thumb{background:rgba(216,183,91,.22);border-radius:999px}
+
+/* Never globally force #view-container or every child to overflow-x:hidden.
+ * Individual product layouts own their containment and responsive behavior. */
