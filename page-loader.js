@@ -1,10 +1,8 @@
-/* PropBetEdge NFL - ordered page/product upgrade loader v44 */
+/* PropBetEdge NFL - ordered page/product upgrade loader v45 */
 (() => {
   'use strict';
-  const VERSION='20260830enginestoryfix1';
+  const VERSION='20260830proppicker1';
   const upgrades=[
-    /* archive/teams.js is a classic script with lexical const bindings; expose
-       the verified directory before newer runtime modules resolve teams. */
     {js:'./team-globals-v1.js'},
 
     {css:'./dashboard-v5.css',js:'./dashboard-v5.js'},
@@ -29,9 +27,6 @@
     {css:'./sgp-lab-v2.css',js:'./sgp-lab-v2.js'},
     {css:'./usage-v2.css',js:'./usage-v2.js'},
 
-    /* Market Watch v3 owns runtime behavior, but its terminal stylesheet is an
-       override layer on top of the structural v2 stylesheet. Keep v2 CSS only;
-       never load the v2 JS authority alongside v3. */
     {css:'./market-watch-v2.css'},
     {css:'./market-watch-v3.css',js:'./market-watch-v3.js'},
 
@@ -55,39 +50,28 @@
     {css:'./sports-shell-v3.css'},
     {css:'./nfl-stadium-bg-v3.css',js:'./dashboard-v7-sanitize.js'},
 
-    /* Global network identity + subscriber controls. */
     {css:'./network-footer-v1.css',js:'./network-footer-v1.js'},
 
-    /* Production authorities. */
     {css:'./paywall-funnel-v2.css',js:'./paywall-funnel-v2.js'},
     {css:'./pbecast-v6.css',js:'./pbecast-v6.js'},
     {css:'./pbecast-v7-enhance.css',js:'./pbecast-v7-enhance.js'},
     {css:'./stadium-selector-v1.css',js:'./stadium-selector-v1.js'},
     {css:'./production-polish-v2.css',js:'./production-polish-v2.js'},
 
-    /* Games is a primary NFL conversion surface. v5 adds edge-cached market
-       readiness / variance / environment context without changing schedule truth. */
     {css:'./games-worldclass-v3.css'},
     {css:'./games-command-v4.css',js:'./games-command-v4.js'},
     {css:'./games-intel-v5.css',js:'./games-intel-v5.js'},
 
-    /* Prop Board: v3 remains data authority, v4 owns the signal workflow, and
-       responsive v5 removes the old 1220px table assumption instead of hiding overflow. */
     {css:'./prop-board-v4.css',js:'./prop-board-v4.js'},
     {css:'./prop-board-responsive-v5.css'},
 
-    /* PBE Picks + Verified Track Record v2 is the sole UI authority. The old
-       v1 file remains historical source only and is intentionally not loaded. */
     {css:'./pbe-picks-v2.css',js:'./pbe-picks-v2.js'},
-
-    /* Gated validation telemetry is aggregate/public-safe. */
     {css:'./pbe-validation-v1.css',js:'./pbe-validation-v1.js'},
 
-    /* Sell the real architecture publicly without exposing proprietary coefficients. */
+    /* Event-driven engine education. Neither module observes the full SPA DOM. */
     {css:'./pbe-engine-story-v1.css',js:'./pbe-engine-story-v1.js'},
+    {css:'./pbe-prop-engine-v1.css',js:'./pbe-prop-engine-v1.js'},
 
-    /* Last by design: scrollbar policy may style true scrollers, but it must
-       never conceal overflow or substitute for responsive component layout. */
     {css:'./scrollbar-clean-v1.css'}
   ];
 
@@ -142,7 +126,9 @@
   function installProSync(){
     window.addEventListener('pbe:pro-state',forceVisibleProRender);
     window.addEventListener('pbe:route-changed',forceVisibleProRender);
-    setTimeout(forceVisibleProRender,0);setTimeout(forceVisibleProRender,250);setTimeout(forceVisibleProRender,1000);
+    setTimeout(forceVisibleProRender,0);
+    setTimeout(forceVisibleProRender,250);
+    setTimeout(forceVisibleProRender,1000);
   }
 
   async function load(){
