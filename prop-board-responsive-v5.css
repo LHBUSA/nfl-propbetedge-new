@@ -3,8 +3,7 @@
  *
  * Contract:
  * - Wide desktop: all 11 columns remain visible.
- * - Standard desktop: Depth + Status collapse because book depth is already
- *   repeated under Player and model state is already expressed by the row.
+ * - Standard desktop: only redundant Depth collapses; Status stays visible.
  * - Narrow desktop/tablet: use the existing information-complete card renderer
  *   instead of squeezing or horizontally clipping the table.
  * - Mobile: one-column cards. No horizontal board scrolling required.
@@ -92,23 +91,23 @@
   .pbe4-worldclass .pbe3-table th:nth-child(11),.pbe4-worldclass .pbe3-table td:nth-child(11){width:10%}
 }
 
-/* Standard desktop: preserve the nine decision fields. Depth is already shown
- * beneath Player as “N books”; Status is already encoded by modeled state/gap. */
+/* Standard desktop: preserve Status. Depth is redundant because the Player cell
+ * already carries the live book count. The remaining ten fields are rebalanced
+ * to fit the viewport rather than forcing a hidden 1220px minimum. */
 @media (min-width:1241px) and (max-width:1440px){
   .pbe4-worldclass .pbe3-table th:nth-child(10),
-  .pbe4-worldclass .pbe3-table td:nth-child(10),
-  .pbe4-worldclass .pbe3-table th:nth-child(11),
-  .pbe4-worldclass .pbe3-table td:nth-child(11){display:none!important}
+  .pbe4-worldclass .pbe3-table td:nth-child(10){display:none!important}
 
-  .pbe4-worldclass .pbe3-table th:nth-child(1),.pbe4-worldclass .pbe3-table td:nth-child(1){width:18%}
-  .pbe4-worldclass .pbe3-table th:nth-child(2),.pbe4-worldclass .pbe3-table td:nth-child(2){width:12%}
-  .pbe4-worldclass .pbe3-table th:nth-child(3),.pbe4-worldclass .pbe3-table td:nth-child(3){width:10%}
-  .pbe4-worldclass .pbe3-table th:nth-child(4),.pbe4-worldclass .pbe3-table td:nth-child(4){width:10%}
-  .pbe4-worldclass .pbe3-table th:nth-child(5),.pbe4-worldclass .pbe3-table td:nth-child(5){width:8%}
-  .pbe4-worldclass .pbe3-table th:nth-child(6),.pbe4-worldclass .pbe3-table td:nth-child(6){width:16%}
-  .pbe4-worldclass .pbe3-table th:nth-child(7),.pbe4-worldclass .pbe3-table td:nth-child(7){width:8%}
-  .pbe4-worldclass .pbe3-table th:nth-child(8),.pbe4-worldclass .pbe3-table td:nth-child(8){width:10%}
+  .pbe4-worldclass .pbe3-table th:nth-child(1),.pbe4-worldclass .pbe3-table td:nth-child(1){width:16%}
+  .pbe4-worldclass .pbe3-table th:nth-child(2),.pbe4-worldclass .pbe3-table td:nth-child(2){width:10%}
+  .pbe4-worldclass .pbe3-table th:nth-child(3),.pbe4-worldclass .pbe3-table td:nth-child(3){width:9%}
+  .pbe4-worldclass .pbe3-table th:nth-child(4),.pbe4-worldclass .pbe3-table td:nth-child(4){width:9%}
+  .pbe4-worldclass .pbe3-table th:nth-child(5),.pbe4-worldclass .pbe3-table td:nth-child(5){width:7%}
+  .pbe4-worldclass .pbe3-table th:nth-child(6),.pbe4-worldclass .pbe3-table td:nth-child(6){width:15%}
+  .pbe4-worldclass .pbe3-table th:nth-child(7),.pbe4-worldclass .pbe3-table td:nth-child(7){width:7%}
+  .pbe4-worldclass .pbe3-table th:nth-child(8),.pbe4-worldclass .pbe3-table td:nth-child(8){width:9%}
   .pbe4-worldclass .pbe3-table th:nth-child(9),.pbe4-worldclass .pbe3-table td:nth-child(9){width:8%}
+  .pbe4-worldclass .pbe3-table th:nth-child(11),.pbe4-worldclass .pbe3-table td:nth-child(11){width:10%}
 }
 
 /* Before the table becomes a postage stamp, switch presentation entirely.
