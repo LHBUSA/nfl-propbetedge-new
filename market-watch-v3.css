@@ -1,0 +1,180 @@
+/* PropBetEdge NFL — Market Watch v3 institutional terminal */
+
+.pbe22-watch-v3{
+  --mw-bg:#060a0f;
+  --mw-panel:rgba(7,12,18,.95);
+  --mw-panel-2:rgba(10,17,25,.965);
+  --mw-line:rgba(255,255,255,.075);
+  --mw-text:#f5f7fa;
+  --mw-muted:#738091;
+  --mw-green:#55d68c;
+  --mw-red:#ff6574;
+  --mw-cyan:#55d9ff;
+  --mw-orange:#ff9a4d;
+  --mw-gold:#d8b75b;
+  padding:6px 0 64px;
+}
+.pbe22-watch-v3 *{box-sizing:border-box}
+
+/* Stadium imagery is atmosphere only. Dense work surfaces are opaque glass. */
+.pbe22-watch-v3 .pbe22-hero,
+.pbe22-watch-v3 .pbe22-contract,
+.pbe22-watch-v3 .pbe22-summary,
+.pbe22-watch-v3 .pbe22-toolbar,
+.pbe22-watch-v3 .pbe22-baseline,
+.pbe22-watch-v3 .pbe22-table-wrap,
+.pbe22-watch-v3 .pbe22-prowall{
+  -webkit-backdrop-filter:blur(18px) saturate(118%);
+  backdrop-filter:blur(18px) saturate(118%);
+}
+.pbe22-watch-v3 .pbe22-hero{
+  border-color:rgba(85,214,140,.14);
+  background:
+    radial-gradient(circle at 87% 3%,rgba(85,214,140,.10),transparent 26rem),
+    radial-gradient(circle at 52% 130%,rgba(85,217,255,.035),transparent 29rem),
+    linear-gradient(135deg,rgba(8,15,20,.97),rgba(5,10,16,.985) 62%,rgba(5,8,13,.99));
+  box-shadow:0 28px 80px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.025);
+}
+.pbe22-watch-v3 .pbe22-title{letter-spacing:-.048em}
+.pbe22-watch-v3 .pbe22-title em{color:var(--mw-cyan)}
+.pbe22-watch-v3 .pbe22-kicker{color:var(--mw-green)}
+.pbe22-watch-v3 .pbe22-copy{color:#8c98a7;max-width:850px}
+.pbe22-watch-v3 .pbe22-status{
+  min-width:310px;
+  border-color:rgba(85,217,255,.13);
+  background:rgba(3,8,12,.72);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.025);
+}
+.pbe22-status-top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.pbe22-watch-v3 .pbe22-status b{color:var(--mw-text);font-size:27px}
+.pbe22-auto{
+  flex:0 0 auto;padding:5px 7px;border:1px solid rgba(85,214,140,.14);border-radius:999px;
+  color:var(--mw-green)!important;background:rgba(85,214,140,.045);font:800 5.5px/1 'DM Mono',monospace!important;
+  letter-spacing:.08em;text-transform:uppercase;
+}
+.pbe22-watch-v3 .pbe22-contract{
+  border-color:rgba(125,167,255,.10);background:rgba(7,12,18,.91);color:#748090;
+}
+.pbe22-watch-v3 .pbe22-contract strong{color:#9fbaff}
+
+.pbe22-watch-v3 .pbe22-summary{background:transparent;backdrop-filter:none;-webkit-backdrop-filter:none}
+.pbe22-watch-v3 .pbe22-stat{
+  background:linear-gradient(145deg,rgba(10,18,27,.97),rgba(6,11,17,.97));
+  border-color:rgba(255,255,255,.07);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.02);
+}
+.pbe22-watch-v3 .pbe22-stat.hot{border-color:rgba(255,154,77,.16);background:linear-gradient(145deg,rgba(31,20,13,.84),rgba(8,13,19,.97))}
+.pbe22-watch-v3 .pbe22-stat.hot b{color:var(--mw-orange)}
+
+.pbe22-watch-v3 .pbe22-toolbar{
+  background:rgba(6,11,17,.965);border-color:rgba(255,255,255,.075);
+  box-shadow:0 12px 34px rgba(0,0,0,.22);
+  grid-template-columns:minmax(220px,1fr) auto auto auto auto;
+}
+.pbe22-watch-v3 .pbe22-input,.pbe22-watch-v3 .pbe22-select{
+  background:rgba(0,0,0,.26);border-color:rgba(255,255,255,.09);font-size:8.5px;
+}
+.pbe22-refresh{
+  min-width:78px;height:34px;border:1px solid rgba(85,217,255,.14);border-radius:7px;background:rgba(85,217,255,.035);
+  color:#bfefff;cursor:pointer;font:800 6.5px/1 'DM Mono',monospace;text-transform:uppercase;letter-spacing:.06em;
+}
+.pbe22-refresh:hover{background:rgba(85,217,255,.065);border-color:rgba(85,217,255,.24)}
+.pbe22-refresh.spinning{pointer-events:none;color:var(--mw-green)}
+.pbe22-refresh.spinning::first-letter{animation:pbe22spin .75s linear infinite}
+@keyframes pbe22spin{to{transform:rotate(360deg)}}
+
+/* One baseline CTA instead of sixty-three NO BASELINE labels. */
+.pbe22-baseline-float{
+  position:sticky;top:8px;z-index:12;margin:9px 0 0 auto;display:flex;align-items:center;gap:10px;width:max-content;max-width:100%;
+  padding:9px 12px;border:1px solid rgba(85,217,255,.18);border-radius:10px;background:rgba(5,13,19,.94);
+  color:#e5f7ff;box-shadow:0 12px 35px rgba(0,0,0,.30),0 0 0 1px rgba(85,217,255,.02);cursor:pointer;
+  -webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);
+}
+.pbe22-baseline-float>span{display:grid;place-items:center;width:26px;height:26px;border-radius:7px;background:rgba(85,217,255,.08);color:var(--mw-cyan);font-size:16px}
+.pbe22-baseline-float strong{display:block;font-size:8px;text-align:left}
+.pbe22-baseline-float small{display:block;margin-top:3px;color:#687688;font:700 5.5px/1.2 'DM Mono',monospace;text-transform:uppercase}
+.pbe22-watch-v3 .pbe22-baseline.compact{background:rgba(7,12,18,.93)}
+
+.pbe22-watch-v3 .pbe22-table-wrap{
+  position:relative;background:rgba(5,10,15,.965);border-color:rgba(255,255,255,.085);
+  box-shadow:0 24px 65px rgba(0,0,0,.36),inset 0 1px 0 rgba(255,255,255,.018);
+}
+.pbe22-watch-v3 .pbe22-scroll{max-height:69vh;background:rgba(4,8,12,.90)}
+.pbe22-watch-v3 .pbe22-table{min-width:1190px;font-variant-numeric:tabular-nums lining-nums}
+.pbe22-watch-v3 .pbe22-table th{
+  padding:10px 11px;background:rgba(7,13,20,.985);border-bottom-color:rgba(255,255,255,.085);color:#647284;
+  -webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);
+}
+.pbe22-watch-v3 .pbe22-table td{
+  height:52px;padding:8px 11px;background:rgba(4,9,14,.78);border-bottom-color:rgba(255,255,255,.045);
+  font-variant-numeric:tabular-nums lining-nums;
+}
+.pbe22-watch-v3 .pbe22-table tbody tr:hover td{background:rgba(13,24,31,.94)}
+.pbe22-watch-v3 .pbe22-num,.pbe22-watch-v3 .pbe22-line,.pbe22-watch-v3 .pbe22-range,.pbe22-watch-v3 .pbe22-best,.pbe22-watch-v3 .pbe22-delta,.pbe22-watch-v3 .pbe22-dispersion b{
+  font-variant-numeric:tabular-nums lining-nums;
+  font-feature-settings:'tnum' 1,'lnum' 1;
+}
+.pbe22-watch-v3 .pbe22-line{font-family:'DM Mono',monospace;font-size:10px;font-weight:800;letter-spacing:-.02em}
+.pbe22-watch-v3 .pbe22-range{color:#a7bcff;font-size:7.5px}
+.pbe22-watch-v3 .pbe22-player{font-size:9.5px}
+.pbe22-watch-v3 .pbe22-market{font-size:8px}
+.pbe22-watch-v3 .pbe22-sub{color:#4e5b6a}
+
+/* Sportsbook mark: favicon where known, compact house code fallback everywhere. */
+.pbe22-best{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;color:#eef5f8!important;font-family:'DM Mono',monospace!important;font-size:7px!important}
+.pbe22-best strong{color:#fff;font-size:8px}
+.pbe22-best em{color:var(--mw-green);font-style:normal;font-weight:900}
+.pbe22-bookmark{
+  display:inline-flex;align-items:center;justify-content:center;gap:3px;min-width:25px;height:19px;padding:0 5px;border:1px solid rgba(255,255,255,.075);
+  border-radius:5px;background:rgba(255,255,255,.025);color:#8390a0;font:900 5.2px/1 'DM Mono',monospace;letter-spacing:.02em;
+}
+.pbe22-bookmark img{width:11px;height:11px;border-radius:2px;object-fit:contain;background:#fff}
+.pbe22-best-empty{color:#3f4a57}
+
+/* Dispersion heat map: green -> cyan -> orange; pulse only at exceptional 5+ point spreads. */
+.pbe22-dispersion{min-width:108px}
+.pbe22-dispersion b{min-width:25px;color:var(--mw-green);font-family:'DM Mono',monospace;font-size:9px;font-weight:900}
+.pbe22-meter{width:70px;height:5px;background:rgba(255,255,255,.055);box-shadow:inset 0 0 0 1px rgba(255,255,255,.012)}
+.pbe22-dispersion.cool .pbe22-meter span{background:var(--mw-green)}
+.pbe22-dispersion.warm b{color:#7de7ff}.pbe22-dispersion.warm .pbe22-meter span{background:linear-gradient(90deg,var(--mw-green),var(--mw-cyan))}
+.pbe22-dispersion.hot b{color:var(--mw-cyan);text-shadow:0 0 12px rgba(85,217,255,.28)}.pbe22-dispersion.hot .pbe22-meter span{background:var(--mw-cyan);box-shadow:0 0 10px rgba(85,217,255,.25)}
+.pbe22-dispersion.extreme b{color:var(--mw-orange);text-shadow:0 0 13px rgba(255,154,77,.36)}.pbe22-dispersion.extreme .pbe22-meter span{background:linear-gradient(90deg,var(--mw-cyan),var(--mw-orange));box-shadow:0 0 12px rgba(255,154,77,.32);animation:pbe22pulse 1.8s ease-in-out infinite}
+.pbe22-table tr.pbe22-heat-extreme td:first-child{box-shadow:inset 2px 0 0 rgba(255,154,77,.65)}
+@keyframes pbe22pulse{0%,100%{opacity:.72}50%{opacity:1}}
+
+/* Empty Local Delta cells are intentionally silent. */
+.pbe22-local-cell.empty{color:transparent!important}
+.pbe22-local-cell.empty::after{content:''}
+.pbe22-local-cell.has-baseline{min-width:66px}
+.pbe22-watch-v3 .pbe22-delta{font-family:'DM Mono',monospace;font-size:9px;font-weight:900}
+
+/* Live-provider refresh flashes. Better/worse refers to executable side quote, not prediction quality. */
+.pbe22-table td{position:relative;transition:background-color .25s,color .25s,box-shadow .25s}
+.pbe22-flash-better{animation:pbe22flashbetter 1.35s ease-out}
+.pbe22-flash-worse{animation:pbe22flashworse 1.35s ease-out}
+.pbe22-flash-neutral{animation:pbe22flashneutral 1.35s ease-out}
+@keyframes pbe22flashbetter{0%{background:rgba(85,214,140,.34);box-shadow:inset 0 0 0 1px rgba(85,214,140,.35)}100%{background:rgba(4,9,14,.78);box-shadow:inset 0 0 0 1px transparent}}
+@keyframes pbe22flashworse{0%{background:rgba(255,101,116,.30);box-shadow:inset 0 0 0 1px rgba(255,101,116,.35)}100%{background:rgba(4,9,14,.78);box-shadow:inset 0 0 0 1px transparent}}
+@keyframes pbe22flashneutral{0%{background:rgba(85,217,255,.25);box-shadow:inset 0 0 0 1px rgba(85,217,255,.30)}100%{background:rgba(4,9,14,.78);box-shadow:inset 0 0 0 1px transparent}}
+
+.pbe22-watch-v3 .pbe22-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:rgba(6,11,17,.96);color:#526071}
+.pbe22-empty.compact{min-height:160px}
+
+@media(max-width:1100px){
+  .pbe22-watch-v3 .pbe22-toolbar{grid-template-columns:1fr 1fr 1fr}
+  .pbe22-refresh{width:100%}
+}
+@media(max-width:720px){
+  .pbe22-watch-v3 .pbe22-status{min-width:0}
+  .pbe22-watch-v3 .pbe22-toolbar{grid-template-columns:1fr 1fr}
+  .pbe22-baseline-float{position:relative;top:auto;margin-left:0;width:100%}
+  .pbe22-watch-v3 .pbe22-table td{height:48px}
+}
+@media(max-width:520px){
+  .pbe22-watch-v3 .pbe22-toolbar{grid-template-columns:1fr}
+  .pbe22-watch-v3 .pbe22-title{font-size:45px}
+  .pbe22-status-top{align-items:flex-start;flex-direction:column}
+}
+@media(prefers-reduced-motion:reduce){
+  .pbe22-dispersion.extreme .pbe22-meter span,.pbe22-flash-better,.pbe22-flash-worse,.pbe22-flash-neutral{animation:none!important}
+}

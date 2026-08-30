@@ -1,7 +1,7 @@
-/* PropBetEdge NFL — ordered page/product upgrade loader v31 */
+/* PropBetEdge NFL — ordered page/product upgrade loader v32 */
 (() => {
   'use strict';
-  const VERSION='20260830propboardworld4';
+  const VERSION='20260830marketwatchterminal3';
   const upgrades=[
     /* archive/teams.js is a classic script with lexical const bindings; expose
        the verified directory before newer runtime modules resolve teams. */
@@ -27,7 +27,10 @@
     {css:'./simulator-v2.css',js:'./simulator-v2.js'},
     {css:'./sgp-lab-v2.css',js:'./sgp-lab-v2.js'},
     {css:'./usage-v2.css',js:'./usage-v2.js'},
-    {css:'./market-watch-v2.css',js:'./market-watch-v2.js'},
+
+    /* Market Watch v3 supersedes v2 as the sole runtime authority. */
+    {css:'./market-watch-v3.css',js:'./market-watch-v3.js'},
+
     {css:'./player-research-v2.css',js:'./player-research-v2.js'},
     {css:'./command-palette-v2.css',js:'./command-palette-v3.js'},
     {css:'./event-selector-v2.css',js:'./event-selector-v2.js'},
