@@ -1,24 +1,30 @@
-/* PropBetEdge NFL — public engine story v1
- * Makes the decision architecture visible without exposing proprietary weights.
- * This is product education, not a second model authority.
+/* PropBetEdge NFL — public engine story v1.1
+ * Product education only. No model authority lives in this file.
+ *
+ * IMPORTANT: this module is deliberately event-driven. It does NOT observe the
+ * entire SPA DOM. The previous global MutationObserver reacted to every market,
+ * media and newsroom paint and could churn the main thread on busy pages.
  */
 (() => {
   'use strict';
 
   const STATE_API='/api/pbe-picks?view=state';
-  let snapshot=null, loading=false;
+  let snapshot=null;
+  let statePromise=null;
+  let timers=[];
+
   const esc=v=>String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
   const pct=(a,b)=>b>0?Math.max(0,Math.min(100,(Number(a)||0)/(Number(b)||1)*100)):0;
 
   async function loadState(){
-    if(snapshot||loading)return snapshot;
-    loading=true;
-    try{
-      const r=await fetch(STATE_API,{cache:'no-store',headers:{accept:'application/json'}});
-      if(r.ok)snapshot=await r.json();
-    }catch(_){/* story still renders from immutable product contract */}
-    finally{loading=false}
-    return snapshot;
+    if(snapshot)return snapshot;
+    if(statePromise)return statePromise;
+    statePromise=fetch(STATE_API,{cache:'no-store',headers:{accept:'application/json'}})
+      .then(async r=>r.ok?await r.json():null)
+      .then(data=>{snapshot=data||snapshot;return snapshot})
+      .catch(()=>null)
+      .finally(()=>{statePromise=null});
+    return statePromise;
   }
 
   function go(route){
@@ -37,7 +43,7 @@
         <div>
           <span class="pbe-engine-kicker">PBE PICKS ENGINE · GOVERNED QUANTITATIVE DECISION SYSTEM</span>
           <h2>We don't publish opinions.<br><em>We make the market prove us wrong.</em></h2>
-          <p>Every NFL decision starts with the current sportsbook market, removes the vig, builds a frozen game-state feature vector, prices the outcome with the active champion model, and measures the difference. If the edge is not large enough, there is no pick.</p>
+          <p>Every NFL decision starts with the sportsbook market, removes the vig, freezes a game-state feature vector, prices the outcome with the active champion model, and measures the difference. If the edge is not large enough, there is no pick.</p>
         </div>
         <aside class="pbe-engine-state">
           <span>${trained?'PRODUCTION CHAMPION':'VALIDATION CHAMPION'}</span>
@@ -47,10 +53,10 @@
       </header>
 
       <div class="pbe-engine-flow">
-        <article><i>01</i><span>MARKET</span><strong>Strip the vig.</strong><p>Spread, total and moneyline prices are converted into fair two-way market probabilities before PBE compares anything.</p></article>
+        <article><i>01</i><span>MARKET</span><strong>Strip the vig.</strong><p>Spread, total and moneyline prices become fair two-way market probabilities before PBE compares anything.</p></article>
         <article><i>02</i><span>MODEL</span><strong>Price the game.</strong><p>EPA, QB quality, rest, venue, weather flags, PROE, pace, line movement and early-season context feed a deterministic probability model.</p></article>
         <article><i>03</i><span>EDGE</span><strong>Demand separation.</strong><p>PBE probability minus de-vigged market probability becomes the edge. Spread/total require 2.0pp; moneyline requires 3.0pp.</p></article>
-        <article><i>04</i><span>SIZE</span><strong>Quarter Kelly.</strong><p>Qualified edges are sized mathematically from the actual sportsbook price, with a 0.5u floor and 2.0u hard cap.</p></article>
+        <article><i>04</i><span>SIZE</span><strong>Quarter Kelly.</strong><p>Qualified edges are sized from the actual sportsbook price, with a 0.5u floor and 2.0u hard cap.</p></article>
         <article><i>05</i><span>LOCK</span><strong>Freeze the decision.</strong><p>Issue line, odds, probability, model version, features and stake are immutable. Later market movement cannot rewrite the original call.</p></article>
         <article><i>06</i><span>LEARN</span><strong>Grade against reality.</strong><p>Final outcome, units, calibration and closing-line value become the next training observation. No provisional result moves production weights.</p></article>
       </div>
@@ -59,7 +65,7 @@
         <div class="pbe-engine-proof-copy">
           <span>WHY THIS IS DIFFERENT</span>
           <h3>A pick has to survive three systems.</h3>
-          <p><b>Decision gate:</b> the model must clear a real edge threshold and positive Kelly sizing. <b>Publication gate:</b> an untrained champion can create hidden tracking decisions, but it cannot publish customer picks. <b>Promotion gate:</b> a challenger cannot become champion until at least 100 finalized observations across 4 distinct weeks exist—and then it still has to beat the reigning model on CLV or calibration.</p>
+          <p><b>Decision gate:</b> clear a real edge threshold and positive Kelly sizing. <b>Publication gate:</b> an untrained champion may create hidden tracking decisions but cannot publish customer picks. <b>Promotion gate:</b> a challenger cannot train until at least 100 finalized observations across 4 distinct weeks exist—and then it still has to beat the reigning model on CLV or calibration.</p>
           <div class="pbe-engine-badges"><span>NO LLM PICKS</span><span>NO RANDOMNESS</span><span>NO MANUAL OVERRIDE</span><span>NO BACKFILL</span><span>LOSSES STAY VISIBLE</span><span>ACTUAL ISSUE PRICE</span></div>
         </div>
         <div class="pbe-engine-gate">
@@ -79,44 +85,72 @@
       </div>
 
       <footer class="pbe-engine-cta">
-        <div><span>THE ALGORITHM IS NOT THE MARKETING CLAIM.</span><strong>The audit trail is.</strong><p>See the validation gate now. When official picks begin, the same surface becomes the public, immutable decision record.</p></div>
+        <div><span>THE ALGORITHM IS NOT THE MARKETING CLAIM.</span><strong>The audit trail is.</strong><p>See the validation gate now. When official picks begin, the same surface becomes the public immutable decision record.</p></div>
         <div><button type="button" data-engine-route="pbepicks">Open PBE Picks</button><button type="button" class="secondary" data-engine-route="trackrecord">Verified Track Record</button></div>
       </footer>
     </section>`;
   }
 
   function wire(root){
-    root.querySelectorAll('[data-engine-route]').forEach(btn=>btn.addEventListener('click',()=>go(btn.dataset.engineRoute)));
+    root?.querySelectorAll('[data-engine-route]').forEach(btn=>{
+      if(btn.dataset.engineWired==='1')return;
+      btn.dataset.engineWired='1';
+      btn.addEventListener('click',()=>go(btn.dataset.engineRoute));
+    });
   }
 
-  function mountHome(){
+  function upsertHome(){
     const page=document.querySelector('.pbehome7');
-    if(!page||page.querySelector(':scope > .pbe-engine-story'))return;
-    const main=page.querySelector('.pbe7-main');
-    if(!main)return;
-    main.insertAdjacentHTML('beforebegin',architecture());
-    wire(page.querySelector(':scope > .pbe-engine-story'));
+    const main=page?.querySelector('.pbe7-main');
+    if(!page||!main)return false;
+    let story=page.querySelector(':scope > .pbe-engine-story');
+    if(!story){
+      main.insertAdjacentHTML('beforebegin',architecture());
+      story=page.querySelector(':scope > .pbe-engine-story');
+    }
+    wire(story);
+    return true;
   }
 
-  function mountPicks(){
+  function upsertPicks(){
     const page=document.querySelector('.pbe2-wrap');
-    if(!page||page.querySelector('.pbe-engine-story'))return;
-    const pipeline=page.querySelector('.pbe2-pipeline');
-    const target=pipeline||page.querySelector('.pbe2-stage');
-    if(!target)return;
-    target.insertAdjacentHTML('afterend',architecture());
-    wire(page.querySelector('.pbe-engine-story'));
+    if(!page)return false;
+    let story=page.querySelector('.pbe-engine-story');
+    if(!story){
+      const target=page.querySelector('.pbe2-pipeline')||page.querySelector('.pbe2-stage');
+      if(!target)return false;
+      target.insertAdjacentHTML('afterend',architecture());
+      story=page.querySelector('.pbe-engine-story');
+    }
+    wire(story);
+    return true;
   }
 
-  async function sync(){
-    await loadState();
-    mountHome();
-    mountPicks();
+  function paint(){
+    upsertHome();
+    upsertPicks();
   }
 
-  const observer=new MutationObserver(()=>queueMicrotask(sync));
-  document.addEventListener('DOMContentLoaded',()=>{observer.observe(document.body,{childList:true,subtree:true});sync()},{once:true});
-  ['pbe:route-changed','pbe:upgrades-ready','pbe:pro-state'].forEach(name=>window.addEventListener(name,()=>setTimeout(sync,25)));
-  if(document.readyState!=='loading'){observer.observe(document.body,{childList:true,subtree:true});sync()}
-  window.PBEEngineStory={sync};
+  function refreshPaint(){
+    // Replace only our own already-mounted story after state arrives; never
+    // touch the rest of the SPA or watch its mutation stream.
+    document.querySelectorAll('.pbe-engine-story').forEach(old=>{
+      const shell=document.createElement('div');
+      shell.innerHTML=architecture().trim();
+      const next=shell.firstElementChild;
+      if(next){old.replaceWith(next);wire(next)}
+    });
+    paint();
+  }
+
+  function schedule(){
+    timers.forEach(clearTimeout);timers=[];
+    [0,80,300,900,1800].forEach(delay=>timers.push(setTimeout(paint,delay)));
+    loadState().then(data=>{if(data)refreshPaint()});
+  }
+
+  document.addEventListener('DOMContentLoaded',schedule,{once:true});
+  ['pbe:route-changed','pbe:upgrades-ready','pbe:pro-state'].forEach(name=>window.addEventListener(name,schedule));
+  if(document.readyState!=='loading')schedule();
+  window.PBEEngineStory={sync:schedule};
 })();
