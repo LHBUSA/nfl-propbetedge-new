@@ -170,7 +170,7 @@
     host.querySelectorAll('[data-cast-game]').forEach(btn=>btn.addEventListener('click',()=>{
       const id=btn.dataset.castGame;
       go('pbecast');
-      setTimeout(()=>window.PBEcastV4?.focus?.(id),180);
+      setTimeout(()=>window.PBEcastV6?.focus?.(id),180);
     }));
     restartAutoAdvance();
   }
