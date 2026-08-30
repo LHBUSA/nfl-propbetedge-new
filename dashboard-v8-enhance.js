@@ -6,7 +6,8 @@
 (() => {
   'use strict';
 
-  const local={eventId:null,market:null,loading:false,marketError:null,filter:'all',timer:null};
+  const MARKET_REFRESH_MS=15000;
+  const local={eventId:null,market:null,loading:false,marketError:null,lastMarketAt:0,filter:'all',timer:null};
   const esc=v=>String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
   const arr=v=>Array.isArray(v)?v:[];
   const num=v=>{if(v===null||v===undefined||v==='')return NaN;const n=Number(v);return Number.isFinite(n)?n:NaN};
@@ -22,11 +23,12 @@
   function latestLiveWp(){const rows=arr(state()?.detail?.win_probability).filter(x=>Number.isFinite(num(x?.home_win_percentage)));if(!rows.length)return null;const home=num(rows.at(-1).home_win_percentage);return{home,away:1-home}}
   function probabilitySnapshot(market){const live=latestLiveWp();return live?{away:live.away,home:live.home,label:'LIVE WIN PROB'}:{away:num(market?.vig_free_probability?.away),home:num(market?.vig_free_probability?.home),label:'MARKET-IMPLIED · VIG FREE'}}
 
-  async function syncMarket(){
+  async function syncMarket(force=false){
     const game=featured();if(!game?.id||local.loading)return;
-    if(local.eventId===String(game.id)&&local.market)return;
+    const same=local.eventId===String(game.id),age=Date.now()-local.lastMarketAt;
+    if(!force&&same&&age<MARKET_REFRESH_MS)return;
     const {awayName,homeName}=featuredTeams();if(!awayName||!homeName)return;
-    local.loading=true;local.marketError=null;
+    local.loading=true;local.marketError=null;local.lastMarketAt=Date.now();
     try{
       const out=await json(`/api/home-market?away=${encodeURIComponent(awayName)}&home=${encodeURIComponent(homeName)}`);
       local.eventId=String(game.id);local.market=out;
@@ -37,13 +39,13 @@
 
   function probabilityBar(value){const p=Number.isFinite(value)?Math.max(0,Math.min(1,value)):null;return p===null?'<span class="pbe8-prob-na">—</span>':`<div class="pbe8-prob"><strong>${(p*100).toFixed(1)}%</strong><span><i style="width:${(p*100).toFixed(1)}%"></i></span></div>`}
   function marketHtml(){
-    if(local.loading)return'<div class="pbe8-market-loading"><i></i><span>Connecting core market…</span></div>';
+    if(local.loading&&!local.market)return'<div class="pbe8-market-loading"><i></i><span>Connecting core market…</span></div>';
     const m=local.market;
     if(!m?.ok)return`<div class="pbe8-market-unavailable"><span>CORE MARKET</span><strong>Unavailable</strong><small>No current spread / total / moneyline board is being returned for this event.</small></div>`;
     const {away,home}=featuredTeams(),p=probabilitySnapshot(m),awayLabel=away.abbreviation||'AWY',homeLabel=home.abbreviation||'HME';
     const updated=m.provider_last_update?new Date(m.provider_last_update):null;
     const time=updated&&!Number.isNaN(updated.getTime())?updated.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'';
-    return`<div class="pbe8-market-head"><span>CORE MARKET · CURRENT CROSS-BOOK CONSENSUS</span><small>${m.books||0} books · ${m.quote_count||0} quotes${time?` · ${esc(time)}`:''}</small></div><div class="pbe8-market-grid"><div><span>SPREAD</span><strong>${esc(awayLabel)} ${fmtLine(m.spread?.away)}</strong><small>${esc(homeLabel)} ${fmtLine(m.spread?.home)}</small></div><div><span>TOTAL</span><strong>${Number.isFinite(num(m.total?.line))?num(m.total.line).toFixed(1):'—'}</strong><small>O ${american(m.total?.over_price)} · U ${american(m.total?.under_price)}</small></div><div><span>MONEYLINE</span><strong>${esc(awayLabel)} ${american(m.moneyline?.away)}</strong><small>${esc(homeLabel)} ${american(m.moneyline?.home)}</small></div></div><div class="pbe8-prob-grid"><div><span>${esc(awayLabel)} · ${p.label}</span>${probabilityBar(p.away)}</div><div><span>${esc(homeLabel)} · ${p.label}</span>${probabilityBar(p.home)}</div></div>`
+    return`<div class="pbe8-market-head"><span>CORE MARKET · CURRENT CROSS-BOOK CONSENSUS</span><small>${m.books||0} books · ${m.quote_count||0} quotes${time?` · ${esc(time)}`:''}${local.loading?' · refreshing':''}</small></div><div class="pbe8-market-grid"><div><span>SPREAD</span><strong>${esc(awayLabel)} ${fmtLine(m.spread?.away)}</strong><small>${esc(homeLabel)} ${fmtLine(m.spread?.home)}</small></div><div><span>TOTAL</span><strong>${Number.isFinite(num(m.total?.line))?num(m.total.line).toFixed(1):'—'}</strong><small>O ${american(m.total?.over_price)} · U ${american(m.total?.under_price)}</small></div><div><span>MONEYLINE</span><strong>${esc(awayLabel)} ${american(m.moneyline?.away)}</strong><small>${esc(homeLabel)} ${american(m.moneyline?.home)}</small></div></div><div class="pbe8-prob-grid"><div><span>${esc(awayLabel)} · ${p.label}</span>${probabilityBar(p.away)}</div><div><span>${esc(homeLabel)} · ${p.label}</span>${probabilityBar(p.home)}</div></div>`
   }
   function renderMarket(){if(!active())return;const scorebox=document.querySelector('.pbe7-scorebox');if(!scorebox)return;let host=document.getElementById('pbe8-core-market');if(!host){host=document.createElement('section');host.id='pbe8-core-market';host.className='pbe8-core-market';const actions=scorebox.querySelector('.pbe7-actions');if(actions)scorebox.insertBefore(host,actions);else scorebox.appendChild(host)}host.innerHTML=marketHtml()}
 
@@ -61,7 +63,7 @@
     const header=panel.querySelector(':scope > header');if(header&&!header.querySelector('.pbe8-news-filters')){const controls=document.createElement('div');controls.className='pbe8-news-filters';controls.innerHTML=`<button data-pbe8-filter="all">All</button><button data-pbe8-filter="injury">Injury</button><button data-pbe8-filter="transaction">Transaction</button><button data-pbe8-filter="lineup">Lineup</button>`;header.appendChild(controls);controls.addEventListener('click',e=>{const b=e.target.closest('[data-pbe8-filter]');if(!b)return;local.filter=b.dataset.pbe8Filter;filterNews()})}filterNews()
   }
 
-  function syncRoute(){const home=window.App?.current==='home';document.documentElement.dataset.pbeHome=home?'1':'0';if(home){setTimeout(()=>{renderMarket();renderNewsControls();syncMarket()},40)}}
+  function syncRoute(){const home=window.App?.current==='home';document.documentElement.dataset.pbeHome=home?'1':'0';if(home){setTimeout(()=>{renderMarket();renderNewsControls();syncMarket(true)},40)}}
   function tick(){clearTimeout(local.timer);if(active()){renderMarket();renderNewsControls();syncMarket()}local.timer=setTimeout(tick,2500)}
 
   window.addEventListener('pbe:route-changed',syncRoute);
