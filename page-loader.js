@@ -1,7 +1,7 @@
-/* PropBetEdge NFL - ordered page/product upgrade loader v45 */
+/* PropBetEdge NFL - ordered page/product upgrade loader v46 */
 (() => {
   'use strict';
-  const VERSION='20260830proppicker1';
+  const VERSION='20260830bootfix1';
   const upgrades=[
     {js:'./team-globals-v1.js'},
 
@@ -17,9 +17,6 @@
     {css:'./draft-review-v2.css',js:'./draft-review-v2.js'},
     {css:'./newsroom-v2.css',js:'./newsroom-v2.js'},
     {css:'./news-intelligence-v2.css',js:'./news-intelligence-v2.js'},
-    {css:'./pbecast-v4.css',js:'./pbecast-v4.js'},
-    {css:'./pbecast-v5.css',js:'./pbecast-v5.js'},
-    {js:'./pbecast-v5-renderer.js'},
     {css:'./propchain-v2.css',js:'./propchain-v2.js'},
     {css:'./matchups-v2.css',js:'./matchups-v2.js'},
     {css:'./simulator-v2.css',js:'./simulator-v2.js'},
@@ -53,8 +50,13 @@
     {css:'./network-footer-v1.css',js:'./network-footer-v1.js'},
 
     {css:'./paywall-funnel-v2.css',js:'./paywall-funnel-v2.js'},
+
+    /* PBEcast v6 is the sole live-game renderer/poller. v4/v5 are historical
+       source only; loading them alongside v6 created duplicate poll loops and a
+       view-container MutationObserver. v7 is an additive trading layer on v6. */
     {css:'./pbecast-v6.css',js:'./pbecast-v6.js'},
     {css:'./pbecast-v7-enhance.css',js:'./pbecast-v7-enhance.js'},
+
     {css:'./stadium-selector-v1.css',js:'./stadium-selector-v1.js'},
     {css:'./production-polish-v2.css',js:'./production-polish-v2.js'},
 
