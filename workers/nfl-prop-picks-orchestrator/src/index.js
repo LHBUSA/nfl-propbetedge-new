@@ -1,12 +1,10 @@
 /* nfl-prop-picks-orchestrator — Algorithm #2: governed NFL player props.
- * v1 is player_pass_yds only. Projection authority stays upstream; this Worker
- * selects executable sportsbook quotes, persists immutable decisions and never
- * promotes bootstrap output into the customer record.
+ * v1 supports player_pass_yds only. Projection authority stays upstream.
  *
- * Two schedules have intentionally different jobs:
- *   7 * * * *    -> evaluate/issue player-prop decisions
- *   */15 * * * * -> copy only each active pick's observed PRE-KICK book state
- *                   into the append-only closing tape. No post-kick CLV input.
+ * Schedules:
+ * - hourly at minute 7: evaluate and issue decisions
+ * - every 15 minutes: copy active picks' observed PRE-KICK book state into the
+ *   append-only closing tape. Post-kick prices are never accepted for CLV.
  */
 import { select, insert, patch, rpc } from '../../nfl-picks-engine-shared/supabase.mjs';
 import {
@@ -15,7 +13,7 @@ import {
 } from '../../nfl-prop-picks-shared/prop-math.mjs';
 
 const SERVICE = 'nfl-prop-picks-orchestrator';
-const VERSION = 'v1.1.0';
+const VERSION = 'v1.1.1';
 const HORIZON_HOURS = 36;
 const CLOSING_TAPE_HOURS = 6;
 const MAX_EVENTS = 16;
@@ -38,7 +36,8 @@ export default {
     const url = new URL(req.url);
     if (url.pathname === '/health') {
       return json({
-        service: SERVICE, version: VERSION,
+        service: SERVICE,
+        version: VERSION,
         last_cron_run: health.last_cron_run,
         last_closing_tape_run: health.last_closing_tape_run,
         last_error_class: health.last_error_class,
@@ -63,11 +62,9 @@ export default {
   },
 
   async scheduled(event, env, ctx) {
-    if (String(event?.cron || '') === '*/15 * * * *') {
-      ctx.waitUntil(captureClosingTape(env));
-    } else {
-      ctx.waitUntil(runOrchestration(env));
-    }
+    const cron = String(event?.cron || '');
+    if (cron === '*/15 * * * *') ctx.waitUntil(captureClosingTape(env));
+    else ctx.waitUntil(runOrchestration(env));
   },
 };
 
@@ -75,12 +72,15 @@ async function engineState(env) {
   try {
     const selector = await latestSelector(env);
     const observations = await select(
-      env, 'nfl_prop_learning_observations',
+      env,
+      'nfl_prop_learning_observations',
       `market=eq.${PROP_MARKET}&is_final=eq.true&select=season,week,publication_scope&limit=5000`,
     ) || [];
     const weeks = new Set(observations.map(row => `${row.season}-${row.week}`));
     return json({
-      service: SERVICE, version: VERSION, market: PROP_MARKET,
+      service: SERVICE,
+      version: VERSION,
+      market: PROP_MARKET,
       selector_version: selector.version,
       projection_model: selector.projection_model,
       selector_trained: selector.trained === true,
@@ -95,7 +95,10 @@ async function engineState(env) {
       truth: 'player_prop_official_only_customer_record',
     });
   } catch (error) {
-    return json({ engine_state: 'PROP ENGINE DEGRADED — source unavailable', error_class: errorClass(error) }, 503);
+    return json({
+      engine_state: 'PROP ENGINE DEGRADED — source unavailable',
+      error_class: errorClass(error),
+    }, 503);
   }
 }
 
@@ -112,6 +115,7 @@ async function runOrchestration(env) {
       getJson(`${intelligenceBase(env)}/v1/nfl/events`),
       getJson(`${gatewayBase(env)}/api/schedule`),
     ]);
+
     const now = Date.now();
     const horizon = now + HORIZON_HOURS * 3600000;
     const events = (Array.isArray(eventsBody?.events) ? eventsBody.events : [])
@@ -130,11 +134,23 @@ async function runOrchestration(env) {
     }
 
     const schedule = Array.isArray(scheduleBody?.games) ? scheduleBody.games : [];
-    const count = { emitted: 0, kept: 0, killed: 0, superseded: 0, schedule_skip: 0, projection_skip: 0, seeded: 0, scope_drain: 0 };
+    const count = {
+      emitted: 0,
+      kept: 0,
+      killed: 0,
+      superseded: 0,
+      schedule_skip: 0,
+      projection_skip: 0,
+      seeded: 0,
+      scope_drain: 0,
+    };
 
     for (const event of events) {
       const scheduleGame = matchScheduleGame(event, schedule);
-      if (!scheduleGame) { count.schedule_skip += 1; continue; }
+      if (!scheduleGame) {
+        count.schedule_skip += 1;
+        continue;
+      }
       const context = scheduleContext(scheduleBody, scheduleGame, event);
 
       let tape = await marketTape(env, event.id);
@@ -148,18 +164,34 @@ async function runOrchestration(env) {
       }
       if (!tape.rows.length) continue;
 
-      const model = await getJson(`${gatewayBase(env)}/api/picks/pass?event_id=${encodeURIComponent(event.id)}`).catch(() => null);
+      const model = await getJson(
+        `${gatewayBase(env)}/api/picks/pass?event_id=${encodeURIComponent(event.id)}`,
+      ).catch(() => null);
       const projections = projectionRows(model);
-      if (!projections.length) { count.projection_skip += 1; continue; }
+      if (!projections.length) {
+        count.projection_skip += 1;
+        continue;
+      }
 
       const byPlayer = groupPairedQuotes(pairCurrentQuotes(tape.rows));
       for (const projection of projections) {
         const pKey = playerKey(playerOf(projection));
+        if (!pKey) continue;
         const quotes = byPlayer.get(pKey) || [];
-        if (!pKey || !quotes.length) continue;
-        const bookCount = new Set(quotes.map(q => String(q.book || '').toLowerCase()).filter(Boolean)).size;
+        if (!quotes.length) continue;
+
+        const bookCount = new Set(
+          quotes.map(q => String(q.book || '').toLowerCase()).filter(Boolean),
+        ).size;
         const decision = quotes
-          .map(quote => evaluatePropQuote({ projection, quote, bookCount, selector, kickoffTs: context.kickoff_ts, nowMs: now }))
+          .map(quote => evaluatePropQuote({
+            projection,
+            quote,
+            bookCount,
+            selector,
+            kickoffTs: context.kickoff_ts,
+            nowMs: now,
+          }))
           .filter(row => row.available)
           .sort((a, b) => Number(b.qualifies) - Number(a.qualifies)
             || Number(b.ev_pct || 0) - Number(a.ev_pct || 0)
@@ -167,10 +199,26 @@ async function runOrchestration(env) {
         if (!decision) continue;
 
         decision.projection_model_version = modelVersion(model);
-        decision.model_snapshot = sanitizedSnapshot({ projection, decision, selector, event, context });
+        decision.model_snapshot = sanitizedSnapshot({
+          projection,
+          decision,
+          selector,
+          event,
+          context,
+        });
+
         const open = await openPickFor(env, event.id, pKey);
-        const result = await reconcile(env, { open, decision, selector, context, event, scope });
-        for (const key of ['emitted', 'kept', 'killed', 'superseded', 'scope_drain']) count[key] += result[key];
+        const result = await reconcile(env, {
+          open,
+          decision,
+          selector,
+          context,
+          event,
+          scope,
+        });
+        for (const key of ['emitted', 'kept', 'killed', 'superseded', 'scope_drain']) {
+          count[key] += result[key];
+        }
       }
     }
 
@@ -198,26 +246,41 @@ async function captureClosingTape(env) {
     const nowIso = new Date(nowMs).toISOString();
     const horizonIso = new Date(nowMs + CLOSING_TAPE_HOURS * 3600000).toISOString();
     const picks = await select(
-      env, 'nfl_prop_picks',
+      env,
+      'nfl_prop_picks',
       `market=eq.${PROP_MARKET}&status=in.(open,killed)`
-        + `&kickoff_ts=gt.${encodeURIComponent(nowIso)}&kickoff_ts=lte.${encodeURIComponent(horizonIso)}`
-        + '&select=id,event_id,kickoff_ts,player_name,player_key,market,book,side&order=kickoff_ts.asc&limit=500',
+        + `&kickoff_ts=gt.${encodeURIComponent(nowIso)}`
+        + `&kickoff_ts=lte.${encodeURIComponent(horizonIso)}`
+        + '&select=id,event_id,kickoff_ts,player_name,player_key,market,book,side'
+        + '&order=kickoff_ts.asc&limit=500',
     ) || [];
 
-    let captured = 0, unavailable = 0, duplicates = 0;
+    let captured = 0;
+    let unavailable = 0;
+    let duplicates = 0;
+
     for (const pick of picks) {
       const movement = await getJson(
         `${intelligenceBase(env)}/v1/nfl/line-movement?event_id=${encodeURIComponent(pick.event_id)}`
-          + `&market=${encodeURIComponent(PROP_MARKET)}&player=${encodeURIComponent(pick.player_name)}`,
+          + `&market=${encodeURIComponent(PROP_MARKET)}`
+          + `&player=${encodeURIComponent(pick.player_name)}`,
       ).catch(() => null);
       const quote = exactClosingQuote(movement?.rows, pick);
-      if (!quote) { unavailable += 1; continue; }
-      const observedMs = Date.parse(quote.observed_at || '');
-      const kickoffMs = Date.parse(pick.kickoff_ts || '');
-      if (!Number.isFinite(observedMs) || !Number.isFinite(kickoffMs) || observedMs >= kickoffMs || observedMs > nowMs + 60000) {
+      if (!quote) {
         unavailable += 1;
         continue;
       }
+
+      const observedMs = Date.parse(quote.observed_at || '');
+      const kickoffMs = Date.parse(pick.kickoff_ts || '');
+      if (!Number.isFinite(observedMs)
+        || !Number.isFinite(kickoffMs)
+        || observedMs >= kickoffMs
+        || observedMs > nowMs + 60000) {
+        unavailable += 1;
+        continue;
+      }
+
       try {
         await insert(env, 'nfl_prop_closing_snapshots', {
           pick_id: pick.id,
@@ -239,7 +302,8 @@ async function captureClosingTape(env) {
       }
     }
 
-    health.last_closing_result = `active=${picks.length} captured=${captured} duplicates=${duplicates} unavailable=${unavailable}`;
+    health.last_closing_result = `active=${picks.length} captured=${captured}`
+      + ` duplicates=${duplicates} unavailable=${unavailable}`;
     health.last_closing_error_class = null;
   } catch (error) {
     health.last_closing_error_class = errorClass(error);
@@ -260,6 +324,7 @@ export function exactClosingQuote(rows, pick) {
     && row?.current?.point != null
     && row?.current?.price != null);
   if (!mine) return null;
+
   const point = finiteOrNull(mine.current.point);
   const price = finiteOrNull(mine.current.price);
   if (point === null || price === null || price === 0) return null;
@@ -332,7 +397,9 @@ async function reconcile(env, { open, decision, selector, context, event, scope 
   if (decision.side !== open.side && decision.qualifies && decision.stake_units > 0) {
     const newId = await rpc(env, 'nfl_replace_open_prop_pick', rpcArgs(open.id, issuance));
     await auditProp(env, open.id, 'prop_pick_superseded', selector.version, {
-      superseded_by: newId, from_side: open.side, to_side: decision.side,
+      superseded_by: newId,
+      from_side: open.side,
+      to_side: decision.side,
     });
     await auditIssuance(env, newId, decision, selector.version, scope);
     tally.superseded = 1;
@@ -346,10 +413,14 @@ async function reconcile(env, { open, decision, selector, context, event, scope 
   const killEdge = finite(config.kill_edge, PROP_KILL_EDGE_DEFAULT);
   const killEv = finite(config.kill_ev_pct, 0);
   if (!decision.qualifies && (decision.edge_pct < killEdge || decision.ev_pct < killEv)) {
-    await patch(env, 'nfl_prop_picks', `id=eq.${open.id}`, { status: 'killed', closed_at: new Date().toISOString() });
+    await patch(env, 'nfl_prop_picks', `id=eq.${open.id}`, {
+      status: 'killed',
+      closed_at: new Date().toISOString(),
+    });
     await auditProp(env, open.id, 'prop_pick_killed', selector.version, {
       reason: decision.edge_pct < killEdge ? 'edge_collapsed' : 'expected_value_negative',
-      edge_pct: decision.edge_pct, ev_pct: decision.ev_pct,
+      edge_pct: decision.edge_pct,
+      ev_pct: decision.ev_pct,
     });
     tally.killed = 1;
     return tally;
@@ -393,47 +464,79 @@ function rpcArgs(openId, row) {
 
 async function auditIssuance(env, pickId, decision, selectorVersion, scope) {
   await auditProp(env, pickId, 'prop_pick_created', selectorVersion, {
-    market: PROP_MARKET, side: decision.side, player_key: decision.player_key,
-    book: decision.book, line: decision.market_line, price: decision.market_price,
-    edge_pct: decision.edge_pct, ev_pct: decision.ev_pct,
-    phase: decision.phase, publication_scope: scope,
+    market: PROP_MARKET,
+    side: decision.side,
+    player_key: decision.player_key,
+    book: decision.book,
+    line: decision.market_line,
+    price: decision.market_price,
+    edge_pct: decision.edge_pct,
+    ev_pct: decision.ev_pct,
+    phase: decision.phase,
+    publication_scope: scope,
   });
   await auditProp(env, pickId, 'prop_model_snapshot_locked', selectorVersion, {
     projection_model_version: decision.projection_model_version,
-    model_prob: decision.model_prob, market_prob: decision.market_prob,
-    model_fair_line: decision.model_fair_line, predictive_sd: decision.predictive_sd,
+    model_prob: decision.model_prob,
+    market_prob: decision.market_prob,
+    model_fair_line: decision.model_fair_line,
+    predictive_sd: decision.predictive_sd,
   });
 }
 
 async function latestSelector(env) {
-  const rows = await select(env, 'nfl_prop_selector_models',
-    `market=eq.${PROP_MARKET}&promoted=is.true&select=*&order=version.desc&limit=1`) || [];
+  const rows = await select(
+    env,
+    'nfl_prop_selector_models',
+    `market=eq.${PROP_MARKET}&promoted=is.true&select=*&order=version.desc&limit=1`,
+  ) || [];
   if (!rows[0]) throw new Error('no_promoted_prop_selector');
   return rows[0];
 }
+
 function issuanceScope(selector) {
   if (!selector || selector.promoted !== true) throw new Error('prop_selector_not_promoted');
   return selector.trained === true ? 'official' : 'tracking';
 }
+
 async function openPickFor(env, eventId, pKey) {
-  const rows = await select(env, 'nfl_prop_picks',
+  const rows = await select(
+    env,
+    'nfl_prop_picks',
     `event_id=eq.${encodeURIComponent(eventId)}&player_key=eq.${encodeURIComponent(pKey)}`
-      + `&market=eq.${PROP_MARKET}&status=eq.open&select=*&limit=1`) || [];
+      + `&market=eq.${PROP_MARKET}&status=eq.open&select=*&limit=1`,
+  ) || [];
   return rows[0] || null;
 }
 
 async function marketTape(env, eventId) {
-  const out = await getJson(`${intelligenceBase(env)}/v1/nfl/line-movement?event_id=${encodeURIComponent(eventId)}`
-    + `&market=${encodeURIComponent(PROP_MARKET)}`).catch(() => null);
+  const out = await getJson(
+    `${intelligenceBase(env)}/v1/nfl/line-movement?event_id=${encodeURIComponent(eventId)}`
+      + `&market=${encodeURIComponent(PROP_MARKET)}`,
+  ).catch(() => null);
   return { rows: Array.isArray(out?.rows) ? out.rows : [] };
 }
+
 function tapeFromBoard(board) {
-  return { rows: (Array.isArray(board?.quotes) ? board.quotes : []).map(row => ({
-    player: row.player, book: row.book, side: row.direction,
-    current: { point: row.point, price: row.price, captured_at: row.last_update || board.provider_last_update || null },
-    open: { point: row.point, price: row.price, captured_at: row.last_update || board.provider_last_update || null },
-  })) };
+  return {
+    rows: (Array.isArray(board?.quotes) ? board.quotes : []).map(row => ({
+      player: row.player,
+      book: row.book,
+      side: row.direction,
+      current: {
+        point: row.point,
+        price: row.price,
+        captured_at: row.last_update || board.provider_last_update || null,
+      },
+      open: {
+        point: row.point,
+        price: row.price,
+        captured_at: row.last_update || board.provider_last_update || null,
+      },
+    })),
+  };
 }
+
 function groupPairedQuotes(rows) {
   const map = new Map();
   for (const quote of rows) {
@@ -448,13 +551,27 @@ function projectionRows(model) {
   return (Array.isArray(rows) ? rows : []).filter(row => {
     const fair = Number(row?.fair_line ?? row?.projected_line);
     const sd = Number(row?.predictive_sd);
-    return row?.available !== false && playerOf(row) && Number.isFinite(fair) && Number.isFinite(sd) && sd > 0;
+    return row?.available !== false
+      && playerOf(row)
+      && Number.isFinite(fair)
+      && Number.isFinite(sd)
+      && sd > 0;
   });
 }
-function playerOf(row) { return row?.player || row?.player_name || row?.name || ''; }
-function modelVersion(model) {
-  return String(model?.model_version || model?.source?.model_version || model?.lineage || 'pbe-passing-production');
+
+function playerOf(row) {
+  return row?.player || row?.player_name || row?.name || '';
 }
+
+function modelVersion(model) {
+  return String(
+    model?.model_version
+      || model?.source?.model_version
+      || model?.lineage
+      || 'pbe-passing-production',
+  );
+}
+
 function sanitizedSnapshot({ projection, decision, selector, event, context }) {
   return {
     projection: {
@@ -465,7 +582,9 @@ function sanitizedSnapshot({ projection, decision, selector, event, context }) {
       raw_games: projection?.raw_games ?? null,
       effective_games: projection?.effective_games ?? null,
       decision_status: projection?.decision_status ?? projection?.status ?? null,
-      missing_inputs: Array.isArray(projection?.missing_inputs) ? projection.missing_inputs.slice(0, 20) : [],
+      missing_inputs: Array.isArray(projection?.missing_inputs)
+        ? projection.missing_inputs.slice(0, 20)
+        : [],
     },
     selector_features: selectorFeatures(decision),
     selector_config: selector?.config || {},
@@ -476,8 +595,12 @@ function sanitizedSnapshot({ projection, decision, selector, event, context }) {
       open_price: decision.open_price,
     },
     event: {
-      event_id: event.id, away_team: event.away_team, home_team: event.home_team,
-      commence_time: event.commence_time, season: context.season, week: context.week,
+      event_id: event.id,
+      away_team: event.away_team,
+      home_team: event.home_team,
+      commence_time: event.commence_time,
+      season: context.season,
+      week: context.week,
     },
   };
 }
@@ -485,8 +608,10 @@ function sanitizedSnapshot({ projection, decision, selector, event, context }) {
 async function auditProp(env, pickId, eventType, selectorVersion, detail) {
   try {
     await insert(env, 'nfl_prop_pick_audit_events', {
-      pick_id: pickId || null, event_type: eventType,
-      selector_version: selectorVersion ?? null, detail: detail || {},
+      pick_id: pickId || null,
+      event_type: eventType,
+      selector_version: selectorVersion ?? null,
+      detail: detail || {},
     }, { returning: 'minimal' });
   } catch (error) {
     console.error('[prop-audit] failed', errorClass(error));
@@ -494,7 +619,8 @@ async function auditProp(env, pickId, eventType, selectorVersion, detail) {
 }
 
 function matchScheduleGame(event, games) {
-  const away = teamCode(event?.away_team), home = teamCode(event?.home_team);
+  const away = teamCode(event?.away_team);
+  const home = teamCode(event?.home_team);
   const kickoff = Date.parse(event?.commence_time || '');
   if (!away || !home || !Number.isFinite(kickoff)) return null;
   return games
@@ -503,12 +629,22 @@ function matchScheduleGame(event, games) {
     .filter(row => Number.isFinite(row.ts) && Math.abs(row.ts - kickoff) <= 8 * 3600000)
     .sort((a, b) => Math.abs(a.ts - kickoff) - Math.abs(b.ts - kickoff))[0]?.game || null;
 }
+
 function scheduleContext(body, game, event) {
-  const season = Number(game?.season || body?.season || new Date(event.commence_time).getUTCFullYear());
+  const season = Number(
+    game?.season || body?.season || new Date(event.commence_time).getUTCFullYear(),
+  );
   const week = Number(game?.week);
-  if (!Number.isFinite(season) || !Number.isFinite(week)) throw new Error('schedule_context_unavailable');
-  return { season, week, kickoff_ts: new Date(event.commence_time).toISOString() };
+  if (!Number.isFinite(season) || !Number.isFinite(week)) {
+    throw new Error('schedule_context_unavailable');
+  }
+  return {
+    season,
+    week,
+    kickoff_ts: new Date(event.commence_time).toISOString(),
+  };
 }
+
 function scheduleKickoff(game) {
   if (game?.kickoff_ts) return Date.parse(game.kickoff_ts);
   if (!game?.gameday) return NaN;
@@ -516,62 +652,92 @@ function scheduleKickoff(game) {
 }
 
 const TEAM_ALIASES = new Map([
-  ['ARI','ARI'],['CARDINALS','ARI'],['ARIZONA CARDINALS','ARI'],
-  ['ATL','ATL'],['FALCONS','ATL'],['ATLANTA FALCONS','ATL'],
-  ['BAL','BAL'],['RAVENS','BAL'],['BALTIMORE RAVENS','BAL'],
-  ['BUF','BUF'],['BILLS','BUF'],['BUFFALO BILLS','BUF'],
-  ['CAR','CAR'],['PANTHERS','CAR'],['CAROLINA PANTHERS','CAR'],
-  ['CHI','CHI'],['BEARS','CHI'],['CHICAGO BEARS','CHI'],
-  ['CIN','CIN'],['BENGALS','CIN'],['CINCINNATI BENGALS','CIN'],
-  ['CLE','CLE'],['BROWNS','CLE'],['CLEVELAND BROWNS','CLE'],
-  ['DAL','DAL'],['COWBOYS','DAL'],['DALLAS COWBOYS','DAL'],
-  ['DEN','DEN'],['BRONCOS','DEN'],['DENVER BRONCOS','DEN'],
-  ['DET','DET'],['LIONS','DET'],['DETROIT LIONS','DET'],
-  ['GB','GB'],['PACKERS','GB'],['GREEN BAY PACKERS','GB'],
-  ['HOU','HOU'],['TEXANS','HOU'],['HOUSTON TEXANS','HOU'],
-  ['IND','IND'],['COLTS','IND'],['INDIANAPOLIS COLTS','IND'],
-  ['JAX','JAX'],['JAGUARS','JAX'],['JACKSONVILLE JAGUARS','JAX'],
-  ['KC','KC'],['CHIEFS','KC'],['KANSAS CITY CHIEFS','KC'],
-  ['LV','LV'],['RAIDERS','LV'],['LAS VEGAS RAIDERS','LV'],
-  ['LAC','LAC'],['CHARGERS','LAC'],['LOS ANGELES CHARGERS','LAC'],
-  ['LAR','LAR'],['RAMS','LAR'],['LOS ANGELES RAMS','LAR'],
-  ['MIA','MIA'],['DOLPHINS','MIA'],['MIAMI DOLPHINS','MIA'],
-  ['MIN','MIN'],['VIKINGS','MIN'],['MINNESOTA VIKINGS','MIN'],
-  ['NE','NE'],['PATRIOTS','NE'],['NEW ENGLAND PATRIOTS','NE'],
-  ['NO','NO'],['SAINTS','NO'],['NEW ORLEANS SAINTS','NO'],
-  ['NYG','NYG'],['GIANTS','NYG'],['NEW YORK GIANTS','NYG'],
-  ['NYJ','NYJ'],['JETS','NYJ'],['NEW YORK JETS','NYJ'],
-  ['PHI','PHI'],['EAGLES','PHI'],['PHILADELPHIA EAGLES','PHI'],
-  ['PIT','PIT'],['STEELERS','PIT'],['PITTSBURGH STEELERS','PIT'],
-  ['SF','SF'],['49ERS','SF'],['SAN FRANCISCO 49ERS','SF'],
-  ['SEA','SEA'],['SEAHAWKS','SEA'],['SEATTLE SEAHAWKS','SEA'],
-  ['TB','TB'],['BUCS','TB'],['BUCCANEERS','TB'],['TAMPA BAY BUCCANEERS','TB'],
-  ['TEN','TEN'],['TITANS','TEN'],['TENNESSEE TITANS','TEN'],
-  ['WAS','WAS'],['WSH','WAS'],['COMMANDERS','WAS'],['WASHINGTON COMMANDERS','WAS'],
+  ['ARI', 'ARI'], ['CARDINALS', 'ARI'], ['ARIZONA CARDINALS', 'ARI'],
+  ['ATL', 'ATL'], ['FALCONS', 'ATL'], ['ATLANTA FALCONS', 'ATL'],
+  ['BAL', 'BAL'], ['RAVENS', 'BAL'], ['BALTIMORE RAVENS', 'BAL'],
+  ['BUF', 'BUF'], ['BILLS', 'BUF'], ['BUFFALO BILLS', 'BUF'],
+  ['CAR', 'CAR'], ['PANTHERS', 'CAR'], ['CAROLINA PANTHERS', 'CAR'],
+  ['CHI', 'CHI'], ['BEARS', 'CHI'], ['CHICAGO BEARS', 'CHI'],
+  ['CIN', 'CIN'], ['BENGALS', 'CIN'], ['CINCINNATI BENGALS', 'CIN'],
+  ['CLE', 'CLE'], ['BROWNS', 'CLE'], ['CLEVELAND BROWNS', 'CLE'],
+  ['DAL', 'DAL'], ['COWBOYS', 'DAL'], ['DALLAS COWBOYS', 'DAL'],
+  ['DEN', 'DEN'], ['BRONCOS', 'DEN'], ['DENVER BRONCOS', 'DEN'],
+  ['DET', 'DET'], ['LIONS', 'DET'], ['DETROIT LIONS', 'DET'],
+  ['GB', 'GB'], ['PACKERS', 'GB'], ['GREEN BAY PACKERS', 'GB'],
+  ['HOU', 'HOU'], ['TEXANS', 'HOU'], ['HOUSTON TEXANS', 'HOU'],
+  ['IND', 'IND'], ['COLTS', 'IND'], ['INDIANAPOLIS COLTS', 'IND'],
+  ['JAX', 'JAX'], ['JAGUARS', 'JAX'], ['JACKSONVILLE JAGUARS', 'JAX'],
+  ['KC', 'KC'], ['CHIEFS', 'KC'], ['KANSAS CITY CHIEFS', 'KC'],
+  ['LV', 'LV'], ['RAIDERS', 'LV'], ['LAS VEGAS RAIDERS', 'LV'],
+  ['LAC', 'LAC'], ['CHARGERS', 'LAC'], ['LOS ANGELES CHARGERS', 'LAC'],
+  ['LAR', 'LAR'], ['RAMS', 'LAR'], ['LOS ANGELES RAMS', 'LAR'],
+  ['MIA', 'MIA'], ['DOLPHINS', 'MIA'], ['MIAMI DOLPHINS', 'MIA'],
+  ['MIN', 'MIN'], ['VIKINGS', 'MIN'], ['MINNESOTA VIKINGS', 'MIN'],
+  ['NE', 'NE'], ['PATRIOTS', 'NE'], ['NEW ENGLAND PATRIOTS', 'NE'],
+  ['NO', 'NO'], ['SAINTS', 'NO'], ['NEW ORLEANS SAINTS', 'NO'],
+  ['NYG', 'NYG'], ['GIANTS', 'NYG'], ['NEW YORK GIANTS', 'NYG'],
+  ['NYJ', 'NYJ'], ['JETS', 'NYJ'], ['NEW YORK JETS', 'NYJ'],
+  ['PHI', 'PHI'], ['EAGLES', 'PHI'], ['PHILADELPHIA EAGLES', 'PHI'],
+  ['PIT', 'PIT'], ['STEELERS', 'PIT'], ['PITTSBURGH STEELERS', 'PIT'],
+  ['SF', 'SF'], ['49ERS', 'SF'], ['SAN FRANCISCO 49ERS', 'SF'],
+  ['SEA', 'SEA'], ['SEAHAWKS', 'SEA'], ['SEATTLE SEAHAWKS', 'SEA'],
+  ['TB', 'TB'], ['BUCS', 'TB'], ['BUCCANEERS', 'TB'], ['TAMPA BAY BUCCANEERS', 'TB'],
+  ['TEN', 'TEN'], ['TITANS', 'TEN'], ['TENNESSEE TITANS', 'TEN'],
+  ['WAS', 'WAS'], ['WSH', 'WAS'], ['COMMANDERS', 'WAS'], ['WASHINGTON COMMANDERS', 'WAS'],
 ]);
+
 function teamCode(value) {
-  const raw = String(value || '').trim().toUpperCase().replace(/[^A-Z0-9]+/g, ' ').replace(/\s+/g, ' ');
+  const raw = String(value || '')
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ');
   if (TEAM_ALIASES.has(raw)) return TEAM_ALIASES.get(raw);
   const last = raw.split(' ').filter(Boolean).at(-1) || '';
   return TEAM_ALIASES.get(last) || null;
 }
 
-function gatewayBase(env) { return String(env.NFL_GATEWAY || 'https://nfl-api.propbetedge.ai').replace(/\/$/, ''); }
-function intelligenceBase(env) { return String(env.NFL_INTELLIGENCE_URL || 'https://pbe-nfl-intelligence.sales-fd3.workers.dev').replace(/\/$/, ''); }
+function gatewayBase(env) {
+  return String(env.NFL_GATEWAY || 'https://nfl-api.propbetedge.ai').replace(/\/$/, '');
+}
+
+function intelligenceBase(env) {
+  return String(
+    env.NFL_INTELLIGENCE_URL || 'https://pbe-nfl-intelligence.sales-fd3.workers.dev',
+  ).replace(/\/$/, '');
+}
+
 async function getJson(url) {
-  const response = await fetch(url, { headers: { accept: 'application/json' }, cf: { cacheTtl: 0 } });
+  const response = await fetch(url, {
+    headers: { accept: 'application/json' },
+    cf: { cacheTtl: 0 },
+  });
   if (!response.ok) throw new Error(`upstream_${response.status}`);
   return response.json();
 }
-function finite(value, fallback) { const n = Number(value); return Number.isFinite(n) ? n : fallback; }
+
+function finite(value, fallback) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+}
+
 function finiteOrNull(value) {
   if (value === null || value === undefined || value === '') return null;
-  const n = Number(value); return Number.isFinite(n) ? n : null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
 }
-function errorClass(error) { return String(error?.message || 'unknown').split(':')[0].slice(0, 80); }
+
+function errorClass(error) {
+  return String(error?.message || 'unknown').split(':')[0].slice(0, 80);
+}
+
 function json(body, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' },
+    headers: {
+      'content-type': 'application/json; charset=utf-8',
+      'cache-control': 'no-store',
+      'x-content-type-options': 'nosniff',
+    },
   });
 }
