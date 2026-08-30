@@ -1,7 +1,7 @@
-/* PropBetEdge NFL - ordered page/product upgrade loader v38 */
+/* PropBetEdge NFL - ordered page/product upgrade loader v39 */
 (() => {
   'use strict';
-  const VERSION='20260830quant2';
+  const VERSION='20260830terminal1';
   const upgrades=[
     /* archive/teams.js is a classic script with lexical const bindings; expose
        the verified directory before newer runtime modules resolve teams. */
@@ -53,12 +53,13 @@
     {css:'./sports-shell-v3.css'},
     {css:'./nfl-stadium-bg-v3.css',js:'./dashboard-v7-sanitize.js'},
 
-    /* Global network identity. */
+    /* Global network identity + subscriber controls. */
     {css:'./network-footer-v1.css',js:'./network-footer-v1.js'},
 
     /* Production authorities. */
     {css:'./paywall-funnel-v2.css',js:'./paywall-funnel-v2.js'},
     {css:'./pbecast-v6.css',js:'./pbecast-v6.js'},
+    {css:'./pbecast-v7-enhance.css',js:'./pbecast-v7-enhance.js'},
     {css:'./stadium-selector-v1.css',js:'./stadium-selector-v1.js'},
     {css:'./production-polish-v2.css',js:'./production-polish-v2.js'},
 
@@ -74,10 +75,12 @@
        v1 file remains historical source only and is intentionally not loaded. */
     {css:'./pbe-picks-v2.css',js:'./pbe-picks-v2.js'},
 
-    /* Gated validation telemetry is aggregate/public-safe. It never reveals a
-       bootstrap selection and never calls the internal receipt chain a third-
-       party notarization. */
-    {css:'./pbe-validation-v1.css',js:'./pbe-validation-v1.js'}
+    /* Gated validation telemetry is aggregate/public-safe. */
+    {css:'./pbe-validation-v1.css',js:'./pbe-validation-v1.js'},
+
+    /* Last by design: hide intrusive nested scrollbar chrome without disabling
+       intended horizontal/touch scrolling inside terminal surfaces. */
+    {css:'./scrollbar-clean-v1.css'}
   ];
 
   const PRO_MODULES=[
@@ -107,52 +110,31 @@
       script.async=false;
       script.dataset.pbeUpgrade=src;
       script.onload=resolve;
-      script.onerror=()=>{
-        console.error('PBE product module failed to load',src);
-        resolve();
-      };
+      script.onerror=()=>{console.error('PBE product module failed to load',src);resolve()};
       document.body.appendChild(script);
     });
   }
 
   function forceVisibleProRender(){
-    const runId=++proSyncRun;
-    let attempt=0;
-
+    const runId=++proSyncRun;let attempt=0;
     const run=()=>{
-      if(runId!==proSyncRun)return;
-      attempt+=1;
-      let waiting=false;
-
+      if(runId!==proSyncRun)return;attempt+=1;let waiting=false;
       document.documentElement.dataset.pbePro=window.PBEPro?.state?.pro===true?'1':'0';
-
       for(const spec of PRO_MODULES){
         if(!document.querySelector(spec.selector))continue;
-        const module=window[spec.global];
-        if(!module||typeof module.render!=='function')continue;
-        if(module.state?.loading){
-          waiting=true;
-          continue;
-        }
-        try{
-          module.render();
-        }catch(error){
-          console.error('[pbe-loader-pro-sync]',spec.global,error?.message||error);
-        }
+        const module=window[spec.global];if(!module||typeof module.render!=='function')continue;
+        if(module.state?.loading){waiting=true;continue}
+        try{module.render()}catch(error){console.error('[pbe-loader-pro-sync]',spec.global,error?.message||error)}
       }
-
       if(waiting&&attempt<60)setTimeout(run,100);
     };
-
     queueMicrotask(run);
   }
 
   function installProSync(){
     window.addEventListener('pbe:pro-state',forceVisibleProRender);
     window.addEventListener('pbe:route-changed',forceVisibleProRender);
-    setTimeout(forceVisibleProRender,0);
-    setTimeout(forceVisibleProRender,250);
-    setTimeout(forceVisibleProRender,1000);
+    setTimeout(forceVisibleProRender,0);setTimeout(forceVisibleProRender,250);setTimeout(forceVisibleProRender,1000);
   }
 
   async function load(){
