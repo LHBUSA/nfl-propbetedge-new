@@ -160,7 +160,7 @@
 <div class="mobile-bottom-nav" id="mobile-bottom-nav"><div class="mobile-bottom-nav-inner"><div class="mbn-item active" id="mbn-home" onclick="App.nav('home');pbeMbnActive('home')"><div class="mbn-icon">⌂</div><span>Home</span></div><div class="mbn-item" id="mbn-propboard" onclick="App.nav('propboard');pbeMbnActive('propboard')"><div class="mbn-icon">↗</div><span>Props</span></div><div class="mbn-item" id="mbn-matchups" onclick="App.nav('matchups');pbeMbnActive('matchups')"><div class="mbn-icon">◫</div><span>Matchup</span></div><div class="mbn-item" id="mbn-game" onclick="App.nav('pbecast');pbeMbnActive('game')"><div class="mbn-icon">◉</div><span>Game</span></div><div class="mbn-item" id="mbn-menu" onclick="pbeToggleSidebar()"><div class="mbn-icon">☰</div><span>Menu</span></div></div></div>
 <script>
   const NFL_API_GATEWAY='https://nfl-api.propbetedge.ai';
-  const BUILD_VERSION='nfl-intelligence-os-production-20260829';
+  const BUILD_VERSION='nfl-intelligence-os-production-20260830-gamesworld3';
   function pbeMbnActive(id){document.querySelectorAll('.mbn-item').forEach(el=>el.classList.remove('active'));document.getElementById('mbn-'+id)?.classList.add('active')}
   function pbeToggleSidebar(){App.toggleMobile()}
 </script>
@@ -179,6 +179,6 @@
 <script src="./ui-v2.js?v=20260828y1"></script>
 <script src="./prop-board-v3.js?v=20260828y1"></script>
 <script src="./model-lab.js?v=20260828y1"></script>
-<script src="./page-loader.js?v=20260829authfix1"></script>
+<script src="./page-loader.js?v=20260830gamesworld3"></script>
 </body>
 </html>
