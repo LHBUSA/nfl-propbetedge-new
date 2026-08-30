@@ -6,90 +6,44 @@
 (() => {
   'use strict';
 
-  const API=typeof NFL_API_GATEWAY!=='undefined'?NFL_API_GATEWAY:'https://nfl-api.propbetedge.ai';
-  const CORE_MARKETS=['h2h','spreads','totals'];
-  const local={eventId:null,board:null,loading:false,marketError:null,filter:'all',timer:null};
+  const local={eventId:null,market:null,loading:false,marketError:null,filter:'all',timer:null};
   const esc=v=>String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
   const arr=v=>Array.isArray(v)?v:[];
   const num=v=>{if(v===null||v===undefined||v==='')return NaN;const n=Number(v);return Number.isFinite(n)?n:NaN};
+  const norm=v=>String(v||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
   const state=()=>window.PBEDashboardV7?.state||{};
   const active=()=>window.App?.current==='home'&&Boolean(document.querySelector('.pbehome7'));
-
-  async function json(url){const r=await fetch(url,{cache:'no-store',headers:{accept:'application/json'}});if(!r.ok){const t=await r.text().catch(()=> '');throw new Error(`${r.status}${t?`:${t.slice(0,90)}`:''}`)}return r.json()}
-  function oddsRows(payload){if(Array.isArray(payload))return payload;for(const k of ['events','games','data','results','odds'])if(Array.isArray(payload?.[k]))return payload[k];return[]}
-  function oddsEvent(raw){return{id:String(raw?.id||raw?.event_id||raw?.eventId||''),away:String(raw?.away_team||raw?.away||raw?.awayTeam||''),home:String(raw?.home_team||raw?.home||raw?.homeTeam||'')}}
-  function norm(v){return String(v||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim()}
-  function namesMatch(a,b){const x=norm(a),y=norm(b);if(!x||!y)return false;const ax=x.split(' ').at(-1),by=y.split(' ').at(-1);return x===y||x.includes(y)||y.includes(x)||ax===by}
-  function featured(){return state()?.featured||null}
+  const featured=()=>state()?.featured||null;
   function featuredTeams(){const g=featured(),a=g?.teams?.away||{},h=g?.teams?.home||{};return{away:a,home:h,awayName:a.display_name||a.name||a.abbreviation||'',homeName:h.display_name||h.name||h.abbreviation||''}}
 
-  function quoteRows(){return arr(local.board?.quotes)}
-  const marketOf=q=>String(q?.market||q?.market_key||q?.key||'').toLowerCase();
-  const selectionOf=q=>String(q?.selection||q?.team||q?.participant||q?.description||q?.outcome||q?.name||'');
-  const pointOf=q=>num(q?.point??q?.line);
-  const priceOf=q=>num(q?.price??q?.american_odds??q?.odds);
-  const sideOf=q=>String(q?.direction||q?.side||q?.outcome||q?.name||'').toUpperCase();
-  const bookOf=q=>q?.book||q?.book_title||q?.sportsbook||q?.book_key||'';
-  function median(values){const xs=values.map(num).filter(Number.isFinite).sort((a,b)=>a-b);if(!xs.length)return NaN;const i=Math.floor(xs.length/2);return xs.length%2?xs[i]:(xs[i-1]+xs[i])/2}
+  async function json(url){const r=await fetch(url,{cache:'no-store',headers:{accept:'application/json'}});const text=await r.text();if(!r.ok)throw new Error(`${r.status}${text?`:${text.slice(0,100)}`:''}`);try{return JSON.parse(text)}catch{throw new Error('non_json_response')}}
   function american(v){const n=num(v);return Number.isFinite(n)?`${n>0?'+':''}${Math.round(n)}`:'—'}
-  function implied(v){const a=num(v);if(!Number.isFinite(a)||a===0)return NaN;return a<0?Math.abs(a)/(Math.abs(a)+100):100/(a+100)}
   function fmtLine(v){const n=num(v);if(!Number.isFinite(n))return'—';return`${n>0?'+':''}${n.toFixed(1).replace(/\.0$/,'')}`}
-
-  function byMarket(name){return quoteRows().filter(q=>marketOf(q)===name||marketOf(q).includes(name))}
-  function teamQuotes(rows,team){return rows.filter(q=>namesMatch(selectionOf(q),team.display_name||team.name||team.abbreviation)||namesMatch(selectionOf(q),team.abbreviation))}
-  function marketSnapshot(){
-    const {away,home}=featuredTeams();
-    const h2h=byMarket('h2h'),spreads=byMarket('spreads'),totals=byMarket('totals');
-    const awayMl=teamQuotes(h2h,away),homeMl=teamQuotes(h2h,home);
-    const awaySp=teamQuotes(spreads,away),homeSp=teamQuotes(spreads,home);
-    const over=totals.filter(q=>sideOf(q).includes('OVER')),under=totals.filter(q=>sideOf(q).includes('UNDER'));
-    const awayPrice=median(awayMl.map(priceOf)),homePrice=median(homeMl.map(priceOf));
-    const rawAway=implied(awayPrice),rawHome=implied(homePrice),sum=rawAway+rawHome;
-    const marketAway=Number.isFinite(sum)&&sum>0?rawAway/sum:NaN,marketHome=Number.isFinite(sum)&&sum>0?rawHome/sum:NaN;
-    const totalLine=median([...over,...under].map(pointOf));
-    return{
-      awaySpread:median(awaySp.map(pointOf)),homeSpread:median(homeSp.map(pointOf)),
-      awayPrice,homePrice,marketAway,marketHome,totalLine,
-      overPrice:median(over.map(priceOf)),underPrice:median(under.map(priceOf)),
-      books:new Set(quoteRows().map(bookOf).filter(Boolean)).size,
-      quoteCount:quoteRows().length,
-      updated:local.board?.provider_last_update||local.board?.last_update||local.board?.updated_at||null
-    }
-  }
-
   function latestLiveWp(){const rows=arr(state()?.detail?.win_probability).filter(x=>Number.isFinite(num(x?.home_win_percentage)));if(!rows.length)return null;const home=num(rows.at(-1).home_win_percentage);return{home,away:1-home}}
-  function probabilitySnapshot(market){const live=latestLiveWp();return live?{away:live.away,home:live.home,label:'LIVE WIN PROB'}:{away:market.marketAway,home:market.marketHome,label:'MARKET-IMPLIED · VIG FREE'}}
+  function probabilitySnapshot(market){const live=latestLiveWp();return live?{away:live.away,home:live.home,label:'LIVE WIN PROB'}:{away:num(market?.vig_free_probability?.away),home:num(market?.vig_free_probability?.home),label:'MARKET-IMPLIED · VIG FREE'}}
 
-  async function resolveOddsEvent(){
-    const {awayName,homeName}=featuredTeams();if(!awayName||!homeName)return null;
-    const payload=await json(`${API}/api/odds`);
-    return oddsRows(payload).map(oddsEvent).find(e=>e.id&&namesMatch(e.away,awayName)&&namesMatch(e.home,homeName))||null;
-  }
-  async function loadBoardForEvent(eventId){
-    try{return await json(`${API}/api/odds/board?event_id=${encodeURIComponent(eventId)}&markets=${encodeURIComponent(CORE_MARKETS.join(','))}`)}catch(_){
-      const settled=await Promise.allSettled(CORE_MARKETS.map(m=>json(`${API}/api/odds/board?event_id=${encodeURIComponent(eventId)}&markets=${encodeURIComponent(m)}`)));
-      const parts=settled.filter(x=>x.status==='fulfilled').map(x=>x.value);if(!parts.length)throw new Error('core_market_unavailable');
-      const merged={...parts[0],quotes:[],market_summary:[]},seen=new Set();
-      for(const p of parts)for(const q of arr(p?.quotes)){const key=[bookOf(q),marketOf(q),selectionOf(q),pointOf(q),priceOf(q)].join('|');if(!seen.has(key)){seen.add(key);merged.quotes.push(q)}}
-      merged.provider_last_update=parts.map(p=>p?.provider_last_update||p?.last_update||p?.updated_at).filter(Boolean).sort().at(-1)||null;
-      return merged;
-    }
-  }
   async function syncMarket(){
     const game=featured();if(!game?.id||local.loading)return;
-    if(local.eventId===String(game.id)&&local.board)return;
+    if(local.eventId===String(game.id)&&local.market)return;
+    const {awayName,homeName}=featuredTeams();if(!awayName||!homeName)return;
     local.loading=true;local.marketError=null;
-    try{const evt=await resolveOddsEvent();if(!evt?.id)throw new Error('featured_game_market_not_found');local.eventId=String(game.id);local.board=await loadBoardForEvent(evt.id)}
-    catch(error){local.board=null;local.eventId=String(game.id);local.marketError=error instanceof Error?error.message:String(error)}
-    finally{local.loading=false;renderMarket()}
+    try{
+      const out=await json(`/api/home-market?away=${encodeURIComponent(awayName)}&home=${encodeURIComponent(homeName)}`);
+      local.eventId=String(game.id);local.market=out;
+    }catch(error){
+      local.eventId=String(game.id);local.market=null;local.marketError=error instanceof Error?error.message:String(error);
+    }finally{local.loading=false;renderMarket()}
   }
 
   function probabilityBar(value){const p=Number.isFinite(value)?Math.max(0,Math.min(1,value)):null;return p===null?'<span class="pbe8-prob-na">—</span>':`<div class="pbe8-prob"><strong>${(p*100).toFixed(1)}%</strong><span><i style="width:${(p*100).toFixed(1)}%"></i></span></div>`}
   function marketHtml(){
     if(local.loading)return'<div class="pbe8-market-loading"><i></i><span>Connecting core market…</span></div>';
-    if(!local.board||!quoteRows().length)return`<div class="pbe8-market-unavailable"><span>CORE MARKET</span><strong>Unavailable</strong><small>No current spread / total / moneyline board is being returned for this event.</small></div>`;
-    const m=marketSnapshot(),{away,home}=featuredTeams(),p=probabilitySnapshot(m),awayLabel=away.abbreviation||'AWY',homeLabel=home.abbreviation||'HME';
-    return`<div class="pbe8-market-head"><span>CORE MARKET · CURRENT CROSS-BOOK CONSENSUS</span><small>${m.books} books · ${m.quoteCount} quotes${m.updated?` · ${esc(new Date(m.updated).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}))}`:''}</small></div><div class="pbe8-market-grid"><div><span>SPREAD</span><strong>${esc(awayLabel)} ${fmtLine(m.awaySpread)}</strong><small>${esc(homeLabel)} ${fmtLine(m.homeSpread)}</small></div><div><span>TOTAL</span><strong>${Number.isFinite(m.totalLine)?m.totalLine.toFixed(1):'—'}</strong><small>O ${american(m.overPrice)} · U ${american(m.underPrice)}</small></div><div><span>MONEYLINE</span><strong>${esc(awayLabel)} ${american(m.awayPrice)}</strong><small>${esc(homeLabel)} ${american(m.homePrice)}</small></div></div><div class="pbe8-prob-grid"><div><span>${esc(awayLabel)} · ${p.label}</span>${probabilityBar(p.away)}</div><div><span>${esc(homeLabel)} · ${p.label}</span>${probabilityBar(p.home)}</div></div>`
+    const m=local.market;
+    if(!m?.ok)return`<div class="pbe8-market-unavailable"><span>CORE MARKET</span><strong>Unavailable</strong><small>No current spread / total / moneyline board is being returned for this event.</small></div>`;
+    const {away,home}=featuredTeams(),p=probabilitySnapshot(m),awayLabel=away.abbreviation||'AWY',homeLabel=home.abbreviation||'HME';
+    const updated=m.provider_last_update?new Date(m.provider_last_update):null;
+    const time=updated&&!Number.isNaN(updated.getTime())?updated.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'';
+    return`<div class="pbe8-market-head"><span>CORE MARKET · CURRENT CROSS-BOOK CONSENSUS</span><small>${m.books||0} books · ${m.quote_count||0} quotes${time?` · ${esc(time)}`:''}</small></div><div class="pbe8-market-grid"><div><span>SPREAD</span><strong>${esc(awayLabel)} ${fmtLine(m.spread?.away)}</strong><small>${esc(homeLabel)} ${fmtLine(m.spread?.home)}</small></div><div><span>TOTAL</span><strong>${Number.isFinite(num(m.total?.line))?num(m.total.line).toFixed(1):'—'}</strong><small>O ${american(m.total?.over_price)} · U ${american(m.total?.under_price)}</small></div><div><span>MONEYLINE</span><strong>${esc(awayLabel)} ${american(m.moneyline?.away)}</strong><small>${esc(homeLabel)} ${american(m.moneyline?.home)}</small></div></div><div class="pbe8-prob-grid"><div><span>${esc(awayLabel)} · ${p.label}</span>${probabilityBar(p.away)}</div><div><span>${esc(homeLabel)} · ${p.label}</span>${probabilityBar(p.home)}</div></div>`
   }
   function renderMarket(){if(!active())return;const scorebox=document.querySelector('.pbe7-scorebox');if(!scorebox)return;let host=document.getElementById('pbe8-core-market');if(!host){host=document.createElement('section');host.id='pbe8-core-market';host.className='pbe8-core-market';const actions=scorebox.querySelector('.pbe7-actions');if(actions)scorebox.insertBefore(host,actions);else scorebox.appendChild(host)}host.innerHTML=marketHtml()}
 
