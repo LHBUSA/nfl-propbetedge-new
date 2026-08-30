@@ -19,7 +19,9 @@
     '.pbe23-market-row .pbe23-player',  // SGP market list
     '.pbe23-leg .pbe23-leg-player',     // SGP selected ticket
     '.pbe4-mobile-card > header > div > span:first-child', // Prop Board cards
-    '[data-pbe-player-media="1"]'       // explicit player entities/chips in news + chains
+    '.pbe27-tag.player',                // News Intelligence player entities
+    '.pbe13-tag.accent',                // Injury / transaction player entities
+    '[data-pbe-player-media="1"]'       // explicit player entities/chips
   ];
 
   const normalize=value=>String(value||'').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
@@ -68,10 +70,33 @@
     el.dataset.pbeMediaV3='loading';
     const src=await resolve(name);
     if(!el.isConnected)return;
+    /* Curated selectors are player-only, but a failed resolver still receives the
+     * deterministic PBE mark so the identity slot never collapses visually. */
     el.dataset.pbeMediaV3='ready';
     el.dataset.pbePlayerName=name;
     el.classList.add('pbe-player-name-enhanced','pbe-player-name-universal');
     if(!el.querySelector(':scope > .pbe-player-headshot'))el.prepend(image(name,src));
+  }
+
+  function markSemanticPlayers(){
+    /* PropChain carries entity type beside the name. Mark only PLAYER nodes;
+     * team nodes are deliberately excluded. */
+    document.querySelectorAll('.pbe15-node').forEach(node=>{
+      const type=node.querySelector('.pbe15-node-value')?.textContent?.trim().toUpperCase();
+      const label=node.querySelector('.pbe15-node-label')?.textContent?.trim().toUpperCase();
+      if(type==='PLAYER'&&label?.includes('AFFECTED ENTITY')){
+        const name=node.querySelector('h3');
+        if(name){name.dataset.pbePlayerMedia='1';name.dataset.player=name.textContent.trim()}
+      }
+    });
+    /* Injury Desk's affected-entity leaderboard is player-only. Transaction Desk
+     * can mix teams and players, so it is intentionally not blanket-hydrated. */
+    const hero=document.querySelector('.pbe13-title')?.textContent?.toLowerCase()||'';
+    if(hero.includes('injury intelligence')){
+      document.querySelectorAll('.pbe13-aff-name').forEach(name=>{
+        name.dataset.pbePlayerMedia='1';name.dataset.player=name.textContent.trim();
+      });
+    }
   }
 
   const observer='IntersectionObserver' in window?new IntersectionObserver(entries=>{
@@ -83,6 +108,7 @@
   },{rootMargin:'320px 0px'}):null;
 
   function scan(){
+    markSemanticPlayers();
     document.querySelectorAll(TARGETS.join(',')).forEach(el=>{
       if(el.dataset.pbeMediaV3==='ready'||el.dataset.pbeMediaV3==='loading'||el.dataset.pbeMediaV3==='queued')return;
       if(observer){el.dataset.pbeMediaV3='queued';observer.observe(el)}
