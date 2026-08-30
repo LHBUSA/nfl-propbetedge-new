@@ -1,4 +1,4 @@
-/* PropBetEdge NFL — scrollbar policy v2
+/* PropBetEdge NFL — scrollbar policy v2.1
  * Do not hide layout bugs. Components must fit their viewport first.
  *
  * The document scrollbar stays understated. Scrollbar chrome is hidden only on
@@ -14,6 +14,13 @@ body::-webkit-scrollbar{width:10px}
 body::-webkit-scrollbar-track{background:rgba(8,8,8,.34)}
 body::-webkit-scrollbar-thumb{background:rgba(216,183,91,.24);border:3px solid rgba(8,8,8,.34);border-radius:999px}
 body::-webkit-scrollbar-thumb:hover{background:rgba(216,183,91,.42)}
+
+/* Legacy index.html used overflow-x:hidden at the root. That concealed layout
+ * failures by cutting off columns. Override it: components must reflow instead. */
+html,body{overflow-x:visible!important}
+@media(max-width:768px){
+  .main-content,.view-container,#view-container{overflow-x:visible!important}
+}
 
 /* Deliberate rails/carousels: scrolling remains enabled, chrome stays out of the UI. */
 .pbe3-tabs,
