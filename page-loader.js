@@ -1,7 +1,7 @@
-/* PropBetEdge NFL — ordered page/product upgrade loader v27 */
+/* PropBetEdge NFL — ordered page/product upgrade loader v28 */
 (() => {
   'use strict';
-  const VERSION='20260829networkfooter1';
+  const VERSION='20260830gamesworld3';
   const upgrades=[
     {css:'./dashboard-v5.css',js:'./dashboard-v5.js'},
     {css:'./games-v2.css',js:'./games-v2.js'},
@@ -48,7 +48,10 @@
     {css:'./paywall-funnel-v2.css',js:'./paywall-funnel-v2.js'},
     {css:'./pbecast-v6.css',js:'./pbecast-v6.js'},
     {css:'./stadium-selector-v1.css',js:'./stadium-selector-v1.js'},
-    {css:'./production-polish-v2.css',js:'./production-polish-v2.js'}
+    {css:'./production-polish-v2.css',js:'./production-polish-v2.js'},
+
+    /* Games is a primary NFL conversion surface; keep its visual authority last. */
+    {css:'./games-worldclass-v3.css'}
   ];
 
   const PRO_MODULES=[
