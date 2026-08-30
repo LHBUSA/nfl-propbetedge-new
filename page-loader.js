@@ -1,7 +1,7 @@
-/* PropBetEdge NFL — ordered page/product upgrade loader v34 */
+/* PropBetEdge NFL - ordered page/product upgrade loader v35 */
 (() => {
   'use strict';
-  const VERSION='20260830marketwatchrepair2';
+  const VERSION='20260830pbepicks1';
   const upgrades=[
     /* archive/teams.js is a classic script with lexical const bindings; expose
        the verified directory before newer runtime modules resolve teams. */
@@ -66,7 +66,11 @@
 
     /* Prop Board: signal-first institutional workspace. v3 remains the source
        of truth; this v4 layer only changes workflow and presentation. */
-    {css:'./prop-board-v4.css',js:'./prop-board-v4.js'}
+    {css:'./prop-board-v4.css',js:'./prop-board-v4.js'},
+
+    /* PBE Picks + Verified Track Record. Official customer picks are Pro-only;
+       verified history is public and official-scope only. */
+    {js:'./pbe-picks-v1.js'}
   ];
 
   const PRO_MODULES=[
