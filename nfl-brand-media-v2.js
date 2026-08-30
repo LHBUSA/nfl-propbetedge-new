@@ -197,6 +197,7 @@
       '.pbe3-player-name',
       '.pbe3-signal-player',
       '.pbe3-drawer-title',
+      '.pbe22-player',
       '.pbe16-model-player',
       '.pbe17-name',
       '.pbe26-leader-name',
