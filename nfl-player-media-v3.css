@@ -1,0 +1,44 @@
+/* PropBetEdge NFL — universal player media v3 */
+.pbe21-player.pbe-player-name-universal,
+.pbe20-player-name.pbe-player-name-universal,
+.pbe20-player-tab.pbe-player-name-universal,
+.pbe4-player.pbe-player-name-universal,
+.pbe23-player.pbe-player-name-universal,
+.pbe23-leg-player.pbe-player-name-universal,
+.pbe4-mobile-card>header>div>span:first-child.pbe-player-name-universal{
+  display:flex!important;
+  align-items:center!important;
+  gap:8px!important;
+  min-width:0;
+}
+.pbe21-player .pbe-player-headshot-v3,
+.pbe20-player-name .pbe-player-headshot-v3,
+.pbe4-player .pbe-player-headshot-v3,
+.pbe23-player .pbe-player-headshot-v3,
+.pbe23-leg-player .pbe-player-headshot-v3{
+  width:32px!important;height:32px!important;flex:0 0 32px!important;border-radius:8px!important;
+}
+.pbe20-player-tab .pbe-player-headshot-v3{
+  width:24px!important;height:24px!important;flex:0 0 24px!important;border-radius:7px!important;
+  margin-left:-4px;
+}
+.pbe4-mobile-card>header>div>span:first-child .pbe-player-headshot-v3{
+  width:34px!important;height:34px!important;flex:0 0 34px!important;border-radius:9px!important;
+}
+.pbe20-player-tab.pbe-player-name-universal{justify-content:flex-start!important;padding-left:8px!important}
+.pbe4-model-row .pbe4-player.pbe-player-name-universal{font-size:inherit}
+.pbe21-player .pbe-player-headshot-v3.is-fallback,
+.pbe20-player-name .pbe-player-headshot-v3.is-fallback,
+.pbe20-player-tab .pbe-player-headshot-v3.is-fallback,
+.pbe4-player .pbe-player-headshot-v3.is-fallback,
+.pbe23-player .pbe-player-headshot-v3.is-fallback,
+.pbe23-leg-player .pbe-player-headshot-v3.is-fallback{padding:6px}
+
+@media(max-width:640px){
+  .pbe21-player .pbe-player-headshot-v3,
+  .pbe20-player-name .pbe-player-headshot-v3,
+  .pbe4-player .pbe-player-headshot-v3,
+  .pbe23-player .pbe-player-headshot-v3,
+  .pbe23-leg-player .pbe-player-headshot-v3{width:28px!important;height:28px!important;flex-basis:28px!important}
+  .pbe20-player-tab .pbe-player-headshot-v3{width:22px!important;height:22px!important;flex-basis:22px!important}
+}
