@@ -2,6 +2,11 @@
  * v1 is player_pass_yds only. Projection authority stays upstream; this Worker
  * selects executable sportsbook quotes, persists immutable decisions and never
  * promotes bootstrap output into the customer record.
+ *
+ * Two schedules have intentionally different jobs:
+ *   7 * * * *    -> evaluate/issue player-prop decisions
+ *   */15 * * * * -> copy only each active pick's observed PRE-KICK book state
+ *                   into the append-only closing tape. No post-kick CLV input.
  */
 import { select, insert, patch, rpc } from '../../nfl-picks-engine-shared/supabase.mjs';
 import {
@@ -10,14 +15,18 @@ import {
 } from '../../nfl-prop-picks-shared/prop-math.mjs';
 
 const SERVICE = 'nfl-prop-picks-orchestrator';
-const VERSION = 'v1.0.1';
+const VERSION = 'v1.1.0';
 const HORIZON_HOURS = 36;
+const CLOSING_TAPE_HOURS = 6;
 const MAX_EVENTS = 16;
 
 const health = {
   last_cron_run: null,
+  last_closing_tape_run: null,
   last_error_class: null,
+  last_closing_error_class: null,
   last_result: null,
+  last_closing_result: null,
   selector_version: null,
   selector_trained: null,
   issuance_scope: null,
@@ -31,8 +40,11 @@ export default {
       return json({
         service: SERVICE, version: VERSION,
         last_cron_run: health.last_cron_run,
+        last_closing_tape_run: health.last_closing_tape_run,
         last_error_class: health.last_error_class,
+        last_closing_error_class: health.last_closing_error_class,
         last_result: health.last_result,
+        last_closing_result: health.last_closing_result,
         engine_state: health.engine_state,
         selector_version: health.selector_version,
         selector_trained: health.selector_trained,
@@ -50,8 +62,12 @@ export default {
     return json({ error: 'not_found', service: SERVICE, version: VERSION }, 404);
   },
 
-  async scheduled(_event, env, ctx) {
-    ctx.waitUntil(runOrchestration(env));
+  async scheduled(event, env, ctx) {
+    if (String(event?.cron || '') === '*/15 * * * *') {
+      ctx.waitUntil(captureClosingTape(env));
+    } else {
+      ctx.waitUntil(runOrchestration(env));
+    }
   },
 };
 
@@ -173,6 +189,97 @@ async function runOrchestration(env) {
     health.last_error_class = errorClass(error);
     console.error(`[${SERVICE}] orchestration failed class=${health.last_error_class}`);
   }
+}
+
+async function captureClosingTape(env) {
+  health.last_closing_tape_run = new Date().toISOString();
+  try {
+    const nowMs = Date.now();
+    const nowIso = new Date(nowMs).toISOString();
+    const horizonIso = new Date(nowMs + CLOSING_TAPE_HOURS * 3600000).toISOString();
+    const picks = await select(
+      env, 'nfl_prop_picks',
+      `market=eq.${PROP_MARKET}&status=in.(open,killed)`
+        + `&kickoff_ts=gt.${encodeURIComponent(nowIso)}&kickoff_ts=lte.${encodeURIComponent(horizonIso)}`
+        + '&select=id,event_id,kickoff_ts,player_name,player_key,market,book,side&order=kickoff_ts.asc&limit=500',
+    ) || [];
+
+    let captured = 0, unavailable = 0, duplicates = 0;
+    for (const pick of picks) {
+      const movement = await getJson(
+        `${intelligenceBase(env)}/v1/nfl/line-movement?event_id=${encodeURIComponent(pick.event_id)}`
+          + `&market=${encodeURIComponent(PROP_MARKET)}&player=${encodeURIComponent(pick.player_name)}`,
+      ).catch(() => null);
+      const quote = exactClosingQuote(movement?.rows, pick);
+      if (!quote) { unavailable += 1; continue; }
+      const observedMs = Date.parse(quote.observed_at || '');
+      const kickoffMs = Date.parse(pick.kickoff_ts || '');
+      if (!Number.isFinite(observedMs) || !Number.isFinite(kickoffMs) || observedMs >= kickoffMs || observedMs > nowMs + 60000) {
+        unavailable += 1;
+        continue;
+      }
+      try {
+        await insert(env, 'nfl_prop_closing_snapshots', {
+          pick_id: pick.id,
+          event_id: pick.event_id,
+          player_key: pick.player_key,
+          market: pick.market,
+          book: pick.book,
+          side: pick.side,
+          point: quote.point,
+          price: quote.price,
+          opposite_price: quote.opposite_price,
+          observed_at: quote.observed_at,
+          source: 'pbe-nfl-intelligence',
+        }, { returning: 'minimal' });
+        captured += 1;
+      } catch (error) {
+        if (String(error?.message || '').startsWith('supabase_409:')) duplicates += 1;
+        else throw error;
+      }
+    }
+
+    health.last_closing_result = `active=${picks.length} captured=${captured} duplicates=${duplicates} unavailable=${unavailable}`;
+    health.last_closing_error_class = null;
+  } catch (error) {
+    health.last_closing_error_class = errorClass(error);
+    console.error(`[${SERVICE}] closing tape failed class=${health.last_closing_error_class}`);
+  }
+}
+
+export function exactClosingQuote(rows, pick) {
+  const list = Array.isArray(rows) ? rows : [];
+  const book = String(pick?.book || '').trim().toLowerCase();
+  const side = String(pick?.side || '').trim().toUpperCase();
+  const opposite = side === 'OVER' ? 'UNDER' : side === 'UNDER' ? 'OVER' : null;
+  if (!book || !opposite) return null;
+
+  const mine = list.find(row =>
+    String(row?.book || '').trim().toLowerCase() === book
+    && String(row?.side || '').trim().toUpperCase() === side
+    && row?.current?.point != null
+    && row?.current?.price != null);
+  if (!mine) return null;
+  const point = finiteOrNull(mine.current.point);
+  const price = finiteOrNull(mine.current.price);
+  if (point === null || price === null || price === 0) return null;
+
+  const other = list.find(row =>
+    String(row?.book || '').trim().toLowerCase() === book
+    && String(row?.side || '').trim().toUpperCase() === opposite
+    && finiteOrNull(row?.current?.point) === point
+    && row?.current?.price != null);
+  const oppositePrice = finiteOrNull(other?.current?.price);
+  if (!other || oppositePrice === null || oppositePrice === 0) return null;
+
+  const observedAt = mine?.current?.captured_at || other?.current?.captured_at || null;
+  if (!observedAt) return null;
+  return {
+    point,
+    price: Math.round(price),
+    opposite_price: Math.round(oppositePrice),
+    observed_at: observedAt,
+  };
 }
 
 async function reconcile(env, { open, decision, selector, context, event, scope }) {
@@ -457,6 +564,10 @@ async function getJson(url) {
   return response.json();
 }
 function finite(value, fallback) { const n = Number(value); return Number.isFinite(n) ? n : fallback; }
+function finiteOrNull(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const n = Number(value); return Number.isFinite(n) ? n : null;
+}
 function errorClass(error) { return String(error?.message || 'unknown').split(':')[0].slice(0, 80); }
 function json(body, status = 200) {
   return new Response(JSON.stringify(body), {
