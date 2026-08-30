@@ -5,7 +5,8 @@ import {
   LEGACY_SESSION_COOKIE,
   HMAC_NAMESPACE,
   readCookieValues,
-  verifyWorkerJwt,
+  getSessionSigningSecrets,
+  verifyWorkerJwtWithSecrets,
   supabaseAdminHeaders,
 } from './_nfl-auth.js';
 
@@ -29,14 +30,21 @@ export default async function handler(req, res) {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Cache-Control', 'no-store');
 
-  const secret = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+  const entitlementSecret = String(process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+  const signing = getSessionSigningSecrets();
   const workerBase = String(process.env.NFL_AUTH_WORKER_URL || DEFAULT_AUTH_WORKER).trim().replace(/\/$/, '');
 
   const report = {
     app_origin: APP_ORIGIN,
     hmac_namespace: HMAC_NAMESPACE,
     session_cookie: SESSION_COOKIE,
-    service_role_key_present: Boolean(secret),
+    service_role_key_present: Boolean(entitlementSecret),
+    session_signing: {
+      mode: signing.mode,
+      configured: Boolean(signing.primary),
+      dedicated_configured: signing.dedicatedConfigured,
+      legacy_fallback_configured: Boolean(signing.fallback),
+    },
     worker: { base: workerBase, reachable: false, version: null, status: null },
     secret_parity: null,
     entitlement_store: { reachable: false, status: null },
@@ -61,14 +69,15 @@ export default async function handler(req, res) {
     report.worker.error = String(error?.message || 'worker_unreachable').slice(0, 120);
   }
 
-  if (!secret) {
+  if (!signing.primary) {
     report.secret_parity = 'unknown_no_local_key';
   } else if (!probeToken) {
     report.secret_parity = 'unknown_no_probe';
   } else {
     try {
-      verifyWorkerJwt(probeToken, secret, 'probe');
+      const verified = verifyWorkerJwtWithSecrets(probeToken, signing, 'probe');
       report.secret_parity = 'match';
+      report.session_signing.probe_verified_by = verified.matched;
     } catch (error) {
       report.secret_parity = `mismatch:${String(error?.message || 'verify_failed')}`;
     }
@@ -83,7 +92,7 @@ export default async function handler(req, res) {
   async function probeSupabase(url) {
     try {
       const response = await fetch(`${url}/rest/v1/nfl_subscriptions?select=status&limit=1`, {
-        headers: supabaseAdminHeaders(secret),
+        headers: supabaseAdminHeaders(entitlementSecret),
         cache: 'no-store',
       });
       const detail = response.ok ? '' : await response.text().catch(() => '');
@@ -98,14 +107,14 @@ export default async function handler(req, res) {
     }
   }
 
-  if (secret) {
-    report.service_role_key_format = secret.startsWith('eyJ') ? 'legacy_jwt'
-      : secret.startsWith('sb_secret_') ? 'sb_secret'
-      : secret.startsWith('sb_publishable_') ? 'sb_publishable_WRONG_KEY'
+  if (entitlementSecret) {
+    report.service_role_key_format = entitlementSecret.startsWith('eyJ') ? 'legacy_jwt'
+      : entitlementSecret.startsWith('sb_secret_') ? 'sb_secret'
+      : entitlementSecret.startsWith('sb_publishable_') ? 'sb_publishable_WRONG_KEY'
       : 'unrecognized';
 
     if (report.service_role_key_format === 'legacy_jwt') {
-      const payload = decodeJwtPayload(secret);
+      const payload = decodeJwtPayload(entitlementSecret);
       report.legacy_key_claims = {
         ref: typeof payload?.ref === 'string' ? payload.ref : null,
         role: typeof payload?.role === 'string' ? payload.role : null,
@@ -137,12 +146,13 @@ export default async function handler(req, res) {
   for (const name of [SESSION_COOKIE, LEGACY_SESSION_COOKIE]) {
     const values = readCookieValues(header, name);
     report.cookies[name].count = values.length;
-    if (!secret || !values.length) continue;
+    if (!signing.primary || !values.length) continue;
     let reason = null;
     for (const value of values) {
       try {
-        verifyWorkerJwt(value, secret, 'session');
+        const verified = verifyWorkerJwtWithSecrets(value, signing, 'session');
         report.cookies[name].verifies = true;
+        report.cookies[name].verified_by = verified.matched;
         reason = null;
         break;
       } catch (error) {
@@ -157,8 +167,9 @@ export default async function handler(req, res) {
     : 'auth_backend_misconfigured';
 
   console.log(
-    '[auth-diag] parity=%s worker=%s entitlement=%s cookies_v2=%d cookies_legacy=%d',
+    '[auth-diag] parity=%s signing=%s worker=%s entitlement=%s cookies_v2=%d cookies_legacy=%d',
     report.secret_parity,
+    report.session_signing.mode,
     report.worker.reachable,
     report.entitlement_store.reachable,
     report.cookies[SESSION_COOKIE].count,
