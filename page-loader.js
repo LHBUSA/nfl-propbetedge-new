@@ -1,7 +1,7 @@
-/* PropBetEdge NFL - ordered page/product upgrade loader v36 */
+/* PropBetEdge NFL - ordered page/product upgrade loader v37 */
 (() => {
   'use strict';
-  const VERSION='20260830pbepicks2';
+  const VERSION='20260830quant1';
   const upgrades=[
     /* archive/teams.js is a classic script with lexical const bindings; expose
        the verified directory before newer runtime modules resolve teams. */
@@ -25,6 +25,7 @@
     {css:'./propchain-v2.css',js:'./propchain-v2.js'},
     {css:'./matchups-v2.css',js:'./matchups-v2.js'},
     {css:'./simulator-v2.css',js:'./simulator-v2.js'},
+    {css:'./simulator-v3-enhance.css',js:'./simulator-v3-enhance.js'},
     {css:'./sgp-lab-v2.css',js:'./sgp-lab-v2.js'},
     {css:'./usage-v2.css',js:'./usage-v2.js'},
 
@@ -35,6 +36,7 @@
     {css:'./market-watch-v3.css',js:'./market-watch-v3.js'},
 
     {css:'./player-research-v2.css',js:'./player-research-v2.js'},
+    {css:'./model-lab-v2-enhance.css',js:'./model-lab-v2-enhance.js'},
     {css:'./command-palette-v2.css',js:'./command-palette-v3.js'},
     {css:'./event-selector-v2.css',js:'./event-selector-v2.js'},
     {css:'./global-polish-v2.css',js:'./global-polish-v5.js'},
@@ -70,7 +72,12 @@
 
     /* PBE Picks + Verified Track Record v2 is the sole UI authority. The old
        v1 file remains historical source only and is intentionally not loaded. */
-    {css:'./pbe-picks-v2.css',js:'./pbe-picks-v2.js'}
+    {css:'./pbe-picks-v2.css',js:'./pbe-picks-v2.js'},
+
+    /* Gated validation telemetry is aggregate/public-safe. It never reveals a
+       bootstrap selection and never calls the internal receipt chain a third-
+       party notarization. */
+    {css:'./pbe-validation-v1.css',js:'./pbe-validation-v1.js'}
   ];
 
   const PRO_MODULES=[
