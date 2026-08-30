@@ -8,7 +8,6 @@ on:
 permissions:
   contents: read
 
-# Canonical validation gate for the broadcast-first NFL build and committed archive snapshot.
 jobs:
   validate:
     runs-on: ubuntu-latest
@@ -23,8 +22,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # node --check silently passes a .js file whose syntax error follows
-          # an ESM import. scripts/check-syntax.mjs parses as a module.
           mapfile -t files < <(find . -type f -name '*.js' -not -path './node_modules/*' -not -path './.git/*')
           node scripts/check-syntax.mjs "${files[@]}"
 
@@ -36,12 +33,9 @@ jobs:
           grep -Fq './page-loader.js' index.html
           grep -Fq './paywall.js' index.html
           grep -Fq './archive/teams.js' index.html
-
           for dataset in utils teams superbowls hof seasons records stats-2025 standings-2025; do
-            grep -Eq "src=\"\./archive/${dataset}\.js" index.html \
-              || { echo "index.html does not load ./archive/${dataset}.js locally"; exit 1; }
+            grep -Eq "src=\"\./archive/${dataset}\.js" index.html || { echo "index.html does not load ./archive/${dataset}.js locally"; exit 1; }
           done
-
           if grep -Eq 'src="https?://[^"]*/archive/' index.html; then
             echo 'Archive dataset loaded from a remote origin; root is not standalone.'
             exit 1
@@ -131,8 +125,6 @@ jobs:
           test -s sports-shell-v1.css
           test -s pbecast-v6.css
 
-          # PBEcast v6 is the sole live-game renderer/poller. Historical v4/v5
-          # source may remain in the repository, but none may be loaded.
           grep -Fq "js:'./pbecast-v6.js'" page-loader.js
           grep -Fq "js:'./pbecast-v7-enhance.js'" page-loader.js
           if grep -Eq "js:'\./pbecast-v(4|5)\.js'|js:'\./pbecast-v5-renderer\.js'" page-loader.js; then
@@ -140,7 +132,6 @@ jobs:
             exit 1
           fi
 
-          # Dashboard and scorebar game-focus actions must target the same v6 authority.
           grep -Fq 'PBEcastV6?.focus' dashboard-v5.js
           grep -Fq 'PBEcastV6?.focus' sports-shell-v2.js
           if grep -Fq 'PBEcastV4?.focus' dashboard-v5.js || grep -Fq 'PBEcastV4?.focus' sports-shell-v2.js; then
@@ -148,9 +139,6 @@ jobs:
             exit 1
           fi
 
-          # Market Watch v3 is the sole JS runtime authority. v2 CSS remains
-          # intentionally active as the structural base beneath the v3 terminal
-          # override; v2 JS must not be loaded alongside it.
           test -s market-watch-v2.css
           grep -Fq 'market-watch-v2.css' page-loader.js
           if grep -Fq "js:'./market-watch-v2.js'" page-loader.js; then
@@ -158,68 +146,53 @@ jobs:
             exit 1
           fi
 
+      - name: Forbid page-wide mutation observers in active client modules
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in pbe-validation-v1.js nfl-brand-media-v2.js nfl-player-media-v3.js pbe-engine-story-v1.js pbe-prop-engine-v1.js; do
+            if grep -Fq 'new MutationObserver' "$file"; then
+              echo "Page-wide MutationObserver reintroduced in $file"
+              exit 1
+            fi
+          done
+          echo 'Observer-free active client modules OK'
+
       - name: Validate CSS-referenced local assets
         shell: bash
         run: |
           set -euo pipefail
           test -s world-class-v1.css
           grep -Fq 'world-class-v1.css' page-loader.js
-
           MIN_BYTES=40960
           CSS=world-class-v1.css
           BASE=$(dirname "$CSS")
-
           mapfile -t refs < <(
             grep -o 'url([^)]*)' "$CSS" \
               | sed -e 's/^url(//' -e 's/)$//' -e "s/^[[:space:]]*['\"]\?//" -e "s/['\"]\?[[:space:]]*$//" \
               | sort -u
           )
-
           if [ "${#refs[@]}" -eq 0 ]; then
             echo "No url() references in $CSS - nothing to validate."
             exit 0
           fi
-
           fail=0
           for ref in "${refs[@]}"; do
             case "$ref" in
-              data:*|http://*|https://*|//*)
-                echo "SKIP      $ref (remote or inline)"
-                continue
-                ;;
-              /*)  path="${ref#/}" ;;
-              *)   path="$BASE/${ref#./}" ;;
+              data:*|http://*|https://*|//*) echo "SKIP      $ref (remote or inline)"; continue ;;
+              /*) path="${ref#/}" ;;
+              *) path="$BASE/${ref#./}" ;;
             esac
-
-            if [ ! -f "$path" ]; then
-              echo "MISSING   $ref -> $path"
-              fail=1
-              continue
-            fi
-
+            if [ ! -f "$path" ]; then echo "MISSING   $ref -> $path"; fail=1; continue; fi
             bytes=$(stat -c%s "$path")
-            if [ "$bytes" -lt "$MIN_BYTES" ]; then
-              echo "UNDERSIZE $path is ${bytes}B, floor is ${MIN_BYTES}B"
-              fail=1
-              continue
-            fi
-
+            if [ "$bytes" -lt "$MIN_BYTES" ]; then echo "UNDERSIZE $path is ${bytes}B, floor is ${MIN_BYTES}B"; fail=1; continue; fi
             if [ "${path##*.}" = "webp" ]; then
               declared=$(python3 -c "import struct,sys; f=open(sys.argv[1],'rb'); f.seek(4); print(struct.unpack('<I', f.read(4))[0] + 8)" "$path")
-              if [ "$bytes" -lt "$declared" ]; then
-                echo "TRUNCATED $path is ${bytes}B but RIFF declares ${declared}B"
-                fail=1
-                continue
-              fi
+              if [ "$bytes" -lt "$declared" ]; then echo "TRUNCATED $path is ${bytes}B but RIFF declares ${declared}B"; fail=1; continue; fi
             fi
-
             echo "OK        $path (${bytes}B)"
           done
-
-          if [ "$fail" -ne 0 ]; then
-            echo "$CSS references missing, undersized or truncated assets"
-            exit 1
-          fi
+          if [ "$fail" -ne 0 ]; then echo "$CSS references missing, undersized or truncated assets"; exit 1; fi
 
       - name: Require live PBEcast transport and visuals
         shell: bash
@@ -254,7 +227,6 @@ jobs:
           set -euo pipefail
           test -s api/pro-model.js
           test -s api/news-feed.js
-
           grep -Fq "from './_nfl-auth.js'" api/pro-model.js
           grep -Fq 'getNflSession' api/pro-model.js
           grep -Fq 'sign_in_required' api/pro-model.js
@@ -287,8 +259,6 @@ jobs:
           grep -Fiq 'no fake board' draft-review-v2.js
           grep -Fiq 'local baseline' market-watch-v3.js
           grep -Fiq 'current roster is not inferred' team-research-v3.js
-          # LIVE remains source-declared: v6 only treats the detail as live when
-          # api/nfl-live returns explicit LIVE semantics.
           grep -Fq "function isLive(d=state.detail){return semantics(d)==='LIVE'}" pbecast-v6.js
           grep -Fq "function semantics(status)" api/nfl-live.js
 
@@ -310,7 +280,7 @@ jobs:
           set -euo pipefail
           grep -Fq "window.addEventListener('pbe:upgrades-ready'" app-core-v3.js
           grep -Fq "App.nav(routeFromLocation(),{ history:false })" app-core-v3.js
-          grep -Fq "const VERSION='20260830bootfix1'" page-loader.js
+          grep -Fq "const VERSION='20260830freezefix2'" page-loader.js
 
       - name: Validate Vercel configuration
         shell: bash
