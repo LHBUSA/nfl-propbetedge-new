@@ -2,6 +2,7 @@
 .pbe3-player-name.pbe-player-name-enhanced,
 .pbe3-signal-player.pbe-player-name-enhanced,
 .pbe3-drawer-title.pbe-player-name-enhanced,
+.pbe22-player.pbe-player-name-enhanced,
 .pbe16-model-player.pbe-player-name-enhanced,
 .pbe17-name.pbe-player-name-enhanced,
 .pbe26-leader-name.pbe-player-name-enhanced,
@@ -25,6 +26,10 @@
 }
 .pbe3-player-name .pbe-player-headshot{
   width:32px!important;height:32px!important;flex:0 0 32px!important;border-radius:8px!important;
+}
+.pbe22-player .pbe-player-headshot{
+  width:34px!important;height:34px!important;flex:0 0 34px!important;border-radius:8px!important;
+  border-color:rgba(85,217,255,.14);box-shadow:0 8px 20px rgba(0,0,0,.30);
 }
 .pbe3-signal-player .pbe-player-headshot,
 .pbe16-model-player .pbe-player-headshot,
@@ -64,6 +69,7 @@
 
 @media(max-width:640px){
   .pbe3-player-name .pbe-player-headshot{width:28px!important;height:28px!important;flex-basis:28px!important}
+  .pbe22-player .pbe-player-headshot{width:30px!important;height:30px!important;flex-basis:30px!important}
   .pbe3-signal-player .pbe-player-headshot,
   .pbe16-model-player .pbe-player-headshot,
   .pbe26-leader-name .pbe-player-headshot{width:30px!important;height:30px!important;flex-basis:30px!important}
