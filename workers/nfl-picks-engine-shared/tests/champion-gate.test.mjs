@@ -50,7 +50,8 @@ test('the seeded v1 champion is promoted but NOT publishable', () => {
 
 test('the gated state is GATED, never "no qualified picks"', () => {
   const gate = championPublishable(SEEDED_V1);
-  assert.equal(gate.state, 'ENGINE GATED — champion not trained');
+  assert.equal(gate.state, UNTRAINED_STATE);
+  assert.match(gate.state, /MODEL VALIDATION IN PROGRESS/);
   assert.notEqual(gate.state, 'ENGINE LIVE — no qualified picks');
   assert.ok(!/no qualified/i.test(gate.state));
 });
@@ -131,22 +132,35 @@ test('the orchestrator gates BEFORE doing any slate work', () => {
     'gate must run before any pick insert is reachable');
 });
 
-test('the orchestrator returns early when blocked, reaching no insert path', () => {
+test('the orchestrator returns early when it cannot issue at all, writing nothing', () => {
   const src = readFileSync(
     new URL('../../nfl-game-picks-orchestrator/src/index.js', import.meta.url), 'utf8');
-  /* Anchor on the orchestration gate specifically — the read contract also
-   * declares a `gate`, and it appears earlier in the file. */
-  const start = src.indexOf('PUBLICATION GATE');
-  assert.ok(start > 0, 'publication gate comment not found');
+  /* Under Option B an UNTRAINED champion still writes tracking rows, so the
+   * early-return path is reserved for the genuinely un-issuable cases: no
+   * promoted champion at all, or an unpromoted one. */
+  const start = src.indexOf('ISSUANCE SCOPE');
+  assert.ok(start > 0, 'issuance scope block not found');
   const gateBlock = src.slice(
     start,
     src.indexOf('const { season, week } = await currentSeasonWeek(env)', start),
   );
-  assert.ok(/if \(!gate\.publishable\)/.test(gateBlock), 'no publishable check');
+  assert.ok(/if \(!issuance\.canIssue\)/.test(gateBlock), 'no canIssue check');
   assert.ok(/\breturn;/.test(gateBlock), 'blocked path must return early');
   // Nothing in the blocked branch may write.
   assert.equal(/insert\(|patch\(|upsert\(/.test(gateBlock), false,
     'blocked branch must not write any row');
+});
+
+test('an untrained champion reaches the slate but only as tracking', () => {
+  const src = readFileSync(
+    new URL('../../nfl-game-picks-orchestrator/src/index.js', import.meta.url), 'utf8');
+  // Scope is resolved once, before the slate, and threaded into every insert.
+  assert.match(src, /const issuance = issuanceScope\(champion\)/);
+  assert.match(src, /scope: issuance\.scope/);
+  assert.match(src, /publication_scope: scope/);
+  // It is never hardcoded to official anywhere.
+  assert.equal(/publication_scope: *['"]official['"]/.test(src), false,
+    'scope must never be hardcoded to official');
 });
 
 test('the seeded migration row really is trained:false and promoted:true', () => {

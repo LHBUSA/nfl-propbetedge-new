@@ -17,7 +17,13 @@
  * only the tuner can produce, and only after its own hard gate opens.
  */
 
-export const UNTRAINED_STATE = 'ENGINE GATED — champion not trained';
+export const UNTRAINED_STATE = 'ENGINE GATED — MODEL VALIDATION IN PROGRESS';
+export const DEGRADED_STATE = 'ENGINE DEGRADED — source unavailable';
+
+/* The two publication classes. A prediction declares which it is at issuance
+ * and can never be reclassified. */
+export const SCOPE_TRACKING = 'tracking';
+export const SCOPE_OFFICIAL = 'official';
 
 /* Strictly true. A missing flag, a string 'false', a 1, or an absent meta
  * block all mean "not trained" — never publishable by accident. */
@@ -28,7 +34,7 @@ export function isTrainedChampion(champion) {
 /* The single authority the orchestrator consults before emitting anything. */
 export function championPublishable(champion) {
   if (!champion) {
-    return { publishable: false, state: 'ENGINE DEGRADED — source unavailable', reason: 'no_promoted_champion' };
+    return { publishable: false, state: DEGRADED_STATE, reason: 'no_promoted_champion' };
   }
   if (champion.promoted === false) {
     return { publishable: false, state: UNTRAINED_STATE, reason: `not_promoted:v${champion.version ?? '?'}` };
@@ -41,4 +47,50 @@ export function championPublishable(champion) {
     };
   }
   return { publishable: true, state: null, reason: null };
+}
+
+/* Resolves what a champion is allowed to ISSUE right now.
+ *
+ * The bootstrap path: a promoted-but-untrained champion still evaluates real
+ * slates and persists real pregame decisions — but as `tracking`, which is
+ * never customer-facing. This is how the loop earns its first 100 finalized
+ * grades without presenting untrained output as an advertised result.
+ *
+ * There is no env flag, query parameter or code constant that can raise the
+ * scope; it is a pure function of the champion row's own state.
+ */
+export function issuanceScope(champion) {
+  if (!champion || champion.promoted === false) {
+    return {
+      canIssue: false,
+      scope: null,
+      mode: 'DEGRADED',
+      state: DEGRADED_STATE,
+      reason: champion ? `not_promoted:v${champion.version ?? '?'}` : 'no_promoted_champion',
+    };
+  }
+  if (!isTrainedChampion(champion)) {
+    return {
+      canIssue: true,
+      scope: SCOPE_TRACKING,
+      mode: 'TRACKING_BOOTSTRAP',
+      state: UNTRAINED_STATE,
+      reason: `untrained_champion:v${champion.version ?? '?'}`,
+    };
+  }
+  return {
+    canIssue: true,
+    scope: SCOPE_OFFICIAL,
+    mode: 'OFFICIAL',
+    state: null,
+    reason: null,
+  };
+}
+
+/* Customer-facing surfaces filter on the issuance classification itself, never
+ * on the champion's current trained flag. If the model is later retrained, a
+ * bootstrap row must STILL be excluded — the classification is authoritative,
+ * not the model's present state. */
+export function isCustomerFacing(pick) {
+  return pick?.publication_scope === SCOPE_OFFICIAL;
 }

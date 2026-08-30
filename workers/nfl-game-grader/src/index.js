@@ -318,6 +318,11 @@ async function gradeOne(env, pick, final) {
     market: pick.market,
     features: pick.features,
     model_version: pick.model_version,
+    /* Carried straight from the pick. A finalized TRACKING decision is a
+     * legitimate learning observation — it was timestamped before the outcome
+     * was known — and recording its class keeps the tuner's sample auditable
+     * rather than silently mixing bootstrap and official history. */
+    publication_scope: pick.publication_scope || 'tracking',
     model_prob: pick.model_prob,
     clv_beat: grade.clv_beat,
     clv_prob: grade.clv_prob,

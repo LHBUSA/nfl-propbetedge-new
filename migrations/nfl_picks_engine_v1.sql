@@ -44,10 +44,31 @@ create table if not exists public.nfl_game_picks (
   confidence_bucket text not null check (confidence_bucket in ('A','B','C')),
   features jsonb not null,
   model_version int not null,
+  -- Every persisted prediction declares what it IS at issuance.
+  --   tracking : real pregame decision from a promoted-but-untrained champion.
+  --              Graded and learned from, never customer-facing, never in the
+  --              Verified Track Record.
+  --   official : customer-facing. Only issuable while the active promoted
+  --              champion is also trained.
+  -- The classification is fixed at issuance and can never be changed, so a
+  -- bootstrap record can never be reframed as an advertised result.
+  publication_scope text not null default 'tracking'
+    check (publication_scope in ('tracking','official')),
   status text not null default 'open'
     check (status in ('open','superseded','killed','graded')),
   superseded_by uuid references public.nfl_game_picks(id)
 );
+
+alter table public.nfl_game_picks
+  add column if not exists publication_scope text not null default 'tracking';
+alter table public.nfl_game_picks
+  drop constraint if exists nfl_game_picks_publication_scope_check;
+alter table public.nfl_game_picks
+  add constraint nfl_game_picks_publication_scope_check
+  check (publication_scope in ('tracking','official'));
+
+create index if not exists nfl_game_picks_scope_idx
+  on public.nfl_game_picks (publication_scope, status);
 
 create index if not exists nfl_game_picks_season_week_idx
   on public.nfl_game_picks (season, week);
@@ -63,6 +84,83 @@ alter table public.nfl_game_picks
 alter table public.nfl_game_picks
   add constraint nfl_game_picks_features_not_empty
   check (jsonb_typeof(features) = 'object' and features <> '{}'::jsonb);
+
+-- ---------------------------------------------------------------------------
+-- 1a. Issuance immutability.
+--
+-- Enforced in the database, not only in Worker code, so that neither a future
+-- code path nor a manual SQL session can reclassify history. Two rules:
+--
+--   * publication_scope and the economic terms of an issued pick can never be
+--     updated. A tracking row can NEVER become official. Market movement
+--     produces a kill or a supersede, never an edit.
+--   * an 'official' row can only be INSERTED while its own model_version is a
+--     promoted champion whose weights declare trained = true.
+--
+-- status and superseded_by remain updatable: those are lifecycle, not terms.
+-- ---------------------------------------------------------------------------
+
+create or replace function public.nfl_game_picks_freeze_issuance()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.publication_scope is distinct from old.publication_scope then
+    raise exception
+      'publication_scope is immutable after issuance (% -> %) on pick %',
+      old.publication_scope, new.publication_scope, old.id;
+  end if;
+
+  if new.side              is distinct from old.side
+     or new.market         is distinct from old.market
+     or new.market_line    is distinct from old.market_line
+     or new.market_price   is distinct from old.market_price
+     or new.market_prob    is distinct from old.market_prob
+     or new.model_prob     is distinct from old.model_prob
+     or new.model_line     is distinct from old.model_line
+     or new.edge_pct       is distinct from old.edge_pct
+     or new.stake_units    is distinct from old.stake_units
+     or new.model_version  is distinct from old.model_version
+     or new.features::text is distinct from old.features::text
+  then
+    raise exception 'issued pick terms are immutable on pick %', old.id;
+  end if;
+
+  return new;
+end
+$$;
+
+drop trigger if exists nfl_game_picks_freeze_issuance on public.nfl_game_picks;
+create trigger nfl_game_picks_freeze_issuance
+  before update on public.nfl_game_picks
+  for each row execute function public.nfl_game_picks_freeze_issuance();
+
+create or replace function public.nfl_game_picks_require_trained_for_official()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.publication_scope = 'official' then
+    if not exists (
+      select 1
+        from public.nfl_model_weights w
+       where w.version = new.model_version
+         and w.promoted is true
+         and (w.weights -> 'meta' ->> 'trained') = 'true'
+    ) then
+      raise exception
+        'official picks require a promoted, trained champion (model_version % is not)',
+        new.model_version;
+    end if;
+  end if;
+  return new;
+end
+$$;
+
+drop trigger if exists nfl_game_picks_official_requires_trained on public.nfl_game_picks;
+create trigger nfl_game_picks_official_requires_trained
+  before insert on public.nfl_game_picks
+  for each row execute function public.nfl_game_picks_require_trained_for_official();
 
 -- ---------------------------------------------------------------------------
 -- 2. Odds snapshots. Closing capture is enforced by a partial unique index.
@@ -249,8 +347,17 @@ create table if not exists public.nfl_learning_observations (
   outcome int check (outcome in (0,1)),
   units_delta numeric not null,
   brier numeric,
-  is_final boolean not null default true check (is_final)
+  is_final boolean not null default true check (is_final),
+  -- Carried from the pick so the tuner's sample is auditable: bootstrap
+  -- tracking decisions are legitimate learning observations (they were
+  -- timestamped before the outcome was known), and this records that fact
+  -- rather than obscuring it.
+  publication_scope text not null default 'tracking'
+    check (publication_scope in ('tracking','official'))
 );
+
+alter table public.nfl_learning_observations
+  add column if not exists publication_scope text not null default 'tracking';
 
 create index if not exists nfl_learning_observations_season_week_idx
   on public.nfl_learning_observations (season, week);
@@ -337,3 +444,45 @@ commit;
 --    market_prob,edge_pct,stake_units,confidence_bucket,features,model_version)
 -- values ('x',2026,1,now(),'spread','X -1',-110,0.5,0.5,0,0.5,'C','{}',1);
 --   expect: ERROR nfl_game_picks_features_not_empty violated.
+--
+-- Negative check (official requires a trained champion) — with only the seeded
+-- untrained v1 present this MUST fail:
+-- insert into public.nfl_game_picks
+--   (game_id,season,week,kickoff_ts,market,side,market_price,model_prob,
+--    market_prob,edge_pct,stake_units,confidence_bucket,features,model_version,
+--    publication_scope)
+-- values ('x',2026,1,now(),'spread','X -1',-110,0.5,0.5,0,0.5,'C',
+--         '{"home":1}',1,'official');
+--   expect: ERROR official picks require a promoted, trained champion
+--
+-- Positive check (tracking IS allowed from the untrained champion):
+-- insert into public.nfl_game_picks
+--   (game_id,season,week,kickoff_ts,market,side,market_price,model_prob,
+--    market_prob,edge_pct,stake_units,confidence_bucket,features,model_version,
+--    publication_scope)
+-- values ('verify-tracking',2026,1,now(),'spread','X -1',-110,0.5,0.5,0,0.5,'C',
+--         '{"home":1}',1,'tracking')
+-- returning id;
+--   expect: one row.
+--
+-- Negative check (tracking can never be reclassified as official):
+-- update public.nfl_game_picks
+--    set publication_scope='official'
+--  where game_id='verify-tracking';
+--   expect: ERROR publication_scope is immutable after issuance
+--
+-- Negative check (issued terms are frozen):
+-- update public.nfl_game_picks set market_line=-7 where game_id='verify-tracking';
+--   expect: ERROR issued pick terms are immutable
+--
+-- Lifecycle IS still allowed:
+-- update public.nfl_game_picks set status='killed' where game_id='verify-tracking';
+--   expect: UPDATE 1
+--
+-- Clean up the verification row:
+-- delete from public.nfl_game_picks where game_id='verify-tracking';
+--   expect: DELETE 1  (production tables must contain no fixture rows)
+--
+-- select publication_scope, count(*) from public.nfl_game_picks
+-- group by publication_scope;
+--   expect after deploy: official 0; tracking >= 0.

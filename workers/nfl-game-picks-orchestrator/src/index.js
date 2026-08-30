@@ -24,7 +24,8 @@ import {
 } from '../../nfl-picks-engine-shared/stadiums.mjs';
 import { ratingUsable } from '../../nfl-picks-engine-shared/ratings.mjs';
 import {
-  championPublishable, isTrainedChampion, UNTRAINED_STATE,
+  championPublishable, isTrainedChampion, issuanceScope, isCustomerFacing,
+  UNTRAINED_STATE, SCOPE_OFFICIAL, SCOPE_TRACKING,
 } from '../../nfl-picks-engine-shared/champion.mjs';
 
 const SERVICE = 'nfl-game-picks-orchestrator';
@@ -123,13 +124,23 @@ async function currentPicks(req, env, origin) {
   try {
     const { season, week } = await currentSeasonWeek(env);
 
+    /* Customer-facing surfaces filter on publication_scope, NOT on the
+     * champion's current trained flag. A bootstrap tracking row must stay
+     * excluded even after the model is later trained — the classification at
+     * issuance is authoritative. Filtered in the QUERY so tracking rows never
+     * reach this Worker's memory, let alone the response. */
     const picks = await select(
       env, 'nfl_game_picks',
-      `or=(status.eq.open,and(status.eq.graded,season.eq.${season},week.eq.${week}))`
+      `publication_scope=eq.${SCOPE_OFFICIAL}`
+      + `&or=(status.eq.open,and(status.eq.graded,season.eq.${season},week.eq.${week}))`
       + '&select=*&order=kickoff_ts.asc&limit=200',
     ) || [];
 
-    const ids = picks.map(p => `"${p.id}"`).join(',');
+    /* Defence in depth: even if the query filter were ever loosened, nothing
+     * that is not classified official may be returned. */
+    const customerFacing = picks.filter(isCustomerFacing);
+
+    const ids = customerFacing.map(p => `"${p.id}"`).join(',');
     const grades = ids
       ? (await select(env, 'nfl_pick_grades', `pick_id=in.(${ids})&select=*`) || [])
       : [];
@@ -138,7 +149,7 @@ async function currentPicks(req, env, origin) {
     const champion = await latestPromotedWeights(env).catch(() => null);
     const gate = championPublishable(champion);
 
-    const rows = picks.map(pick => {
+    const rows = customerFacing.map(pick => {
       const view = full ? proView(pick) : publicView(pick);
       const grade = gradeById.get(pick.id) || null;
       view.grade = grade
@@ -160,7 +171,7 @@ async function currentPicks(req, env, origin) {
       ? gate.state
       : rows.length
         ? 'ENGINE LIVE — picks available'
-        : health.engine_state;
+        : 'ENGINE LIVE — no qualified picks';
 
     return json({
       service: SERVICE,
@@ -171,8 +182,11 @@ async function currentPicks(req, env, origin) {
       week,
       model_version: champion?.version ?? null,
       champion_trained: isTrainedChampion(champion),
+      /* The Verified Track Record begins at the first official pick. Bootstrap
+       * tracking decisions are never part of it. */
+      truth: 'verified_live_official_only',
+      publication_scope: SCOPE_OFFICIAL,
       entitlement: full ? 'pro' : 'public',
-      truth: 'verified_live',
       count: rows.length,
       picks: rows,
     }, 200, origin, env);
@@ -197,6 +211,8 @@ async function engineState(req, env, origin) {
     ) || [];
     const weeks = new Set(observations.map(o => `${o.season}-${o.week}`));
     const graded = observations.length;
+    const trackingSample = observations.filter(o => o.publication_scope === SCOPE_TRACKING).length;
+    const officialSample = observations.filter(o => o.publication_scope === SCOPE_OFFICIAL).length;
     const gateOpen = graded >= 100 && weeks.size >= 4;
 
     return json({
@@ -211,6 +227,9 @@ async function engineState(req, env, origin) {
       auto_tuner: gateOpen ? 'ELIGIBLE' : 'GATED',
       graded_sample: graded,
       graded_sample_required: 100,
+      graded_sample_tracking: trackingSample,
+      graded_sample_official: officialSample,
+      issuance_mode: issuanceScope(champion).mode,
       distinct_weeks: weeks.size,
       distinct_weeks_required: 4,
     }, 200, origin, env);
@@ -229,23 +248,24 @@ async function runOrchestration(env) {
   try {
     const champion = await latestPromotedWeights(env);
 
-    /* PUBLICATION GATE. An untrained champion emits nothing at all: no picks,
-     * no kills, no supersedes. This is checked BEFORE any slate work so an
-     * untrained model cannot mutate a single row. */
-    const gate = championPublishable(champion);
-    if (!gate.publishable) {
-      health.engine_state = gate.state;
-      health.publication_blocked_reason = gate.reason;
-      health.champion_version = champion?.version ?? null;
-      health.champion_trained = isTrainedChampion(champion);
-      health.last_result = `publication_blocked:${gate.reason}`;
+    /* ISSUANCE SCOPE. Decided from the champion row's own state before any
+     * slate work. An untrained champion still evaluates real slates and
+     * persists real pregame decisions, but as `tracking` — never as an
+     * official customer-facing pick. */
+    const issuance = issuanceScope(champion);
+    health.champion_version = champion?.version ?? null;
+    health.champion_trained = isTrainedChampion(champion);
+    health.issuance_mode = issuance.mode;
+    health.issuance_scope = issuance.scope;
+    health.publication_blocked_reason = issuance.reason;
+
+    if (!issuance.canIssue) {
+      health.engine_state = issuance.state;
+      health.last_result = `issuance_blocked:${issuance.reason}`;
       health.last_error_class = null;
-      console.log(`[${SERVICE}] publication blocked ${gate.reason} — emitting nothing`);
+      console.log(`[${SERVICE}] issuance blocked ${issuance.reason} — emitting nothing`);
       return;
     }
-    health.publication_blocked_reason = null;
-    health.champion_version = champion.version;
-    health.champion_trained = true;
 
     const { season, week } = await currentSeasonWeek(env);
     const games = await upcomingGames(env);
@@ -296,7 +316,10 @@ async function runOrchestration(env) {
         }
 
         const open = await openPickFor(env, game.game_id, market);
-        const result = await reconcile(env, { open, decision, champion, game, market, season, week });
+        const result = await reconcile(env, {
+          open, decision, champion, game, market, season, week,
+          scope: issuance.scope,
+        });
 
         emitted += result.emitted; killed += result.killed;
         superseded += result.superseded; kept += result.kept;
@@ -307,10 +330,17 @@ async function runOrchestration(env) {
      * qualified picks". Those are different truths and must not be conflated:
      * one says the model looked and declined, the other says it could not
      * look at all. */
-    if (emitted || kept) {
-      health.engine_state = 'ENGINE LIVE — picks available';
-    } else if (ratingsBlocked > 0) {
+    /* Three distinct internal truths, never conflated:
+     *   - source degradation  : we could not evaluate
+     *   - bootstrap tracking  : we evaluated, but the model may not publish
+     *   - genuinely zero      : a trained champion evaluated and declined
+     * "no qualified picks" is reserved for the last case alone. */
+    if (ratingsBlocked > 0 && !emitted && !kept) {
       health.engine_state = 'ENGINE DEGRADED — source unavailable';
+    } else if (issuance.scope === SCOPE_TRACKING) {
+      health.engine_state = UNTRAINED_STATE;
+    } else if (emitted || kept) {
+      health.engine_state = 'ENGINE LIVE — picks available';
     } else {
       health.engine_state = 'ENGINE LIVE — no qualified picks';
     }
@@ -318,7 +348,9 @@ async function runOrchestration(env) {
     health.ratings_blocked = ratingsBlocked;
     health.ratings_blocked_reasons = [...blockedReasons].slice(0, 5);
     health.last_result =
-      `emitted=${emitted} kept=${kept} killed=${killed} superseded=${superseded} ratings_blocked=${ratingsBlocked}`;
+      `scope=${issuance.scope} emitted=${emitted} kept=${kept} killed=${killed}`
+      + ` superseded=${superseded} ratings_blocked=${ratingsBlocked}`;
+    health.tracking_only = issuance.scope === SCOPE_TRACKING;
     health.last_error_class = null;
   } catch (error) {
     health.engine_state = 'ENGINE DEGRADED — source unavailable';
@@ -423,7 +455,7 @@ export function evaluate({ game, market, quote, ratings, weather, champion, seas
 
 /* Lifecycle. This is the only place a pick's status changes, and it never
  * edits an issued pick's economic terms. */
-async function reconcile(env, { open, decision, champion, game, market, season, week }) {
+async function reconcile(env, { open, decision, champion, game, market, season, week, scope }) {
   const tally = { emitted: 0, killed: 0, superseded: 0, kept: 0 };
 
   if (!open) {
@@ -444,12 +476,13 @@ async function reconcile(env, { open, decision, champion, game, market, season, 
       confidence_bucket: decision.confidence_bucket,
       features: decision.features,
       model_version: champion.version,
+      publication_scope: scope,
       status: 'open',
     });
     const pickId = Array.isArray(row) ? row[0]?.id : row?.id;
     await audit(env, {
       pick_id: pickId, event_type: 'pick_created', model_version: champion.version,
-      detail: { market, side: decision.side, edge_pct: decision.edge_pct },
+      detail: { market, side: decision.side, edge_pct: decision.edge_pct, publication_scope: scope },
     });
     await audit(env, {
       pick_id: pickId, event_type: 'features_locked', model_version: champion.version,
@@ -473,7 +506,8 @@ async function reconcile(env, { open, decision, champion, game, market, season, 
       model_line: decision.model_line, model_prob: decision.model_prob,
       market_prob: decision.market_prob, edge_pct: decision.edge_pct,
       stake_units: decision.stake_units, confidence_bucket: decision.confidence_bucket,
-      features: decision.features, model_version: champion.version, status: 'open',
+      features: decision.features, model_version: champion.version,
+      publication_scope: scope, status: 'open',
     });
     const newId = Array.isArray(row) ? row[0]?.id : row?.id;
     /* The superseded pick keeps its original terms forever; only status and
