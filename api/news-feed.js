@@ -34,6 +34,48 @@ function proxiedImage(raw){
   return IMG_PROXY+encodeURIComponent(value);
 }
 
+function impactBand(score){
+  const n=Number(score);
+  if(!Number.isFinite(n)||n<=0)return'CONTEXT';
+  if(n>=80)return'HIGH';
+  if(n>=55)return'ELEVATED';
+  if(n>=30)return'MONITOR';
+  return'CONTEXT';
+}
+
+function marketImpact({topic,score,teams,players,props,isBreaking}){
+  const kind=String(topic||'').toLowerCase();
+  const band=impactBand(score);
+  let copy='Contextual NFL information. No verified sportsbook price movement is being claimed.';
+
+  if(kind==='injury'||/injur|inactive|questionable|doubtful/.test(kind)){
+    copy='Availability can change usage assumptions, player derivatives and team pricing. Monitor confirmation and related markets.';
+  }else if(['lineup','depth_chart','depth chart','return'].includes(kind)){
+    copy='Role confirmation can reprice opportunity-driven player markets and team-level assumptions.';
+  }else if(['trade','signing','transaction'].includes(kind)){
+    copy='Roster movement can alter depth-chart assumptions, player opportunity and broader team-market expectations.';
+  }else if(['weather'].includes(kind)){
+    copy='Weather can affect passing, kicking and scoring distributions. Monitor verified venue conditions before repricing.';
+  }else if(['suspension','discipline'].includes(kind)){
+    copy='Availability risk may affect lineup expectations and related player or team markets.';
+  }else if(isBreaking){
+    copy='Fresh information with potential market sensitivity. Monitor related prices for confirmed repricing.';
+  }
+
+  const scope=[];
+  if(players.length)scope.push(players.slice(0,2).join(', '));
+  else if(teams.length)scope.push(teams.slice(0,2).join(', '));
+  if(props.length)scope.push(`markets: ${props.slice(0,2).join(', ')}`);
+
+  return {
+    band,
+    score:Number.isFinite(Number(score))?Number(score):null,
+    text:copy,
+    scope:scope.join(' · ')||null,
+    semantics:'CONTEXT_NOT_PRICE_MOVE'
+  };
+}
+
 function article(row){
   const take=row?.take || row?.analysis || row?.ai_take || {};
   const teams=arr(row?.take_teams ?? row?.affected_teams ?? row?.teams ?? take?.teams);
@@ -45,6 +87,8 @@ function article(row){
   const slug=row?.slug ?? null;
   const url=row?.url ?? row?.article_url ?? row?.link ?? (slug?`https://propbetedge.ai/news/nfl/${slug}`:null);
   const rawImage=row?.image_url ?? row?.imageUrl ?? row?.featured_image ?? row?.featuredImage ?? row?.thumbnail_url ?? row?.thumbnail ?? row?.image?.url ?? row?.image?.href ?? take?.image_url ?? null;
+  const impactScore=row?.prop_impact_score ?? row?.impact_score ?? row?.take_impact ?? take?.impact_score ?? null;
+  const isBreaking=Boolean(row?.is_breaking ?? row?.breaking ?? false);
   return {
     id: row?.id ?? row?.news_id ?? slug ?? url ?? `${title}|${row?.published_at||''}`,
     title,
@@ -63,9 +107,10 @@ function article(row){
     teams,
     players,
     props,
-    impact_score: row?.prop_impact_score ?? row?.impact_score ?? row?.take_impact ?? take?.impact_score ?? null,
+    impact_score: impactScore,
+    market_impact: marketImpact({topic,score:impactScore,teams,players,props,isBreaking}),
     relevance_score: row?.relevance_score ?? row?.homepage_score ?? row?.recency_score ?? null,
-    is_breaking: Boolean(row?.is_breaking ?? row?.breaking ?? false),
+    is_breaking:isBreaking,
     provenance: {
       semantics: 'NEWS',
       upstream: 'propbet-news-api',
