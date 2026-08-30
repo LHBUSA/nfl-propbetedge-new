@@ -1,7 +1,7 @@
-/* PropBetEdge NFL - ordered page/product upgrade loader v42 */
+/* PropBetEdge NFL - ordered page/product upgrade loader v43 */
 (() => {
   'use strict';
-  const VERSION='20260830gamesintel2';
+  const VERSION='20260830enginestory1';
   const upgrades=[
     /* archive/teams.js is a classic script with lexical const bindings; expose
        the verified directory before newer runtime modules resolve teams. */
@@ -82,6 +82,9 @@
 
     /* Gated validation telemetry is aggregate/public-safe. */
     {css:'./pbe-validation-v1.css',js:'./pbe-validation-v1.js'},
+
+    /* Sell the real architecture publicly without exposing proprietary coefficients. */
+    {css:'./pbe-engine-story-v1.css',js:'./pbe-engine-story-v1.js'},
 
     /* Last by design: scrollbar policy may style true scrollers, but it must
        never conceal overflow or substitute for responsive component layout. */
