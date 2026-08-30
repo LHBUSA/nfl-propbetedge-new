@@ -51,7 +51,7 @@ function send(res,status,body,ttl=0){
   res.end(JSON.stringify(body));
 }
 const arr=v=>Array.isArray(v)?v:[];
-const num=v=>{const n=Number(v);return Number.isFinite(n)?n:NaN};
+const num=v=>{if(v===null||v===undefined||v==='')return NaN;const n=Number(v);return Number.isFinite(n)?n:NaN};
 const norm=v=>String(v||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
 const marketOf=q=>String(q?.market||q?.market_key||q?.key||'').toLowerCase();
 const playerOf=q=>q?.player||q?.player_name||q?.description||'';
@@ -98,6 +98,47 @@ async function loadBoard(eventId,markets){
     merged.provider_last_update=parts.map(p=>p?.provider_last_update||p?.last_update||p?.updated_at).filter(Boolean).sort().at(-1)||null;
     return merged;
   }
+}
+
+function oddsRows(payload){if(Array.isArray(payload))return payload;for(const key of ['events','games','data','results','odds'])if(Array.isArray(payload?.[key]))return payload[key];return[]}
+function oddsEvent(raw){return{id:String(raw?.id||raw?.event_id||raw?.eventId||''),away:String(raw?.away_team||raw?.away||raw?.awayTeam||''),home:String(raw?.home_team||raw?.home||raw?.homeTeam||'')}}
+function flattenCoreQuotes(raw){
+  const out=[];
+  for(const book of arr(raw?.bookmakers||raw?.books||raw?.sportsbooks)){
+    const bookName=book?.title||book?.name||book?.key||book?.book||'Sportsbook';
+    const updated=book?.last_update||book?.lastUpdate||book?.updated_at||null;
+    for(const market of arr(book?.markets||book?.market_data)){
+      const key=String(market?.key||market?.market||market?.name||'').toLowerCase();
+      if(!CORE_MARKETS.some(m=>key===m||key.includes(m==='spreads'?'spread':m==='totals'?'total':m)))continue;
+      for(const outcome of arr(market?.outcomes||market?.prices||market?.selections)){
+        out.push({
+          market:key,
+          selection:outcome?.name||outcome?.selection||outcome?.team||outcome?.description||'',
+          name:outcome?.name||outcome?.side||'',
+          side:outcome?.side||outcome?.direction||outcome?.name||'',
+          point:outcome?.point??outcome?.line??null,
+          price:outcome?.price??outcome?.odds??outcome?.american_odds??null,
+          book:bookName,
+          book_last_update:updated
+        });
+      }
+    }
+  }
+  return out;
+}
+async function loadCore(eventId,away,home){
+  try{
+    const payload=await upstream('/api/odds');
+    const raw=oddsRows(payload).find(item=>{
+      const event=oddsEvent(item);
+      return (event.id&&event.id===eventId)||(namesMatch(event.away,away)&&namesMatch(event.home,home));
+    });
+    if(raw){
+      const event=oddsEvent(raw),quotes=flattenCoreQuotes(raw);
+      if(quotes.length)return{event,quotes,provider_last_update:raw?.last_update||raw?.updated_at||payload?.last_update||payload?.updated_at||quotes.map(q=>q.book_last_update).filter(Boolean).sort().at(-1)||null};
+    }
+  }catch(_){/* fall through to board route */}
+  return loadBoard(eventId,CORE_MARKETS);
 }
 
 function readiness(propBoard){
@@ -181,22 +222,24 @@ export default async function handler(req,res){
   try{
     const [propBoard,coreBoard]=await Promise.all([
       loadBoard(eventId,PROP_ANCHORS.map(([market])=>market)),
-      loadBoard(eventId,CORE_MARKETS)
+      loadCore(eventId,away,home)
     ]);
     if(!propBoard&&!coreBoard)return send(res,404,{ok:false,error:'market_not_available',event_id:eventId});
+    const resolvedAway=away||propBoard?.event?.away_team||coreBoard?.event?.away||coreBoard?.event?.away_team||null;
+    const resolvedHome=home||propBoard?.event?.home_team||coreBoard?.event?.home||coreBoard?.event?.home_team||null;
     return send(res,200,{
       ok:true,
       event_id:eventId,
-      away:away||propBoard?.event?.away_team||coreBoard?.event?.away_team||null,
-      home:home||propBoard?.event?.home_team||coreBoard?.event?.home_team||null,
+      away:resolvedAway,
+      home:resolvedHome,
       provider_last_update:[propBoard?.provider_last_update,coreBoard?.provider_last_update].filter(Boolean).sort().at(-1)||null,
       readiness:readiness(propBoard),
       dispersion:dispersion(propBoard),
-      core:coreMarket(coreBoard,away||coreBoard?.event?.away_team||'',home||coreBoard?.event?.home_team||''),
-      environment:homeEnvironment(home||coreBoard?.event?.home_team||propBoard?.event?.home_team||''),
+      core:coreMarket(coreBoard,resolvedAway||'',resolvedHome||''),
+      environment:homeEnvironment(resolvedHome||''),
       weather:{status:'NOT_CONNECTED',note:'Live wind/temperature intentionally unavailable until a commercially licensed weather feed is configured.'},
       truth:{movement_history:false,sharp_money:false,posting_eta:false}
-    },300);
+    },900);
   }catch(error){
     return send(res,503,{ok:false,error:'game_intelligence_unavailable',detail:error instanceof Error?error.message:String(error)});
   }
