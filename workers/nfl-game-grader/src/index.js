@@ -116,7 +116,15 @@ export function pbpUrl(season) {
 
 async function refreshRatings(env) {
   const { season, week } = await completedSeasonWeek(env);
-  if (!Number.isFinite(week) || week < 1) return 'no_completed_week';
+  if (!Number.isFinite(week) || week < 0) return 'no_week_signal';
+
+  /* WEEK-1 BOOTSTRAP. Before any regular-season week has completed, Week 1
+   * still needs ratings. Write a factual prior-season-only baseline at
+   * as_of_week = 0, which any real regular-season week then outranks, since
+   * the orchestrator takes the highest as_of_week. No current-season metric is
+   * fabricated: every row is labelled prior_only. */
+  const isBaseline = week === 0;
+  const asOfWeek = isBaseline ? 0 : week;
 
   /* The current season file does not exist until the season starts. That is a
    * normal pre-season state, not a failure — the prior season carries the
@@ -132,13 +140,20 @@ async function refreshRatings(env) {
 
   if (!current && !prior) throw new Error('pbp_unavailable_both_seasons');
 
-  const currentRatings = current ? buildSeasonRatings(current.plays, week) : new Map();
+  /* On the baseline pass there is by definition no completed current-season
+   * data, so the current map is empty and every team resolves to prior_only. */
+  const currentRatings = (!isBaseline && current)
+    ? buildSeasonRatings(current.plays, week)
+    : new Map();
   const priorRatings = prior ? buildSeasonRatings(prior.plays, 99) : new Map();
-  const blended = blendSeasons({ current: currentRatings, prior: priorRatings, week });
+  const blended = blendSeasons({
+    current: currentRatings, prior: priorRatings,
+    week: isBaseline ? 1 : week,
+  });
 
   const qbTiers = await qbTierMap(env);
   const rows = toRatingRows(blended, {
-    season, asOfWeek: week,
+    season, asOfWeek,
     sourceTimestamp: new Date().toISOString(),
     qbTiers,
   });
@@ -150,30 +165,46 @@ async function refreshRatings(env) {
   await audit(env, {
     event_type: 'training_run',
     detail: {
-      kind: 'ratings_refresh', season, as_of_week: week,
+      kind: isBaseline ? 'ratings_baseline' : 'ratings_refresh',
+      season, as_of_week: asOfWeek,
       source: RATINGS_SOURCE, source_version: RATINGS_ALGO_VERSION,
       teams: rows.length, usable, unavailable: rows.length - usable,
     },
   });
-  return `${usable}/${rows.length}@w${week}`;
+  return `${usable}/${rows.length}@w${asOfWeek}${isBaseline ? ' (prior_only baseline)' : ''}`;
 }
 
 /* The most recent week with completed games — ratings are only refreshed for
  * weeks that actually finished. */
+/* The most recent COMPLETED REGULAR-SEASON week.
+ *
+ * Preseason must be excluded explicitly: a completed preseason week 3 would
+ * otherwise outrank real regular-season weeks 1-3 in nfl_team_ratings, because
+ * the orchestrator takes the highest as_of_week.
+ *
+ * Fails closed — if the payload carries no game_type at all we cannot prove
+ * regular-season semantics, so we refuse rather than guess. */
 async function completedSeasonWeek(env) {
   const base = String(env.NFL_GATEWAY || 'https://nfl-api.propbetedge.ai').replace(/\/$/, '');
   const response = await fetch(`${base}/api/scores`, { cf: { cacheTtl: 0 } });
   if (!response.ok) throw new Error(`gateway_${response.status}`);
   const body = await response.json();
   const games = Array.isArray(body?.games) ? body.games : [];
-  const finals = games.filter(g => {
+
+  if (games.length && !games.some(g => g?.game_type !== undefined && g?.game_type !== null)) {
+    throw new Error('scores_missing_game_type');
+  }
+
+  const regular = games.filter(g => String(g?.game_type || '').toUpperCase() === 'REG');
+  const finals = regular.filter(g => {
     const s = String(g?.semantics || '').toUpperCase();
     const st = String(g?.status || '').toUpperCase();
     return s === 'FINAL' || /FINAL|COMPLETE|CLOSED/.test(st);
   });
+
   const season = Number(body?.season || new Date().getUTCFullYear());
   const week = finals.length ? Math.max(...finals.map(g => Number(g.week) || 0)) : 0;
-  return { season, week };
+  return { season, week, regular_games: regular.length, completed_regular: finals.length };
 }
 
 /* QB tier comes from the injury/role source already feeding Injury
@@ -213,18 +244,29 @@ export function computeGrade(pick, final, closing) {
     result = 'void';
   } else if (final.cancelled) {
     result = 'void';
+  } else if (pick.market === 'total') {
+    /* Totals need no team attribution, but they DO need an explicit side. */
+    const ou = String(pick.selection_over_under || '').toUpperCase();
+    if (ou !== 'OVER' && ou !== 'UNDER') throw new Error('missing_attribution:selection_over_under');
+    result = settleTotal({
+      side: ou, pickLine: Number(pick.market_line),
+      homeScore: final.home_score, awayScore: final.away_score,
+    });
   } else {
-    const selectedIsHome = pick.side_is_home !== false;
+    /* FAIL CLOSED. A missing side_is_home must never default to HOME — that
+     * would silently grade every away pick against the wrong team. */
+    if (typeof pick.side_is_home !== 'boolean') {
+      throw new Error('missing_attribution:side_is_home');
+    }
+    if (!pick.selection_team) {
+      throw new Error('missing_attribution:selection_team');
+    }
+    const selectedIsHome = pick.side_is_home;
     const teamScore = selectedIsHome ? final.home_score : final.away_score;
     const oppScore = selectedIsHome ? final.away_score : final.home_score;
 
     if (pick.market === 'spread') {
-      result = settleSpread({ side: pick.side, pickLine: Number(pick.market_line), teamScore, oppScore });
-    } else if (pick.market === 'total') {
-      result = settleTotal({
-        side: pick.side, pickLine: Number(pick.market_line),
-        homeScore: final.home_score, awayScore: final.away_score,
-      });
+      result = settleSpread({ pickLine: Number(pick.market_line), teamScore, oppScore });
     } else {
       result = settleMoneyline({ teamScore, oppScore });
     }
@@ -293,13 +335,25 @@ async function gradeOne(env, pick, final) {
   await upsert(env, 'nfl_pick_grades', grade, 'pick_id', { returning: 'minimal' });
 
   if (!existing) {
+    /* official_final_result is RESERVED for publication_scope='official'.
+     * A finalized bootstrap decision emits tracking_final_result so the audit
+     * trail never implies a customer-facing publication that never happened. */
+    const scope = pick.publication_scope || 'tracking';
     await audit(env, {
-      pick_id: pick.id, event_type: 'official_final_result', model_version: pick.model_version,
-      detail: { home_score: final.home_score, away_score: final.away_score },
+      pick_id: pick.id,
+      event_type: scope === 'official' ? 'official_final_result' : 'tracking_final_result',
+      model_version: pick.model_version,
+      detail: {
+        publication_scope: scope,
+        home_score: final.home_score, away_score: final.away_score,
+      },
     });
     await audit(env, {
       pick_id: pick.id, event_type: 'first_grade', model_version: pick.model_version,
-      detail: { result: grade.result, units_delta: grade.units_delta, clv_beat: grade.clv_beat },
+      detail: {
+        publication_scope: scope,
+        result: grade.result, units_delta: grade.units_delta, clv_beat: grade.clv_beat,
+      },
     });
   }
 
@@ -373,16 +427,43 @@ async function finalScores(env) {
   return out;
 }
 
+/* Matches the closing snapshot CANONICALLY.
+ *
+ * Never by the display side string: a moved line turns "SEA -2.5" into
+ * "SEA -3.5", so string matching would miss the correct side and — with the
+ * old rows[0] fallback — silently attach the OPPOSITE team's closing price.
+ * Team markets match on selection_team, totals on over_under.
+ *
+ * If the exact selection is not present, CLV is unavailable (null). There is
+ * no fallback, because a wrong CLV is worse than a missing one. */
 async function closingFor(env, pick) {
   const rows = await select(
     env, 'nfl_odds_snapshots',
     `game_id=eq.${encodeURIComponent(pick.game_id)}&market=eq.${pick.market}`
-    + '&is_closing=is.true&select=side,line,price&limit=10',
+    + '&is_closing=is.true'
+    + '&select=side,line,price,team,over_under,is_home&limit=20',
   ) || [];
   if (!rows.length) return null;
 
-  const mine = rows.find(r => r.side === pick.side) || rows[0];
-  const other = rows.find(r => r.side !== mine.side) || null;
+  let mine = null;
+  let other = null;
+
+  if (pick.market === 'total') {
+    const ou = String(pick.selection_over_under || '').toUpperCase();
+    if (ou !== 'OVER' && ou !== 'UNDER') return null;
+    const opposite = ou === 'OVER' ? 'UNDER' : 'OVER';
+    mine = rows.find(r => String(r.over_under || '').toUpperCase() === ou) || null;
+    other = rows.find(r => String(r.over_under || '').toUpperCase() === opposite) || null;
+  } else {
+    const team = pick.selection_team;
+    if (!team) return null;
+    mine = rows.find(r => r.team === team) || null;
+    /* The exact opposite canonical selection: the other team in this market. */
+    other = rows.find(r => r.team && r.team !== team) || null;
+  }
+
+  if (!mine) return null;
+
   return {
     line: mine.line,
     price: mine.price,

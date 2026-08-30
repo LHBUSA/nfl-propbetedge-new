@@ -83,6 +83,7 @@ const trackingPick = {
   side: 'SEA -2.5', market_line: -2.5, market_price: -110, market_prob: 0.5,
   model_prob: 0.58, stake_units: 1, status: 'open', model_version: 1,
   publication_scope: SCOPE_TRACKING,
+  selection_team: 'SEA', side_is_home: true, selection_over_under: null,
   features: Object.fromEntries(FEATURE_ORDER.map(f => [f, 0])),
 };
 

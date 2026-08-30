@@ -163,6 +163,9 @@ const basePick = {
   id: 'p1', game_id: GAME.game_id, season: 2026, week: 1, market: 'spread',
   side: 'SEA -2.5', market_line: -2.5, market_price: -110, market_prob: 0.5,
   model_prob: 0.58, stake_units: 1.0, status: 'open', model_version: 1,
+  // Canonical attribution is required at issuance; grading fails closed
+  // without it rather than defaulting the side to home.
+  selection_team: 'SEA', side_is_home: true, selection_over_under: null,
   features: Object.fromEntries(FEATURE_ORDER.map(f => [f, 0])),
 };
 

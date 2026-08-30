@@ -74,6 +74,16 @@ export function upsert(env, table, rows, onConflict, { returning = 'representati
   });
 }
 
+/* Calls a Postgres function. Used where a sequence must be atomic against a
+ * partial unique index — several separate PostgREST calls are not. */
+export function rpc(env, fn, args) {
+  return request(env, `rpc/${fn}`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(args || {}),
+  });
+}
+
 export function patch(env, table, query, values) {
   return request(env, `${table}?${query}`, {
     method: 'PATCH',

@@ -12,7 +12,7 @@
  */
 
 import {
-  select, insert, patch, audit, latestPromotedWeights,
+  select, insert, patch, rpc, audit, latestPromotedWeights,
 } from '../../nfl-picks-engine-shared/supabase.mjs';
 import {
   devigTwoWay, modelProbability, buildFeatureVector,
@@ -279,7 +279,7 @@ async function runOrchestration(env) {
 
     const ratings = await teamRatings(env, season);
     const rest = await restDays(env);
-    let emitted = 0, killed = 0, superseded = 0, kept = 0, ratingsBlocked = 0;
+    let emitted = 0, killed = 0, superseded = 0, kept = 0, ratingsBlocked = 0, scopeDrain = 0;
     const blockedReasons = new Set();
 
     for (const game of games) {
@@ -323,6 +323,7 @@ async function runOrchestration(env) {
 
         emitted += result.emitted; killed += result.killed;
         superseded += result.superseded; kept += result.kept;
+        scopeDrain += result.scope_drain || 0;
       }
     }
 
@@ -349,7 +350,8 @@ async function runOrchestration(env) {
     health.ratings_blocked_reasons = [...blockedReasons].slice(0, 5);
     health.last_result =
       `scope=${issuance.scope} emitted=${emitted} kept=${kept} killed=${killed}`
-      + ` superseded=${superseded} ratings_blocked=${ratingsBlocked}`;
+      + ` superseded=${superseded} ratings_blocked=${ratingsBlocked}`
+      + ` scope_drain=${scopeDrain}`;
     health.tracking_only = issuance.scope === SCOPE_TRACKING;
     health.last_error_class = null;
   } catch (error) {
@@ -382,6 +384,10 @@ export function evaluate({ game, market, quote, ratings, weather, champion, seas
       stake_units: 0,
       confidence_bucket: null,
       features: null,
+      selection_team: quote.team ?? null,
+      selection_over_under: quote.over_under ?? null,
+      side_is_home: quote.selected_is_home === true ? true
+        : quote.selected_is_home === false ? false : null,
     };
   }
 
@@ -438,6 +444,11 @@ export function evaluate({ game, market, quote, ratings, weather, champion, seas
     ratings_available: true,
     unavailable_reason: null,
     side: quote.side,
+    /* Canonical attribution straight from the odds quote. Never re-derived
+     * from the display string, which changes when the line moves. */
+    selection_team: isTeamMarket ? (quote.team ?? null) : null,
+    selection_over_under: isTeamMarket ? null : (quote.over_under ?? null),
+    side_is_home: isTeamMarket ? selectedIsHome : null,
     market_line: quote.line ?? null,
     market_price: quote.price,
     model_line: modelLine,
@@ -456,33 +467,43 @@ export function evaluate({ game, market, quote, ratings, weather, champion, seas
 /* Lifecycle. This is the only place a pick's status changes, and it never
  * edits an issued pick's economic terms. */
 async function reconcile(env, { open, decision, champion, game, market, season, week, scope }) {
-  const tally = { emitted: 0, killed: 0, superseded: 0, kept: 0 };
+  const tally = { emitted: 0, killed: 0, superseded: 0, kept: 0, scope_drain: 0 };
 
-  if (!open) {
-    if (!decision.qualifies || decision.stake_units <= 0) return tally;
-    const row = await insert(env, 'nfl_game_picks', {
-      game_id: game.game_id,
-      season, week,
-      kickoff_ts: decision.kickoff_ts,
-      market,
-      side: decision.side,
-      market_line: decision.market_line,
-      market_price: decision.market_price,
-      model_line: decision.model_line,
-      model_prob: decision.model_prob,
-      market_prob: decision.market_prob,
-      edge_pct: decision.edge_pct,
-      stake_units: decision.stake_units,
-      confidence_bucket: decision.confidence_bucket,
-      features: decision.features,
-      model_version: champion.version,
-      publication_scope: scope,
-      status: 'open',
-    });
-    const pickId = Array.isArray(row) ? row[0]?.id : row?.id;
+  const issuanceRow = {
+    game_id: game.game_id,
+    season, week,
+    kickoff_ts: decision.kickoff_ts,
+    market,
+    side: decision.side,
+    market_line: decision.market_line,
+    market_price: decision.market_price,
+    model_line: decision.model_line,
+    model_prob: decision.model_prob,
+    market_prob: decision.market_prob,
+    edge_pct: decision.edge_pct,
+    stake_units: decision.stake_units,
+    confidence_bucket: decision.confidence_bucket,
+    features: decision.features,
+    model_version: champion.version,
+    publication_scope: scope,
+    /* Canonical attribution, persisted at issuance and frozen by the database.
+     * Grading reads these, never the display string. */
+    selection_team: decision.selection_team,
+    selection_over_under: decision.selection_over_under,
+    side_is_home: decision.side_is_home,
+    status: 'open',
+  };
+
+  async function auditIssuance(pickId) {
     await audit(env, {
       pick_id: pickId, event_type: 'pick_created', model_version: champion.version,
-      detail: { market, side: decision.side, edge_pct: decision.edge_pct, publication_scope: scope },
+      detail: {
+        market, side: decision.side, edge_pct: decision.edge_pct,
+        publication_scope: scope,
+        selection_team: decision.selection_team,
+        selection_over_under: decision.selection_over_under,
+        side_is_home: decision.side_is_home,
+      },
     });
     await audit(env, {
       pick_id: pickId, event_type: 'features_locked', model_version: champion.version,
@@ -490,31 +511,70 @@ async function reconcile(env, { open, decision, champion, game, market, season, 
     });
     await audit(env, {
       pick_id: pickId, event_type: 'issuance_market_state', model_version: champion.version,
-      detail: { line: decision.market_line, price: decision.market_price, market_prob: decision.market_prob },
+      detail: {
+        line: decision.market_line, price: decision.market_price,
+        market_prob: decision.market_prob,
+      },
     });
+  }
+
+  if (!open) {
+    if (!decision.qualifies || decision.stake_units <= 0) return tally;
+    const row = await insert(env, 'nfl_game_picks', issuanceRow);
+    const pickId = Array.isArray(row) ? row[0]?.id : row?.id;
+    await auditIssuance(pickId);
     tally.emitted = 1;
+    return tally;
+  }
+
+  /* SCOPE TRANSITION — "bootstrap drain".
+   *
+   * one_open_pick_per_market is scope-agnostic, so an open tracking decision
+   * and an open official decision cannot coexist for the same (game_id,
+   * market). When the champion becomes trained, the incumbent tracking
+   * decision is deliberately LEFT ALONE: it stays open, plays out, and is
+   * graded, which preserves the learning observation that earned the gate.
+   *
+   * It is never superseded by the official pick (that would destroy the
+   * observation) and never reclassified (the database forbids it). Official
+   * issuance simply begins with the next (game_id, market) that has no open
+   * tracking decision — normally the following week.
+   */
+  if (open.publication_scope && open.publication_scope !== scope) {
+    tally.scope_drain = 1;
     return tally;
   }
 
   const sideFlipped = decision.side && decision.side !== open.side;
 
   if (sideFlipped && decision.qualifies && decision.stake_units > 0) {
-    const row = await insert(env, 'nfl_game_picks', {
-      game_id: game.game_id, season, week,
-      kickoff_ts: decision.kickoff_ts, market, side: decision.side,
-      market_line: decision.market_line, market_price: decision.market_price,
-      model_line: decision.model_line, model_prob: decision.model_prob,
-      market_prob: decision.market_prob, edge_pct: decision.edge_pct,
-      stake_units: decision.stake_units, confidence_bucket: decision.confidence_bucket,
-      features: decision.features, model_version: champion.version,
-      publication_scope: scope, status: 'open',
+    /* Atomic: the function supersedes the incumbent and inserts the
+     * replacement in one transaction, so the partial unique index never sees
+     * two open rows. Doing this as two PostgREST calls conflicts. */
+    const newId = await rpc(env, 'nfl_replace_open_pick', {
+      p_open_id: open.id,
+      p_game_id: issuanceRow.game_id,
+      p_season: issuanceRow.season,
+      p_week: issuanceRow.week,
+      p_kickoff_ts: issuanceRow.kickoff_ts,
+      p_market: issuanceRow.market,
+      p_side: issuanceRow.side,
+      p_market_line: issuanceRow.market_line,
+      p_market_price: issuanceRow.market_price,
+      p_model_line: issuanceRow.model_line,
+      p_model_prob: issuanceRow.model_prob,
+      p_market_prob: issuanceRow.market_prob,
+      p_edge_pct: issuanceRow.edge_pct,
+      p_stake_units: issuanceRow.stake_units,
+      p_confidence_bucket: issuanceRow.confidence_bucket,
+      p_features: issuanceRow.features,
+      p_model_version: issuanceRow.model_version,
+      p_publication_scope: issuanceRow.publication_scope,
+      p_selection_team: issuanceRow.selection_team,
+      p_selection_over_under: issuanceRow.selection_over_under,
+      p_side_is_home: issuanceRow.side_is_home,
     });
-    const newId = Array.isArray(row) ? row[0]?.id : row?.id;
-    /* The superseded pick keeps its original terms forever; only status and
-     * the forward pointer change. */
-    await patch(env, 'nfl_game_picks', `id=eq.${open.id}`, {
-      status: 'superseded', superseded_by: newId,
-    });
+    await auditIssuance(newId);
     await audit(env, {
       pick_id: open.id, event_type: 'pick_superseded', model_version: champion.version,
       detail: { superseded_by: newId, from_side: open.side, to_side: decision.side },
