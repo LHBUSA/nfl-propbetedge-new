@@ -1,7 +1,7 @@
-/* PropBetEdge NFL - ordered page/product upgrade loader v41 */
+/* PropBetEdge NFL - ordered page/product upgrade loader v42 */
 (() => {
   'use strict';
-  const VERSION='20260830propfit2';
+  const VERSION='20260830gamesintel1';
   const upgrades=[
     /* archive/teams.js is a classic script with lexical const bindings; expose
        the verified directory before newer runtime modules resolve teams. */
@@ -48,6 +48,7 @@
     {css:'./paywall-polish-v1.css',js:'./paywall-polish-v1.js'},
     {css:'./nfl-brand-media-v1.css'},
     {css:'./nfl-player-media-v2.css',js:'./nfl-brand-media-v2.js'},
+    {css:'./nfl-player-media-v3.css',js:'./nfl-player-media-v3.js'},
     {css:'./dashboard-v6.css',js:'./dashboard-v6.js'},
     {css:'./dashboard-v7.css',js:'./dashboard-v7.js'},
     {css:'./dashboard-v8-enhance.css',js:'./dashboard-v8-enhance.js'},
@@ -64,9 +65,11 @@
     {css:'./stadium-selector-v1.css',js:'./stadium-selector-v1.js'},
     {css:'./production-polish-v2.css',js:'./production-polish-v2.js'},
 
-    /* Games is a primary NFL conversion surface. */
+    /* Games is a primary NFL conversion surface. v5 adds edge-cached market
+       readiness / variance / environment context without changing schedule truth. */
     {css:'./games-worldclass-v3.css'},
     {css:'./games-command-v4.css',js:'./games-command-v4.js'},
+    {css:'./games-intel-v5.css',js:'./games-intel-v5.js'},
 
     /* Prop Board: v3 remains data authority, v4 owns the signal workflow, and
        responsive v5 removes the old 1220px table assumption instead of hiding overflow. */
