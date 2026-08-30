@@ -35,7 +35,7 @@
     {css:'./market-watch-v2.css'},
     {css:'./market-watch-v3.css',js:'./market-watch-v3.js'},
 
-    {css:'./player-research-v2.css',js:'./nfl-brand-media-v2.js'},
+    {css:'./player-research-v2.css',js:'./player-research-v2.js'},
     {css:'./model-lab-v2-enhance.css',js:'./model-lab-v2-enhance.js'},
     {css:'./command-palette-v2.css',js:'./command-palette-v3.js'},
     {css:'./event-selector-v2.css',js:'./event-selector-v2.js'},
