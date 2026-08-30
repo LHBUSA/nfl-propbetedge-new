@@ -1,7 +1,7 @@
-/* PropBetEdge NFL - ordered page/product upgrade loader v39 */
+/* PropBetEdge NFL - ordered page/product upgrade loader v40 */
 (() => {
   'use strict';
-  const VERSION='20260830terminal1';
+  const VERSION='20260830command2';
   const upgrades=[
     /* archive/teams.js is a classic script with lexical const bindings; expose
        the verified directory before newer runtime modules resolve teams. */
@@ -35,7 +35,7 @@
     {css:'./market-watch-v2.css'},
     {css:'./market-watch-v3.css',js:'./market-watch-v3.js'},
 
-    {css:'./player-research-v2.css',js:'./player-research-v2.js'},
+    {css:'./player-research-v2.css',js:'./nfl-brand-media-v2.js'},
     {css:'./model-lab-v2-enhance.css',js:'./model-lab-v2-enhance.js'},
     {css:'./command-palette-v2.css',js:'./command-palette-v3.js'},
     {css:'./event-selector-v2.css',js:'./event-selector-v2.js'},
@@ -50,6 +50,7 @@
     {css:'./nfl-player-media-v2.css',js:'./nfl-brand-media-v2.js'},
     {css:'./dashboard-v6.css',js:'./dashboard-v6.js'},
     {css:'./dashboard-v7.css',js:'./dashboard-v7.js'},
+    {css:'./dashboard-v8-enhance.css',js:'./dashboard-v8-enhance.js'},
     {css:'./sports-shell-v3.css'},
     {css:'./nfl-stadium-bg-v3.css',js:'./dashboard-v7-sanitize.js'},
 
