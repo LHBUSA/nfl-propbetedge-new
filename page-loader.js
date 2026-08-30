@@ -1,7 +1,7 @@
-/* PropBetEdge NFL — ordered page/product upgrade loader v30 */
+/* PropBetEdge NFL — ordered page/product upgrade loader v31 */
 (() => {
   'use strict';
-  const VERSION='20260830authhardening1';
+  const VERSION='20260830propboardworld4';
   const upgrades=[
     /* archive/teams.js is a classic script with lexical const bindings; expose
        the verified directory before newer runtime modules resolve teams. */
@@ -56,7 +56,11 @@
 
     /* Games is a primary NFL conversion surface. */
     {css:'./games-worldclass-v3.css'},
-    {css:'./games-command-v4.css',js:'./games-command-v4.js'}
+    {css:'./games-command-v4.css',js:'./games-command-v4.js'},
+
+    /* Prop Board: signal-first institutional workspace. v3 remains the source
+       of truth; this v4 layer only changes workflow and presentation. */
+    {css:'./prop-board-v4.css',js:'./prop-board-v4.js'}
   ];
 
   const PRO_MODULES=[
