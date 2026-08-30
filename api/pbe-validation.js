@@ -161,7 +161,8 @@ export default async function handler(req, res) {
         third_party_notarized: false,
         external_anchor: 'not_configured',
         committed_tracking_count: receipts.length,
-        latest: head ? { seq: head.seq, issued_at: head.issued_at, chain_hash: head.chain_hash } : null
+        latest: head ? { seq: head.seq, issued_at: head.issued_at, chain_hash: head.chain_hash } : null,
+        recent: receipts.slice(0, 8).map(row => ({ seq: row.seq, issued_at: row.issued_at, chain_hash: row.chain_hash }))
       },
       market_heartbeat: {
         latest_snapshot_at: odds[0]?.captured_at ?? null,
