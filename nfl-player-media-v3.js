@@ -12,13 +12,14 @@
   let timer=null;
 
   const TARGETS=[
-    '.pbe21-player',                 // Usage Research
-    '.pbe20-player-name',            // Line Simulator active player
-    '.pbe20-player-tab',             // Line Simulator player tabs
-    '.pbe4-model-row .pbe4-player',  // Model Lab
-    '.pbe23-market-row .pbe23-player', // SGP market list
-    '.pbe23-leg .pbe23-leg-player',  // SGP selected ticket
-    '.pbe4-mobile-card > header > div > span:first-child' // Prop Board responsive cards
+    '.pbe21-player',                    // Usage Research primary rows
+    '.pbe20-player-name',               // Line Simulator active player
+    '.pbe20-player-tab',                // Line Simulator player tabs
+    '.pbe4-model-row .pbe4-player',     // Model Lab
+    '.pbe23-market-row .pbe23-player',  // SGP market list
+    '.pbe23-leg .pbe23-leg-player',     // SGP selected ticket
+    '.pbe4-mobile-card > header > div > span:first-child', // Prop Board cards
+    '[data-pbe-player-media="1"]'       // explicit player entities/chips in news + chains
   ];
 
   const normalize=value=>String(value||'').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
