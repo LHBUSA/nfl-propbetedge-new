@@ -1,0 +1,35 @@
+/* PropBetEdge NFL — global nested-scrollbar cleanup
+ * Preserve touch / wheel / trackpad scrolling, remove the heavy in-surface bars.
+ * The document scrollbar remains visible and intentionally understated.
+ */
+html{scrollbar-width:thin;scrollbar-color:rgba(216,183,91,.28) rgba(8,8,8,.34)}
+body::-webkit-scrollbar{width:10px}
+body::-webkit-scrollbar-track{background:rgba(8,8,8,.34)}
+body::-webkit-scrollbar-thumb{background:rgba(216,183,91,.24);border:3px solid rgba(8,8,8,.34);border-radius:999px}
+body::-webkit-scrollbar-thumb:hover{background:rgba(216,183,91,.42)}
+
+/* Every product surface can still scroll, but its internal scrollbar chrome is hidden. */
+#view-container *,
+#pbe-sports-shell *,
+.pbe-network-footer *{
+  scrollbar-width:none;
+  -ms-overflow-style:none;
+}
+#view-container *::-webkit-scrollbar,
+#pbe-sports-shell *::-webkit-scrollbar,
+.pbe-network-footer *::-webkit-scrollbar{
+  width:0!important;
+  height:0!important;
+  display:none!important;
+  background:transparent!important;
+}
+
+/* Avoid accidental page-wide horizontal overflow while keeping intended inner scrollers usable. */
+html,body,#main-content,#view-container{max-width:100%;overflow-x:hidden}
+#view-container [class*="scroll"],
+#view-container [class*="rail"],
+#view-container [class*="table"],
+#view-container [style*="overflow-x"]{
+  overscroll-behavior-inline:contain;
+  -webkit-overflow-scrolling:touch;
+}
