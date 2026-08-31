@@ -1,13 +1,23 @@
-/* PropBetEdge NFL - ordered page/product upgrade loader v43 recovery */
+/* PropBetEdge NFL - ordered page/product upgrade loader v44 recovery */
 (() => {
   'use strict';
   const VERSION='20260830gamesintel2';
   const upgrades=[
-    /* archive/teams.js is a classic script with lexical const bindings; expose
-       the verified directory before newer runtime modules resolve teams. */
+    /* Establish the final homepage authority first. v6 replaces the v5 DOM with
+       .pbehome6; v7 historically registered itself after that without repainting
+       until the next navigation. The loader explicitly invokes v7 after install. */
     {js:'./team-globals-v1.js'},
-
     {css:'./dashboard-v5.css',js:'./dashboard-v5.js'},
+    {css:'./dashboard-v6.css',js:'./dashboard-v6.js'},
+    {css:'./dashboard-v7.css',js:'./dashboard-v7.js'},
+    {css:'./dashboard-v8-enhance.css',js:'./dashboard-v8-enhance.js'},
+    {css:'./nfl-stadium-bg-v3.css',js:'./dashboard-v7-sanitize.js'},
+
+    /* Current additive product surfaces. Both are event-driven and do not own
+       page-wide mutation observers. */
+    {css:'./pbe-engine-story-v1.css',js:'./pbe-engine-story-v1.js'},
+    {css:'./pbe-prop-engine-v1.css',js:'./pbe-prop-engine-v1.js'},
+
     {css:'./games-v2.css',js:'./games-v2.js'},
     {css:'./team-research-v3.css',js:'./team-research-v3.js'},
     {css:'./stats-v2.css',js:'./stats-v2.js'},
@@ -46,14 +56,12 @@
     {css:'./world-class-v1.css'},
     {css:'./readability-v1.css'},
     {css:'./paywall-polish-v1.css',js:'./paywall-polish-v1.js'},
+
+    /* Keep the known-good global media cascade. */
     {css:'./nfl-brand-media-v1.css'},
     {css:'./nfl-player-media-v2.css',js:'./nfl-brand-media-v2.js'},
     {css:'./nfl-player-media-v3.css',js:'./nfl-player-media-v3.js'},
-    {css:'./dashboard-v6.css',js:'./dashboard-v6.js'},
-    {css:'./dashboard-v7.css',js:'./dashboard-v7.js'},
-    {css:'./dashboard-v8-enhance.css',js:'./dashboard-v8-enhance.js'},
     {css:'./sports-shell-v3.css'},
-    {css:'./nfl-stadium-bg-v3.css',js:'./dashboard-v7-sanitize.js'},
 
     /* Global network identity + subscriber controls. */
     {css:'./network-footer-v1.css',js:'./network-footer-v1.js'},
@@ -76,16 +84,11 @@
     {css:'./prop-board-v4.css',js:'./prop-board-v4.js'},
     {css:'./prop-board-responsive-v5.css'},
 
-    /* PBE Picks + Verified Track Record v2 is the sole UI authority. The old
-       v1 file remains historical source only and is intentionally not loaded. */
+    /* PBE Picks + Verified Track Record v2 is the sole UI authority. */
     {css:'./pbe-picks-v2.css',js:'./pbe-picks-v2.js'},
 
     /* Gated validation telemetry is aggregate/public-safe. */
     {css:'./pbe-validation-v1.css',js:'./pbe-validation-v1.js'},
-
-    /* New product surfaces stay additive on the known-good global runtime. */
-    {css:'./pbe-engine-story-v1.css',js:'./pbe-engine-story-v1.js'},
-    {css:'./pbe-prop-engine-v1.css',js:'./pbe-prop-engine-v1.js'},
 
     /* Last by design: scrollbar policy may style true scrollers, but it must
        never conceal overflow or substitute for responsive component layout. */
@@ -148,7 +151,14 @@
 
   async function load(){
     upgrades.forEach(item=>{if(item.css)addCss(item.css)});
-    for(const item of upgrades)await addScript(item.js);
+    for(const item of upgrades){
+      await addScript(item.js);
+      /* v7 is authoritative, but its legacy install check did not include the
+         transient .pbehome6 DOM. Force the handoff immediately on initial home. */
+      if(item.js==='./dashboard-v7.js'&&window.App?.current==='home'&&typeof window.PBEDashboardV7?.load==='function'){
+        await window.PBEDashboardV7.load();
+      }
+    }
     installProSync();
     window.dispatchEvent(new CustomEvent('pbe:upgrades-ready',{detail:{version:VERSION}}));
     forceVisibleProRender();
