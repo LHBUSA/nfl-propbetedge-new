@@ -142,14 +142,14 @@
     const counts = summaryCounts(rows);
     const lead = rows[0] || null;
     const rest = rows.slice(1);
-    const status = state?.error ? 'EDITORIAL FEED UNAVAILABLE' : `${rows.length} CURRENT INJURY STORIES`;
+    const deskLine = state?.error ? 'Coverage temporarily unavailable' : 'Reporting · analysis · availability';
     return `<header class="pbe13-hero pbe13-editorial-hero">
       <div>
         <div class="pbe13-kicker">PROPBETEDGE EDITORIAL · NFL INJURIES</div>
         <h1 class="pbe13-title">Injuries change everything.</h1>
         <div class="pbe13-copy">The injury stories that matter — what happened, who it changes, and what to watch next. Full NFL injury coverage from PropBetEdge Editorial.</div>
       </div>
-      <aside class="pbe13-statusbox"><b>LATEST COVERAGE</b><span>${esc(status)}${state?.fetchedAt?` · refreshed ${esc(timeAgo(state.fetchedAt))}`:''}</span></aside>
+      <aside class="pbe13-statusbox"><b>NFL INJURY DESK</b><span>${esc(deskLine)}</span></aside>
     </header>
     <div class="pbe13-editorial-note"><strong>Editorial coverage:</strong> reporting and analysis from PropBetEdge articles. This is not the official NFL practice/game injury report, and no status is inferred beyond what the underlying reporting supports.</div>
     ${state?.error?`<div class="pbe13-editorial-empty"><strong>Injury coverage unavailable</strong><span>${esc(state.error)}</span></div>`:leadStory(lead,counts)}
