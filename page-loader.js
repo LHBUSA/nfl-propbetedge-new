@@ -1,7 +1,7 @@
-/* PropBetEdge NFL - ordered page/product upgrade loader v47 */
+/* PropBetEdge NFL - production recovery loader v48 */
 (() => {
   'use strict';
-  const VERSION='20260830freezefix2';
+  const VERSION='20260830recovery1';
   const upgrades=[
     {js:'./team-globals-v1.js'},
 
@@ -40,7 +40,6 @@
     {css:'./paywall-polish-v1.css',js:'./paywall-polish-v1.js'},
     {css:'./nfl-brand-media-v1.css'},
     {css:'./nfl-player-media-v2.css',js:'./nfl-brand-media-v2.js'},
-    {css:'./nfl-player-media-v3.css',js:'./nfl-player-media-v3.js'},
     {css:'./dashboard-v6.css',js:'./dashboard-v6.js'},
     {css:'./dashboard-v7.css',js:'./dashboard-v7.js'},
     {css:'./dashboard-v8-enhance.css',js:'./dashboard-v8-enhance.js'},
@@ -48,12 +47,9 @@
     {css:'./nfl-stadium-bg-v3.css',js:'./dashboard-v7-sanitize.js'},
 
     {css:'./network-footer-v1.css',js:'./network-footer-v1.js'},
-
     {css:'./paywall-funnel-v2.css',js:'./paywall-funnel-v2.js'},
 
-    /* PBEcast v6 is the sole live-game renderer/poller. v4/v5 are historical
-       source only; loading them alongside v6 created duplicate poll loops and a
-       view-container MutationObserver. v7 is an additive trading layer on v6. */
+    /* One live-game authority only. */
     {css:'./pbecast-v6.css',js:'./pbecast-v6.js'},
     {css:'./pbecast-v7-enhance.css',js:'./pbecast-v7-enhance.js'},
 
@@ -62,17 +58,15 @@
 
     {css:'./games-worldclass-v3.css'},
     {css:'./games-command-v4.css',js:'./games-command-v4.js'},
-    {css:'./games-intel-v5.css',js:'./games-intel-v5.js'},
 
     {css:'./prop-board-v4.css',js:'./prop-board-v4.js'},
     {css:'./prop-board-responsive-v5.css'},
 
     {css:'./pbe-picks-v2.css',js:'./pbe-picks-v2.js'},
-    {css:'./pbe-validation-v1.css',js:'./pbe-validation-v1.js'},
 
-    /* Event-driven engine education. Neither module observes the full SPA DOM. */
-    {css:'./pbe-engine-story-v1.css',js:'./pbe-engine-story-v1.js'},
-    {css:'./pbe-prop-engine-v1.css',js:'./pbe-prop-engine-v1.js'},
+    /* Recovery boundary: keep additive high-frequency/DOM-wide features out of
+       the production shell until they are reintroduced behind isolated tests.
+       Backend APIs, prop-engine persistence and Workers remain untouched. */
 
     {css:'./scrollbar-clean-v1.css'}
   ];
@@ -112,15 +106,18 @@
   function forceVisibleProRender(){
     const runId=++proSyncRun;let attempt=0;
     const run=()=>{
-      if(runId!==proSyncRun)return;attempt+=1;let waiting=false;
+      if(runId!==proSyncRun)return;
+      attempt+=1;
+      let waiting=false;
       document.documentElement.dataset.pbePro=window.PBEPro?.state?.pro===true?'1':'0';
       for(const spec of PRO_MODULES){
         if(!document.querySelector(spec.selector))continue;
-        const module=window[spec.global];if(!module||typeof module.render!=='function')continue;
+        const module=window[spec.global];
+        if(!module||typeof module.render!=='function')continue;
         if(module.state?.loading){waiting=true;continue}
         try{module.render()}catch(error){console.error('[pbe-loader-pro-sync]',spec.global,error?.message||error)}
       }
-      if(waiting&&attempt<60)setTimeout(run,100);
+      if(waiting&&attempt<30)setTimeout(run,150);
     };
     queueMicrotask(run);
   }
@@ -129,8 +126,7 @@
     window.addEventListener('pbe:pro-state',forceVisibleProRender);
     window.addEventListener('pbe:route-changed',forceVisibleProRender);
     setTimeout(forceVisibleProRender,0);
-    setTimeout(forceVisibleProRender,250);
-    setTimeout(forceVisibleProRender,1000);
+    setTimeout(forceVisibleProRender,400);
   }
 
   async function load(){
