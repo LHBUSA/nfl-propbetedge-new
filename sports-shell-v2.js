@@ -58,10 +58,13 @@
       : `<span class="pbes-score-logo-fallback">${esc(String(label).slice(0,3))}</span>`;
   }
 
+  /* One authoritative desktop product map. PBE Picks / Track Record are native
+     here so late product modules never have to create a second navigation model. */
   const PRIMARY=[
     ['pbecast','⚡ PBEcast','cast'],['propboard','Props',''],['marketwatch','Market Watch',''],
-    ['picks','Model Lab',''],['simulator','Simulator',''],['sgplab','SGP Lab',''],
-    ['usage','Usage',''],['games','Games',''],['newsintel','News','']
+    ['pbepicks','PBE Picks',''],['trackrecord','Track Record',''],['picks','Model Lab',''],
+    ['simulator','Simulator',''],['sgplab','SGP Lab',''],['usage','Usage',''],
+    ['propchain','PropChain',''],['games','Games',''],['newsintel','News','']
   ];
   const RESEARCH=[
     ['matchups','Matchups'],['injuries','Injuries'],['trades','Transactions'],['teams','Teams'],
