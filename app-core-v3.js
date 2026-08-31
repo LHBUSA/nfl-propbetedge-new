@@ -1,4 +1,4 @@
-/* PropBetEdge NFL — standalone app core v3.1 */
+/* PropBetEdge NFL — standalone app core v3.2 */
 (() => {
   'use strict';
 
@@ -9,8 +9,22 @@
     super_bowls:'sb'
   };
 
-  const App = {
-    VIEWS: {},
+  let App = null;
+  const rawViews = {};
+  const views = new Proxy(rawViews, {
+    set(target, prop, value) {
+      target[prop] = value;
+      const route = String(prop);
+      queueMicrotask(() => {
+        if (!App || typeof value !== 'function') return;
+        if (App.current === route || App.pendingRoute === route) App.replayCurrent();
+      });
+      return true;
+    }
+  });
+
+  App = {
+    VIEWS: views,
     current: 'home',
     booted: false,
     pendingRoute: null,
@@ -67,11 +81,6 @@
       const view = this.normalize(route);
       if (typeof renderer !== 'function') return false;
       this.VIEWS[view] = renderer;
-      if (this.current === view || this.pendingRoute === view) {
-        queueMicrotask(() => {
-          if (this.current === view && typeof this.VIEWS[view] === 'function') this.renderRegistered(view);
-        });
-      }
       return true;
     },
 
@@ -103,10 +112,6 @@
   // Compatibility stubs for upgrade modules that expect the historical globals to exist.
   window.HomeView = window.HomeView || { render() {} };
 
-  window.addEventListener('pbe:view-registered',event => {
-    const route = App.normalize(event?.detail?.route || '');
-    if (route && App.current === route) App.replayCurrent();
-  });
   window.addEventListener('pbe:upgrades-ready',() => {
     App.boot();
     setTimeout(() => App.replayCurrent(),0);
