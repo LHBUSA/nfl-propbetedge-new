@@ -145,8 +145,13 @@
   .pbe13-news.pbe13-injury-v2 .pbe13-featured{grid-template-columns:1fr!important}
 }
 @media(max-width:800px){
-  .pbe13-news.pbe13-injury-v2 .pbe13-hero{grid-template-columns:1fr!important;padding:15px!important}
-  .pbe13-news.pbe13-injury-v2 .pbe13-title{font-size:38px!important}
+  .pbe13-news.pbe13-injury-v2 .pbe13-hero{grid-template-columns:1fr!important;gap:12px!important;padding:10px 12px!important}
+  .pbe13-news.pbe13-injury-v2 .pbe13-title{margin-top:5px!important;font-size:35px!important;line-height:.84!important}
+  .pbe13-news.pbe13-injury-v2 .pbe13-copy{margin-top:6px!important;font-size:9.5px!important;line-height:1.42!important}
+  .pbe13-news.pbe13-injury-v2 .pbe13-semantic{margin-top:6px!important;padding:4px 6px!important}
+  .pbe13-news.pbe13-injury-v2 .pbe13-statusbox{padding:9px 10px!important}
+  .pbe13-news.pbe13-injury-v2 .pbe13-statusbox b{font-size:18px!important}
+  .pbe13-news.pbe13-injury-v2 .pbe13-statusbox span{margin-top:4px!important;line-height:1.35!important}
   .pbe13-news.pbe13-injury-v2 .pbe13-summary{grid-template-columns:repeat(2,minmax(0,1fr))!important}
   .pbe13-news.pbe13-injury-v2 .pbe13-controls{grid-template-columns:1fr!important}
   .pbe13-news.pbe13-injury-v2 .pbe13-input{grid-column:auto!important}
