@@ -1,0 +1,82 @@
+name: NFL Post-Deploy Smoke
+
+# A REAL post-deploy hook.
+#
+# Every other workflow in this repo triggers on `push`, which starts at the same
+# moment Vercel starts building. Those runs therefore race the deploy and can
+# pass against the PREVIOUS build — which is exactly how a main-thread freeze
+# reached production while CI was green.
+#
+# `deployment_status` fires only once the deployment provider reports a result,
+# so this runs against the build that is actually live, at the URL that is
+# actually serving it.
+
+on:
+  deployment_status:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: Target URL to smoke
+        required: false
+        default: https://nfl.propbetedge.ai
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    # Only on a successful production deployment. Previews and failed builds
+    # are skipped rather than reported as smoke failures.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.deployment_status.state == 'success' &&
+       github.event.deployment.environment == 'Production')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Resolve target URL
+        id: target
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            url="${{ github.event.inputs.url }}"
+          else
+            # Prefer the alias the product is actually served on.
+            url="https://nfl.propbetedge.ai"
+          fi
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "Smoking $url"
+
+      # A wedged renderer cannot answer 1+1. This asserts liveness directly
+      # rather than inferring it from a screenshot or a timeout.
+      - name: Browser liveness and route soak against the live deployment
+        env:
+          PBE_URL: ${{ steps.target.outputs.url }}
+          PBE_CHROME: /usr/bin/google-chrome
+        run: node scripts/recovery-browser-smoke.mjs
+
+      - name: Observer loop alarm must be silent
+        env:
+          PBE_URL: ${{ steps.target.outputs.url }}
+          PBE_CHROME: /usr/bin/google-chrome
+        run: node scripts/observer-alarm-check.mjs
+
+      - name: Upload smoke evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: post-deploy-smoke
+          path: |
+            recovery-smoke.log
+            observer-alarm.log
+            recovery-*.png
+          if-no-files-found: ignore
