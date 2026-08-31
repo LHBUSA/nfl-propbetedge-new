@@ -28,9 +28,15 @@
 .pbe13-news.pbe13-injury-v2 .pbe13-note{
   margin-top:8px!important;
   padding:8px 11px!important;
-  font-size:8px!important;
+  border:1px solid rgba(241,107,120,.16)!important;
+  border-radius:8px!important;
+  background:rgba(8,13,19,.94)!important;
+  color:#aeb8c3!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.025)!important;
+  font-size:8.5px!important;
   line-height:1.45!important;
 }
+.pbe13-news.pbe13-injury-v2 .pbe13-note strong{color:#f16b78!important}
 
 /* Put the useful visual context before dashboard chrome. */
 .pbe13-news.pbe13-injury-v2 .pbe13-featured{
@@ -152,6 +158,7 @@
   .pbe13-news.pbe13-injury-v2 .pbe13-statusbox{padding:9px 10px!important}
   .pbe13-news.pbe13-injury-v2 .pbe13-statusbox b{font-size:18px!important}
   .pbe13-news.pbe13-injury-v2 .pbe13-statusbox span{margin-top:4px!important;line-height:1.35!important}
+  .pbe13-news.pbe13-injury-v2 .pbe13-note{padding:8px 10px!important;font-size:8.5px!important}
   .pbe13-news.pbe13-injury-v2 .pbe13-summary{grid-template-columns:repeat(2,minmax(0,1fr))!important}
   .pbe13-news.pbe13-injury-v2 .pbe13-controls{grid-template-columns:1fr!important}
   .pbe13-news.pbe13-injury-v2 .pbe13-input{grid-column:auto!important}
