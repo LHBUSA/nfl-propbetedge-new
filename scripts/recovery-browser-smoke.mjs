@@ -5,8 +5,8 @@
  *
  * This gate checks more than liveness. A prior recovery rendered successfully
  * while silently regressing navigation and CSS authority, so we also require
- * the complete product map, synchronized active state, intended layered CSS
- * ordering, route content and visual captures of the major workspaces.
+ * the complete visible product map, synchronized active state, intended layered
+ * CSS ordering, route content and visual captures of the major workspaces.
  */
 import {spawn} from 'node:child_process';
 import {mkdtempSync,rmSync,readFileSync,existsSync,statSync,appendFileSync,writeFileSync} from 'node:fs';
@@ -38,7 +38,7 @@ await send('Runtime.enable');await send('Page.enable');await send('Fetch.enable'
 const probe=async(expr,ms=7000)=>{try{const r=await Promise.race([send('Runtime.evaluate',{expression:expr,returnByValue:true,awaitPromise:true}),sleep(ms).then(()=>{throw new Error('WEDGED')})]);return r.result?.value}catch(e){return`<${e.message}>`}};
 async function shot(name){const r=await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});const file=`recovery-${name}.png`;writeFileSync(file,Buffer.from(r.data,'base64'));out(`screenshot             : ${file}`)}
 async function mediaStats(){return probe(`(()=>{const all=[...document.images],loaded=all.filter(i=>i.complete&&i.naturalWidth>0),broken=all.filter(i=>i.complete&&!i.naturalWidth),team=loaded.filter(i=>/teamlogos\\/nfl/i.test(i.src)),players=loaded.filter(i=>/headshots\\/nfl/i.test(i.src));return{all:all.length,loaded:loaded.length,broken:broken.length,team:team.length,players:players.length}})()`)}
-async function navStats(){return probe(`(()=>{const buttons=[...document.querySelectorAll('.pbe-v2-quicknav [data-route]')];return{count:buttons.length,routes:buttons.map(x=>x.dataset.route),active:buttons.filter(x=>x.classList.contains('primary')).map(x=>x.dataset.route),picks:!!document.getElementById('nav-pbepicks'),record:!!document.getElementById('nav-trackrecord'),width:Math.round(document.querySelector('.pbe-v2-quicknav')?.getBoundingClientRect().width||0),scrollWidth:Math.round(document.querySelector('.pbe-v2-quicknav')?.scrollWidth||0)}})()`)}
+async function navStats(){return probe(`(()=>{const nav=document.querySelector('.pbe-v2-quicknav'),buttons=[...document.querySelectorAll('.pbe-v2-quicknav [data-route]')];return{count:buttons.length,routes:buttons.map(x=>x.dataset.route),active:buttons.filter(x=>x.classList.contains('primary')).map(x=>x.dataset.route),picks:!!document.getElementById('nav-pbepicks'),record:!!document.getElementById('nav-trackrecord'),width:Math.round(nav?.getBoundingClientRect().width||0),scrollWidth:Math.round(nav?.scrollWidth||0)}})()`)}
 async function activeNav(route){return probe(`(()=>{const all=[...document.querySelectorAll('.pbe-v2-quicknav [data-route].primary')];const target=document.querySelector('.pbe-v2-quicknav [data-route=${JSON.stringify(route)}]');return{target:!!target,active:!!target?.classList.contains('primary'),current:target?.getAttribute('aria-current')||'',activeCount:all.length,activeRoutes:all.map(x=>x.dataset.route)}})()`)}
 
 const requiredNav=['home','games','propboard','marketwatch','matchups','picks','pbepicks','trackrecord','simulator','sgplab','usage','propchain','pbecast','newsintel','injuries','trades'];
@@ -56,8 +56,8 @@ for(const [sel,label] of features){const v=await probe(`!!document.querySelector
 let media=await mediaStats();out(`home media             : ${JSON.stringify(media)}`);if(!media||typeof media!=='object'||media.loaded<4||media.team<2||media.broken>0)pass=false;
 
 out('\n=== NAVIGATION CONTRACT ===');
-const nav=await navStats();out(`quick nav              : ${JSON.stringify(nav)}`);
-if(!nav||typeof nav!=='object'||nav.count!==requiredNav.length||!nav.picks||!nav.record||nav.active.length!==1||nav.active[0]!=='home'||requiredNav.some(r=>!nav.routes.includes(r)))pass=false;
+const nav=await navStats(),navFits=nav&&typeof nav==='object'&&Number(nav.width)>=850&&Number(nav.scrollWidth)<=Number(nav.width)+4;out(`quick nav              : ${JSON.stringify(nav)} allVisible=${navFits}`);
+if(!nav||typeof nav!=='object'||nav.count!==requiredNav.length||!nav.picks||!nav.record||nav.active.length!==1||nav.active[0]!=='home'||requiredNav.some(r=>!nav.routes.includes(r))||!navFits)pass=false;
 const cssOrder=await probe(`(()=>{const files=[...document.querySelectorAll('link[data-pbe-upgrade]')].map(x=>(new URL(x.href)).pathname.split('/').pop()),at=f=>files.indexOf(f),world=at('world-class-v1.css');const foundations=['dashboard-v7.css','dashboard-v8-enhance.css','games-v2.css','model-lab-v2-enhance.css','simulator-v3-enhance.css','usage-v2.css'];const terminal=['pbecast-v6.css','pbecast-v7-enhance.css','games-command-v4.css','games-intel-v5.css','prop-board-v4.css','prop-board-responsive-v5.css','pbe-picks-v2.css'];return{world,foundations:Object.fromEntries(foundations.map(f=>[f,at(f)])),terminal:Object.fromEntries(terminal.map(f=>[f,at(f)])),ok:world>=0&&foundations.every(f=>at(f)>=0&&at(f)<world)&&terminal.every(f=>at(f)>world)}})()`);
 out(`visual CSS authority   : ${JSON.stringify(cssOrder)}`);if(!cssOrder||typeof cssOrder!=='object'||cssOrder.ok!==true)pass=false;
 await shot('home-desktop');
