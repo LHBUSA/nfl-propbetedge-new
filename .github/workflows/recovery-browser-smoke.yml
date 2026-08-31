@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - recovery/baseline-d29ff748
+      - fix/injuries-photo-layout-v2
   pull_request:
 
 permissions:
@@ -21,7 +22,10 @@ jobs:
           node-version: '22'
 
       - name: Runtime syntax
-        run: node --check page-loader.js
+        run: |
+          node --check page-loader.js
+          node --check injury-intel-v2.js
+          node --check scripts/injury-layout-smoke.mjs
 
       - name: Observer safety across active runtime
         run: node scripts/scan-observers.mjs
@@ -40,6 +44,11 @@ jobs:
           PBE_CHROME: /usr/bin/google-chrome
         run: node scripts/recovery-browser-smoke.mjs
 
+      - name: Injury Intelligence photo layout
+        env:
+          PBE_CHROME: /usr/bin/google-chrome
+        run: node scripts/injury-layout-smoke.mjs
+
       - name: Upload visual regression audit
         if: always()
         uses: actions/upload-artifact@v4
@@ -48,4 +57,5 @@ jobs:
           path: |
             recovery-smoke.log
             recovery-*.png
+            injury-layout-*.png
           if-no-files-found: ignore
