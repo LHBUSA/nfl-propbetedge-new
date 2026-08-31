@@ -48,8 +48,8 @@
   html[data-pbe-home="1"] .pbe7-team.home{
     right:0!important;
     left:auto!important;
-    justify-content:flex-start!important;
-    text-align:left!important;
+    justify-content:flex-end!important;
+    text-align:right!important;
   }
 }
 
