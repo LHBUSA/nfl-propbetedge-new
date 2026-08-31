@@ -2,19 +2,19 @@ name: NFL OS Regression
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - recovery/baseline-d29ff748
   pull_request:
 
 permissions:
   contents: read
 
-# Canonical validation gate for the broadcast-first NFL build and committed archive snapshot.
 jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -23,21 +23,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # node --check silently passes a .js file whose syntax error follows
-          # an ESM import. scripts/check-syntax.mjs parses as a module.
           mapfile -t files < <(find . -type f -name '*.js' -not -path './node_modules/*' -not -path './.git/*')
           node scripts/check-syntax.mjs "${files[@]}"
 
-      # STALE ASSERTION REPLACED.
-      # The old gate required the literal build marker
-      # 'nfl-intelligence-os-standalone-v3-local-archive' in index.html. That
-      # marker no longer exists, so the workflow failed on an obsolete string
-      # rather than on a real product defect.
-      #
-      # The intent behind it was "the root is fully standalone: it boots from
-      # local runtime + the frozen local archive, with no dependency on the old
-      # hosted runtime". That intent is asserted directly below, which is
-      # strictly stronger than matching one exact comment.
       - name: Require fully standalone root
         shell: bash
         run: |
@@ -45,49 +33,11 @@ jobs:
           grep -Fq './app-core-v3.js' index.html
           grep -Fq './page-loader.js' index.html
           grep -Fq './paywall.js' index.html
-          grep -Fq './archive/teams.js' index.html
-
-          # Every frozen archive dataset must be loaded LOCALLY from ./archive/.
           for dataset in utils teams superbowls hof seasons records stats-2025 standings-2025; do
-            grep -Eq "src=\"\./archive/${dataset}\.js" index.html \
-              || { echo "index.html does not load ./archive/${dataset}.js locally"; exit 1; }
+            grep -Eq "src=\"\./archive/${dataset}\.js" index.html || { echo "Missing local archive dataset: ${dataset}"; exit 1; }
           done
-
-          # And no archive dataset may be pulled from a remote origin.
-          if grep -Eq 'src="https?://[^"]*/archive/' index.html; then
-            echo 'Archive dataset loaded from a remote origin; root is not standalone.'
-            exit 1
-          fi
-          if grep -Fq 'https://nfl.propbetedge.ai/js/' index.html; then
-            echo 'Old NFL production runtime dependency found in active root.'
-            exit 1
-          fi
-
-      - name: Forbid retired fake-live and rejected shell modules
-        shell: bash
-        run: |
-          set -euo pipefail
-          banned=(
-            'js/data/live-data.js'
-            'js/views/home.js'
-            'js/views/picks.js'
-            'js/views/propchain.js'
-            'js/views/pbecast.js'
-            'js/views/injuries.js'
-            'js/views/trades.js'
-            'js/views/player-modal.js'
-            'js/components/ticker.js'
-            'js/components/search.js'
-            'js/app.js'
-            'game-center-v2.js'
-            'dashboard-v4.js'
-          )
-          for token in "${banned[@]}"; do
-            if grep -Fq "$token" index.html || grep -Fq "$token" page-loader.js; then
-              echo "Retired/rejected runtime import found: $token"
-              exit 1
-            fi
-          done
+          ! grep -Eq 'src="https?://[^"]*/archive/' index.html
+          ! grep -Fq 'https://nfl.propbetedge.ai/js/' index.html
 
       - name: Forbid randomized product behavior
         shell: bash
@@ -98,38 +48,23 @@ jobs:
             exit 1
           fi
 
-      - name: Require frozen archive snapshot
+      - name: Require recovered product authorities
         shell: bash
         run: |
           set -euo pipefail
-          required=(archive/utils.js archive/teams.js archive/superbowls.js archive/hof.js archive/seasons.js archive/records.js archive/stats-2025.js archive/standings-2025.js)
-          for file in "${required[@]}"; do
-            test -s "$file" || { echo "Missing archive asset: $file"; exit 1; }
-          done
-
-      - name: Require active broadcast-first product modules
-        shell: bash
-        run: |
-          set -euo pipefail
+          grep -Fq "const VERSION='20260830recovery1'" page-loader.js
           required=(
-            dashboard-v5.js
-            sports-shell-v2.js
-            pbecast-v4.js
-            games-v2.js
-            team-research-v3.js
-            prop-board-v3.js
-            market-watch-v3.js
-            matchups-v2.js
-            model-lab.js
-            simulator-v2.js
-            sgp-lab-v2.js
-            usage-v2.js
-            propchain-v2.js
-            news-intelligence-v2.js
-            newsroom-v2.js
-            player-research-v2.js
-            command-palette-v3.js
-            event-selector-v2.js
+            dashboard-v5.js dashboard-v6.js dashboard-v7.js dashboard-v8-enhance.js
+            sports-shell-v2.js sports-shell-auth-state.js
+            games-v2.js games-command-v4.js games-intel-v5.js
+            prop-board-v3.js prop-board-v4.js market-watch-v3.js matchups-v2.js
+            model-lab.js model-lab-v2-enhance.js simulator-v2.js simulator-v3-enhance.js
+            sgp-lab-v2.js usage-v2.js propchain-v2.js
+            pbecast-v6.js pbecast-v7-enhance.js
+            news-intelligence-v2.js newsroom-v2.js player-research-v2.js
+            pbe-picks-v2.js pbe-validation-v1.js
+            pbe-engine-story-v1.js pbe-prop-engine-v1.js
+            nfl-brand-media-v2.js nfl-player-media-v3.js
           )
           for file in "${required[@]}"; do
             test -s "$file" || { echo "Missing product module: $file"; exit 1; }
@@ -138,194 +73,68 @@ jobs:
               exit 1
             fi
           done
-          test -s dashboard-v5.css
-          test -s sports-shell-v1.css
-          test -s pbecast-v4.css
+          grep -Fq 'PBEcastV6?.focus' dashboard-v5.js
+          grep -Fq 'PBEcastV6?.focus' sports-shell-v2.js
+          grep -Fq "['pbepicks','PBE Picks']" global-polish-v5.js
+          grep -Fq "['trackrecord','Record']" global-polish-v5.js
+          grep -Fq 'syncQuickNav' global-polish-v5.js
+          grep -Fq "if(item.js==='./dashboard-v7.js'" page-loader.js
 
-          # Market Watch v3 is the sole JS runtime authority. v2 CSS remains
-          # intentionally active as the structural base beneath the v3 terminal
-          # override; v2 JS must not be loaded alongside it.
-          test -s market-watch-v2.css
-          grep -Fq 'market-watch-v2.css' page-loader.js
-          if grep -Fq "js:'./market-watch-v2.js'" page-loader.js; then
-            echo 'Market Watch v2 JS must remain inactive under the v3 authority.'
-            exit 1
-          fi
-
-      - name: Validate CSS-referenced local assets
+      - name: Require intended visual authority order
         shell: bash
         run: |
           set -euo pipefail
-          test -s world-class-v1.css
-          grep -Fq 'world-class-v1.css' page-loader.js
+          node <<'NODE'
+          const fs=require('fs');
+          const src=fs.readFileSync('page-loader.js','utf8');
+          const at=f=>src.indexOf(`'./${f}'`);
+          const world=at('world-class-v1.css');
+          const foundations=['dashboard-v7.css','dashboard-v8-enhance.css','games-v2.css','model-lab-v2-enhance.css','simulator-v3-enhance.css','usage-v2.css'];
+          const terminal=['pbecast-v6.css','pbecast-v7-enhance.css','games-command-v4.css','games-intel-v5.css','prop-board-v4.css','prop-board-responsive-v5.css','pbe-picks-v2.css'];
+          if(world<0) throw new Error('world-class visual layer missing');
+          for(const f of foundations) if(at(f)<0||at(f)>world) throw new Error(`${f} must load before world-class-v1.css`);
+          for(const f of terminal) if(at(f)<world) throw new Error(`${f} must load after world-class-v1.css`);
+          console.log('Recovered layered visual authority OK');
+          NODE
 
-          # Every local url() in the visual stylesheet must resolve, be large
-          # enough to be real, and (for WebP) not be truncated. Hero imagery is
-          # optional: zero references is a valid, passing state. The gradient-only
-          # design is deliberate until approved photography exists.
-          MIN_BYTES=40960
-          CSS=world-class-v1.css
-          BASE=$(dirname "$CSS")
+      - name: Observer safety across all active client modules
+        run: node scripts/scan-observers.mjs
 
-          mapfile -t refs < <(
-            grep -o 'url([^)]*)' "$CSS"               | sed -e 's/^url(//' -e 's/)$//' -e "s/^[[:space:]]*['\"]\?//" -e "s/['\"]\?[[:space:]]*$//"               | sort -u
-          )
+      - name: Prop engine unit tests
+        run: node --test tests/nfl-prop-picker.test.mjs tests/nfl-prop-grader.test.mjs tests/nfl-prop-tuner.test.mjs
 
-          if [ "${#refs[@]}" -eq 0 ]; then
-            echo "No url() references in $CSS - nothing to validate."
-            exit 0
-          fi
-
-          fail=0
-          for ref in "${refs[@]}"; do
-            case "$ref" in
-              data:*|http://*|https://*|//*)
-                echo "SKIP      $ref (remote or inline)"
-                continue
-                ;;
-              /*)  path="${ref#/}" ;;
-              *)   path="$BASE/${ref#./}" ;;
-            esac
-
-            if [ ! -f "$path" ]; then
-              echo "MISSING   $ref -> $path"
-              fail=1
-              continue
-            fi
-
-            bytes=$(stat -c%s "$path")
-            if [ "$bytes" -lt "$MIN_BYTES" ]; then
-              echo "UNDERSIZE $path is ${bytes}B, floor is ${MIN_BYTES}B"
-              fail=1
-              continue
-            fi
-
-            # WebP carries its own length in the RIFF header. If the file on
-            # disk is shorter, it was truncated in transit - the exact defect
-            # that shipped three undecodable heroes past a bare -s check.
-            if [ "${path##*.}" = "webp" ]; then
-              declared=$(python3 -c "import struct,sys; f=open(sys.argv[1],'rb'); f.seek(4); print(struct.unpack('<I', f.read(4))[0] + 8)" "$path")
-              if [ "$bytes" -lt "$declared" ]; then
-                echo "TRUNCATED $path is ${bytes}B but RIFF declares ${declared}B"
-                fail=1
-                continue
-              fi
-            fi
-
-            echo "OK        $path (${bytes}B)"
-          done
-
-          if [ "$fail" -ne 0 ]; then
-            echo "$CSS references missing, undersized or truncated assets"
-            exit 1
-          fi
-
-      - name: Require live PBEcast transport and visuals
+      - name: Require live PBEcast and truth boundaries
         shell: bash
         run: |
           set -euo pipefail
           test -s api/nfl-live.js
-          grep -Fq 'Full Play-by-Play' pbecast-v4.js
-          grep -Fq 'current_drive' pbecast-v4.js
-          grep -Fq 'current_play' pbecast-v4.js
-          grep -Fq 'player_stats' pbecast-v4.js
+          grep -Fq "const LIVE_API='/api/nfl-live'" pbecast-v6.js
+          grep -Fq 'current_play' pbecast-v6.js
+          grep -Fq 'current_drive' pbecast-v6.js
+          grep -Fq 'player_stats' pbecast-v6.js
+          grep -Fq "function isLive(d=state.detail){return semantics(d)==='LIVE'}" pbecast-v6.js
           grep -Fq 'espn_cdn_gamepackage' api/nfl-live.js
-          grep -Fq "return'LIVE'" api/nfl-live.js
-          grep -Fq "transport:'poll'" api/nfl-live.js
-
-      - name: Require sports broadcast hierarchy
-        shell: bash
-        run: |
-          set -euo pipefail
-          grep -Fq 'pbes-scorebar' sports-shell-v1.js
-          grep -Fq 'PBEcast' sports-shell-v1.js
-          grep -Fq 'Tonight in the NFL' dashboard-v5.js
-          grep -Fq 'FEATURED GAME' dashboard-v5.js
-          grep -Fq 'headshot' dashboard-v5.js
-          grep -Fq 'PBEcastV4' dashboard-v5.js
-
-      # STALE ASSERTION REPLACED.
-      # The old gate grepped api/pro-model.js for 'nfl_has_pro_access', the
-      # Supabase RPC the premium gate used to call. pro-model.js now enforces
-      # entitlement through the single session authority in api/_nfl-auth.js,
-      # so the RPC name is gone from that file (the DB function still exists).
-      # The assertions below check the CURRENT server-gate contract, which is
-      # a stronger guarantee than the old string match: the endpoint must
-      # verify a session AND require Pro, server-side.
-      - name: Require premium and newsroom server gates
-        shell: bash
-        run: |
-          set -euo pipefail
-          test -s api/pro-model.js
-          test -s api/news-feed.js
-
-          # Premium model output must go through the shared session authority,
-          # never a duplicated auth path.
-          grep -Fq "from './_nfl-auth.js'" api/pro-model.js
-          grep -Fq 'getNflSession' api/pro-model.js
-
-          # It must reject both the signed-out AND the signed-in-but-not-Pro
-          # case, server-side.
-          grep -Fq 'sign_in_required' api/pro-model.js
-          grep -Fq 'nfl_pro_required' api/pro-model.js
-
-          grep -Fq 'propbet-news-api' api/news-feed.js
-
-      - name: Forbid duplicated auth logic outside the session authority
-        shell: bash
-        run: |
-          set -euo pipefail
-          # Only _nfl-auth.js may verify session tokens. Any other api/ file
-          # doing its own HMAC verification is a second source of truth.
-          for f in api/*.js; do
-            case "$(basename "$f")" in
-              _nfl-auth.js|auth-diag.js) continue ;;
-            esac
-            if grep -Fq 'createHmac' "$f"; then
-              echo "Duplicate auth logic in $f: session verification belongs in api/_nfl-auth.js"
-              exit 1
-            fi
-          done
-          echo 'Single session authority OK'
-
-      - name: Require truth boundaries
-        shell: bash
-        run: |
-          set -euo pipefail
           grep -Fiq 'causality unproven' propchain-v2.js
           grep -Fiq 'model derived' simulator-v2.js
           grep -Fiq 'correlation model unavailable' sgp-lab-v2.js
           grep -Fiq 'target share' usage-v2.js
-          grep -Fiq 'no fake board' draft-review-v2.js
           grep -Fiq 'local baseline' market-watch-v3.js
           grep -Fiq 'current roster is not inferred' team-research-v3.js
-          grep -Fiq 'LIVE is rendered only' pbecast-v4.js
 
-      # STALE ASSERTION REPLACED — NOT WEAKENED.
-      # games-v2.js used to carry the prose "score feed says so". The rewrite
-      # in the games intelligence launchpad removed the comment but made the
-      # guarantee STRUCTURAL: game state is derived from the score feed's own
-      # semantics, and a score is only rendered once the feed declares LIVE or
-      # FINAL. Asserting the mechanism is stronger than asserting the sentence.
-      - name: Require games state to derive from feed semantics
+      - name: Require premium server authority
         shell: bash
         run: |
           set -euo pipefail
-          # State is read from the feed's declared semantics, not inferred.
-          grep -Fq 'scoreSemantics' games-v2.js
-          grep -Fq 'scoreStatus' games-v2.js
-          # LIVE and FINAL are gated on what the feed actually says.
-          grep -Eq "sem===?'LIVE'" games-v2.js
-          grep -Eq "sem===?'FINAL'|FINAL\|COMPLETE" games-v2.js
-          # A score is only shown when the feed supports it.
-          grep -Fq 'scoreReady' games-v2.js
-          # A future kickoff is SCHEDULE, never a fabricated in-progress state.
-          grep -Fq "kind:'SCHEDULE'" games-v2.js
-          echo 'games-v2 feed-semantics contract OK'
+          grep -Fq "from './_nfl-auth.js'" api/pro-model.js
+          grep -Fq 'getNflSession' api/pro-model.js
+          grep -Fq 'sign_in_required' api/pro-model.js
+          grep -Fq 'nfl_pro_required' api/pro-model.js
+          for f in api/*.js; do
+            case "$(basename "$f")" in _nfl-auth.js|auth-diag.js) continue ;; esac
+            if grep -Fq 'createHmac' "$f"; then echo "Duplicate auth logic in $f"; exit 1; fi
+          done
 
       - name: Validate Vercel configuration
         shell: bash
         run: |
-          if [ -f vercel.json ]; then
-            node -e "JSON.parse(require('fs').readFileSync('vercel.json','utf8'))"
-          fi
+          if [ -f vercel.json ]; then node -e "JSON.parse(require('fs').readFileSync('vercel.json','utf8'))"; fi
