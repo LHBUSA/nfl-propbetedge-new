@@ -110,11 +110,11 @@
 .pbe13-news.pbe13-injury-v2 .pbe13-aff-row{min-height:48px!important;padding:6px 8px!important}
 .pbe13-news.pbe13-injury-v2 .pbe13-aff-name{display:flex!important;align-items:center!important;gap:8px!important;font-size:10px!important}
 .pbe13-news.pbe13-injury-v2 .pbe13-aff-name>.pbe-player-headshot-v3{
-  width:36px!important;
-  height:36px!important;
-  max-width:36px!important;
-  max-height:36px!important;
-  flex:0 0 36px!important;
+  width:34px!important;
+  height:34px!important;
+  max-width:34px!important;
+  max-height:34px!important;
+  flex:0 0 34px!important;
   border-radius:9px!important;
   object-fit:cover!important;
 }
