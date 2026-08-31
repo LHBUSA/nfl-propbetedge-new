@@ -1,6 +1,7 @@
 /* Injury Editorial focused browser gate.
  * Uses production origin/APIs while substituting checked-out branch static
- * files. Verifies the injuries route is a photo-led PropBetEdge article desk.
+ * files. Verifies the injuries route is a photo-led PropBetEdge article desk
+ * with source-disciplined player availability and reported return windows.
  */
 import {spawn} from 'node:child_process';
 import {mkdtempSync,rmSync,readFileSync,existsSync,statSync,writeFileSync} from 'node:fs';
@@ -43,9 +44,13 @@ let desktop=await probe(`(()=>{
   const lead=root.querySelector('.pbe13-editorial-lead');
   const leadImg=lead?.querySelector('.pbe13-editorial-lead-media img');
   const cards=[...root.querySelectorAll('.pbe13-editorial-card')];
+  const board=root.querySelector('.pbe13-availability-board');
+  const availabilityRows=[...root.querySelectorAll('.pbe13-availability-row')];
+  const timelineValues=availabilityRows.map(row=>row.querySelector('.pbe13-availability-cell.timeline>strong')?.textContent?.trim()||'');
+  const reportedTimelines=timelineValues.filter(value=>value&&value!=='Timeline not reported');
   const isPbeArticle=href=>{try{const u=new URL(href);return u.hostname==='propbetedge.ai'&&u.pathname.startsWith('/news/nfl/')}catch{return false}};
   const links=[...root.querySelectorAll('a[href]')].map(a=>a.href).filter(isPbeArticle);
-  const badLinks=[...root.querySelectorAll('.pbe13-editorial-lead a[href],.pbe13-editorial-card[href]')].map(a=>a.href).filter(h=>!isPbeArticle(h));
+  const badLinks=[...root.querySelectorAll('.pbe13-editorial-lead a[href],.pbe13-editorial-card[href],.pbe13-availability-row[href]')].map(a=>a.href).filter(h=>!isPbeArticle(h));
   const imgs=[...root.querySelectorAll('.pbe13-editorial-lead img,.pbe13-editorial-card img')];
   const loaded=imgs.filter(i=>i.complete&&i.naturalWidth>0);
   const broken=imgs.filter(i=>i.complete&&!i.naturalWidth);
@@ -65,11 +70,38 @@ let desktop=await probe(`(()=>{
     telemetryNodes:controls.length,
     impactText:/impact score|selected-event team stories|affected players/i.test(root.textContent||''),
     editorialText:/PropBetEdge Editorial/i.test(root.textContent||''),
+    availabilityBoard:!!board,
+    availabilityRows:availabilityRows.length,
+    reportedTimelines:reportedTimelines.length,
+    availabilityText:/who's out & how long/i.test(root.textContent||''),
     text:(root.textContent||'').trim().length
   };
 })()`);
 out(`desktop ${JSON.stringify(desktop)}`);
-if(!desktop||typeof desktop!=='object'||desktop.root!==true||desktop.heroHeight>255||desktop.lead!==true||desktop.leadImage!==true||desktop.leadMediaWidth<500||desktop.cards<5||desktop.articleLinks<6||desktop.badLinks!==0||desktop.images<6||desktop.loadedImages<5||desktop.broken>0||desktop.telemetryNodes!==0||desktop.impactText!==false||desktop.editorialText!==true||desktop.text<1200)pass=false;
+if(!desktop||typeof desktop!=='object'||desktop.root!==true||desktop.heroHeight>255||desktop.lead!==true||desktop.leadImage!==true||desktop.leadMediaWidth<500||desktop.cards<5||desktop.articleLinks<6||desktop.badLinks!==0||desktop.images<6||desktop.loadedImages<5||desktop.broken>0||desktop.telemetryNodes!==0||desktop.impactText!==false||desktop.editorialText!==true||desktop.availabilityBoard!==true||desktop.availabilityRows<3||desktop.reportedTimelines<2||desktop.availabilityText!==true||desktop.text<1500)pass=false;
+
+const binding=await probe(`(()=>{
+  const api=window.PBEInjuryIntelV2;
+  if(!api?.factForArticle)return{ready:false};
+  const er=api.factForArticle({
+    title:'Eagles Face Tight End Depth Crisis Before Week 1; Ertz Reunion Unlikely to Move Receiving Props',
+    summary:"Philadelphia's hamstring injury to rookie Eli Stowers has forced a pass-catching look, but a Zach Ertz return would address depth, not production.",
+    slug:'synthetic-ertz',topic_kind:'injury',teams:['PHI'],players:['Zach Ertz','Dallas Goedert','Eli Stowers']
+  });
+  const bad=api.factForArticle({
+    title:'Aaron Donald takes part in Rams practice Sunday',
+    summary:"Twenty months after tearing his ACL, Dell remains unavailable for Houston's opener, forcing the Texans to lean harder on secondary receiving targets.",
+    slug:'synthetic-bad',topic_kind:'general',teams:['HOU'],players:['Tank Dell','C.J. Stroud']
+  });
+  const timed=api.factForArticle({
+    title:"Charbonnet Out Through Week 4: Seattle's Backfield Pivot Opens Price's Path",
+    summary:"The Seahawks' co-starter remains sidelined until Week 5, handing a rookie first-rounder the early-season lead role.",
+    slug:'synthetic-timeline',topic_kind:'transaction',teams:['SEA'],players:['Zach Charbonnet','Jadarian Price']
+  });
+  return{ready:true,ertzPlayer:er?.player||null,ertzInjury:er?.injury||null,badIsNull:bad===null,timeline:timed?.timeline||null};
+})()`);
+out(`binding ${JSON.stringify(binding)}`);
+if(!binding||typeof binding!=='object'||binding.ready!==true||binding.ertzPlayer!=='Eli Stowers'||binding.ertzInjury!=='Hamstring'||binding.badIsNull!==true||!/week 4/i.test(binding.timeline||''))pass=false;
 await shot('injury-editorial-desktop.png');
 
 await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
@@ -79,17 +111,21 @@ const mobile=await probe(`(()=>{
   const hero=root?.querySelector('.pbe13-editorial-hero');
   const lead=root?.querySelector('.pbe13-editorial-lead');
   const leadImg=root?.querySelector('.pbe13-editorial-lead-media img');
+  const board=root?.querySelector('.pbe13-availability-board');
+  const firstAvailability=root?.querySelector('.pbe13-availability-row');
   return{
     root:!!root,
     heroHeight:+(hero?.getBoundingClientRect().height||0).toFixed(1),
     leadWidth:+(lead?.getBoundingClientRect().width||0).toFixed(1),
     leadImgWidth:+(leadImg?.getBoundingClientRect().width||0).toFixed(1),
+    boardWidth:+(board?.getBoundingClientRect().width||0).toFixed(1),
+    availabilityWidth:+(firstAvailability?.getBoundingClientRect().width||0).toFixed(1),
     overflow:document.documentElement.scrollWidth-window.innerWidth,
     route:window.App?.current
   };
 })()`);
 out(`mobile ${JSON.stringify(mobile)}`);
-if(!mobile||typeof mobile!=='object'||mobile.root!==true||mobile.route!=='injuries'||mobile.heroHeight>330||mobile.leadWidth>390||mobile.leadImgWidth>390||mobile.overflow>2)pass=false;
+if(!mobile||typeof mobile!=='object'||mobile.root!==true||mobile.route!=='injuries'||mobile.heroHeight>330||mobile.leadWidth>390||mobile.leadImgWidth>390||mobile.boardWidth>390||mobile.availabilityWidth>390||mobile.overflow>2)pass=false;
 await shot('injury-editorial-mobile.png');
 
 out(`RESULT ${pass?'PASS':'FAIL'}`);
