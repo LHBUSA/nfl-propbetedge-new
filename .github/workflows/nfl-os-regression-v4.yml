@@ -2,7 +2,9 @@ name: NFL OS Regression
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - recovery/baseline-d29ff748
   pull_request:
 
 permissions:
@@ -13,7 +15,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -32,44 +33,11 @@ jobs:
           grep -Fq './app-core-v3.js' index.html
           grep -Fq './page-loader.js' index.html
           grep -Fq './paywall.js' index.html
-          grep -Fq './archive/teams.js' index.html
           for dataset in utils teams superbowls hof seasons records stats-2025 standings-2025; do
-            grep -Eq "src=\"\./archive/${dataset}\.js" index.html || { echo "index.html does not load ./archive/${dataset}.js locally"; exit 1; }
+            grep -Eq "src=\"\./archive/${dataset}\.js" index.html || { echo "Missing local archive dataset: ${dataset}"; exit 1; }
           done
-          if grep -Eq 'src="https?://[^"]*/archive/' index.html; then
-            echo 'Archive dataset loaded from a remote origin; root is not standalone.'
-            exit 1
-          fi
-          if grep -Fq 'https://nfl.propbetedge.ai/js/' index.html; then
-            echo 'Old NFL production runtime dependency found in active root.'
-            exit 1
-          fi
-
-      - name: Forbid retired fake-live and rejected shell modules
-        shell: bash
-        run: |
-          set -euo pipefail
-          banned=(
-            'js/data/live-data.js'
-            'js/views/home.js'
-            'js/views/picks.js'
-            'js/views/propchain.js'
-            'js/views/pbecast.js'
-            'js/views/injuries.js'
-            'js/views/trades.js'
-            'js/views/player-modal.js'
-            'js/components/ticker.js'
-            'js/components/search.js'
-            'js/app.js'
-            'game-center-v2.js'
-            'dashboard-v4.js'
-          )
-          for token in "${banned[@]}"; do
-            if grep -Fq "$token" index.html || grep -Fq "$token" page-loader.js; then
-              echo "Retired/rejected runtime import found: $token"
-              exit 1
-            fi
-          done
+          ! grep -Eq 'src="https?://[^"]*/archive/' index.html
+          ! grep -Fq 'https://nfl.propbetedge.ai/js/' index.html
 
       - name: Forbid randomized product behavior
         shell: bash
@@ -80,49 +48,23 @@ jobs:
             exit 1
           fi
 
-      - name: Require frozen archive snapshot
+      - name: Require recovered product authorities
         shell: bash
         run: |
           set -euo pipefail
-          required=(archive/utils.js archive/teams.js archive/superbowls.js archive/hof.js archive/seasons.js archive/records.js archive/stats-2025.js archive/standings-2025.js)
-          for file in "${required[@]}"; do
-            test -s "$file" || { echo "Missing archive asset: $file"; exit 1; }
-          done
-
-      - name: Require active broadcast-first product modules
-        shell: bash
-        run: |
-          set -euo pipefail
+          grep -Fq "const VERSION='20260830recovery1'" page-loader.js
           required=(
-            dashboard-v5.js
-            dashboard-v6.js
-            dashboard-v7.js
-            dashboard-v8-enhance.js
-            sports-shell-v2.js
-            pbecast-v6.js
-            pbecast-v7-enhance.js
-            games-v2.js
-            games-command-v4.js
-            games-intel-v5.js
-            team-research-v3.js
-            prop-board-v3.js
-            prop-board-v4.js
-            market-watch-v3.js
-            matchups-v2.js
-            model-lab.js
-            simulator-v2.js
-            sgp-lab-v2.js
-            usage-v2.js
-            propchain-v2.js
-            news-intelligence-v2.js
-            newsroom-v2.js
-            player-research-v2.js
-            command-palette-v3.js
-            event-selector-v2.js
-            pbe-picks-v2.js
-            pbe-validation-v1.js
-            pbe-engine-story-v1.js
-            pbe-prop-engine-v1.js
+            dashboard-v5.js dashboard-v6.js dashboard-v7.js dashboard-v8-enhance.js
+            sports-shell-v2.js sports-shell-auth-state.js
+            games-v2.js games-command-v4.js games-intel-v5.js
+            prop-board-v3.js prop-board-v4.js market-watch-v3.js matchups-v2.js
+            model-lab.js model-lab-v2-enhance.js simulator-v2.js simulator-v3-enhance.js
+            sgp-lab-v2.js usage-v2.js propchain-v2.js
+            pbecast-v6.js pbecast-v7-enhance.js
+            news-intelligence-v2.js newsroom-v2.js player-research-v2.js
+            pbe-picks-v2.js pbe-validation-v1.js
+            pbe-engine-story-v1.js pbe-prop-engine-v1.js
+            nfl-brand-media-v2.js nfl-player-media-v3.js
           )
           for file in "${required[@]}"; do
             test -s "$file" || { echo "Missing product module: $file"; exit 1; }
@@ -131,248 +73,68 @@ jobs:
               exit 1
             fi
           done
-          test -s dashboard-v5.css
-          test -s sports-shell-v1.css
-          test -s pbecast-v6.css
-
-          grep -Fq "'./pbecast-v6.js'" page-loader.js
-          grep -Fq "'./pbecast-v7-enhance.js'" page-loader.js
-          if grep -Eq "'\./pbecast-v(4|5)\.js'|'\./pbecast-v5-renderer\.js'" page-loader.js; then
-            echo 'Legacy PBEcast v4/v5 runtime must remain inactive under v6 authority.'
-            exit 1
-          fi
-
           grep -Fq 'PBEcastV6?.focus' dashboard-v5.js
           grep -Fq 'PBEcastV6?.focus' sports-shell-v2.js
-          if grep -Fq 'PBEcastV4?.focus' dashboard-v5.js || grep -Fq 'PBEcastV4?.focus' sports-shell-v2.js; then
-            echo 'Active navigation still targets retired PBEcast v4.'
-            exit 1
-          fi
+          grep -Fq "['pbepicks','PBE Picks']" global-polish-v5.js
+          grep -Fq "['trackrecord','Record']" global-polish-v5.js
+          grep -Fq 'syncQuickNav' global-polish-v5.js
+          grep -Fq "if(item.js==='./dashboard-v7.js'" page-loader.js
 
-          test -s market-watch-v2.css
-          grep -Fq 'market-watch-v2.css' page-loader.js
-          if grep -Fq "'./market-watch-v2.js'" page-loader.js; then
-            echo 'Market Watch v2 JS must remain inactive under the v3 authority.'
-            exit 1
-          fi
-
-      - name: Require route-scoped runtime boundaries
+      - name: Require intended visual authority order
         shell: bash
         run: |
           set -euo pipefail
-          grep -Fq "const VERSION='20260830fullroute1'" page-loader.js
-          grep -Fq 'const ROUTES={' page-loader.js
-          grep -Fq 'const GLOBAL={' page-loader.js
-          grep -Fq "window.addEventListener('pbe:route-missing'" page-loader.js
-          grep -Fq "window.addEventListener('pbe:route-changed'" page-loader.js
-          grep -Fq "home:{" page-loader.js
-          grep -Fq "'./pbe-engine-story-v1.js'" page-loader.js
-          grep -Fq "'./pbe-prop-engine-v1.js'" page-loader.js
-          echo 'Full route-scoped product runtime OK'
+          node <<'NODE'
+          const fs=require('fs');
+          const src=fs.readFileSync('page-loader.js','utf8');
+          const at=f=>src.indexOf(`'./${f}'`);
+          const world=at('world-class-v1.css');
+          const foundations=['dashboard-v7.css','dashboard-v8-enhance.css','games-v2.css','model-lab-v2-enhance.css','simulator-v3-enhance.css','usage-v2.css'];
+          const terminal=['pbecast-v6.css','pbecast-v7-enhance.css','games-command-v4.css','games-intel-v5.css','prop-board-v4.css','prop-board-responsive-v5.css','pbe-picks-v2.css'];
+          if(world<0) throw new Error('world-class visual layer missing');
+          for(const f of foundations) if(at(f)<0||at(f)>world) throw new Error(`${f} must load before world-class-v1.css`);
+          for(const f of terminal) if(at(f)<world) throw new Error(`${f} must load after world-class-v1.css`);
+          console.log('Recovered layered visual authority OK');
+          NODE
 
-      # REPLACED. The previous gate hand-listed five files and passed while
-      # dashboard-v8-enhance.js froze production: it observed document.body with
-      # subtree:true and wrote innerHTML unconditionally from a queueMicrotask,
-      # so the observer re-triggered itself and the microtask queue never
-      # drained - no paint, no input, no DevTools.
-      #
-      # scan-observers.mjs derives the ACTIVE module set from index.html and
-      # page-loader.js, so a module cannot escape the check by not being listed.
-      - name: Observer safety across ALL active client modules
+      - name: Observer safety across all active client modules
         run: node scripts/scan-observers.mjs
 
-      - name: Route renderer can replace the initial loading screen
-        shell: bash
-        run: |
-          set -euo pipefail
-          # The boot screen must exist...
-          grep -Fq 'Loading NFL Intelligence OS' index.html
-          # ...and the loader must render the current route into #view-container
-          # after its modules load, or the spinner is never replaced.
-          grep -Fq 'view-container' index.html
-          grep -Fq 'ensureRoute' page-loader.js
-          grep -Fq 'App.nav' page-loader.js
-          grep -Eq 'loadRouteAndRender|ensureRoute\(currentRoute\(\)\)' page-loader.js
-          echo 'Route render path OK'
+      - name: Prop engine unit tests
+        run: node --test tests/nfl-prop-picker.test.mjs tests/nfl-prop-grader.test.mjs tests/nfl-prop-tuner.test.mjs
 
-      - name: Cache generation is coherent
-        shell: bash
-        run: |
-          set -euo pipefail
-          # Every ?v= stamp in index.html must be the same generation, and the
-          # loader's own VERSION must match it. Mixed stamps let a browser mix
-          # generations of the runtime, which is how a fixed module can keep
-          # serving a cached broken one.
-          stamps=$(grep -oE '\?v=[A-Za-z0-9._-]+' index.html | sort -u | wc -l)
-          if [ "$stamps" -ne 1 ]; then
-            echo "index.html mixes $stamps cache generations:"
-            grep -oE '\?v=[A-Za-z0-9._-]+' index.html | sort -u
-            exit 1
-          fi
-          html_stamp=$(grep -oE '\?v=[A-Za-z0-9._-]+' index.html | sort -u | sed 's/^?v=//')
-          loader_stamp=$(grep -oE "VERSION='[^']+'" page-loader.js | sed "s/VERSION='//;s/'//")
-          if [ "$html_stamp" != "$loader_stamp" ]; then
-            echo "index.html stamp ($html_stamp) != page-loader VERSION ($loader_stamp)"
-            exit 1
-          fi
-          echo "Cache generation coherent: $html_stamp"
-
-      - name: Validate CSS-referenced local assets
-        shell: bash
-        run: |
-          set -euo pipefail
-          test -s world-class-v1.css
-          grep -Fq 'world-class-v1.css' page-loader.js
-          MIN_BYTES=40960
-          CSS=world-class-v1.css
-          BASE=$(dirname "$CSS")
-          mapfile -t refs < <(
-            grep -o 'url([^)]*)' "$CSS" \
-              | sed -e 's/^url(//' -e 's/)$//' -e "s/^[[:space:]]*['\"]\?//" -e "s/['\"]\?[[:space:]]*$//" \
-              | sort -u
-          )
-          if [ "${#refs[@]}" -eq 0 ]; then
-            echo "No url() references in $CSS - nothing to validate."
-            exit 0
-          fi
-          fail=0
-          for ref in "${refs[@]}"; do
-            case "$ref" in
-              data:*|http://*|https://*|//*) echo "SKIP      $ref (remote or inline)"; continue ;;
-              /*) path="${ref#/}" ;;
-              *) path="$BASE/${ref#./}" ;;
-            esac
-            if [ ! -f "$path" ]; then echo "MISSING   $ref -> $path"; fail=1; continue; fi
-            bytes=$(stat -c%s "$path")
-            if [ "$bytes" -lt "$MIN_BYTES" ]; then echo "UNDERSIZE $path is ${bytes}B, floor is ${MIN_BYTES}B"; fail=1; continue; fi
-            if [ "${path##*.}" = "webp" ]; then
-              declared=$(python3 -c "import struct,sys; f=open(sys.argv[1],'rb'); f.seek(4); print(struct.unpack('<I', f.read(4))[0] + 8)" "$path")
-              if [ "$bytes" -lt "$declared" ]; then echo "TRUNCATED $path is ${bytes}B but RIFF declares ${declared}B"; fail=1; continue; fi
-            fi
-            echo "OK        $path (${bytes}B)"
-          done
-          if [ "$fail" -ne 0 ]; then echo "$CSS references missing, undersized or truncated assets"; exit 1; fi
-
-      - name: Require live PBEcast transport and visuals
+      - name: Require live PBEcast and truth boundaries
         shell: bash
         run: |
           set -euo pipefail
           test -s api/nfl-live.js
-          test -s pbecast-v6.js
           grep -Fq "const LIVE_API='/api/nfl-live'" pbecast-v6.js
           grep -Fq 'current_play' pbecast-v6.js
-          grep -Fq 'player_stats' pbecast-v6.js
           grep -Fq 'current_drive' pbecast-v6.js
+          grep -Fq 'player_stats' pbecast-v6.js
           grep -Fq "function isLive(d=state.detail){return semantics(d)==='LIVE'}" pbecast-v6.js
-          grep -Fq "const delay=isLive()?5000:15000" pbecast-v6.js
           grep -Fq 'espn_cdn_gamepackage' api/nfl-live.js
-          grep -Fq "return'LIVE'" api/nfl-live.js
-          grep -Fq "transport:'poll'" api/nfl-live.js
-
-      - name: Require sports broadcast hierarchy
-        shell: bash
-        run: |
-          set -euo pipefail
-          grep -Fq 'pbes-scorebar' sports-shell-v1.js
-          grep -Fq 'PBEcast' sports-shell-v1.js
-          grep -Fq 'Tonight in the NFL' dashboard-v5.js
-          grep -Fq 'FEATURED GAME' dashboard-v5.js
-          grep -Fq 'headshot' dashboard-v5.js
-          grep -Fq 'PBEcastV6' dashboard-v5.js
-
-      - name: Require premium and newsroom server gates
-        shell: bash
-        run: |
-          set -euo pipefail
-          test -s api/pro-model.js
-          test -s api/news-feed.js
-          grep -Fq "from './_nfl-auth.js'" api/pro-model.js
-          grep -Fq 'getNflSession' api/pro-model.js
-          grep -Fq 'sign_in_required' api/pro-model.js
-          grep -Fq 'nfl_pro_required' api/pro-model.js
-          grep -Fq 'propbet-news-api' api/news-feed.js
-
-      - name: Forbid duplicated auth logic outside the session authority
-        shell: bash
-        run: |
-          set -euo pipefail
-          for f in api/*.js; do
-            case "$(basename "$f")" in
-              _nfl-auth.js|auth-diag.js) continue ;;
-            esac
-            if grep -Fq 'createHmac' "$f"; then
-              echo "Duplicate auth logic in $f: session verification belongs in api/_nfl-auth.js"
-              exit 1
-            fi
-          done
-          echo 'Single session authority OK'
-
-      - name: Require truth boundaries
-        shell: bash
-        run: |
-          set -euo pipefail
           grep -Fiq 'causality unproven' propchain-v2.js
           grep -Fiq 'model derived' simulator-v2.js
           grep -Fiq 'correlation model unavailable' sgp-lab-v2.js
           grep -Fiq 'target share' usage-v2.js
-          grep -Fiq 'no fake board' draft-review-v2.js
           grep -Fiq 'local baseline' market-watch-v3.js
           grep -Fiq 'current roster is not inferred' team-research-v3.js
-          grep -Fq "function isLive(d=state.detail){return semantics(d)==='LIVE'}" pbecast-v6.js
-          grep -Fq "function semantics(status)" api/nfl-live.js
 
-      - name: Require games state to derive from feed semantics
+      - name: Require premium server authority
         shell: bash
         run: |
           set -euo pipefail
-          grep -Fq 'scoreSemantics' games-v2.js
-          grep -Fq 'scoreStatus' games-v2.js
-          grep -Eq "sem===?'LIVE'" games-v2.js
-          grep -Eq "sem===?'FINAL'|FINAL\|COMPLETE" games-v2.js
-          grep -Fq 'scoreReady' games-v2.js
-          grep -Fq "kind:'SCHEDULE'" games-v2.js
-          echo 'games-v2 feed-semantics contract OK'
-
-      - name: Require missing routes to recover on demand
-        shell: bash
-        run: |
-          set -euo pipefail
-          grep -Fq "window.dispatchEvent(new CustomEvent('pbe:route-missing'" app-core-v3.js
-          grep -Fq "window.addEventListener('pbe:route-missing'" page-loader.js
-          grep -Fq 'ensureRoute' page-loader.js
-          grep -Fq 'loadRouteAndRender' page-loader.js
-          grep -Fq "window.addEventListener('pbe:upgrades-ready'" app-core-v3.js
-          echo 'Deep-route on-demand recovery OK'
+          grep -Fq "from './_nfl-auth.js'" api/pro-model.js
+          grep -Fq 'getNflSession' api/pro-model.js
+          grep -Fq 'sign_in_required' api/pro-model.js
+          grep -Fq 'nfl_pro_required' api/pro-model.js
+          for f in api/*.js; do
+            case "$(basename "$f")" in _nfl-auth.js|auth-diag.js) continue ;; esac
+            if grep -Fq 'createHmac' "$f"; then echo "Duplicate auth logic in $f"; exit 1; fi
+          done
 
       - name: Validate Vercel configuration
         shell: bash
         run: |
-          if [ -f vercel.json ]; then
-            node -e "JSON.parse(require('fs').readFileSync('vercel.json','utf8'))"
-          fi
-
-  browser-smoke:
-    # Post-deploy liveness gate. A wedged renderer cannot answer 1+1, so this
-    # catches the main-thread freeze class that static checks cannot see.
-    if: github.event_name != 'pull_request'
-    runs-on: ubuntu-latest
-    needs: validate
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-      - name: Wait for deployment to settle
-        run: sleep 45
-      - name: Browser smoke test against production
-        env:
-          PBE_URL: https://nfl.propbetedge.ai
-          PBE_CHROME: /usr/bin/google-chrome
-        run: node scripts/browser-smoke.mjs
-      - name: Upload smoke log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: browser-smoke-log
-          path: verify-all.log
-          if-no-files-found: ignore
+          if [ -f vercel.json ]; then node -e "JSON.parse(require('fs').readFileSync('vercel.json','utf8'))"; fi

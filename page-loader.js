@@ -1,77 +1,99 @@
-/* PropBetEdge NFL - full product, route-scoped runtime v51 */
+/* PropBetEdge NFL - ordered page/product upgrade loader v44 recovery */
 (() => {
   'use strict';
-  const VERSION='20260830freezefix1';
+  const VERSION='20260830recovery1';
+  const upgrades=[
+    /* Establish the final homepage authority first. v6 replaces the v5 DOM with
+       .pbehome6; v7 historically registered itself after that without repainting
+       until the next navigation. The loader explicitly invokes v7 after install. */
+    {js:'./team-globals-v1.js'},
+    {css:'./dashboard-v5.css',js:'./dashboard-v5.js'},
+    {css:'./dashboard-v6.css',js:'./dashboard-v6.js'},
+    {css:'./dashboard-v7.css',js:'./dashboard-v7.js'},
+    {css:'./dashboard-v8-enhance.css',js:'./dashboard-v8-enhance.js'},
+    {css:'./nfl-stadium-bg-v3.css',js:'./dashboard-v7-sanitize.js'},
 
-  const MEDIA_CSS=['./nfl-brand-media-v1.css','./nfl-player-media-v2.css','./nfl-player-media-v3.css'];
-  const MEDIA_JS=['./nfl-brand-media-v2.js','./nfl-player-media-v3.js'];
+    /* Current additive product surfaces. Both are event-driven and do not own
+       page-wide mutation observers. */
+    {css:'./pbe-engine-story-v1.css',js:'./pbe-engine-story-v1.js'},
+    {css:'./pbe-prop-engine-v1.css',js:'./pbe-prop-engine-v1.js'},
 
-  /* Global shell + visual identity only. Page-specific market/news/model runtime stays route-scoped. */
-  const GLOBAL={
-    css:[
-      './command-palette-v2.css','./global-polish-v2.css','./sports-shell-v1.css','./sports-shell-v2.css','./sports-shell-v3.css',
-      './world-class-v1.css','./readability-v1.css','./paywall-polish-v1.css','./network-footer-v1.css','./paywall-funnel-v2.css',
-      './stadium-selector-v1.css','./production-polish-v2.css','./scrollbar-clean-v1.css',...MEDIA_CSS
-    ],
-    js:[
-      './team-globals-v1.js','./command-palette-v3.js','./global-polish-v5.js','./sports-shell-v2.js','./sports-shell-auth-state.js',
-      './paywall-polish-v1.js','./network-footer-v1.js','./paywall-funnel-v2.js','./stadium-selector-v1.js','./production-polish-v2.js',...MEDIA_JS
-    ]
-  };
+    {css:'./games-v2.css',js:'./games-v2.js'},
+    {css:'./team-research-v3.css',js:'./team-research-v3.js'},
+    {css:'./stats-v2.css',js:'./stats-v2.js'},
+    {css:'./standings-v2.css',js:'./standings-v2.js'},
+    {css:'./season-archive-v2.css',js:'./season-archive-v2.js'},
+    {css:'./hof-v2.css',js:'./hof-v2.js'},
+    {css:'./records-v2.css',js:'./records-v2.js'},
+    {css:'./super-bowls-v2.css',js:'./super-bowls-v2.js'},
+    {css:'./draft-review-v2.css',js:'./draft-review-v2.js'},
+    {css:'./newsroom-v2.css',js:'./newsroom-v2.js'},
+    {css:'./news-intelligence-v2.css',js:'./news-intelligence-v2.js'},
+    {css:'./pbecast-v4.css',js:'./pbecast-v4.js'},
+    {css:'./pbecast-v5.css',js:'./pbecast-v5.js'},
+    {js:'./pbecast-v5-renderer.js'},
+    {css:'./propchain-v2.css',js:'./propchain-v2.js'},
+    {css:'./matchups-v2.css',js:'./matchups-v2.js'},
+    {css:'./simulator-v2.css',js:'./simulator-v2.js'},
+    {css:'./simulator-v3-enhance.css',js:'./simulator-v3-enhance.js'},
+    {css:'./sgp-lab-v2.css',js:'./sgp-lab-v2.js'},
+    {css:'./usage-v2.css',js:'./usage-v2.js'},
 
-  const ROUTES={
-    home:{
-      css:['./dashboard-v5.css','./dashboard-v6.css','./dashboard-v7.css','./dashboard-v8-enhance.css','./nfl-stadium-bg-v3.css','./pbe-engine-story-v1.css','./pbe-prop-engine-v1.css'],
-      js:['./dashboard-v5.js','./dashboard-v6.js','./dashboard-v7.js','./dashboard-v8-enhance.js','./dashboard-v7-sanitize.js','./pbe-engine-story-v1.js','./pbe-prop-engine-v1.js']
-    },
-    games:{
-      css:['./games-v2.css','./games-worldclass-v3.css','./games-command-v4.css','./games-intel-v5.css'],
-      js:['./games-v2.js','./games-command-v4.js','./games-intel-v5.js']
-    },
-    teams:{css:['./team-research-v3.css',...MEDIA_CSS],js:['./team-research-v3.js',...MEDIA_JS]},
-    stats:{css:['./stats-v2.css',...MEDIA_CSS],js:['./stats-v2.js',...MEDIA_JS]},
-    standings:{css:['./standings-v2.css'],js:['./standings-v2.js']},
-    seasonhistory:{css:['./season-archive-v2.css'],js:['./season-archive-v2.js']},
-    hof:{css:['./hof-v2.css',...MEDIA_CSS],js:['./hof-v2.js',...MEDIA_JS]},
-    records:{css:['./records-v2.css'],js:['./records-v2.js']},
-    sb:{css:['./super-bowls-v2.css'],js:['./super-bowls-v2.js']},
-    prospects:{css:['./draft-review-v2.css',...MEDIA_CSS],js:['./draft-review-v2.js',...MEDIA_JS]},
+    /* Market Watch v3 owns runtime behavior, but its terminal stylesheet is an
+       override layer on top of the structural v2 stylesheet. Keep v2 CSS only;
+       never load the v2 JS authority alongside v3. */
+    {css:'./market-watch-v2.css'},
+    {css:'./market-watch-v3.css',js:'./market-watch-v3.js'},
 
-    news:{css:['./newsroom-v2.css',...MEDIA_CSS],js:['./newsroom-v2.js',...MEDIA_JS]},
-    newsintel:{css:['./newsroom-v2.css','./news-intelligence-v2.css',...MEDIA_CSS],js:['./newsroom-v2.js','./news-intelligence-v2.js',...MEDIA_JS]},
-    injuries:{css:['./newsroom-v2.css',...MEDIA_CSS],js:['./newsroom-v2.js',...MEDIA_JS]},
-    trades:{css:['./newsroom-v2.css',...MEDIA_CSS],js:['./newsroom-v2.js',...MEDIA_JS]},
+    {css:'./player-research-v2.css',js:'./player-research-v2.js'},
+    {css:'./model-lab-v2-enhance.css',js:'./model-lab-v2-enhance.js'},
+    {css:'./command-palette-v2.css',js:'./command-palette-v3.js'},
+    {css:'./event-selector-v2.css',js:'./event-selector-v2.js'},
+    {css:'./global-polish-v2.css',js:'./global-polish-v5.js'},
+    {css:'./sports-shell-v1.css',js:'./sports-shell-v2.js'},
+    {js:'./sports-shell-auth-state.js'},
+    {css:'./sports-shell-v2.css'},
+    {css:'./world-class-v1.css'},
+    {css:'./readability-v1.css'},
+    {css:'./paywall-polish-v1.css',js:'./paywall-polish-v1.js'},
 
-    propchain:{css:['./propchain-v2.css',...MEDIA_CSS],js:['./propchain-v2.js',...MEDIA_JS]},
-    matchups:{css:['./matchups-v2.css',...MEDIA_CSS],js:['./event-selector-v2.js','./matchups-v2.js',...MEDIA_JS]},
-    simulator:{css:['./simulator-v2.css','./simulator-v3-enhance.css',...MEDIA_CSS],js:['./event-selector-v2.js','./simulator-v2.js','./simulator-v3-enhance.js',...MEDIA_JS]},
-    sgplab:{css:['./sgp-lab-v2.css',...MEDIA_CSS],js:['./event-selector-v2.js','./sgp-lab-v2.js',...MEDIA_JS]},
-    usage:{css:['./usage-v2.css',...MEDIA_CSS],js:['./event-selector-v2.js','./usage-v2.js',...MEDIA_JS]},
-    marketwatch:{css:['./market-watch-v2.css','./market-watch-v3.css',...MEDIA_CSS],js:['./event-selector-v2.js','./market-watch-v3.js',...MEDIA_JS]},
-    player:{css:['./player-research-v2.css',...MEDIA_CSS],js:['./player-research-v2.js',...MEDIA_JS]},
-    players:{css:['./player-research-v2.css',...MEDIA_CSS],js:['./player-research-v2.js',...MEDIA_JS]},
+    /* Keep the known-good global media cascade. */
+    {css:'./nfl-brand-media-v1.css'},
+    {css:'./nfl-player-media-v2.css',js:'./nfl-brand-media-v2.js'},
+    {css:'./nfl-player-media-v3.css',js:'./nfl-player-media-v3.js'},
+    {css:'./sports-shell-v3.css'},
 
-    picks:{
-      css:['./model-lab-v2-enhance.css',...MEDIA_CSS],
-      js:['./event-selector-v2.js','./model-lab-v2-enhance.js',...MEDIA_JS]
-    },
-    propboard:{
-      css:['./prop-board-v4.css','./prop-board-responsive-v5.css',...MEDIA_CSS],
-      js:['./event-selector-v2.js','./prop-board-v4.js',...MEDIA_JS]
-    },
-    pbecast:{
-      css:['./pbecast-v6.css','./pbecast-v7-enhance.css',...MEDIA_CSS],
-      js:['./event-selector-v2.js','./pbecast-v6.js','./pbecast-v7-enhance.js',...MEDIA_JS]
-    },
-    pbepicks:{
-      css:['./pbe-picks-v2.css','./pbe-validation-v1.css','./pbe-engine-story-v1.css','./pbe-prop-engine-v1.css',...MEDIA_CSS],
-      js:['./pbe-picks-v2.js','./pbe-validation-v1.js','./pbe-engine-story-v1.js','./pbe-prop-engine-v1.js',...MEDIA_JS]
-    },
-    trackrecord:{
-      css:['./pbe-picks-v2.css','./pbe-validation-v1.css','./pbe-engine-story-v1.css','./pbe-prop-engine-v1.css',...MEDIA_CSS],
-      js:['./pbe-picks-v2.js','./pbe-validation-v1.js','./pbe-engine-story-v1.js','./pbe-prop-engine-v1.js',...MEDIA_JS]
-    }
-  };
+    /* Global network identity + subscriber controls. */
+    {css:'./network-footer-v1.css',js:'./network-footer-v1.js'},
+
+    /* Production authorities. */
+    {css:'./paywall-funnel-v2.css',js:'./paywall-funnel-v2.js'},
+    {css:'./pbecast-v6.css',js:'./pbecast-v6.js'},
+    {css:'./pbecast-v7-enhance.css',js:'./pbecast-v7-enhance.js'},
+    {css:'./stadium-selector-v1.css',js:'./stadium-selector-v1.js'},
+    {css:'./production-polish-v2.css',js:'./production-polish-v2.js'},
+
+    /* Games is a primary NFL conversion surface. v5 adds edge-cached market
+       readiness / variance / environment context without changing schedule truth. */
+    {css:'./games-worldclass-v3.css'},
+    {css:'./games-command-v4.css',js:'./games-command-v4.js'},
+    {css:'./games-intel-v5.css',js:'./games-intel-v5.js'},
+
+    /* Prop Board: v3 remains data authority, v4 owns the signal workflow, and
+       responsive v5 removes the old 1220px table assumption instead of hiding overflow. */
+    {css:'./prop-board-v4.css',js:'./prop-board-v4.js'},
+    {css:'./prop-board-responsive-v5.css'},
+
+    /* PBE Picks + Verified Track Record v2 is the sole UI authority. */
+    {css:'./pbe-picks-v2.css',js:'./pbe-picks-v2.js'},
+
+    /* Gated validation telemetry is aggregate/public-safe. */
+    {css:'./pbe-validation-v1.css',js:'./pbe-validation-v1.js'},
+
+    /* Last by design: scrollbar policy may style true scrollers, but it must
+       never conceal overflow or substitute for responsive component layout. */
+    {css:'./scrollbar-clean-v1.css'}
+  ];
 
   const PRO_MODULES=[
     {selector:'.pbe22-watch',global:'PBEMarketWatch'},
@@ -80,134 +102,67 @@
     {selector:'.pbe4-model-lab',global:'PBEModelLab'}
   ];
 
-  const cssLoaded=new Set();
-  const scriptPromises=new Map();
-  const routePromises=new Map();
-  const routeReady=new Set();
   let proSyncRun=0;
 
-  window.PBELoaderState={version:VERSION,phase:'starting',currentRoute:null,lastError:null,loadedScripts:[],loadedCss:[],readyRoutes:[]};
-
-  function normalizedRoute(route){
-    const raw=String(route||'home').replace(/^#/,'').trim().toLowerCase();
-    if(raw==='season-history'||raw==='season_history')return'seasonhistory';
-    if(raw==='superbowls'||raw==='super_bowls')return'sb';
-    return raw||'home';
-  }
-  function currentRoute(){return normalizedRoute(String(location.hash||'').replace(/^#/,'')||window.App?.current||'home')}
-
   function addCss(href){
-    if(!href||cssLoaded.has(href)||document.querySelector(`link[data-pbe-route-css="${href}"]`))return;
-    cssLoaded.add(href);
+    if(document.querySelector(`link[data-pbe-upgrade="${href}"]`))return;
     const link=document.createElement('link');
     link.rel='stylesheet';
     link.href=`${href}?v=${VERSION}`;
-    link.dataset.pbeRouteCss=href;
-    link.onload=()=>window.PBELoaderState.loadedCss.push(href);
+    link.dataset.pbeUpgrade=href;
     document.head.appendChild(link);
   }
 
   function addScript(src){
-    if(!src)return Promise.resolve();
-    if(scriptPromises.has(src))return scriptPromises.get(src);
-    if(document.querySelector(`script[data-pbe-route-js="${src}"]`))return Promise.resolve();
-    const promise=new Promise((resolve,reject)=>{
+    return new Promise(resolve=>{
+      if(!src)return resolve();
+      if(document.querySelector(`script[data-pbe-upgrade="${src}"]`))return resolve();
       const script=document.createElement('script');
-      const timer=setTimeout(()=>{script.remove();reject(new Error(`module_timeout:${src}`))},12000);
       script.src=`${src}?v=${VERSION}`;
       script.async=false;
-      script.dataset.pbeRouteJs=src;
-      script.onload=()=>{clearTimeout(timer);window.PBELoaderState.loadedScripts.push(src);resolve()};
-      script.onerror=()=>{clearTimeout(timer);reject(new Error(`module_load_failed:${src}`))};
+      script.dataset.pbeUpgrade=src;
+      script.onload=resolve;
+      script.onerror=()=>{console.error('PBE product module failed to load',src);resolve()};
       document.body.appendChild(script);
     });
-    scriptPromises.set(src,promise);
-    return promise;
   }
-  async function loadSequence(files){for(const file of files||[])await addScript(file)}
 
   function forceVisibleProRender(){
     const runId=++proSyncRun;let attempt=0;
     const run=()=>{
-      if(runId!==proSyncRun)return;
-      attempt+=1;let waiting=false;
+      if(runId!==proSyncRun)return;attempt+=1;let waiting=false;
       document.documentElement.dataset.pbePro=window.PBEPro?.state?.pro===true?'1':'0';
       for(const spec of PRO_MODULES){
         if(!document.querySelector(spec.selector))continue;
-        const module=window[spec.global];
-        if(!module||typeof module.render!=='function')continue;
+        const module=window[spec.global];if(!module||typeof module.render!=='function')continue;
         if(module.state?.loading){waiting=true;continue}
         try{module.render()}catch(error){console.error('[pbe-loader-pro-sync]',spec.global,error?.message||error)}
       }
-      if(waiting&&attempt<20)setTimeout(run,150);
+      if(waiting&&attempt<60)setTimeout(run,100);
     };
     queueMicrotask(run);
   }
 
-  async function ensureRoute(route){
-    const key=normalizedRoute(route);
-    if(routeReady.has(key))return true;
-    if(routePromises.has(key))return routePromises.get(key);
-    const assets=ROUTES[key]||{css:[],js:[]};
-    const promise=(async()=>{
-      window.PBELoaderState.phase='route';
-      window.PBELoaderState.currentRoute=key;
-      (assets.css||[]).forEach(addCss);
-      await loadSequence(assets.js||[]);
-      routeReady.add(key);
-      window.PBELoaderState.readyRoutes=[...routeReady];
-      return true;
-    })().catch(error=>{window.PBELoaderState.lastError=String(error?.message||error);routePromises.delete(key);throw error});
-    routePromises.set(key,promise);
-    return promise;
-  }
-
-  function loadRouteAndRender(route){
-    const key=normalizedRoute(route);
-    const wasReady=routeReady.has(key);
-    return ensureRoute(key).then(()=>{
-      if(!wasReady&&window.App?.current===key)window.App.nav(key,{history:false});
-      forceVisibleProRender();
-      return true;
-    }).catch(error=>{
-      console.error('[pbe-route-load]',key,error);
-      window.PBEAppCore?.renderFailure?.(key,'Workspace failed to load.');
-      return false;
-    });
-  }
-
-  function installRouteLoading(){
-    window.addEventListener('pbe:route-missing',event=>loadRouteAndRender(event?.detail?.route||window.App?.current||'home'));
-    window.addEventListener('pbe:route-changed',event=>{
-      const route=normalizedRoute(event?.detail?.route||window.App?.current||'home');
-      if(!routeReady.has(route))loadRouteAndRender(route); else forceVisibleProRender();
-    });
-  }
-
   function installProSync(){
     window.addEventListener('pbe:pro-state',forceVisibleProRender);
-    setTimeout(forceVisibleProRender,0);
-    setTimeout(forceVisibleProRender,400);
+    window.addEventListener('pbe:route-changed',forceVisibleProRender);
+    setTimeout(forceVisibleProRender,0);setTimeout(forceVisibleProRender,250);setTimeout(forceVisibleProRender,1000);
   }
 
-  async function boot(){
-    installRouteLoading();
-    (GLOBAL.css||[]).forEach(addCss);
-    try{
-      window.PBELoaderState.phase='global';
-      await loadSequence(GLOBAL.js||[]);
-      await ensureRoute(currentRoute());
-      installProSync();
-      window.PBELoaderState.phase='ready';
-      window.dispatchEvent(new CustomEvent('pbe:upgrades-ready',{detail:{version:VERSION}}));
-      forceVisibleProRender();
-    }catch(error){
-      window.PBELoaderState.phase='failed';
-      window.PBELoaderState.lastError=String(error?.message||error);
-      console.error('[pbe-loader-fatal]',error);
-      window.PBEAppCore?.renderFailure?.(currentRoute(),'Core workspace failed to load.');
+  async function load(){
+    upgrades.forEach(item=>{if(item.css)addCss(item.css)});
+    for(const item of upgrades){
+      await addScript(item.js);
+      /* v7 is authoritative, but its legacy install check did not include the
+         transient .pbehome6 DOM. Force the handoff immediately on initial home. */
+      if(item.js==='./dashboard-v7.js'&&window.App?.current==='home'&&typeof window.PBEDashboardV7?.load==='function'){
+        await window.PBEDashboardV7.load();
+      }
     }
+    installProSync();
+    window.dispatchEvent(new CustomEvent('pbe:upgrades-ready',{detail:{version:VERSION}}));
+    forceVisibleProRender();
   }
 
-  boot();
+  load();
 })();
