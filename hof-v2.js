@@ -3,7 +3,9 @@
   'use strict';
   const state={search:'',pos:'all',decade:'all',sort:'newest'};
   const esc=v=>String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-  const members=()=>Array.isArray(window.HOF_MEMBERS)?HOF_MEMBERS:[];
+  /* archive/hof.js is a classic script with a top-level const HOF_MEMBERS. That
+     binding is available to later classic scripts but is not a window property. */
+  const members=()=>typeof HOF_MEMBERS!=='undefined'&&Array.isArray(HOF_MEMBERS)?HOF_MEMBERS:(Array.isArray(window.HOF_MEMBERS)?window.HOF_MEMBERS:[]);
   function positions(){return [...new Set(members().map(m=>m.pos).filter(Boolean))].sort();}
   function decades(){return [...new Set(members().map(m=>Math.floor(Number(m.inducted)/10)*10).filter(Number.isFinite))].sort((a,b)=>b-a);}
   function latestYear(){const years=members().map(m=>Number(m.inducted)).filter(Number.isFinite);return years.length?Math.max(...years):null;}
