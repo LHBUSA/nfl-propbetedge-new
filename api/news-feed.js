@@ -26,6 +26,25 @@ function arr(value){
   return [value].filter(Boolean);
 }
 
+function firstText(...values){
+  for(const value of values){
+    if(value===null||value===undefined)continue;
+    if(typeof value==='string'||typeof value==='number'){
+      const text=String(value).trim();
+      if(text)return text;
+      continue;
+    }
+    if(typeof value==='object'){
+      const nested=value.display_name ?? value.displayName ?? value.name ?? value.text ?? value.description ?? value.detail ?? value.value ?? value.label;
+      if(nested!==null&&nested!==undefined){
+        const text=String(nested).trim();
+        if(text)return text;
+      }
+    }
+  }
+  return null;
+}
+
 function proxiedImage(raw){
   const value=String(raw||'').trim();
   if(!value)return null;
@@ -89,6 +108,35 @@ function marketImpact({topic,score,teams,players,props,isBreaking}){
   };
 }
 
+function structuredAvailability(row,take){
+  const availability=row?.availability||take?.availability||{};
+  const injury=firstText(
+    row?.injury_type,row?.injuryType,row?.injury_detail,row?.injuryDetail,row?.injury,
+    availability?.injury,availability?.injury_type,availability?.injuryType,
+    take?.injury_type,take?.injuryType,take?.injury
+  );
+  const status=firstText(
+    row?.injury_status,row?.injuryStatus,row?.availability_status,row?.availabilityStatus,
+    row?.injury_designation,row?.injuryDesignation,row?.designation,
+    availability?.status,availability?.designation,availability?.injury_status,
+    take?.injury_status,take?.availability_status,take?.designation
+  );
+  const expectedReturn=firstText(
+    row?.expected_return,row?.expectedReturn,row?.return_timeline,row?.returnTimeline,
+    row?.return_window,row?.returnWindow,row?.out_until,row?.outUntil,
+    availability?.expected_return,availability?.expectedReturn,availability?.return_timeline,
+    availability?.returnTimeline,availability?.return_window,availability?.out_until,
+    take?.expected_return,take?.return_timeline,take?.return_window,take?.out_until
+  );
+  if(!injury&&!status&&!expectedReturn)return null;
+  return {
+    injury:injury||null,
+    status:status||null,
+    expected_return:expectedReturn||null,
+    semantics:'REPORTED_AVAILABILITY'
+  };
+}
+
 function article(row){
   const take=row?.take || row?.analysis || row?.ai_take || {};
   const teams=arr(row?.take_teams ?? row?.affected_teams ?? row?.teams ?? take?.teams);
@@ -102,6 +150,7 @@ function article(row){
   const rawImage=row?.image_url ?? row?.imageUrl ?? row?.featured_image ?? row?.featuredImage ?? row?.thumbnail_url ?? row?.thumbnail ?? row?.image?.url ?? row?.image?.href ?? take?.image_url ?? null;
   const impactScore=row?.prop_impact_score ?? row?.impact_score ?? row?.take_impact ?? take?.impact_score ?? null;
   const isBreaking=Boolean(row?.is_breaking ?? row?.breaking ?? false);
+  const availability=structuredAvailability(row,take);
   return {
     id: row?.id ?? row?.news_id ?? slug ?? url ?? `${title}|${row?.published_at||''}`,
     title,
@@ -120,6 +169,7 @@ function article(row){
     teams,
     players,
     props,
+    availability,
     impact_score: impactScore,
     market_impact: marketImpact({topic,score:impactScore,teams,players,props,isBreaking}),
     relevance_score: row?.relevance_score ?? row?.homepage_score ?? row?.recency_score ?? null,
@@ -129,6 +179,7 @@ function article(row){
       upstream: 'propbet-news-api',
       canonical_host: url ? 'propbetedge.ai' : null,
       image_transport: rawImage ? 'propbet-img-proxy' : null,
+      availability_transport: availability ? 'upstream_structured' : null,
       sport: row?.sport ?? 'nfl'
     }
   };
@@ -170,6 +221,7 @@ export default async function handler(req,res){
         count:rows.length,
         image_count:rows.filter(row=>row.image_url).length,
         canonical_count:rows.filter(row=>row.url&&/^https:\/\/propbetedge\.ai\/news\/nfl\//i.test(row.url)).length,
+        availability_count:rows.filter(row=>row.availability).length,
         articles:rows,
         fetched_at:new Date().toISOString()
       });
