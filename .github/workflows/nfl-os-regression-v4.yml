@@ -95,12 +95,18 @@ jobs:
           set -euo pipefail
           required=(
             dashboard-v5.js
+            dashboard-v6.js
+            dashboard-v7.js
+            dashboard-v8-enhance.js
             sports-shell-v2.js
             pbecast-v6.js
             pbecast-v7-enhance.js
             games-v2.js
+            games-command-v4.js
+            games-intel-v5.js
             team-research-v3.js
             prop-board-v3.js
+            prop-board-v4.js
             market-watch-v3.js
             matchups-v2.js
             model-lab.js
@@ -113,6 +119,10 @@ jobs:
             player-research-v2.js
             command-palette-v3.js
             event-selector-v2.js
+            pbe-picks-v2.js
+            pbe-validation-v1.js
+            pbe-engine-story-v1.js
+            pbe-prop-engine-v1.js
           )
           for file in "${required[@]}"; do
             test -s "$file" || { echo "Missing product module: $file"; exit 1; }
@@ -125,9 +135,9 @@ jobs:
           test -s sports-shell-v1.css
           test -s pbecast-v6.css
 
-          grep -Fq "js:'./pbecast-v6.js'" page-loader.js
-          grep -Fq "js:'./pbecast-v7-enhance.js'" page-loader.js
-          if grep -Eq "js:'\./pbecast-v(4|5)\.js'|js:'\./pbecast-v5-renderer\.js'" page-loader.js; then
+          grep -Fq "'./pbecast-v6.js'" page-loader.js
+          grep -Fq "'./pbecast-v7-enhance.js'" page-loader.js
+          if grep -Eq "'\./pbecast-v(4|5)\.js'|'\./pbecast-v5-renderer\.js'" page-loader.js; then
             echo 'Legacy PBEcast v4/v5 runtime must remain inactive under v6 authority.'
             exit 1
           fi
@@ -141,10 +151,24 @@ jobs:
 
           test -s market-watch-v2.css
           grep -Fq 'market-watch-v2.css' page-loader.js
-          if grep -Fq "js:'./market-watch-v2.js'" page-loader.js; then
+          if grep -Fq "'./market-watch-v2.js'" page-loader.js; then
             echo 'Market Watch v2 JS must remain inactive under the v3 authority.'
             exit 1
           fi
+
+      - name: Require route-scoped runtime boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq "const VERSION='20260830fullroute1'" page-loader.js
+          grep -Fq 'const ROUTES={' page-loader.js
+          grep -Fq 'const GLOBAL={' page-loader.js
+          grep -Fq "window.addEventListener('pbe:route-missing'" page-loader.js
+          grep -Fq "window.addEventListener('pbe:route-changed'" page-loader.js
+          grep -Fq "home:{" page-loader.js
+          grep -Fq "'./pbe-engine-story-v1.js'" page-loader.js
+          grep -Fq "'./pbe-prop-engine-v1.js'" page-loader.js
+          echo 'Full route-scoped product runtime OK'
 
       - name: Forbid page-wide mutation observers in active client modules
         shell: bash
@@ -274,13 +298,16 @@ jobs:
           grep -Fq "kind:'SCHEDULE'" games-v2.js
           echo 'games-v2 feed-semantics contract OK'
 
-      - name: Require deep routes to recover after ordered upgrades
+      - name: Require missing routes to recover on demand
         shell: bash
         run: |
           set -euo pipefail
+          grep -Fq "window.dispatchEvent(new CustomEvent('pbe:route-missing'" app-core-v3.js
+          grep -Fq "window.addEventListener('pbe:route-missing'" page-loader.js
+          grep -Fq 'ensureRoute' page-loader.js
+          grep -Fq 'loadRouteAndRender' page-loader.js
           grep -Fq "window.addEventListener('pbe:upgrades-ready'" app-core-v3.js
-          grep -Fq "App.nav(routeFromLocation(),{ history:false })" app-core-v3.js
-          grep -Fq "const VERSION='20260830freezefix2'" page-loader.js
+          echo 'Deep-route on-demand recovery OK'
 
       - name: Validate Vercel configuration
         shell: bash
