@@ -1,7 +1,7 @@
 /* PropBetEdge NFL - ordered page/product upgrade loader v45 recovery */
 (() => {
   'use strict';
-  const VERSION='20260830recovery9';
+  const VERSION='20260831injurydepth1';
   const upgrades=[
     /* Establish the final homepage authority first. v6 replaces the v5 DOM with
        .pbehome6; v7 historically registered itself after that without repainting
@@ -74,7 +74,8 @@
     {css:'./production-polish-v2.css',js:'./production-polish-v2.js'},
 
     /* Injury Editorial terminal authority. It converts the factual newsroom
-       injury feed into a canonical PropBetEdge article desk with story art. */
+       injury feed into a canonical PropBetEdge article desk with story art and
+       source-disciplined player availability / reported return windows. */
     {css:'./injury-intel-v2.css',js:'./injury-intel-v2.js'},
 
     /* Games is a primary NFL conversion surface. v5 adds edge-cached market
