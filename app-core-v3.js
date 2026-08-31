@@ -1,4 +1,4 @@
-/* PropBetEdge NFL — standalone app core v3.1 */
+/* PropBetEdge NFL — standalone app core v3.2 */
 (() => {
   'use strict';
 
@@ -26,10 +26,8 @@
       document.querySelectorAll('.sidebar-nav .nav-item').forEach(el => el.classList.remove('active'));
       document.getElementById(`nav-${view}`)?.classList.add('active');
 
-      const sidebar = document.getElementById('sidebar');
-      const overlay = document.getElementById('mobile-overlay');
-      sidebar?.classList.remove('open');
-      overlay?.classList.remove('open');
+      document.getElementById('sidebar')?.classList.remove('open');
+      document.getElementById('mobile-overlay')?.classList.remove('open');
 
       try { if (typeof window.pbeMbnActive === 'function') window.pbeMbnActive(view); } catch (_) {}
 
@@ -48,11 +46,13 @@
           return true;
         } catch (error) {
           console.error('PBE route render failed',view,error);
+          renderFailure(view,'Workspace render failed.');
+          return false;
         }
       }
 
-      const vc = document.getElementById('view-container');
-      if (vc) vc.innerHTML = `<div class="view-loading"><div><div class="loading-mark"></div><div class="loading-text">Loading ${view.replace(/-/g,' ')}…</div></div></div>`;
+      renderLoading(view);
+      window.dispatchEvent(new CustomEvent('pbe:route-missing',{ detail:{ route:view } }));
       return false;
     },
 
@@ -64,8 +64,7 @@
     boot() {
       if (this.booted) return;
       this.booted = true;
-      const route = routeFromLocation();
-      setTimeout(() => this.nav(route,{ history:false }),0);
+      setTimeout(() => this.nav(routeFromLocation(),{ history:false }),0);
     }
   };
 
@@ -74,22 +73,28 @@
     return App.normalize(hash || App.current || 'home');
   }
 
+  function renderLoading(view){
+    const vc=document.getElementById('view-container');
+    if(!vc)return;
+    vc.innerHTML=`<div class="view-loading" data-pbe-loading-route="${escapeHtml(view)}"><div><div class="loading-mark"></div><div class="loading-text">Loading ${escapeHtml(view.replace(/-/g,' '))}…</div></div></div>`;
+  }
+
+  function renderFailure(view,message){
+    const vc=document.getElementById('view-container');
+    if(!vc)return;
+    vc.innerHTML=`<div class="view-loading pbe-load-failed"><div><div class="loading-text">${escapeHtml(message)}</div><button type="button" onclick="App.nav('${escapeJs(view)}',{history:false})">Retry workspace</button></div></div>`;
+  }
+
+  function escapeHtml(value){return String(value??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
+  function escapeJs(value){return String(value??'').replace(/\\/g,'\\\\').replace(/'/g,"\\'")}
+
   window.App = App;
-
-  // Compatibility stub for upgrade modules that expect the historical global.
   window.HomeView = window.HomeView || { render() {} };
+  window.PBEAppCore = { routeFromLocation, renderFailure };
 
-  /* A deep-link can boot before page-loader has registered that route's renderer.
-   * When the ordered upgrade loader finishes, ALWAYS render the requested route
-   * again. Previously App.boot() returned early once booted, leaving the user on
-   * a permanent Loading... shell after a hard refresh of #marketwatch, #pbecast,
-   * #pbepicks and other late-loaded routes. */
   window.addEventListener('pbe:upgrades-ready',() => {
-    if (!App.booted) {
-      App.boot();
-      return;
-    }
-    App.nav(routeFromLocation(),{ history:false });
+    if (!App.booted) App.boot();
+    else App.nav(routeFromLocation(),{ history:false });
   },{ once:true });
 
   document.addEventListener('DOMContentLoaded',() => {
