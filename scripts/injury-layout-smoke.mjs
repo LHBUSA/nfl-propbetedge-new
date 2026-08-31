@@ -26,7 +26,7 @@ const mime=p=>({'.js':'application/javascript; charset=utf-8','.mjs':'applicatio
 function localFile(url){let u;try{u=new URL(url)}catch{return null}if(u.origin!==ORIGIN||u.pathname.startsWith('/api/'))return null;let rel=u.pathname==='/'?'index.html':decodeURIComponent(u.pathname.slice(1));if(!rel||rel.includes('..'))return null;const ext=extname(rel);if(!['.js','.mjs','.css','.html','.webmanifest','.json'].includes(ext))return null;const fp=join(REPO,rel);try{if(!existsSync(fp)||!statSync(fp).isFile())return null;return{body:readFileSync(fp),type:mime(rel)}}catch{return null}}
 ws.onmessage=ev=>{const m=JSON.parse(ev.data);if(m.id&&pending.has(m.id)){const p=pending.get(m.id);pending.delete(m.id);m.error?p.reject(new Error(m.error.message)):p.resolve(m.result);return}if(m.method==='Fetch.requestPaused'){const local=localFile(m.params.request.url);if(local)send('Fetch.fulfillRequest',{requestId:m.params.requestId,responseCode:200,responseHeaders:[{name:'content-type',value:local.type},{name:'cache-control',value:'no-store'}],body:local.body.toString('base64')}).catch(()=>{});else send('Fetch.continueRequest',{requestId:m.params.requestId}).catch(()=>{})}};
 await send('Runtime.enable');await send('Page.enable');await send('Fetch.enable',{patterns:[{urlPattern:`${ORIGIN}/*`,requestStage:'Request'}]});
-const probe=async(expr,ms=7000)=>{try{const r=await Promise.race([send('Runtime.evaluate',{expression:expr,returnByValue:true,awaitPromise:true}),sleep(ms).then(()=>{throw new Error('WEDGED')})]);return r.result?.value}catch(e){return`<${e.message}>`}};
+const probe=async(expr,ms=7000)=>{try{const r=await Promise.race([send('Runtime.evaluate',{expression:expr,returnByValue:true,awaitPromise:true}),sleep(ms).then(()=>{throw new Error('WEDGED')})]);if(r.exceptionDetails)return`<EVAL ${r.exceptionDetails.text||'ERROR'}>`;return r.result?.value}catch(e){return`<${e.message}>`}};
 async function shot(name){const r=await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});writeFileSync(name,Buffer.from(r.data,'base64'));out(`screenshot ${name}`)}
 
 await send('Page.navigate',{url:`${TARGET}/?injury-editorial=${Date.now()}`});
@@ -43,8 +43,9 @@ let desktop=await probe(`(()=>{
   const lead=root.querySelector('.pbe13-editorial-lead');
   const leadImg=lead?.querySelector('.pbe13-editorial-lead-media img');
   const cards=[...root.querySelectorAll('.pbe13-editorial-card')];
-  const links=[...root.querySelectorAll('a[href]')].map(a=>a.href).filter(h=>/propbetedge\\.ai\\/news\\/nfl\//i.test(h));
-  const badLinks=[...root.querySelectorAll('.pbe13-editorial-lead a[href],.pbe13-editorial-card[href]')].map(a=>a.href).filter(h=>!/^https:\\/\\/propbetedge\\.ai\\/news\\/nfl\//i.test(h));
+  const isPbeArticle=href=>{try{const u=new URL(href);return u.hostname==='propbetedge.ai'&&u.pathname.startsWith('/news/nfl/')}catch{return false}};
+  const links=[...root.querySelectorAll('a[href]')].map(a=>a.href).filter(isPbeArticle);
+  const badLinks=[...root.querySelectorAll('.pbe13-editorial-lead a[href],.pbe13-editorial-card[href]')].map(a=>a.href).filter(h=>!isPbeArticle(h));
   const imgs=[...root.querySelectorAll('.pbe13-editorial-lead img,.pbe13-editorial-card img')];
   const loaded=imgs.filter(i=>i.complete&&i.naturalWidth>0);
   const broken=imgs.filter(i=>i.complete&&!i.naturalWidth);
@@ -68,7 +69,7 @@ let desktop=await probe(`(()=>{
   };
 })()`);
 out(`desktop ${JSON.stringify(desktop)}`);
-if(!desktop||desktop.root!==true||desktop.heroHeight>255||desktop.lead!==true||desktop.leadImage!==true||desktop.leadMediaWidth<500||desktop.cards<5||desktop.articleLinks<6||desktop.badLinks!==0||desktop.images<6||desktop.loadedImages<5||desktop.broken>0||desktop.telemetryNodes!==0||desktop.impactText!==false||desktop.editorialText!==true||desktop.text<1200)pass=false;
+if(!desktop||typeof desktop!=='object'||desktop.root!==true||desktop.heroHeight>255||desktop.lead!==true||desktop.leadImage!==true||desktop.leadMediaWidth<500||desktop.cards<5||desktop.articleLinks<6||desktop.badLinks!==0||desktop.images<6||desktop.loadedImages<5||desktop.broken>0||desktop.telemetryNodes!==0||desktop.impactText!==false||desktop.editorialText!==true||desktop.text<1200)pass=false;
 await shot('injury-editorial-desktop.png');
 
 await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
@@ -88,7 +89,7 @@ const mobile=await probe(`(()=>{
   };
 })()`);
 out(`mobile ${JSON.stringify(mobile)}`);
-if(!mobile||mobile.root!==true||mobile.route!=='injuries'||mobile.heroHeight>330||mobile.leadWidth>390||mobile.leadImgWidth>390||mobile.overflow>2)pass=false;
+if(!mobile||typeof mobile!=='object'||mobile.root!==true||mobile.route!=='injuries'||mobile.heroHeight>330||mobile.leadWidth>390||mobile.leadImgWidth>390||mobile.overflow>2)pass=false;
 await shot('injury-editorial-mobile.png');
 
 out(`RESULT ${pass?'PASS':'FAIL'}`);
