@@ -72,6 +72,8 @@ const text=await probe(`(document.querySelector('#view-container')?.textContent|
 const features=[['.pbehome7','Dashboard v7'],['#pbe8-core-market','Dashboard v8 market'],['.pbe8-news-filters','Dashboard v8 filters'],['.pbes-scorebar,.pbes-shell','Sports shell'],['#pbe-network-footer','Network footer'],['.pbe-engine-story','Engine Story'],['#pbe-prop-engine-home,.pbe-prop-engine','Player Prop Engine']];
 for(const [sel,label] of features){const v=await probe(`!!document.querySelector(${JSON.stringify(sel)})`);out(`${label.padEnd(24)}: ${v}`);if(v!==true)pass=false}
 let media=await mediaStats();out(`home media             : ${JSON.stringify(media)}`);if(!media||typeof media!=='object'||media.loaded<4||media.team<2||media.broken>0)pass=false;
+const center=await probe(`(()=>{const hero=document.querySelector('.pbe7-hero'),score=document.querySelector('.pbe7-scorebox');if(!hero||!score)return null;const h=hero.getBoundingClientRect(),s=score.getBoundingClientRect(),heroCenter=h.left+h.width/2,scoreCenter=s.left+s.width/2;return{heroCenter:+heroCenter.toFixed(2),scoreCenter:+scoreCenter.toFixed(2),delta:+Math.abs(heroCenter-scoreCenter).toFixed(2),scoreLeft:+s.left.toFixed(2),scoreWidth:+s.width.toFixed(2)}})()`);
+out(`featured center axis   : ${JSON.stringify(center)}`);if(!center||typeof center!=='object'||Number(center.delta)>2)pass=false;
 
 out('\n=== SINGLE NAVIGATION CONTRACT ===');
 const nav=await navStats();out(`sports nav             : ${JSON.stringify(nav)}`);
