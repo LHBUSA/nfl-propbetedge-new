@@ -14,27 +14,21 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Wait for recovery preview
+      - name: Verify production APIs are reachable
         shell: bash
-        env:
-          PBE_URL: https://nfl-propbetedge-new-git-recove-65e3e3-justins-projects-ad4f4bb7.vercel.app/?_vercel_share=aJqInZLvMgrCT4QtfHA22yjlynRi0hUz
         run: |
           set -euo pipefail
-          for i in $(seq 1 30); do
-            if curl -L -fsS "$PBE_URL" | grep -Fq 'PropBetEdge NFL'; then exit 0; fi
-            sleep 4
-          done
-          echo 'Recovery preview did not become reachable as the NFL app'
-          exit 1
-      - name: Browser liveness and route smoke
+          curl -fsS 'https://nfl.propbetedge.ai/api/nfl-live?date=20260830' | grep -Fq '"ok":true'
+      - name: Browser liveness, media, routes and visual captures
         env:
-          PBE_URL: https://nfl-propbetedge-new-git-recove-65e3e3-justins-projects-ad4f4bb7.vercel.app/?_vercel_share=aJqInZLvMgrCT4QtfHA22yjlynRi0hUz
           PBE_CHROME: /usr/bin/google-chrome
-        run: node scripts/browser-smoke.mjs
-      - name: Upload smoke log
+        run: node scripts/recovery-browser-smoke.mjs
+      - name: Upload recovery audit
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: recovery-browser-smoke-log
-          path: verify-all.log
+          name: recovery-browser-audit
+          path: |
+            recovery-smoke.log
+            recovery-*.png
           if-no-files-found: ignore
