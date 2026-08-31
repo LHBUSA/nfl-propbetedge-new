@@ -153,7 +153,7 @@
     </header>
     <div class="pbe13-editorial-note"><strong>Editorial coverage:</strong> reporting and analysis from PropBetEdge articles. This is not the official NFL practice/game injury report, and no status is inferred beyond what the underlying reporting supports.</div>
     ${state?.error?`<div class="pbe13-editorial-empty"><strong>Injury coverage unavailable</strong><span>${esc(state.error)}</span></div>`:leadStory(lead,counts)}
-    ${!state?.error?`<div class="pbe13-feed pbe13-editorial-feed"><section class="pbe13-editorial-latest">
+    ${!state?.error?`<div class="pbe13-feed pbe13-editorial-feed" style="grid-template-columns:1fr"><section class="pbe13-editorial-latest">
       <div class="pbe13-editorial-section-head"><div><span>PROPBETEDGE EDITORIAL</span><h2>Latest injury coverage</h2></div><a href="https://propbetedge.ai/news/nfl" target="_blank" rel="noopener">All NFL news ↗</a></div>
       ${rest.length?`<div class="pbe13-editorial-grid">${rest.map(article=>storyCard(article,counts)).join('')}</div>`:`<div class="pbe13-editorial-empty compact"><span>No additional injury stories are currently available.</span></div>`}
     </section></div>`:''}`;
