@@ -17,7 +17,7 @@
     propchain:['PropChain','Factual news → entity → market → model evidence map'],
     pbecast:['Game Center','Selected event · score state · market · news'],
     newsintel:['News Intelligence','Current NFL newsroom · impact · affected teams and players'],
-    injuries:['Injury Intelligence','Current NEWS developments · official-status boundary'],
+    injuries:['Injury Editorial','PropBetEdge reporting · analysis · latest injury coverage'],
     trades:['Transactions','Current trades · signings · roster movement'],
     teams:['Team Research','Current team news · selected game · 2025 final context'],
     stats:['2025 Stats Archive','Historical final statistical leaders'],
