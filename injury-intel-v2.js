@@ -106,17 +106,97 @@
     return `By ${esc(author)} · ${esc(timeAgo(article?.published_at))}`;
   }
 
+  function playerTerms(player) {
+    const full = clean(player);
+    const surname = full.split(/\s+/).filter(Boolean).at(-1)?.replace(/[^A-Za-z'.-]/g,'') || '';
+    return [full, surname.length >= 4 ? surname : null].filter(Boolean);
+  }
+
+  function termPositions(text, term) {
+    if (!text || !term) return [];
+    const positions = [];
+    const rx = new RegExp(`\\b${escapeRx(term)}(?:'s)?\\b`,'ig');
+    let match;
+    while ((match = rx.exec(text))) {
+      positions.push(match.index);
+      if (!match[0].length) rx.lastIndex += 1;
+    }
+    return positions;
+  }
+
+  function injuryMarkerPositions(text) {
+    const positions = [];
+    const rx = /\b(?:injur(?:y|ies|ed)|injured reserve|reserve[\/-]pup|pup|nfi|acl|mcl|achilles|hamstring|ankle|knee|shoulder|concussion|surgery|rehab(?:bing)?|recovery|sidelined|questionable|doubtful|inactive|out through|out for|will not play|won't play|miss(?:es|ing)?|back at practice|return(?:s|ed)? to practice|activated)\b/ig;
+    let match;
+    while ((match = rx.exec(text))) {
+      positions.push(match.index);
+      if (!match[0].length) rx.lastIndex += 1;
+    }
+    return positions;
+  }
+
+  function nearestDistance(points, markers) {
+    let best = Infinity;
+    points.forEach(point => markers.forEach(marker => { best = Math.min(best, Math.abs(point-marker)); }));
+    return best;
+  }
+
   function reportedPlayer(article) {
     const title = clean(article?.title);
+    const summary = clean(article?.summary);
+    const combined = `${title}. ${summary}`;
     const players = (article?.players || []).map(clean).filter(Boolean);
-    for (const player of players) {
-      if (title.toLowerCase().includes(player.toLowerCase())) return player;
-      const parts = player.split(/\s+/).filter(Boolean);
-      const surname = parts.at(-1)?.replace(/[^A-Za-z'.-]/g,'') || '';
-      if (surname.length >= 4 && new RegExp(`\\b${escapeRx(surname)}(?:'s)?\\b`,'i').test(title)) return player;
-    }
+    if (!players.length) return null;
+    const markers = injuryMarkerPositions(combined);
+    const topic = clean(article?.topic_kind).toLowerCase();
+    let best = null;
+
+    players.forEach(player => {
+      const terms = playerTerms(player);
+      const titlePoints = terms.flatMap(term => termPositions(title,term));
+      const summaryPoints = terms.flatMap(term => termPositions(summary,term));
+      const combinedPoints = terms.flatMap(term => termPositions(combined,term));
+      const inTitle = titlePoints.length > 0;
+      const inSummary = summaryPoints.length > 0;
+      if (!combinedPoints.length) return;
+      if (!inTitle && topic !== 'injury' && !article?.availability) return;
+
+      let score = (inTitle ? 4 : 0) + (inSummary ? 2 : 0);
+      const distance = nearestDistance(combinedPoints,markers);
+      if (distance <= 35) score += 10;
+      else if (distance <= 75) score += 6;
+      else if (distance <= 130) score += 3;
+      else if (distance <= 220) score += 1;
+      if (article?.availability) score += 3;
+      if (!best || score > best.score) best = { player, score, inTitle, inSummary };
+    });
+
+    if (best) return best.player;
     if (article?.availability && players.length === 1) return players[0];
     return null;
+  }
+
+  function contextForPlayer(article, player) {
+    if (article?.availability) return `${clean(article?.title)} ${clean(article?.summary)}`;
+    const title = clean(article?.title);
+    const summary = clean(article?.summary);
+    const terms = playerTerms(player);
+    const pieces = [];
+    const titleMention = terms.some(term => termPositions(title,term).length);
+    if (titleMention) pieces.push(title);
+
+    const summaryPoints = terms.flatMap(term => termPositions(summary,term));
+    summaryPoints.forEach(point => pieces.push(summary.slice(Math.max(0,point-180),Math.min(summary.length,point+240))));
+
+    if (titleMention && !summaryPoints.length) {
+      const otherPlayerMention = (article?.players || []).map(clean).filter(Boolean).some(other => {
+        if (other.toLowerCase() === clean(player).toLowerCase()) return false;
+        return playerTerms(other).some(term => termPositions(summary,term).length);
+      });
+      if (!otherPlayerMention) pieces.push(summary);
+    }
+
+    return clean([...new Set(pieces.filter(Boolean))].join(' '));
   }
 
   function reportedInjury(article, text) {
@@ -194,7 +274,8 @@
   function factForArticle(article) {
     const player = reportedPlayer(article);
     if (!player) return null;
-    const text = `${clean(article?.title)} ${clean(article?.summary)}`;
+    const text = contextForPlayer(article,player);
+    if (!text && !article?.availability) return null;
     const injury = reportedInjury(article,text);
     const status = reportedStatus(article,text);
     const timeline = reportedTimeline(article,text);
