@@ -1,7 +1,7 @@
 /* PropBetEdge NFL - full product, route-scoped runtime v51 */
 (() => {
   'use strict';
-  const VERSION='20260830fullroute1';
+  const VERSION='20260830freezefix1';
 
   const MEDIA_CSS=['./nfl-brand-media-v1.css','./nfl-player-media-v2.css','./nfl-player-media-v3.css'];
   const MEDIA_JS=['./nfl-brand-media-v2.js','./nfl-player-media-v3.js'];

@@ -170,17 +170,52 @@ jobs:
           grep -Fq "'./pbe-prop-engine-v1.js'" page-loader.js
           echo 'Full route-scoped product runtime OK'
 
-      - name: Forbid page-wide mutation observers in active client modules
+      # REPLACED. The previous gate hand-listed five files and passed while
+      # dashboard-v8-enhance.js froze production: it observed document.body with
+      # subtree:true and wrote innerHTML unconditionally from a queueMicrotask,
+      # so the observer re-triggered itself and the microtask queue never
+      # drained - no paint, no input, no DevTools.
+      #
+      # scan-observers.mjs derives the ACTIVE module set from index.html and
+      # page-loader.js, so a module cannot escape the check by not being listed.
+      - name: Observer safety across ALL active client modules
+        run: node scripts/scan-observers.mjs
+
+      - name: Route renderer can replace the initial loading screen
         shell: bash
         run: |
           set -euo pipefail
-          for file in pbe-validation-v1.js nfl-brand-media-v2.js nfl-player-media-v3.js pbe-engine-story-v1.js pbe-prop-engine-v1.js; do
-            if grep -Fq 'new MutationObserver' "$file"; then
-              echo "Page-wide MutationObserver reintroduced in $file"
-              exit 1
-            fi
-          done
-          echo 'Observer-free active client modules OK'
+          # The boot screen must exist...
+          grep -Fq 'Loading NFL Intelligence OS' index.html
+          # ...and the loader must render the current route into #view-container
+          # after its modules load, or the spinner is never replaced.
+          grep -Fq 'view-container' index.html
+          grep -Fq 'ensureRoute' page-loader.js
+          grep -Fq 'App.nav' page-loader.js
+          grep -Eq 'loadRouteAndRender|ensureRoute\(currentRoute\(\)\)' page-loader.js
+          echo 'Route render path OK'
+
+      - name: Cache generation is coherent
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Every ?v= stamp in index.html must be the same generation, and the
+          # loader's own VERSION must match it. Mixed stamps let a browser mix
+          # generations of the runtime, which is how a fixed module can keep
+          # serving a cached broken one.
+          stamps=$(grep -oE '\?v=[A-Za-z0-9._-]+' index.html | sort -u | wc -l)
+          if [ "$stamps" -ne 1 ]; then
+            echo "index.html mixes $stamps cache generations:"
+            grep -oE '\?v=[A-Za-z0-9._-]+' index.html | sort -u
+            exit 1
+          fi
+          html_stamp=$(grep -oE '\?v=[A-Za-z0-9._-]+' index.html | sort -u | sed 's/^?v=//')
+          loader_stamp=$(grep -oE "VERSION='[^']+'" page-loader.js | sed "s/VERSION='//;s/'//")
+          if [ "$html_stamp" != "$loader_stamp" ]; then
+            echo "index.html stamp ($html_stamp) != page-loader VERSION ($loader_stamp)"
+            exit 1
+          fi
+          echo "Cache generation coherent: $html_stamp"
 
       - name: Validate CSS-referenced local assets
         shell: bash
@@ -315,3 +350,29 @@ jobs:
           if [ -f vercel.json ]; then
             node -e "JSON.parse(require('fs').readFileSync('vercel.json','utf8'))"
           fi
+
+  browser-smoke:
+    # Post-deploy liveness gate. A wedged renderer cannot answer 1+1, so this
+    # catches the main-thread freeze class that static checks cannot see.
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    needs: validate
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Wait for deployment to settle
+        run: sleep 45
+      - name: Browser smoke test against production
+        env:
+          PBE_URL: https://nfl.propbetedge.ai
+          PBE_CHROME: /usr/bin/google-chrome
+        run: node scripts/browser-smoke.mjs
+      - name: Upload smoke log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-smoke-log
+          path: verify-all.log
+          if-no-files-found: ignore
