@@ -1,75 +1,73 @@
-/* PropBetEdge NFL - production recovery loader v48 */
+/* PropBetEdge NFL - route-on-demand production loader v49 */
 (() => {
   'use strict';
-  const VERSION='20260830recovery1';
-  const upgrades=[
-    {js:'./team-globals-v1.js'},
+  const VERSION='20260830routeload1';
 
-    {css:'./dashboard-v5.css',js:'./dashboard-v5.js'},
-    {css:'./games-v2.css',js:'./games-v2.js'},
-    {css:'./team-research-v3.css',js:'./team-research-v3.js'},
-    {css:'./stats-v2.css',js:'./stats-v2.js'},
-    {css:'./standings-v2.css',js:'./standings-v2.js'},
-    {css:'./season-archive-v2.css',js:'./season-archive-v2.js'},
-    {css:'./hof-v2.css',js:'./hof-v2.js'},
-    {css:'./records-v2.css',js:'./records-v2.js'},
-    {css:'./super-bowls-v2.css',js:'./super-bowls-v2.js'},
-    {css:'./draft-review-v2.css',js:'./draft-review-v2.js'},
-    {css:'./newsroom-v2.css',js:'./newsroom-v2.js'},
-    {css:'./news-intelligence-v2.css',js:'./news-intelligence-v2.js'},
-    {css:'./propchain-v2.css',js:'./propchain-v2.js'},
-    {css:'./matchups-v2.css',js:'./matchups-v2.js'},
-    {css:'./simulator-v2.css',js:'./simulator-v2.js'},
-    {css:'./simulator-v3-enhance.css',js:'./simulator-v3-enhance.js'},
-    {css:'./sgp-lab-v2.css',js:'./sgp-lab-v2.js'},
-    {css:'./usage-v2.css',js:'./usage-v2.js'},
-
-    {css:'./market-watch-v2.css'},
-    {css:'./market-watch-v3.css',js:'./market-watch-v3.js'},
-
-    {css:'./player-research-v2.css',js:'./player-research-v2.js'},
-    {css:'./model-lab-v2-enhance.css',js:'./model-lab-v2-enhance.js'},
-    {css:'./command-palette-v2.css',js:'./command-palette-v3.js'},
-    {css:'./event-selector-v2.css',js:'./event-selector-v2.js'},
-    {css:'./global-polish-v2.css',js:'./global-polish-v5.js'},
-    {css:'./sports-shell-v1.css',js:'./sports-shell-v2.js'},
-    {js:'./sports-shell-auth-state.js'},
-    {css:'./sports-shell-v2.css'},
-    {css:'./world-class-v1.css'},
-    {css:'./readability-v1.css'},
-    {css:'./paywall-polish-v1.css',js:'./paywall-polish-v1.js'},
-    {css:'./nfl-brand-media-v1.css'},
-    {css:'./nfl-player-media-v2.css',js:'./nfl-brand-media-v2.js'},
-    {css:'./dashboard-v6.css',js:'./dashboard-v6.js'},
-    {css:'./dashboard-v7.css',js:'./dashboard-v7.js'},
-    {css:'./dashboard-v8-enhance.css',js:'./dashboard-v8-enhance.js'},
-    {css:'./sports-shell-v3.css'},
-    {css:'./nfl-stadium-bg-v3.css',js:'./dashboard-v7-sanitize.js'},
-
-    {css:'./network-footer-v1.css',js:'./network-footer-v1.js'},
-    {css:'./paywall-funnel-v2.css',js:'./paywall-funnel-v2.js'},
-
-    /* One live-game authority only. */
-    {css:'./pbecast-v6.css',js:'./pbecast-v6.js'},
-    {css:'./pbecast-v7-enhance.css',js:'./pbecast-v7-enhance.js'},
-
-    {css:'./stadium-selector-v1.css',js:'./stadium-selector-v1.js'},
-    {css:'./production-polish-v2.css',js:'./production-polish-v2.js'},
-
-    {css:'./games-worldclass-v3.css'},
-    {css:'./games-command-v4.css',js:'./games-command-v4.js'},
-
-    {css:'./prop-board-v4.css',js:'./prop-board-v4.js'},
-    {css:'./prop-board-responsive-v5.css'},
-
-    {css:'./pbe-picks-v2.css',js:'./pbe-picks-v2.js'},
-
-    /* Recovery boundary: keep additive high-frequency/DOM-wide features out of
-       the production shell until they are reintroduced behind isolated tests.
-       Backend APIs, prop-engine persistence and Workers remain untouched. */
-
-    {css:'./scrollbar-clean-v1.css'}
+  /* Styles are cheap and parallel. JavaScript is intentionally NOT all executed
+   * at startup anymore. Each workspace initializes only when the user opens it. */
+  const CSS=[
+    './dashboard-v5.css','./games-v2.css','./team-research-v3.css','./stats-v2.css','./standings-v2.css',
+    './season-archive-v2.css','./hof-v2.css','./records-v2.css','./super-bowls-v2.css','./draft-review-v2.css',
+    './newsroom-v2.css','./news-intelligence-v2.css','./propchain-v2.css','./matchups-v2.css','./simulator-v2.css',
+    './simulator-v3-enhance.css','./sgp-lab-v2.css','./usage-v2.css','./market-watch-v2.css','./market-watch-v3.css',
+    './player-research-v2.css','./model-lab-v2-enhance.css','./command-palette-v2.css','./event-selector-v2.css',
+    './global-polish-v2.css','./sports-shell-v1.css','./sports-shell-v2.css','./world-class-v1.css','./readability-v1.css',
+    './paywall-polish-v1.css','./nfl-brand-media-v1.css','./nfl-player-media-v2.css','./dashboard-v6.css','./dashboard-v7.css',
+    './dashboard-v8-enhance.css','./sports-shell-v3.css','./nfl-stadium-bg-v3.css','./network-footer-v1.css',
+    './paywall-funnel-v2.css','./pbecast-v6.css','./pbecast-v7-enhance.css','./stadium-selector-v1.css',
+    './production-polish-v2.css','./games-worldclass-v3.css','./games-command-v4.css','./prop-board-v4.css',
+    './prop-board-responsive-v5.css','./pbe-picks-v2.css','./scrollbar-clean-v1.css'
   ];
+
+  const CORE=[
+    './team-globals-v1.js',
+    './dashboard-v5.js',
+    './command-palette-v3.js',
+    './event-selector-v2.js',
+    './global-polish-v5.js',
+    './sports-shell-v2.js',
+    './sports-shell-auth-state.js',
+    './paywall-polish-v1.js',
+    './nfl-brand-media-v2.js',
+    './dashboard-v6.js',
+    './dashboard-v7.js',
+    './dashboard-v8-enhance.js',
+    './dashboard-v7-sanitize.js',
+    './network-footer-v1.js',
+    './paywall-funnel-v2.js',
+    './stadium-selector-v1.js',
+    './production-polish-v2.js'
+  ];
+
+  const ROUTES={
+    home:[],
+    games:['./games-v2.js','./games-command-v4.js'],
+    teams:['./team-research-v3.js'],
+    stats:['./stats-v2.js'],
+    standings:['./standings-v2.js'],
+    seasonhistory:['./season-archive-v2.js'],
+    hof:['./hof-v2.js'],
+    records:['./records-v2.js'],
+    sb:['./super-bowls-v2.js'],
+    prospects:['./draft-review-v2.js'],
+    news:['./newsroom-v2.js'],
+    newsintel:['./newsroom-v2.js','./news-intelligence-v2.js'],
+    injuries:['./newsroom-v2.js'],
+    trades:['./newsroom-v2.js'],
+    propchain:['./propchain-v2.js'],
+    matchups:['./matchups-v2.js'],
+    simulator:['./simulator-v2.js','./simulator-v3-enhance.js'],
+    sgplab:['./sgp-lab-v2.js'],
+    usage:['./usage-v2.js'],
+    marketwatch:['./market-watch-v3.js'],
+    player:['./player-research-v2.js'],
+    players:['./player-research-v2.js'],
+    picks:['./model-lab-v2-enhance.js'],
+    propboard:['./prop-board-v4.js'],
+    pbecast:['./pbecast-v6.js','./pbecast-v7-enhance.js'],
+    pbepicks:['./pbe-picks-v2.js'],
+    trackrecord:['./pbe-picks-v2.js']
+  };
 
   const PRO_MODULES=[
     {selector:'.pbe22-watch',global:'PBEMarketWatch'},
@@ -78,7 +76,11 @@
     {selector:'.pbe4-model-lab',global:'PBEModelLab'}
   ];
 
+  const scriptPromises=new Map();
+  const routePromises=new Map();
   let proSyncRun=0;
+
+  window.PBELoaderState={version:VERSION,phase:'starting',currentRoute:null,lastError:null,loaded:[]};
 
   function addCss(href){
     if(document.querySelector(`link[data-pbe-upgrade="${href}"]`))return;
@@ -90,21 +92,70 @@
   }
 
   function addScript(src){
-    return new Promise(resolve=>{
-      if(!src)return resolve();
-      if(document.querySelector(`script[data-pbe-upgrade="${src}"]`))return resolve();
+    if(!src)return Promise.resolve();
+    if(scriptPromises.has(src))return scriptPromises.get(src);
+    if(document.querySelector(`script[data-pbe-upgrade="${src}"]`))return Promise.resolve();
+
+    const promise=new Promise((resolve,reject)=>{
       const script=document.createElement('script');
+      const timer=setTimeout(()=>{
+        script.remove();
+        reject(new Error(`module_timeout:${src}`));
+      },12000);
       script.src=`${src}?v=${VERSION}`;
       script.async=false;
       script.dataset.pbeUpgrade=src;
-      script.onload=resolve;
-      script.onerror=()=>{console.error('PBE product module failed to load',src);resolve()};
+      script.onload=()=>{
+        clearTimeout(timer);
+        window.PBELoaderState.loaded.push(src);
+        resolve();
+      };
+      script.onerror=()=>{
+        clearTimeout(timer);
+        reject(new Error(`module_load_failed:${src}`));
+      };
       document.body.appendChild(script);
     });
+    scriptPromises.set(src,promise);
+    return promise;
+  }
+
+  async function loadSequence(files){
+    for(const file of files)await addScript(file);
+  }
+
+  function normalizedRoute(route){
+    const raw=String(route||'home').replace(/^#/,'').trim().toLowerCase();
+    if(raw==='season-history'||raw==='season_history')return'seasonhistory';
+    if(raw==='superbowls'||raw==='super_bowls')return'sb';
+    return raw||'home';
+  }
+
+  async function ensureRoute(route){
+    const key=normalizedRoute(route);
+    if(routePromises.has(key))return routePromises.get(key);
+    const files=ROUTES[key]||[];
+    const promise=(async()=>{
+      window.PBELoaderState.phase='route';
+      window.PBELoaderState.currentRoute=key;
+      await loadSequence(files);
+      return true;
+    })().catch(error=>{
+      window.PBELoaderState.lastError=String(error?.message||error);
+      routePromises.delete(key);
+      throw error;
+    });
+    routePromises.set(key,promise);
+    return promise;
+  }
+
+  function currentRoute(){
+    return normalizedRoute(String(location.hash||'').replace(/^#/,'')||window.App?.current||'home');
   }
 
   function forceVisibleProRender(){
-    const runId=++proSyncRun;let attempt=0;
+    const runId=++proSyncRun;
+    let attempt=0;
     const run=()=>{
       if(runId!==proSyncRun)return;
       attempt+=1;
@@ -117,9 +168,23 @@
         if(module.state?.loading){waiting=true;continue}
         try{module.render()}catch(error){console.error('[pbe-loader-pro-sync]',spec.global,error?.message||error)}
       }
-      if(waiting&&attempt<30)setTimeout(run,150);
+      if(waiting&&attempt<20)setTimeout(run,150);
     };
     queueMicrotask(run);
+  }
+
+  function installRouteLoading(){
+    window.addEventListener('pbe:route-missing',event=>{
+      const route=normalizedRoute(event?.detail?.route||window.App?.current||'home');
+      ensureRoute(route)
+        .then(()=>{
+          if(window.App?.current===route)window.App.nav(route,{history:false});
+        })
+        .catch(error=>{
+          console.error('[pbe-route-load]',route,error);
+          window.PBEAppCore?.renderFailure?.(route,'Workspace failed to load.');
+        });
+    });
   }
 
   function installProSync(){
@@ -129,13 +194,25 @@
     setTimeout(forceVisibleProRender,400);
   }
 
-  async function load(){
-    upgrades.forEach(item=>{if(item.css)addCss(item.css)});
-    for(const item of upgrades)await addScript(item.js);
-    installProSync();
-    window.dispatchEvent(new CustomEvent('pbe:upgrades-ready',{detail:{version:VERSION}}));
-    forceVisibleProRender();
+  async function boot(){
+    CSS.forEach(addCss);
+    installRouteLoading();
+    try{
+      window.PBELoaderState.phase='core';
+      await loadSequence(CORE);
+      await ensureRoute(currentRoute());
+      installProSync();
+      window.PBELoaderState.phase='ready';
+      window.dispatchEvent(new CustomEvent('pbe:upgrades-ready',{detail:{version:VERSION}}));
+      forceVisibleProRender();
+    }catch(error){
+      window.PBELoaderState.phase='failed';
+      window.PBELoaderState.lastError=String(error?.message||error);
+      console.error('[pbe-loader-fatal]',error);
+      const route=currentRoute();
+      window.PBEAppCore?.renderFailure?.(route,'Core workspace failed to load.');
+    }
   }
 
-  load();
+  boot();
 })();
