@@ -8,6 +8,51 @@
 #pbe-sports-shell .pbes-right{position:relative;z-index:3;flex:0 0 auto;background:linear-gradient(90deg,rgba(12,11,9,0),rgba(12,11,9,.96) 18%)!important;padding-left:12px!important}
 #pbe-sports-shell .pbes-center{min-width:0!important;overflow:hidden!important}
 
+/* Dashboard featured game: do not let grid/content widths choose the optical axis.
+   On wide desktop the score + core-market column is pinned to the exact 50% point
+   of the hero and both teams receive equal side zones. */
+@media(min-width:1200px){
+  html[data-pbe-home="1"] .pbe7-matchup{
+    position:relative!important;
+    display:block!important;
+    width:100%!important;
+    max-width:none!important;
+    min-height:360px!important;
+    margin:24px 0 0!important;
+  }
+  html[data-pbe-home="1"] .pbe7-scorebox{
+    position:absolute!important;
+    top:0!important;
+    left:50%!important;
+    width:min(520px,38vw)!important;
+    max-width:520px!important;
+    margin:0!important;
+    transform:translateX(-50%)!important;
+    z-index:4!important;
+  }
+  html[data-pbe-home="1"] .pbe7-team{
+    position:absolute!important;
+    top:50%!important;
+    width:calc(50% - 330px)!important;
+    max-width:480px!important;
+    margin:0!important;
+    transform:translateY(-50%)!important;
+    z-index:3!important;
+  }
+  html[data-pbe-home="1"] .pbe7-team.away{
+    left:0!important;
+    right:auto!important;
+    justify-content:flex-end!important;
+    text-align:right!important;
+  }
+  html[data-pbe-home="1"] .pbe7-team.home{
+    right:0!important;
+    left:auto!important;
+    justify-content:flex-start!important;
+    text-align:left!important;
+  }
+}
+
 /* Wrong article context is worse than less copy. Side stories keep image/headline/time;
    the featured story remains the only dashboard story with body copy. */
 .pbehome7 .pbe7-news-copy p{display:none!important}
@@ -36,7 +81,7 @@
 
 @media(max-width:760px){
   #pbe-sports-shell .pbes-news-vp{padding-right:8px!important}
-  #pbe-sports-shell .pbes-news-track{padding-right:50px!important}
+  #pbe-sports-shell .pbes-news-track{padding-right:50px!important;will-change:transform}
   #pbe-sports-shell .pbes-right{padding-left:6px!important}
   .pbehome7 .pbe7-news-item{min-height:88px!important}
 }
