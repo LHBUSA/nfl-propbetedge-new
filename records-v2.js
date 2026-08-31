@@ -3,8 +3,9 @@
   'use strict';
   const state={cat:null,search:''};
   const esc=v=>String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-  const records=()=>window.NFL_RECORDS||{};
-  const milestones=()=>Array.isArray(window.NFL_MILESTONES)?NFL_MILESTONES:[];
+  /* archive/records.js exposes classic-script lexical const bindings, not window props. */
+  const records=()=>typeof NFL_RECORDS!=='undefined'&&NFL_RECORDS&&typeof NFL_RECORDS==='object'?NFL_RECORDS:(window.NFL_RECORDS||{});
+  const milestones=()=>typeof NFL_MILESTONES!=='undefined'&&Array.isArray(NFL_MILESTONES)?NFL_MILESTONES:(Array.isArray(window.NFL_MILESTONES)?window.NFL_MILESTONES:[]);
   function cats(){return Object.keys(records());}
   function label(cat){return cat==='MILESTONES'?'Milestones':String(cat||'').charAt(0)+String(cat||'').slice(1).toLowerCase().replace(/_/g,' ');}
   function rows(){if(state.cat==='MILESTONES')return[];const q=state.search.trim().toLowerCase();return (records()[state.cat]||[]).filter(r=>!q||[r.record,r.holder,r.stat,r.team,r.year,r.note].some(v=>String(v||'').toLowerCase().includes(q)));}
