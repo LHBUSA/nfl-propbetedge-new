@@ -1,7 +1,7 @@
-/* PropBetEdge NFL - ordered page/product upgrade loader v44 recovery */
+/* PropBetEdge NFL - ordered page/product upgrade loader v45 recovery */
 (() => {
   'use strict';
-  const VERSION='20260830recovery2';
+  const VERSION='20260830recovery3';
   const upgrades=[
     /* Establish the final homepage authority first. v6 replaces the v5 DOM with
        .pbehome6; v7 historically registered itself after that without repainting
@@ -113,18 +113,32 @@
     document.head.appendChild(link);
   }
 
-  function addScript(src){
-    return new Promise(resolve=>{
+  function addScript(src,attempt=0){
+    return new Promise((resolve,reject)=>{
       if(!src)return resolve();
       if(document.querySelector(`script[data-pbe-upgrade="${src}"]`))return resolve();
       const script=document.createElement('script');
-      script.src=`${src}?v=${VERSION}`;
+      script.src=`${src}?v=${VERSION}${attempt?`&retry=${attempt}`:''}`;
       script.async=false;
       script.dataset.pbeUpgrade=src;
       script.onload=resolve;
-      script.onerror=()=>{console.error('PBE product module failed to load',src);resolve()};
+      script.onerror=()=>{
+        script.remove();
+        if(attempt<1){
+          console.warn('PBE product module retry',src);
+          addScript(src,attempt+1).then(resolve,reject);
+        }else reject(new Error(`module_load_failed:${src}`));
+      };
       document.body.appendChild(script);
     });
+  }
+
+  function replayPendingRoute(){
+    const route=window.App?.current;
+    if(!route||typeof window.App?.VIEWS?.[route]!=='function')return false;
+    const pending=document.querySelector(`[data-pbe-pending-route="${CSS.escape(String(route))}"]`);
+    if(!pending&&window.App?.pendingRoute!==route)return false;
+    try{window.App.nav(route,{history:false});return true}catch(error){console.error('[pbe-route-replay]',route,error?.message||error);return false}
   }
 
   function forceVisibleProRender(){
@@ -151,17 +165,27 @@
 
   async function load(){
     upgrades.forEach(item=>{if(item.css)addCss(item.css)});
-    for(const item of upgrades){
-      await addScript(item.js);
-      /* v7 is authoritative, but its legacy install check did not include the
-         transient .pbehome6 DOM. Force the handoff immediately on initial home. */
-      if(item.js==='./dashboard-v7.js'&&window.App?.current==='home'&&typeof window.PBEDashboardV7?.load==='function'){
-        await window.PBEDashboardV7.load();
+    try{
+      for(const item of upgrades){
+        await addScript(item.js);
+        /* v7 is authoritative, but its legacy install check did not include the
+           transient .pbehome6 DOM. Force the handoff immediately on initial home. */
+        if(item.js==='./dashboard-v7.js'&&window.App?.current==='home'&&typeof window.PBEDashboardV7?.load==='function'){
+          await window.PBEDashboardV7.load();
+        }
+        replayPendingRoute();
       }
+      installProSync();
+      window.dispatchEvent(new CustomEvent('pbe:upgrades-ready',{detail:{version:VERSION}}));
+      replayPendingRoute();
+      window.App?.replayCurrent?.();
+      forceVisibleProRender();
+    }catch(error){
+      console.error('[pbe-loader-fatal]',error?.message||error);
+      const route=window.App?.current||'home';
+      const vc=document.getElementById('view-container');
+      if(vc&&document.querySelector('[data-pbe-pending-route]'))vc.innerHTML=`<section class="pbe-v2-dashboard"><div class="pbe-v2-market-empty">Workspace failed to load. Refresh to retry ${String(route).replace(/-/g,' ')}.</div></section>`;
     }
-    installProSync();
-    window.dispatchEvent(new CustomEvent('pbe:upgrades-ready',{detail:{version:VERSION}}));
-    forceVisibleProRender();
   }
 
   load();
