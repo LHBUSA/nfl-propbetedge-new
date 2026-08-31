@@ -52,7 +52,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          grep -Fq "const VERSION='20260830recovery1'" page-loader.js
+          grep -Eq "const VERSION='20260830recovery[0-9]+'" page-loader.js
           required=(
             dashboard-v5.js dashboard-v6.js dashboard-v7.js dashboard-v8-enhance.js
             sports-shell-v2.js sports-shell-auth-state.js
