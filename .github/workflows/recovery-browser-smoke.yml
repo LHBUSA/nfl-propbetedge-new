@@ -14,15 +14,27 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+
+      - name: Recovery runtime syntax
+        run: node --check page-loader.js
+
+      - name: Observer safety across active runtime
+        run: node scripts/scan-observers.mjs
+
+      - name: Prop engine unit tests
+        run: node --test tests/nfl-prop-picker.test.mjs tests/nfl-prop-grader.test.mjs tests/nfl-prop-tuner.test.mjs
+
       - name: Verify production APIs are reachable
         shell: bash
         run: |
           set -euo pipefail
           curl -fsS 'https://nfl.propbetedge.ai/api/nfl-live?date=20260830' | grep -Fq '"ok":true'
+
       - name: Browser liveness, media, routes and visual captures
         env:
           PBE_CHROME: /usr/bin/google-chrome
         run: node scripts/recovery-browser-smoke.mjs
+
       - name: Upload recovery audit
         if: always()
         uses: actions/upload-artifact@v4
