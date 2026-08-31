@@ -1,6 +1,6 @@
-/* Injury Intelligence focused browser gate.
- * Uses the production origin and APIs while substituting same-origin static
- * HTML/JS/CSS with the checked-out branch, so no deployment is required.
+/* Injury Editorial focused browser gate.
+ * Uses production origin/APIs while substituting checked-out branch static
+ * files. Verifies the injuries route is a photo-led PropBetEdge article desk.
  */
 import {spawn} from 'node:child_process';
 import {mkdtempSync,rmSync,readFileSync,existsSync,statSync,writeFileSync} from 'node:fs';
@@ -12,7 +12,7 @@ const TARGET='https://nfl.propbetedge.ai';
 const ORIGIN=new URL(TARGET).origin;
 const PORT=9810+Math.floor(Math.random()*70);
 const CHROME=process.env.PBE_CHROME||'/usr/bin/google-chrome';
-const dir=mkdtempSync(join(tmpdir(),'pbe-injury-layout-'));
+const dir=mkdtempSync(join(tmpdir(),'pbe-injury-editorial-'));
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const out=s=>console.log(s);
 const chrome=spawn(CHROME,[`--remote-debugging-port=${PORT}`,`--user-data-dir=${dir}`,'--headless=new','--no-first-run','--no-default-browser-check','--disable-extensions','--disable-background-timer-throttling','--window-size=1440,900','about:blank'],{stdio:'ignore'});
@@ -29,56 +29,67 @@ await send('Runtime.enable');await send('Page.enable');await send('Fetch.enable'
 const probe=async(expr,ms=7000)=>{try{const r=await Promise.race([send('Runtime.evaluate',{expression:expr,returnByValue:true,awaitPromise:true}),sleep(ms).then(()=>{throw new Error('WEDGED')})]);return r.result?.value}catch(e){return`<${e.message}>`}};
 async function shot(name){const r=await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});writeFileSync(name,Buffer.from(r.data,'base64'));out(`screenshot ${name}`)}
 
-await send('Page.navigate',{url:`${TARGET}/?injury-layout=${Date.now()}`});
+await send('Page.navigate',{url:`${TARGET}/?injury-editorial=${Date.now()}`});
 await sleep(11000);
 if(await probe('1+1')!==2){out('RESULT FAIL main_thread');ws.close();finish(1)}
 await probe(`window.App&&App.nav('injuries')`,8000);
-await sleep(2800);
+await sleep(3300);
 
 let pass=true;
 let desktop=await probe(`(()=>{
-  const root=document.querySelector('.pbe13-news.pbe13-injury-v2');
+  const root=document.querySelector('.pbe13-news.pbe13-injury-editorial');
   if(!root)return{root:false};
-  const hero=root.querySelector('.pbe13-hero');
-  const featured=root.querySelector('.pbe13-featured');
-  const summary=root.querySelector('#pbe13-summary');
-  const lead=root.querySelector('.pbe13-lead');
-  const leadImg=lead?.querySelector('.pbe13-story-player-lead > .pbe-player-headshot-v3');
-  const aff=[...root.querySelectorAll('.pbe13-aff-name > .pbe-player-headshot-v3')];
-  const storyBlocks=[...root.querySelectorAll('.pbe13-story-player-card')];
-  const allImgs=[...root.querySelectorAll('img')];
-  const maxImg=Math.max(0,...allImgs.map(i=>Math.max(i.getBoundingClientRect().width,i.getBoundingClientRect().height)));
+  const hero=root.querySelector('.pbe13-editorial-hero');
+  const lead=root.querySelector('.pbe13-editorial-lead');
+  const leadImg=lead?.querySelector('.pbe13-editorial-lead-media img');
+  const cards=[...root.querySelectorAll('.pbe13-editorial-card')];
+  const links=[...root.querySelectorAll('a[href]')].map(a=>a.href).filter(h=>/propbetedge\\.ai\\/news\\/nfl\//i.test(h));
+  const badLinks=[...root.querySelectorAll('.pbe13-editorial-lead a[href],.pbe13-editorial-card[href]')].map(a=>a.href).filter(h=>!/^https:\\/\\/propbetedge\\.ai\\/news\\/nfl\//i.test(h));
+  const imgs=[...root.querySelectorAll('.pbe13-editorial-lead img,.pbe13-editorial-card img')];
+  const loaded=imgs.filter(i=>i.complete&&i.naturalWidth>0);
+  const broken=imgs.filter(i=>i.complete&&!i.naturalWidth);
+  const controls=root.querySelectorAll('#pbe13-summary,.pbe13-controls,.pbe13-side,.pbe13-story-player,.pbe13-impact');
   return{
     root:true,
     heroHeight:+(hero?.getBoundingClientRect().height||0).toFixed(1),
-    featuredBeforeSummary:!!featured&&!!summary&&featured.getBoundingClientRect().top<summary.getBoundingClientRect().top,
-    leadPhoto:!!leadImg,
-    leadPhotoWidth:+(leadImg?.getBoundingClientRect().width||0).toFixed(1),
-    affectedPhotos:aff.length,
-    maxAffected:+Math.max(0,...aff.map(i=>i.getBoundingClientRect().width)).toFixed(1),
-    storyBlocks:storyBlocks.length,
-    maxImg:+maxImg.toFixed(1),
-    feedColumns:getComputedStyle(root.querySelector('.pbe13-feed')).gridTemplateColumns,
-    broken:allImgs.filter(i=>i.complete&&!i.naturalWidth).length,
+    lead:!!lead,
+    leadImage:!!leadImg&&leadImg.complete&&leadImg.naturalWidth>0,
+    leadMediaWidth:+(leadImg?.getBoundingClientRect().width||0).toFixed(1),
+    cards:cards.length,
+    articleLinks:links.length,
+    badLinks:badLinks.length,
+    images:imgs.length,
+    loadedImages:loaded.length,
+    broken:broken.length,
+    telemetryNodes:controls.length,
+    impactText:/impact score|selected-event team stories|affected players/i.test(root.textContent||''),
+    editorialText:/PropBetEdge Editorial/i.test(root.textContent||''),
     text:(root.textContent||'').trim().length
   };
 })()`);
 out(`desktop ${JSON.stringify(desktop)}`);
-if(!desktop||desktop.root!==true||desktop.heroHeight>225||desktop.featuredBeforeSummary!==true||desktop.leadPhoto!==true||desktop.leadPhotoWidth<64||desktop.leadPhotoWidth>82||desktop.affectedPhotos<1||desktop.maxAffected>38||desktop.storyBlocks<3||desktop.maxImg>84||desktop.broken>0||desktop.text<1000)pass=false;
-await shot('injury-layout-desktop.png');
-
-await probe(`(()=>{const card=document.querySelector('.pbe13-card .pbe13-story-player-card');card?.scrollIntoView({block:'center'});window.PBENFLPlayerMediaV3?.scan?.();return !!card})()`);
-await sleep(1200);
-const cardPhoto=await probe(`(()=>{const img=document.querySelector('.pbe13-card .pbe13-story-player-card > .pbe-player-headshot-v3');if(!img)return null;const r=img.getBoundingClientRect();return{width:+r.width.toFixed(1),height:+r.height.toFixed(1),loaded:img.complete&&img.naturalWidth>0}})()`);
-out(`cardPhoto ${JSON.stringify(cardPhoto)}`);
-if(!cardPhoto||cardPhoto.loaded!==true||cardPhoto.width<44||cardPhoto.width>54||cardPhoto.height<44||cardPhoto.height>54)pass=false;
+if(!desktop||desktop.root!==true||desktop.heroHeight>255||desktop.lead!==true||desktop.leadImage!==true||desktop.leadMediaWidth<500||desktop.cards<5||desktop.articleLinks<6||desktop.badLinks!==0||desktop.images<6||desktop.loadedImages<5||desktop.broken>0||desktop.telemetryNodes!==0||desktop.impactText!==false||desktop.editorialText!==true||desktop.text<1200)pass=false;
+await shot('injury-editorial-desktop.png');
 
 await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
-await probe(`window.scrollTo(0,0)`);await sleep(700);
-const mobile=await probe(`(()=>{const root=document.querySelector('.pbe13-news.pbe13-injury-v2');const hero=root?.querySelector('.pbe13-hero');const leadImg=root?.querySelector('.pbe13-story-player-lead > .pbe-player-headshot-v3');return{root:!!root,heroHeight:+(hero?.getBoundingClientRect().height||0).toFixed(1),leadPhotoWidth:+(leadImg?.getBoundingClientRect().width||0).toFixed(1),overflow:document.documentElement.scrollWidth-window.innerWidth,route:window.App?.current}})()`);
+await probe(`window.scrollTo(0,0)`);await sleep(900);
+const mobile=await probe(`(()=>{
+  const root=document.querySelector('.pbe13-news.pbe13-injury-editorial');
+  const hero=root?.querySelector('.pbe13-editorial-hero');
+  const lead=root?.querySelector('.pbe13-editorial-lead');
+  const leadImg=root?.querySelector('.pbe13-editorial-lead-media img');
+  return{
+    root:!!root,
+    heroHeight:+(hero?.getBoundingClientRect().height||0).toFixed(1),
+    leadWidth:+(lead?.getBoundingClientRect().width||0).toFixed(1),
+    leadImgWidth:+(leadImg?.getBoundingClientRect().width||0).toFixed(1),
+    overflow:document.documentElement.scrollWidth-window.innerWidth,
+    route:window.App?.current
+  };
+})()`);
 out(`mobile ${JSON.stringify(mobile)}`);
-if(!mobile||mobile.root!==true||mobile.route!=='injuries'||mobile.heroHeight>285||mobile.leadPhotoWidth>66||mobile.overflow>2)pass=false;
-await shot('injury-layout-mobile.png');
+if(!mobile||mobile.root!==true||mobile.route!=='injuries'||mobile.heroHeight>330||mobile.leadWidth>390||mobile.leadImgWidth>390||mobile.overflow>2)pass=false;
+await shot('injury-editorial-mobile.png');
 
 out(`RESULT ${pass?'PASS':'FAIL'}`);
 ws.close();finish(pass?0:1);
