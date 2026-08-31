@@ -22,6 +22,23 @@ html[data-pbe-home="1"] .pbe7-news-layout{grid-template-columns:minmax(0,1.16fr)
 html[data-pbe-home="1"] .pbe7-hero{
   box-shadow:0 34px 95px rgba(0,0,0,.52),inset 0 1px 0 rgba(255,255,255,.055)!important;
 }
+
+/* Keep the featured matchup as one centered visual unit on wide desktops instead
+   of stretching its three tracks across the entire hero. Teams stay balanced on
+   either side of the score/market column, so the visual center is the game itself. */
+@media(min-width:1001px){
+  html[data-pbe-home="1"] .pbe7-matchup{
+    width:min(100%,1380px)!important;
+    margin:34px auto 0!important;
+    grid-template-columns:minmax(260px,1fr) minmax(420px,520px) minmax(260px,1fr)!important;
+    gap:34px!important;
+    justify-content:center!important;
+  }
+  html[data-pbe-home="1"] .pbe7-team.away{justify-content:flex-end!important;text-align:right!important}
+  html[data-pbe-home="1"] .pbe7-team.home{justify-content:flex-start!important;text-align:left!important}
+  html[data-pbe-home="1"] .pbe7-scorebox{width:100%!important;max-width:520px!important;justify-self:center!important}
+}
+
 html[data-pbe-home="1"] .pbe7-panel,
 html[data-pbe-home="1"] .pbe7-livefacts>div,
 html[data-pbe-home="1"] .pbe7-leader{
