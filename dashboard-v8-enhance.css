@@ -1,9 +1,9 @@
 /* PropBetEdge NFL — dashboard v8 command-center layer */
 
-/* The persistent left sidebar is the tool authority. Remove redundant horizontal
-   tool/research tiers from the sports shell and reclaim vertical workspace. */
-html[data-pbe-home="1"] #pbe-sports-shell .pbes-primary,
-html[data-pbe-home="1"] #pbe-sports-shell .pbes-research{display:none!important}
+/* The sports shell is the single desktop product-navigation authority. The old
+   Dashboard rule hid it because a persistent sidebar was once expected to own
+   navigation, but sports-shell-v1 intentionally retires that sidebar. Keep the
+   shell navigation visible on Home just like every other workspace. */
 html[data-pbe-home="1"] #pbe-sports-shell .pbes-top{min-height:66px!important}
 html[data-pbe-home="1"] #pbe-sports-shell .pbes-news{height:34px!important}
 html[data-pbe-home="1"] #pbe-sports-shell[data-shell-version="2"] .pbes-scorebar,
@@ -13,7 +13,7 @@ html[data-pbe-home="1"] #pbe-sports-shell[data-shell-version="2"] .pbes-scores{m
 html[data-pbe-home="1"] #pbe-sports-shell[data-shell-version="2"] .pbes-score{min-height:94px!important}
 
 /* The home is no longer an index of product cards. Navigation already exists in
-   the sidebar; the dashboard should be active game + market + news intelligence. */
+   the sports shell; the dashboard should be active game + market + news intelligence. */
 html[data-pbe-home="1"] .pbe7-rail{display:none!important}
 html[data-pbe-home="1"] .pbe7-main{grid-template-columns:minmax(0,1fr)!important;gap:14px!important;margin-top:14px!important}
 html[data-pbe-home="1"] .pbe7-news-layout{grid-template-columns:minmax(0,1.16fr) minmax(420px,.84fr)!important}
@@ -79,20 +79,11 @@ html[data-pbe-home="1"] .pbe7-news-panel>header{min-height:76px!important;align-
 .pbe7-news-layout.pbe8-list-only .pbe7-news-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
 .pbe8-filter-empty{grid-column:1/-1;min-height:220px;display:grid;place-items:center;color:#766f66;font:800 8px/1.4 'DM Mono',monospace;text-transform:uppercase;letter-spacing:.08em}
 
-/* Sidebar becomes the single tool navigation authority on desktop. */
-@media(min-width:901px){
-  html[data-pbe-home="1"] .sidebar{background:rgba(8,10,11,.965)!important;border-right-color:rgba(216,183,91,.12)!important;box-shadow:18px 0 44px rgba(0,0,0,.22)!important;backdrop-filter:blur(18px)!important}
-  html[data-pbe-home="1"] .sidebar-inner{scrollbar-width:none}
-  html[data-pbe-home="1"] .nav-item.active{background:linear-gradient(90deg,rgba(216,183,91,.13),rgba(216,183,91,.025))!important;border-color:rgba(216,183,91,.14)!important;box-shadow:inset 2px 0 0 #d8b75b!important}
-}
-
 @media(max-width:1100px){
   html[data-pbe-home="1"] .pbe7-news-layout{grid-template-columns:1fr!important}
   html[data-pbe-home="1"] .pbe7-lead-story{border-right:0!important;border-bottom:1px solid rgba(255,255,255,.07)}
 }
 @media(max-width:760px){
-  html[data-pbe-home="1"] #pbe-sports-shell .pbes-primary,
-  html[data-pbe-home="1"] #pbe-sports-shell .pbes-research{display:none!important}
   .pbe8-market-grid{grid-template-columns:1fr 1fr}
   .pbe8-market-grid>div:last-child{grid-column:1/-1}
   .pbe8-prob-grid{grid-template-columns:1fr}
