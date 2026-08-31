@@ -1,6 +1,7 @@
 /* PropBetEdge NFL — Injury availability readability v5
- * Presentation-only authority. Adds a semantic desktop column header to the
- * existing source-disciplined availability board without changing injury facts.
+ * Presentation-only authority. Converts the existing source-disciplined
+ * availability board into a true five-column reading surface without changing
+ * any injury, status, team, or timeline facts.
  * No mutation observers: route/upgrades events plus a bounded render burst only.
  */
 (() => {
@@ -8,6 +9,23 @@
 
   let burstToken = 0;
   const HEADERS = ['PLAYER','TEAM','INJURY','STATUS','REPORTED TIMELINE'];
+
+  function splitTeamColumn(row) {
+    if (!row || row.querySelector(':scope > .pbe13-availability-team')) return false;
+    const player = row.querySelector(':scope > .pbe13-availability-player');
+    const source = player?.querySelector(':scope > span');
+    if (!player || !source) return false;
+
+    const team = document.createElement('div');
+    team.className = 'pbe13-availability-team';
+    const code = document.createElement('span');
+    code.className = 'team-code';
+    code.textContent = source.textContent?.trim() || 'NFL';
+    team.appendChild(code);
+    source.remove();
+    player.after(team);
+    return true;
+  }
 
   function enhance() {
     if (window.App?.current !== 'injuries') return false;
@@ -27,6 +45,8 @@
       board.insertBefore(columns, list);
     }
 
+    [...list.querySelectorAll(':scope > .pbe13-availability-row')].forEach(splitTeamColumn);
+
     board.dataset.pbeReadabilityV5 = '1';
     board.setAttribute('aria-label', "Who's out and how long — reported NFL player availability");
     root.dataset.pbeInjuryReadability = '5';
@@ -45,5 +65,5 @@
   document.addEventListener('DOMContentLoaded', burst, { once: true });
   if (document.readyState !== 'loading') burst();
 
-  window.PBEInjuryReadabilityV5 = { enhance, burst };
+  window.PBEInjuryReadabilityV5 = { enhance, burst, splitTeamColumn };
 })();
