@@ -94,8 +94,14 @@
   function installObserver(){
     const root=document.body||document.documentElement;
     if(!root)return;
+    /* Coalesced onto a macrotask rather than a microtask. renderDegraded is
+     * already idempotent, but scheduling observer work as a microtask means any
+     * future feedback loop could never yield to the event loop — exactly the
+     * failure mode that wedged the main thread in dashboard-v8-enhance. */
+    let queued=0;
     const observer=new MutationObserver(()=>{
-      if(isDegraded(window.PBEPro?.state||{}))queueMicrotask(renderDegraded);
+      if(queued||!isDegraded(window.PBEPro?.state||{}))return;
+      queued=setTimeout(()=>{queued=0;renderDegraded()},50);
     });
     observer.observe(root,{childList:true,subtree:true});
   }

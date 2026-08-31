@@ -1,0 +1,19 @@
+name = "nfl-prop-picks-orchestrator"
+main = "src/index.js"
+compatibility_date = "2026-08-30"
+workers_dev = true
+preview_urls = false
+
+[vars]
+SUPABASE_URL = "https://tkmlnhmylqnttmnsnief.supabase.co"
+NFL_GATEWAY = "https://nfl-api.propbetedge.ai"
+NFL_INTELLIGENCE_URL = "https://pbe-nfl-intelligence.sales-fd3.workers.dev"
+
+[triggers]
+crons = ["7 * * * *", "*/15 * * * *"]
+
+# Required secret:
+# SUPABASE_SERVICE_ROLE_KEY
+#
+# Deliberately absent:
+# ODDS_API_KEY — this selector consumes PBE NFL Intelligence's persisted tape.

@@ -47,7 +47,12 @@
     const time=updated&&!Number.isNaN(updated.getTime())?updated.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'';
     return`<div class="pbe8-market-head"><span>CORE MARKET · CURRENT CROSS-BOOK CONSENSUS</span><small>${m.books||0} books · ${m.quote_count||0} quotes${time?` · ${esc(time)}`:''}${local.loading?' · refreshing':''}</small></div><div class="pbe8-market-grid"><div><span>SPREAD</span><strong>${esc(awayLabel)} ${fmtLine(m.spread?.away)}</strong><small>${esc(homeLabel)} ${fmtLine(m.spread?.home)}</small></div><div><span>TOTAL</span><strong>${Number.isFinite(num(m.total?.line))?num(m.total.line).toFixed(1):'—'}</strong><small>O ${american(m.total?.over_price)} · U ${american(m.total?.under_price)}</small></div><div><span>MONEYLINE</span><strong>${esc(awayLabel)} ${american(m.moneyline?.away)}</strong><small>${esc(homeLabel)} ${american(m.moneyline?.home)}</small></div></div><div class="pbe8-prob-grid"><div><span>${esc(awayLabel)} · ${p.label}</span>${probabilityBar(p.away)}</div><div><span>${esc(homeLabel)} · ${p.label}</span>${probabilityBar(p.home)}</div></div>`
   }
-  function renderMarket(){if(!active())return;const scorebox=document.querySelector('.pbe7-scorebox');if(!scorebox)return;let host=document.getElementById('pbe8-core-market');if(!host){host=document.createElement('section');host.id='pbe8-core-market';host.className='pbe8-core-market';const actions=scorebox.querySelector('.pbe7-actions');if(actions)scorebox.insertBefore(host,actions);else scorebox.appendChild(host)}host.innerHTML=marketHtml()}
+  /* The innerHTML write MUST stay conditional. #pbe8-core-market lives inside
+   * document.body, and the observer below watches body with subtree:true, so
+   * an unconditional write re-triggers the very observer that scheduled it.
+   * Because observer callbacks and queueMicrotask both run as microtasks, that
+   * cycle never yields to the event loop: no paint, no input, no DevTools. */
+  function renderMarket(){if(!active())return;const scorebox=document.querySelector('.pbe7-scorebox');if(!scorebox)return;let host=document.getElementById('pbe8-core-market');if(!host){host=document.createElement('section');host.id='pbe8-core-market';host.className='pbe8-core-market';const actions=scorebox.querySelector('.pbe7-actions');if(actions)scorebox.insertBefore(host,actions);else scorebox.appendChild(host)}const next=marketHtml();if(host.innerHTML!==next)host.innerHTML=next}
 
   function category(item){const t=String(item?.topic_kind||'').toLowerCase();if(t==='injury'||/injur|inactive/.test(t))return'injury';if(['trade','signing','transaction'].includes(t))return'transaction';if(['lineup','return','depth_chart','depth chart'].includes(t))return'lineup';return'other'}
   function impact(item){const m=item?.market_impact||{};return{band:String(m.band||'CONTEXT').toUpperCase(),text:m.text||'Contextual NFL information. No verified sportsbook price movement is being claimed.',scope:m.scope||'',score:Number.isFinite(Number(m.score))?Number(m.score):null}}
@@ -69,8 +74,25 @@
   window.addEventListener('pbe:route-changed',syncRoute);
   window.addEventListener('pbe:upgrades-ready',syncRoute);
   window.addEventListener('pbe:pro-state',()=>setTimeout(renderNewsControls,30));
-  const observer=new MutationObserver(()=>{if(active())queueMicrotask(()=>{renderMarket();renderNewsControls()})});
-  document.addEventListener('DOMContentLoaded',()=>{observer.observe(document.body,{childList:true,subtree:true});syncRoute();tick()},{once:true});
-  if(document.readyState!=='loading'){observer.observe(document.body,{childList:true,subtree:true});syncRoute();tick()}
+  /* Coalesced onto a macrotask, not a microtask. Even if a future edit
+   * reintroduces an unconditional write, the loop can only run once per task,
+   * so the event loop still gets to paint and accept input instead of the
+   * whole main thread wedging. */
+  let pending=0;
+  function scheduleEnhance(){
+    if(pending||!active())return;
+    pending=setTimeout(()=>{pending=0;renderMarket();renderNewsControls()},50);
+  }
+  const observer=new MutationObserver(scheduleEnhance);
+  /* Scoped to the route container rather than document.body. The dashboard
+   * this enhances only ever renders inside #view-container, so watching all of
+   * body meant reacting to the ticker, scorebar, footer and every other
+   * unrelated mutation on the page. */
+  const observeHost=()=>observer.observe(
+    document.getElementById('view-container')||document.body,
+    {childList:true,subtree:true},
+  );
+  document.addEventListener('DOMContentLoaded',()=>{observeHost();syncRoute();tick()},{once:true});
+  if(document.readyState!=='loading'){observeHost();syncRoute();tick()}
   window.PBEDashboardV8={syncMarket,renderMarket,renderNewsControls,local};
 })();
