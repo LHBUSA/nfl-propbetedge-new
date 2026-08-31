@@ -1,0 +1,159 @@
+/* PropBetEdge NFL — Injury Intelligence visual authority v2 */
+.pbe13-news.pbe13-injury-v2{padding-top:8px!important}
+.pbe13-news.pbe13-injury-v2 .pbe13-hero{
+  min-height:0!important;
+  grid-template-columns:minmax(0,1fr) minmax(210px,250px)!important;
+  align-items:center!important;
+  gap:18px!important;
+  padding:16px 18px!important;
+  border-radius:13px!important;
+  background:radial-gradient(circle at 82% 0,rgba(241,107,120,.10),transparent 22rem),linear-gradient(135deg,#101923,#090f16 68%,#080d13)!important;
+}
+.pbe13-news.pbe13-injury-v2 .pbe13-kicker{font-size:7px!important}
+.pbe13-news.pbe13-injury-v2 .pbe13-title{
+  margin-top:7px!important;
+  font-size:clamp(35px,3.55vw,50px)!important;
+  line-height:.86!important;
+  letter-spacing:-.035em!important;
+}
+.pbe13-news.pbe13-injury-v2 .pbe13-copy{
+  max-width:760px!important;
+  margin-top:9px!important;
+  font-size:10px!important;
+  line-height:1.5!important;
+}
+.pbe13-news.pbe13-injury-v2 .pbe13-semantic{margin-top:8px!important;padding:5px 7px!important}
+.pbe13-news.pbe13-injury-v2 .pbe13-statusbox{min-width:0!important;padding:12px!important}
+.pbe13-news.pbe13-injury-v2 .pbe13-statusbox b{font-size:20px!important}
+.pbe13-news.pbe13-injury-v2 .pbe13-note{
+  margin-top:8px!important;
+  padding:8px 11px!important;
+  font-size:8px!important;
+  line-height:1.45!important;
+}
+
+/* Put the useful visual context before dashboard chrome. */
+.pbe13-news.pbe13-injury-v2 .pbe13-featured{
+  grid-template-columns:minmax(0,1.5fr) minmax(300px,.72fr)!important;
+  gap:9px!important;
+  margin-top:9px!important;
+}
+.pbe13-news.pbe13-injury-v2 .pbe13-lead{
+  min-height:0!important;
+  padding:16px 18px!important;
+  border-radius:11px!important;
+  background:radial-gradient(circle at 92% 8%,rgba(241,107,120,.08),transparent 18rem),linear-gradient(145deg,#111a26,#0a1018)!important;
+}
+.pbe13-news.pbe13-injury-v2 .pbe13-lead h2{
+  max-width:920px!important;
+  margin-top:8px!important;
+  font-size:clamp(25px,2.45vw,35px)!important;
+  line-height:.96!important;
+}
+.pbe13-news.pbe13-injury-v2 .pbe13-lead p{margin-top:8px!important;font-size:9.5px!important;line-height:1.5!important}
+.pbe13-news.pbe13-injury-v2 .pbe13-source{margin-top:10px!important}
+.pbe13-news.pbe13-injury-v2 .pbe13-lead-actions{margin-top:11px!important}
+
+/* Portraits are deliberate identity anchors, never natural-size images. */
+.pbe13-news.pbe13-injury-v2 .pbe13-story-player{
+  display:flex!important;
+  align-items:center!important;
+  gap:10px!important;
+  width:max-content!important;
+  max-width:100%!important;
+  margin-top:9px!important;
+  color:#edf2f7!important;
+  font-weight:800!important;
+}
+.pbe13-news.pbe13-injury-v2 .pbe13-story-player-lead>.pbe-player-headshot-v3{
+  width:78px!important;
+  height:78px!important;
+  max-width:78px!important;
+  max-height:78px!important;
+  flex:0 0 78px!important;
+  border-radius:14px!important;
+  border:1px solid rgba(241,107,120,.24)!important;
+  background:#0a1018!important;
+  object-fit:cover!important;
+}
+.pbe13-news.pbe13-injury-v2 .pbe13-story-player-lead .pbe13-story-player-name{
+  max-width:220px!important;
+  font:900 21px/.95 'Barlow Condensed',sans-serif!important;
+  text-transform:uppercase!important;
+  letter-spacing:-.01em!important;
+}
+.pbe13-news.pbe13-injury-v2 .pbe13-story-player-card{
+  margin-top:8px!important;
+  gap:9px!important;
+}
+.pbe13-news.pbe13-injury-v2 .pbe13-story-player-card>.pbe-player-headshot-v3{
+  width:52px!important;
+  height:52px!important;
+  max-width:52px!important;
+  max-height:52px!important;
+  flex:0 0 52px!important;
+  border-radius:11px!important;
+  border:1px solid rgba(241,107,120,.18)!important;
+  background:#0a1018!important;
+  object-fit:cover!important;
+}
+.pbe13-news.pbe13-injury-v2 .pbe13-story-player-card .pbe13-story-player-name{
+  font:900 15px/1 'Barlow Condensed',sans-serif!important;
+  text-transform:uppercase!important;
+}
+
+/* Affected player rail remains visual but compact. */
+.pbe13-news.pbe13-injury-v2 .pbe13-side{padding:11px!important}
+.pbe13-news.pbe13-injury-v2 .pbe13-side-head{margin-bottom:7px!important}
+.pbe13-news.pbe13-injury-v2 .pbe13-side-head strong{font-size:16px!important}
+.pbe13-news.pbe13-injury-v2 .pbe13-affected{gap:5px!important}
+.pbe13-news.pbe13-injury-v2 .pbe13-aff-row{min-height:48px!important;padding:6px 8px!important}
+.pbe13-news.pbe13-injury-v2 .pbe13-aff-name{display:flex!important;align-items:center!important;gap:8px!important;font-size:10px!important}
+.pbe13-news.pbe13-injury-v2 .pbe13-aff-name>.pbe-player-headshot-v3{
+  width:36px!important;
+  height:36px!important;
+  max-width:36px!important;
+  max-height:36px!important;
+  flex:0 0 36px!important;
+  border-radius:9px!important;
+  object-fit:cover!important;
+}
+.pbe13-news.pbe13-injury-v2 .pbe13-impact{font-size:17px!important}
+
+.pbe13-news.pbe13-injury-v2 .pbe13-summary{gap:7px!important;margin-top:8px!important}
+.pbe13-news.pbe13-injury-v2 .pbe13-stat{padding:10px 12px!important}
+.pbe13-news.pbe13-injury-v2 .pbe13-stat b{font-size:25px!important}
+.pbe13-news.pbe13-injury-v2 .pbe13-controls{margin-top:8px!important;padding:8px!important}
+.pbe13-news.pbe13-injury-v2 .pbe13-input,
+.pbe13-news.pbe13-injury-v2 .pbe13-select{height:36px!important;font-size:9px!important}
+
+/* The story ledger stays one column for fast scanning, now with portraits. */
+.pbe13-news.pbe13-injury-v2 .pbe13-feed{grid-template-columns:1fr!important;gap:7px!important;margin-top:9px!important}
+.pbe13-news.pbe13-injury-v2 .pbe13-card{
+  min-height:0!important;
+  padding:12px 14px!important;
+  border-radius:9px!important;
+}
+.pbe13-news.pbe13-injury-v2 .pbe13-card h3{margin-top:7px!important;font-size:19px!important;line-height:1.04!important}
+.pbe13-news.pbe13-injury-v2 .pbe13-card p{max-width:1100px!important;margin-top:6px!important;font-size:8.8px!important;line-height:1.5!important}
+.pbe13-news.pbe13-injury-v2 .pbe13-card-foot{margin-top:8px!important;padding-top:7px!important}
+.pbe13-news.pbe13-injury-v2 .pbe13-tags{margin-top:8px!important}
+/* Chips remain text; the portrait treatment above carries identity. */
+.pbe13-news.pbe13-injury-v2 .pbe13-tag.accent>.pbe-player-headshot-v3{display:none!important}
+
+@media(max-width:1050px){
+  .pbe13-news.pbe13-injury-v2 .pbe13-featured{grid-template-columns:1fr!important}
+}
+@media(max-width:800px){
+  .pbe13-news.pbe13-injury-v2 .pbe13-hero{grid-template-columns:1fr!important;padding:15px!important}
+  .pbe13-news.pbe13-injury-v2 .pbe13-title{font-size:38px!important}
+  .pbe13-news.pbe13-injury-v2 .pbe13-summary{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .pbe13-news.pbe13-injury-v2 .pbe13-controls{grid-template-columns:1fr!important}
+  .pbe13-news.pbe13-injury-v2 .pbe13-input{grid-column:auto!important}
+}
+@media(max-width:520px){
+  .pbe13-news.pbe13-injury-v2 .pbe13-story-player-lead>.pbe-player-headshot-v3{width:64px!important;height:64px!important;max-width:64px!important;max-height:64px!important;flex-basis:64px!important}
+  .pbe13-news.pbe13-injury-v2 .pbe13-story-player-card>.pbe-player-headshot-v3{width:46px!important;height:46px!important;max-width:46px!important;max-height:46px!important;flex-basis:46px!important}
+  .pbe13-news.pbe13-injury-v2 .pbe13-summary{grid-template-columns:1fr 1fr!important}
+  .pbe13-news.pbe13-injury-v2 .pbe13-stat:last-child{grid-column:1/-1!important}
+}
