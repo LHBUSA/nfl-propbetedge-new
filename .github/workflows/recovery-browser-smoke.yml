@@ -1,9 +1,14 @@
-name: Recovery Browser Smoke
+name: NFL Browser Visual Regression
 
 on:
   push:
     branches:
+      - main
       - recovery/baseline-d29ff748
+  pull_request:
+
+permissions:
+  contents: read
 
 jobs:
   smoke:
@@ -15,7 +20,7 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Recovery runtime syntax
+      - name: Runtime syntax
         run: node --check page-loader.js
 
       - name: Observer safety across active runtime
@@ -30,16 +35,16 @@ jobs:
           set -euo pipefail
           curl -fsS 'https://nfl.propbetedge.ai/api/nfl-live?date=20260830' | grep -Fq '"ok":true'
 
-      - name: Browser liveness, media, routes and visual captures
+      - name: Browser liveness media nav routes and visual captures
         env:
           PBE_CHROME: /usr/bin/google-chrome
         run: node scripts/recovery-browser-smoke.mjs
 
-      - name: Upload recovery audit
+      - name: Upload visual regression audit
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: recovery-browser-audit
+          name: nfl-browser-visual-audit
           path: |
             recovery-smoke.log
             recovery-*.png
