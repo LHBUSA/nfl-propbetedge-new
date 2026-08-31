@@ -66,7 +66,10 @@ let desktop=await probe(`(()=>{
   const broken=imgs.filter(i=>i.complete&&!i.naturalWidth);
   const controls=root.querySelectorAll('#pbe13-summary,.pbe13-controls,.pbe13-side,.pbe13-story-player,.pbe13-impact');
   const boardStyle=board?getComputedStyle(board):null;
-  const gridTracks=firstRow?getComputedStyle(firstRow).gridTemplateColumns.split(/\s+/).filter(Boolean).length:0;
+  const rowCells=firstRow?[...firstRow.children].slice(0,5):[];
+  const rowLefts=rowCells.map(el=>Math.round(el.getBoundingClientRect().left));
+  const renderedColumns=new Set(rowLefts).size;
+  const orderedColumns=rowLefts.every((left,index)=>index===0||left>rowLefts[index-1]);
   return{
     root:true,
     heroHeight:+(hero?.getBoundingClientRect().height||0).toFixed(1),
@@ -91,7 +94,9 @@ let desktop=await probe(`(()=>{
     columnDisplay:columns?getComputedStyle(columns).display:null,
     columnFont:px(columns?.querySelector('span')),
     teamColumn:!!teamCell,
-    gridTracks,
+    renderedColumns,
+    orderedColumns,
+    rowLefts,
     playerFont:px(playerName),
     teamFont:px(teamCell),
     injuryFont:px(injuryValue),
@@ -103,7 +108,7 @@ let desktop=await probe(`(()=>{
   };
 })()`);
 out(`desktop ${JSON.stringify(desktop)}`);
-if(!desktop||typeof desktop!=='object'||desktop.root!==true||desktop.heroHeight>255||desktop.lead!==true||desktop.leadImage!==true||desktop.leadMediaWidth<500||desktop.cards<5||desktop.articleLinks<6||desktop.badLinks!==0||desktop.images<6||desktop.loadedImages<1||desktop.broken>0||desktop.telemetryNodes!==0||desktop.impactText!==false||desktop.editorialText!==true||desktop.availabilityBoard!==true||desktop.availabilityRows<3||desktop.reportedTimelines<2||desktop.availabilityText!==true||desktop.readabilityAuthority!=='5'||desktop.columnCount!==5||desktop.columnDisplay!=='grid'||desktop.columnFont<9.5||desktop.teamColumn!==true||desktop.gridTracks!==5||desktop.playerFont<18||desktop.teamFont<11||desktop.injuryFont<12||desktop.statusFont<10||desktop.timelineFont<13||desktop.footFont<9.5||!desktop.boardBg||desktop.boardBg==='rgba(0, 0, 0, 0)'||desktop.text<1500)pass=false;
+if(!desktop||typeof desktop!=='object'||desktop.root!==true||desktop.heroHeight>255||desktop.lead!==true||desktop.leadImage!==true||desktop.leadMediaWidth<500||desktop.cards<5||desktop.articleLinks<6||desktop.badLinks!==0||desktop.images<6||desktop.loadedImages<1||desktop.broken>0||desktop.telemetryNodes!==0||desktop.impactText!==false||desktop.editorialText!==true||desktop.availabilityBoard!==true||desktop.availabilityRows<3||desktop.reportedTimelines<2||desktop.availabilityText!==true||desktop.readabilityAuthority!=='5'||desktop.columnCount!==5||desktop.columnDisplay!=='grid'||desktop.columnFont<9.5||desktop.teamColumn!==true||desktop.renderedColumns!==5||desktop.orderedColumns!==true||desktop.playerFont<18||desktop.teamFont<11||desktop.injuryFont<12||desktop.statusFont<10||desktop.timelineFont<13||desktop.footFont<9.5||!desktop.boardBg||desktop.boardBg==='rgba(0, 0, 0, 0)'||desktop.text<1500)pass=false;
 
 const binding=await probe(`(()=>{
   const api=window.PBEInjuryIntelV2;
