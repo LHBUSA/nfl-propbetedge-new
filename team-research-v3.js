@@ -9,7 +9,9 @@
   const state={loading:false,news:[],query:'',conf:'all',div:'all',selected:null};
   const esc=v=>String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
   const num=v=>{const n=Number(v);return Number.isFinite(n)?n:NaN};
-  const teams=()=>Object.values(window.NFL_TEAMS||{}).sort((a,b)=>String(a.name||'').localeCompare(String(b.name||'')));
+  /* archive/teams.js is a classic script with top-level const NFL_TEAMS. */
+  const teamMap=()=>typeof NFL_TEAMS!=='undefined'&&NFL_TEAMS&&typeof NFL_TEAMS==='object'?NFL_TEAMS:(window.NFL_TEAMS||{});
+  const teams=()=>Object.values(teamMap()).sort((a,b)=>String(a.name||'').localeCompare(String(b.name||'')));
   async function fetchJson(url){const r=await fetch(url,{cache:'no-store',headers:{Accept:'application/json'}});if(!r.ok)throw new Error(`HTTP ${r.status}`);return r.json();}
   function crest(t,size=36){try{if(t?.abbr&&typeof teamCrest==='function')return teamCrest(t.abbr,size)}catch(_){}return `<strong style="color:#fff;font:900 12px 'Barlow Condensed',sans-serif">${esc(t?.abbr||'NFL')}</strong>`;}
   function standingRows(){const src=window.StandingsView?.STANDINGS||{},out=[];Object.entries(src).forEach(([conf,divs])=>Object.entries(divs||{}).forEach(([div,rows])=>(rows||[]).forEach(r=>out.push({...r,conf,div}))));return out;}
