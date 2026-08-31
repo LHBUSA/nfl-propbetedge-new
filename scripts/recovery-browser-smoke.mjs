@@ -5,7 +5,7 @@
  *
  * This gate checks more than liveness. A prior recovery rendered successfully
  * while silently regressing navigation and CSS authority, so we also require
- * the complete product map, synchronized active state, terminal visual-layer
+ * the complete product map, synchronized active state, intended layered CSS
  * ordering, route content and visual captures of the major workspaces.
  */
 import {spawn} from 'node:child_process';
@@ -58,7 +58,7 @@ let media=await mediaStats();out(`home media             : ${JSON.stringify(medi
 out('\n=== NAVIGATION CONTRACT ===');
 const nav=await navStats();out(`quick nav              : ${JSON.stringify(nav)}`);
 if(!nav||typeof nav!=='object'||nav.count!==requiredNav.length||!nav.picks||!nav.record||nav.active.length!==1||nav.active[0]!=='home'||requiredNav.some(r=>!nav.routes.includes(r)))pass=false;
-const cssOrder=await probe(`(()=>{const files=[...document.querySelectorAll('link[data-pbe-upgrade]')].map(x=>(new URL(x.href)).pathname.split('/').pop());const terminal=files.indexOf('world-class-v1.css');const structural=['dashboard-v7.css','games-intel-v5.css','prop-board-v4.css','model-lab-v2-enhance.css','pbecast-v6.css'];return{terminal,structural:Object.fromEntries(structural.map(f=>[f,files.indexOf(f)])),ok:terminal>=0&&structural.every(f=>files.indexOf(f)>=0&&files.indexOf(f)<terminal)}})()`);
+const cssOrder=await probe(`(()=>{const files=[...document.querySelectorAll('link[data-pbe-upgrade]')].map(x=>(new URL(x.href)).pathname.split('/').pop()),at=f=>files.indexOf(f),world=at('world-class-v1.css');const foundations=['dashboard-v7.css','dashboard-v8-enhance.css','games-v2.css','model-lab-v2-enhance.css','simulator-v3-enhance.css','usage-v2.css'];const terminal=['pbecast-v6.css','pbecast-v7-enhance.css','games-command-v4.css','games-intel-v5.css','prop-board-v4.css','prop-board-responsive-v5.css','pbe-picks-v2.css'];return{world,foundations:Object.fromEntries(foundations.map(f=>[f,at(f)])),terminal:Object.fromEntries(terminal.map(f=>[f,at(f)])),ok:world>=0&&foundations.every(f=>at(f)>=0&&at(f)<world)&&terminal.every(f=>at(f)>world)}})()`);
 out(`visual CSS authority   : ${JSON.stringify(cssOrder)}`);if(!cssOrder||typeof cssOrder!=='object'||cssOrder.ok!==true)pass=false;
 await shot('home-desktop');
 
