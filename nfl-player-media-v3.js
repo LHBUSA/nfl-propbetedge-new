@@ -1,4 +1,4 @@
-/* PropBetEdge NFL — universal player media v3.1
+/* PropBetEdge NFL — universal player media v3.2
  * Extends the identity-safe resolver to player-name treatments without observing
  * every DOM mutation. Hydration runs in bounded bursts on route/render events.
  */
@@ -33,6 +33,10 @@
     return String(clone.textContent||'').replace(/\s+/g,' ').trim();
   }
 
+  function isInjuryStoryChip(el){
+    return Boolean(el?.matches?.('.pbe13-tag.accent')&&el.closest?.('.pbe13-news')?.querySelector?.('.pbe13-note'));
+  }
+
   async function resolve(name){
     const key=normalize(name);if(!key)return null;if(cache.has(key))return cache.get(key);
     const base=window.PBENFLMediaV2?.resolvePlayerImage;
@@ -46,7 +50,7 @@
   }
 
   async function hydrate(el){
-    if(!el?.isConnected||el.dataset.pbeMediaV3==='loading'||el.dataset.pbeMediaV3==='ready')return;
+    if(!el?.isConnected||isInjuryStoryChip(el)||el.dataset.pbeMediaV3==='loading'||el.dataset.pbeMediaV3==='ready')return;
     if(el.querySelector(':scope > .pbe-player-headshot')){el.dataset.pbeMediaV3='ready';return}
     const name=cleanName(el);if(!name)return;el.dataset.pbeMediaV3='loading';
     const src=await resolve(name);if(!el.isConnected)return;
@@ -64,7 +68,7 @@
 
   function scan(){
     markSemanticPlayers();
-    document.querySelectorAll(TARGETS.join(',')).forEach(el=>{if(el.dataset.pbeMediaV3==='ready'||el.dataset.pbeMediaV3==='loading'||el.dataset.pbeMediaV3==='queued')return;if(observer){el.dataset.pbeMediaV3='queued';observer.observe(el)}else hydrate(el)});
+    document.querySelectorAll(TARGETS.join(',')).forEach(el=>{if(isInjuryStoryChip(el))return;if(el.dataset.pbeMediaV3==='ready'||el.dataset.pbeMediaV3==='loading'||el.dataset.pbeMediaV3==='queued')return;if(observer){el.dataset.pbeMediaV3='queued';observer.observe(el)}else hydrate(el)});
   }
 
   function schedule(){clearTimeout(timer);timer=setTimeout(scan,35)}
