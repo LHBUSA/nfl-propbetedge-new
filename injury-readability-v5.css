@@ -1,0 +1,309 @@
+/* PropBetEdge NFL — Injury availability readability v5
+ * Terminal presentation authority for the Who's Out & How Long board.
+ * The factual/editorial authority remains injury-intel-v2.js.
+ */
+
+.pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"]{
+  background:
+    radial-gradient(circle at 92% 12%,rgba(46,119,89,.055),transparent 30rem),
+    linear-gradient(180deg,rgba(5,10,16,.965),rgba(5,9,14,.992))!important;
+}
+
+.pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-board{
+  margin-top:14px!important;
+  border:1px solid rgba(210,222,233,.15)!important;
+  border-radius:14px!important;
+  background:#081019!important;
+  background-image:none!important;
+  box-shadow:0 22px 58px rgba(0,0,0,.36),inset 0 1px 0 rgba(255,255,255,.025)!important;
+}
+
+.pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-head{
+  align-items:center!important;
+  padding:22px 24px 20px!important;
+  border-bottom:1px solid rgba(210,222,233,.11)!important;
+  background:#0b141e!important;
+  background-image:linear-gradient(105deg,rgba(255,255,255,.018),transparent 48%,rgba(241,107,120,.035))!important;
+}
+.pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-head>div:first-child>span{
+  color:#f28b95!important;
+  font-size:9.5px!important;
+  line-height:1!important;
+  letter-spacing:.14em!important;
+}
+.pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-head h2{
+  margin-top:8px!important;
+  color:#f7f9fb!important;
+  font-size:clamp(42px,3.6vw,54px)!important;
+  line-height:.92!important;
+  letter-spacing:-.022em!important;
+  text-shadow:0 1px 0 rgba(255,255,255,.04)!important;
+}
+.pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-head p{
+  max-width:830px!important;
+  margin-top:10px!important;
+  color:#aeb8c3!important;
+  font-size:13px!important;
+  line-height:1.55!important;
+}
+.pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-coverage{
+  min-width:145px!important;
+  padding:12px 14px!important;
+  border-color:rgba(241,107,120,.25)!important;
+  background:#111923!important;
+  text-align:right!important;
+}
+.pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-coverage strong{
+  color:#ff9ca5!important;
+  font-size:31px!important;
+}
+.pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-coverage span{
+  margin-top:5px!important;
+  color:#a0acb8!important;
+  font-size:8.5px!important;
+  line-height:1.25!important;
+}
+
+.pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-columns,
+.pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-row{
+  grid-template-columns:minmax(220px,1.25fr) minmax(82px,.42fr) minmax(150px,.74fr) minmax(190px,.95fr) minmax(250px,1.22fr)!important;
+  gap:18px!important;
+}
+.pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-columns{
+  display:grid!important;
+  align-items:center!important;
+  padding:12px 22px!important;
+  border-bottom:1px solid rgba(210,222,233,.12)!important;
+  background:#071019!important;
+  color:#8f9cab!important;
+  font:800 10.5px/1 'DM Mono',monospace!important;
+  letter-spacing:.09em!important;
+  text-transform:uppercase!important;
+}
+
+.pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-list{
+  border-top:0!important;
+  background:#081019!important;
+}
+.pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-row{
+  min-height:66px!important;
+  padding:12px 22px!important;
+  border-bottom:1px solid rgba(210,222,233,.085)!important;
+  background:#0a131d!important;
+  transition:background .15s ease,border-color .15s ease,box-shadow .15s ease!important;
+}
+.pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-row:nth-child(even){
+  background:#0c1621!important;
+}
+.pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-row:hover{
+  background:#101c28!important;
+  border-bottom-color:rgba(210,222,233,.15)!important;
+  box-shadow:inset 3px 0 0 rgba(241,107,120,.65)!important;
+}
+.pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-player,
+.pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-team,
+.pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-cell{
+  min-width:0!important;
+}
+.pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-player strong{
+  color:#f6f8fa!important;
+  font-size:22px!important;
+  line-height:1!important;
+  letter-spacing:-.01em!important;
+}
+.pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-team{
+  display:flex!important;
+  align-items:center!important;
+}
+.pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-team .team-code{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  min-width:46px!important;
+  min-height:30px!important;
+  padding:5px 9px!important;
+  border:1px solid rgba(210,222,233,.15)!important;
+  border-radius:8px!important;
+  background:#101a25!important;
+  color:#edf2f6!important;
+  font:900 13px/1 'DM Mono',monospace!important;
+  letter-spacing:.045em!important;
+}
+.pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-cell .label{
+  display:none!important;
+}
+.pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-cell>strong{
+  margin-top:0!important;
+  color:#e5eaf0!important;
+  font:800 14px/1.3 'DM Mono',monospace!important;
+  letter-spacing:0!important;
+}
+.pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-avail-status{
+  min-height:34px!important;
+  align-items:center!important;
+  justify-content:center!important;
+  padding:7px 12px!important;
+  border-width:1px!important;
+  border-radius:999px!important;
+  font-size:11.5px!important;
+  line-height:1!important;
+  font-weight:900!important;
+  white-space:normal!important;
+  text-align:center!important;
+}
+.pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-avail-status.is-out{
+  border-color:rgba(255,105,116,.43)!important;
+  background:rgba(183,48,61,.15)!important;
+  color:#ff7f89!important;
+}
+.pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-avail-status.is-watch{
+  border-color:rgba(244,190,63,.42)!important;
+  background:rgba(168,115,14,.14)!important;
+  color:#f3c750!important;
+}
+.pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-avail-status.is-returning{
+  border-color:rgba(70,220,161,.36)!important;
+  background:rgba(25,143,98,.15)!important;
+  color:#6ee0b2!important;
+}
+.pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-cell.timeline>strong{
+  color:#f6f8fa!important;
+  font-size:15.5px!important;
+  line-height:1.24!important;
+  font-weight:900!important;
+}
+.pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-cell.timeline.is-unknown>strong{
+  color:#aab4bf!important;
+}
+.pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-cell small{
+  margin-top:6px!important;
+  color:#84919e!important;
+  font-size:9px!important;
+  line-height:1.25!important;
+  font-weight:700!important;
+  letter-spacing:.04em!important;
+}
+.pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-foot{
+  padding:12px 22px 13px!important;
+  border-top:1px solid rgba(210,222,233,.09)!important;
+  background:#071019!important;
+  color:#9aa6b2!important;
+  font-size:10.5px!important;
+  line-height:1.55!important;
+}
+
+@media(max-width:1120px) and (min-width:801px){
+  .pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-columns,
+  .pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-row{
+    grid-template-columns:minmax(175px,1.15fr) minmax(64px,.4fr) minmax(120px,.72fr) minmax(155px,.92fr) minmax(190px,1.15fr)!important;
+    gap:12px!important;
+    padding-left:16px!important;
+    padding-right:16px!important;
+  }
+  .pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-player strong{font-size:19px!important}
+  .pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-cell>strong{font-size:12.5px!important}
+  .pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-cell.timeline>strong{font-size:13.5px!important}
+  .pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-avail-status{font-size:10.5px!important;padding-left:9px!important;padding-right:9px!important}
+}
+
+@media(max-width:800px){
+  .pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-board{
+    border-radius:11px!important;
+  }
+  .pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-head{
+    display:block!important;
+    padding:17px 15px 15px!important;
+  }
+  .pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-head h2{
+    font-size:38px!important;
+  }
+  .pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-head p{
+    font-size:12px!important;
+  }
+  .pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-coverage{
+    display:inline-block!important;
+    min-width:0!important;
+    margin-top:13px!important;
+    text-align:left!important;
+  }
+  .pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-columns{
+    display:none!important;
+  }
+  .pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-list{
+    display:grid!important;
+    gap:8px!important;
+    padding:8px!important;
+    background:#071019!important;
+  }
+  .pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-row{
+    display:grid!important;
+    grid-template-columns:minmax(0,1.25fr) minmax(92px,.75fr)!important;
+    gap:13px 14px!important;
+    min-height:0!important;
+    padding:14px!important;
+    border:1px solid rgba(210,222,233,.11)!important;
+    border-radius:9px!important;
+    background:#0b151f!important;
+    box-shadow:none!important;
+  }
+  .pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-row:nth-child(even){background:#0d1722!important}
+  .pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-player{
+    grid-column:1!important;
+    grid-row:1!important;
+    align-self:center!important;
+  }
+  .pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-player strong{font-size:21px!important}
+  .pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-team{
+    grid-column:2!important;
+    grid-row:1!important;
+    align-self:center!important;
+    justify-self:end!important;
+  }
+  .pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-team:before{
+    content:'TEAM';
+    margin-right:7px;
+    color:#758290;
+    font:800 8px/1 'DM Mono',monospace;
+    letter-spacing:.08em;
+  }
+  .pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-team .team-code{
+    min-width:42px!important;
+    min-height:28px!important;
+    font-size:12px!important;
+  }
+  .pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-row>.pbe13-availability-cell:nth-child(3){grid-column:1!important;grid-row:2!important}
+  .pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-row>.pbe13-availability-cell:nth-child(4){grid-column:2!important;grid-row:2!important}
+  .pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-cell.timeline{grid-column:1/-1!important;grid-row:3!important;padding-top:11px!important;border-top:1px solid rgba(210,222,233,.09)!important}
+  .pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-cell .label{
+    display:block!important;
+    margin-bottom:6px!important;
+    color:#7c8996!important;
+    font-size:8px!important;
+    line-height:1!important;
+  }
+  .pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-cell>strong{
+    color:#edf2f6!important;
+    font-size:13px!important;
+  }
+  .pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-avail-status{
+    min-height:31px!important;
+    padding:6px 9px!important;
+    font-size:10px!important;
+  }
+  .pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-cell.timeline>strong{font-size:15px!important}
+  .pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-cell small{font-size:8.5px!important}
+  .pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-foot{
+    padding:12px 14px 14px!important;
+    font-size:10px!important;
+  }
+}
+
+@media(max-width:430px){
+  .pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-head h2{font-size:34px!important}
+  .pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-row{
+    grid-template-columns:minmax(0,1fr) minmax(82px,.58fr)!important;
+    padding:13px 12px!important;
+    gap:12px 10px!important;
+  }
+  .pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-team:before{display:none!important}
+}
