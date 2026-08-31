@@ -52,7 +52,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          grep -Eq "const VERSION='20260830recovery[0-9]+'" page-loader.js
+          grep -Eq "const VERSION='20[0-9]{6}[A-Za-z0-9-]+'" page-loader.js
           required=(
             dashboard-v5.js dashboard-v6.js dashboard-v7.js dashboard-v8-enhance.js
             sports-shell-v2.js sports-shell-auth-state.js
@@ -61,7 +61,7 @@ jobs:
             model-lab.js model-lab-v2-enhance.js simulator-v2.js simulator-v3-enhance.js
             sgp-lab-v2.js usage-v2.js propchain-v2.js
             pbecast-v6.js pbecast-v7-enhance.js
-            news-intelligence-v2.js newsroom-v2.js player-research-v2.js
+            news-intelligence-v2.js newsroom-v2.js injury-intel-v2.js player-research-v2.js
             pbe-picks-v2.js pbe-validation-v1.js
             pbe-engine-story-v1.js pbe-prop-engine-v1.js
             nfl-brand-media-v2.js nfl-player-media-v3.js
