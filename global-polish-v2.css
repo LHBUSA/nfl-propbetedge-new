@@ -3,15 +3,15 @@
 .sidebar-nav .nav-group:nth-child(2){padding-top:1px}
 #nav-propboard,#nav-matchups,#nav-picks,#nav-pbepicks,#nav-trackrecord{font-weight:700!important}
 #nav-propboard .nav-badge,#nav-matchups .nav-badge,#nav-pbepicks .nav-badge,#nav-trackrecord .nav-badge{margin-left:auto}
-/* The event selector is inserted between the context block and quick nav, so
-   the command bar is intentionally two rows on desktop: context + event on top,
-   the complete product map spanning the full row below. */
-.pbe-v2-commandbar{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:'context event' 'quick quick';align-items:center;column-gap:14px;row-gap:8px;min-height:92px;padding-top:8px;padding-bottom:9px;box-shadow:0 12px 35px rgba(0,0,0,.08)}
+/* The sports shell owns desktop product navigation. The command bar is context +
+   selected event only; duplicating the entire product map here made every route
+   look like it had two competing navigation systems. */
+.pbe-v2-commandbar{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:'context event';align-items:center;column-gap:14px;min-height:58px;padding-top:0;padding-bottom:0;box-shadow:0 12px 35px rgba(0,0,0,.08)}
 .pbe-v2-crumbs{grid-area:context;min-width:0}
-#pbe19-event-button,.pbe19-event-button{grid-area:event;justify-self:end;max-width:min(360px,34vw)}
-.pbe-v2-quicknav{grid-area:quick;width:100%;max-width:none;justify-content:flex-start;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;padding:2px 0}.pbe-v2-quicknav::-webkit-scrollbar{display:none}.pbe-v2-quicknav button,.pbe-v2-quicknav a{flex:0 0 auto}
+#pbe19-event-button,.pbe19-event-button{grid-area:event;justify-self:end;max-width:min(390px,38vw)}
+.pbe-v2-quicknav{display:none!important}
 .sidebar-foot{position:relative;overflow:hidden}.sidebar-foot:after{content:'PRO';position:absolute;right:-5px;bottom:-9px;color:rgba(216,183,91,.035);font:900 48px/.8 'Barlow Condensed',sans-serif;pointer-events:none}
 .sf-api{position:relative;z-index:1}
 .pbe-os-shortcut{display:inline-flex;align-items:center;gap:5px;margin-left:4px;color:#5b6877!important}.pbe-os-shortcut kbd{padding:3px 5px;border:1px solid rgba(255,255,255,.06);border-radius:4px;background:rgba(255,255,255,.014);color:#778493;font:700 5px/1 'DM Mono',monospace}
-@media(max-width:1180px){.pbe-v2-commandbar{column-gap:10px}.pbe-v2-view-meta{display:none}.pbe-v2-quicknav{justify-content:flex-start}}
-@media(max-width:900px){.pbe-v2-commandbar{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:'context event';min-height:56px;padding-top:0;padding-bottom:0;row-gap:0}.pbe-v2-quicknav{display:none!important}.sidebar-nav .nav-group:first-child{border-bottom:0}.mobile-bottom-nav .mbn-item span{font-size:8px}}
+@media(max-width:1180px){.pbe-v2-commandbar{column-gap:10px}.pbe-v2-view-meta{display:none}}
+@media(max-width:900px){.pbe-v2-commandbar{min-height:56px}.sidebar-nav .nav-group:first-child{border-bottom:0}.mobile-bottom-nav .mbn-item span{font-size:8px}}
