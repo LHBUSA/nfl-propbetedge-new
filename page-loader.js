@@ -6,16 +6,16 @@
   const MEDIA_CSS=['./nfl-brand-media-v1.css','./nfl-player-media-v2.css','./nfl-player-media-v3.css'];
   const MEDIA_JS=['./nfl-brand-media-v2.js','./nfl-player-media-v3.js'];
 
-  /* Global shell only. No page-specific market/news/model runtime initializes here. */
+  /* Global shell + visual identity only. Page-specific market/news/model runtime stays route-scoped. */
   const GLOBAL={
     css:[
       './command-palette-v2.css','./global-polish-v2.css','./sports-shell-v1.css','./sports-shell-v2.css','./sports-shell-v3.css',
       './world-class-v1.css','./readability-v1.css','./paywall-polish-v1.css','./network-footer-v1.css','./paywall-funnel-v2.css',
-      './stadium-selector-v1.css','./production-polish-v2.css','./scrollbar-clean-v1.css'
+      './stadium-selector-v1.css','./production-polish-v2.css','./scrollbar-clean-v1.css',...MEDIA_CSS
     ],
     js:[
       './team-globals-v1.js','./command-palette-v3.js','./global-polish-v5.js','./sports-shell-v2.js','./sports-shell-auth-state.js',
-      './paywall-polish-v1.js','./network-footer-v1.js','./paywall-funnel-v2.js','./stadium-selector-v1.js','./production-polish-v2.js'
+      './paywall-polish-v1.js','./network-footer-v1.js','./paywall-funnel-v2.js','./stadium-selector-v1.js','./production-polish-v2.js',...MEDIA_JS
     ]
   };
 
