@@ -6,6 +6,7 @@ on:
       - main
       - recovery/baseline-d29ff748
       - fix/injuries-photo-layout-v2
+      - fix/injury-editorial-hub-v3
   pull_request:
 
 permissions:
@@ -44,7 +45,7 @@ jobs:
           PBE_CHROME: /usr/bin/google-chrome
         run: node scripts/recovery-browser-smoke.mjs
 
-      - name: Injury Intelligence photo layout
+      - name: Injury Editorial article layout
         env:
           PBE_CHROME: /usr/bin/google-chrome
         run: node scripts/injury-layout-smoke.mjs
@@ -58,4 +59,5 @@ jobs:
             recovery-smoke.log
             recovery-*.png
             injury-layout-*.png
+            injury-editorial-*.png
           if-no-files-found: ignore
