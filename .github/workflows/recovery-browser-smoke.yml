@@ -1,0 +1,39 @@
+name: Recovery Browser Smoke
+
+on:
+  push:
+    branches:
+      - recovery/baseline-d29ff748
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Wait for recovery preview
+        shell: bash
+        run: |
+          set -euo pipefail
+          url='https://nfl-propbetedge-new-git-recove-65e3e3-justins-projects-ad4f4bb7.vercel.app'
+          for i in $(seq 1 30); do
+            if curl -fsS "$url" >/dev/null; then exit 0; fi
+            sleep 4
+          done
+          echo 'Recovery preview did not become reachable'
+          exit 1
+      - name: Browser liveness and route smoke
+        env:
+          PBE_URL: https://nfl-propbetedge-new-git-recove-65e3e3-justins-projects-ad4f4bb7.vercel.app
+          PBE_CHROME: /usr/bin/google-chrome
+        run: node scripts/browser-smoke.mjs
+      - name: Upload smoke log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: recovery-browser-smoke-log
+          path: verify-all.log
+          if-no-files-found: ignore
