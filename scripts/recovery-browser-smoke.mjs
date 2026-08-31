@@ -44,7 +44,7 @@ async function activeNav(route){return probe(`(()=>{const all=[...document.query
 const primaryRoutes=['pbecast','propboard','marketwatch','pbepicks','trackrecord','picks','simulator','sgplab','usage','propchain','games','newsintel'];
 const researchRoutes=['matchups','injuries','trades','teams','stats','standings','seasonhistory','hof','records','sb','prospects'];
 const routes=[...primaryRoutes,...researchRoutes,'home'];
-const captureRoutes=new Set(['games','propboard','marketwatch','picks','pbepicks','trackrecord','usage','propchain','pbecast','newsintel','matchups','home']);
+const captureRoutes=new Set(['games','propboard','marketwatch','picks','pbepicks','trackrecord','usage','propchain','pbecast','newsintel','matchups','injuries','home']);
 
 out(`TARGET ${TARGET}`);out('MODE recovery static files + live production APIs + injected Usage fault');
 await send('Page.navigate',{url:`${TARGET}/?recovery=${Date.now()}`});await sleep(12000);
@@ -89,6 +89,12 @@ for(const route of routes){
   out(`${route.padEnd(13)} alive=${alive?'YES':'NO '} route=${String(cur).padEnd(13)} chars=${chars} active=${JSON.stringify(active)} media=${JSON.stringify(media)}`);
   if(!alive||cur!==route||!(Number(chars)>80)||!active||active.active!==true||active.activeCount!==1||Number(media?.broken||0)>0){pass=false;break}
   if(route==='usage'&&await probe(`!!document.querySelector('.pbe21-usage')`)!==true){pass=false;break}
+  if(route==='injuries'){
+    const injuryLayout=await probe(`(()=>{const root=document.querySelector('.pbe13-news'),affected=[...document.querySelectorAll('.pbe13-aff-name>.pbe-player-headshot-v3')],tagPhotos=[...document.querySelectorAll('.pbe13-tags .pbe-player-headshot-v3')],feed=document.querySelector('.pbe13-feed'),cards=[...document.querySelectorAll('.pbe13-feed>.pbe13-card')];const maxAffected=affected.reduce((m,img)=>Math.max(m,img.getBoundingClientRect().width,img.getBoundingClientRect().height),0);const visibleTagPhotos=tagPhotos.filter(img=>{const s=getComputedStyle(img),r=img.getBoundingClientRect();return s.display!=='none'&&s.visibility!=='hidden'&&r.width>0&&r.height>0}).length;const columns=feed?getComputedStyle(feed).gridTemplateColumns:'';return{root:!!root,affected:affected.length,maxAffected:+maxAffected.toFixed(2),tagPhotos:tagPhotos.length,visibleTagPhotos,columns,cards:cards.length}})()`);
+    out(`injury layout          : ${JSON.stringify(injuryLayout)}`);
+    const injuryColumns=String(injuryLayout?.columns||'').trim().split(/\s+/).filter(Boolean).length;
+    if(!injuryLayout||typeof injuryLayout!=='object'||injuryLayout.root!==true||Number(injuryLayout.maxAffected)>34.5||Number(injuryLayout.visibleTagPhotos)!==0||injuryColumns!==1)pass=false;
+  }
   if(captureRoutes.has(route))await shot(`${route}-desktop`);
 }
 
