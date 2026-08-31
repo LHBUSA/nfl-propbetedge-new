@@ -1,7 +1,8 @@
 /* Injury Editorial focused browser gate.
  * Uses production origin/APIs while substituting checked-out branch static
  * files. Verifies the injuries route is a photo-led PropBetEdge article desk
- * with source-disciplined player availability and reported return windows.
+ * with source-disciplined player availability, reported return windows, and a
+ * high-contrast readable availability surface on desktop + mobile.
  */
 import {spawn} from 'node:child_process';
 import {mkdtempSync,rmSync,readFileSync,existsSync,statSync,writeFileSync} from 'node:fs';
@@ -45,7 +46,16 @@ let desktop=await probe(`(()=>{
   const leadImg=lead?.querySelector('.pbe13-editorial-lead-media img');
   const cards=[...root.querySelectorAll('.pbe13-editorial-card')];
   const board=root.querySelector('.pbe13-availability-board');
+  const columns=board?.querySelector('.pbe13-availability-columns');
   const availabilityRows=[...root.querySelectorAll('.pbe13-availability-row')];
+  const firstRow=availabilityRows[0];
+  const playerName=firstRow?.querySelector('.pbe13-availability-player strong');
+  const teamCell=firstRow?.querySelector(':scope > .pbe13-availability-team .team-code');
+  const injuryValue=firstRow?.querySelector(':scope > .pbe13-availability-cell:nth-child(3)>strong');
+  const statusValue=firstRow?.querySelector(':scope > .pbe13-availability-cell:nth-child(4) .pbe13-avail-status');
+  const timelineValue=firstRow?.querySelector('.pbe13-availability-cell.timeline>strong');
+  const foot=board?.querySelector('.pbe13-availability-foot');
+  const px=el=>el?parseFloat(getComputedStyle(el).fontSize)||0:0;
   const timelineValues=availabilityRows.map(row=>row.querySelector('.pbe13-availability-cell.timeline>strong')?.textContent?.trim()||'');
   const reportedTimelines=timelineValues.filter(value=>value&&value!=='Timeline not reported');
   const isPbeArticle=href=>{try{const u=new URL(href);return u.hostname==='propbetedge.ai'&&u.pathname.startsWith('/news/nfl/')}catch{return false}};
@@ -55,6 +65,8 @@ let desktop=await probe(`(()=>{
   const loaded=imgs.filter(i=>i.complete&&i.naturalWidth>0);
   const broken=imgs.filter(i=>i.complete&&!i.naturalWidth);
   const controls=root.querySelectorAll('#pbe13-summary,.pbe13-controls,.pbe13-side,.pbe13-story-player,.pbe13-impact');
+  const boardStyle=board?getComputedStyle(board):null;
+  const gridTracks=firstRow?getComputedStyle(firstRow).gridTemplateColumns.split(/\s+/).filter(Boolean).length:0;
   return{
     root:true,
     heroHeight:+(hero?.getBoundingClientRect().height||0).toFixed(1),
@@ -74,11 +86,24 @@ let desktop=await probe(`(()=>{
     availabilityRows:availabilityRows.length,
     reportedTimelines:reportedTimelines.length,
     availabilityText:/who's out & how long/i.test(root.textContent||''),
+    readabilityAuthority:root.dataset.pbeInjuryReadability||null,
+    columnCount:columns?.children?.length||0,
+    columnDisplay:columns?getComputedStyle(columns).display:null,
+    columnFont:px(columns?.querySelector('span')),
+    teamColumn:!!teamCell,
+    gridTracks,
+    playerFont:px(playerName),
+    teamFont:px(teamCell),
+    injuryFont:px(injuryValue),
+    statusFont:px(statusValue),
+    timelineFont:px(timelineValue),
+    footFont:px(foot),
+    boardBg:boardStyle?.backgroundColor||null,
     text:(root.textContent||'').trim().length
   };
 })()`);
 out(`desktop ${JSON.stringify(desktop)}`);
-if(!desktop||typeof desktop!=='object'||desktop.root!==true||desktop.heroHeight>255||desktop.lead!==true||desktop.leadImage!==true||desktop.leadMediaWidth<500||desktop.cards<5||desktop.articleLinks<6||desktop.badLinks!==0||desktop.images<6||desktop.loadedImages<1||desktop.broken>0||desktop.telemetryNodes!==0||desktop.impactText!==false||desktop.editorialText!==true||desktop.availabilityBoard!==true||desktop.availabilityRows<3||desktop.reportedTimelines<2||desktop.availabilityText!==true||desktop.text<1500)pass=false;
+if(!desktop||typeof desktop!=='object'||desktop.root!==true||desktop.heroHeight>255||desktop.lead!==true||desktop.leadImage!==true||desktop.leadMediaWidth<500||desktop.cards<5||desktop.articleLinks<6||desktop.badLinks!==0||desktop.images<6||desktop.loadedImages<1||desktop.broken>0||desktop.telemetryNodes!==0||desktop.impactText!==false||desktop.editorialText!==true||desktop.availabilityBoard!==true||desktop.availabilityRows<3||desktop.reportedTimelines<2||desktop.availabilityText!==true||desktop.readabilityAuthority!=='5'||desktop.columnCount!==5||desktop.columnDisplay!=='grid'||desktop.columnFont<9.5||desktop.teamColumn!==true||desktop.gridTracks!==5||desktop.playerFont<18||desktop.teamFont<11||desktop.injuryFont<12||desktop.statusFont<10||desktop.timelineFont<13||desktop.footFont<9.5||!desktop.boardBg||desktop.boardBg==='rgba(0, 0, 0, 0)'||desktop.text<1500)pass=false;
 
 const binding=await probe(`(()=>{
   const api=window.PBEInjuryIntelV2;
@@ -112,7 +137,13 @@ const mobile=await probe(`(()=>{
   const lead=root?.querySelector('.pbe13-editorial-lead');
   const leadImg=root?.querySelector('.pbe13-editorial-lead-media img');
   const board=root?.querySelector('.pbe13-availability-board');
+  const columns=board?.querySelector('.pbe13-availability-columns');
   const firstAvailability=root?.querySelector('.pbe13-availability-row');
+  const player=firstAvailability?.querySelector('.pbe13-availability-player strong');
+  const team=firstAvailability?.querySelector('.pbe13-availability-team .team-code');
+  const injury=firstAvailability?.querySelector(':scope > .pbe13-availability-cell:nth-child(3)>strong');
+  const timeline=firstAvailability?.querySelector('.pbe13-availability-cell.timeline>strong');
+  const px=el=>el?parseFloat(getComputedStyle(el).fontSize)||0:0;
   return{
     root:!!root,
     heroHeight:+(hero?.getBoundingClientRect().height||0).toFixed(1),
@@ -120,12 +151,17 @@ const mobile=await probe(`(()=>{
     leadImgWidth:+(leadImg?.getBoundingClientRect().width||0).toFixed(1),
     boardWidth:+(board?.getBoundingClientRect().width||0).toFixed(1),
     availabilityWidth:+(firstAvailability?.getBoundingClientRect().width||0).toFixed(1),
+    columnDisplay:columns?getComputedStyle(columns).display:null,
+    playerFont:px(player),
+    teamFont:px(team),
+    injuryFont:px(injury),
+    timelineFont:px(timeline),
     overflow:document.documentElement.scrollWidth-window.innerWidth,
     route:window.App?.current
   };
 })()`);
 out(`mobile ${JSON.stringify(mobile)}`);
-if(!mobile||typeof mobile!=='object'||mobile.root!==true||mobile.route!=='injuries'||mobile.heroHeight>330||mobile.leadWidth>390||mobile.leadImgWidth>390||mobile.boardWidth>390||mobile.availabilityWidth>390||mobile.overflow>2)pass=false;
+if(!mobile||typeof mobile!=='object'||mobile.root!==true||mobile.route!=='injuries'||mobile.heroHeight>330||mobile.leadWidth>390||mobile.leadImgWidth>390||mobile.boardWidth>390||mobile.availabilityWidth>390||mobile.columnDisplay!=='none'||mobile.playerFont<18||mobile.teamFont<11||mobile.injuryFont<12||mobile.timelineFont<13||mobile.overflow>2)pass=false;
 await shot('injury-editorial-mobile.png');
 
 out(`RESULT ${pass?'PASS':'FAIL'}`);
