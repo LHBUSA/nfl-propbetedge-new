@@ -56,6 +56,109 @@
   }
 }
 
+/* Injury Intelligence is a scanning/research surface, not a photo gallery.
+   The injury-only note is a reliable semantic hook that keeps Transactions unchanged. */
+.pbe13-news:has(.pbe13-note){padding-top:10px!important}
+.pbe13-news:has(.pbe13-note) .pbe13-hero{
+  grid-template-columns:minmax(0,1fr) minmax(220px,270px)!important;
+  align-items:center!important;
+  gap:24px!important;
+  padding:22px 24px!important;
+  border-radius:14px!important;
+}
+.pbe13-news:has(.pbe13-note) .pbe13-title{
+  margin-top:8px!important;
+  font-size:clamp(38px,4.15vw,60px)!important;
+  line-height:.88!important;
+  letter-spacing:-.035em!important;
+}
+.pbe13-news:has(.pbe13-note) .pbe13-copy{
+  max-width:760px!important;
+  margin-top:12px!important;
+  color:#aab5c0!important;
+  font-size:11.5px!important;
+  line-height:1.58!important;
+}
+.pbe13-news:has(.pbe13-note) .pbe13-statusbox{min-width:0!important;padding:14px!important}
+.pbe13-news:has(.pbe13-note) .pbe13-statusbox b{font-size:22px!important}
+.pbe13-news:has(.pbe13-note) .pbe13-statusbox span{font-size:7.5px!important;line-height:1.5!important}
+.pbe13-news:has(.pbe13-note) .pbe13-semantic{font-size:7px!important}
+.pbe13-news:has(.pbe13-note) .pbe13-note{
+  margin-top:10px!important;
+  padding:10px 12px!important;
+  color:#a59a78!important;
+  font-size:9.5px!important;
+  line-height:1.5!important;
+}
+.pbe13-news:has(.pbe13-note) .pbe13-summary{gap:9px!important;margin-top:10px!important}
+.pbe13-news:has(.pbe13-note) .pbe13-stat{padding:12px 14px!important}
+.pbe13-news:has(.pbe13-note) .pbe13-stat b{font-size:27px!important}
+.pbe13-news:has(.pbe13-note) .pbe13-stat span{font-size:7.5px!important;line-height:1.35!important}
+.pbe13-news:has(.pbe13-note) .pbe13-controls{gap:8px!important;margin-top:10px!important;padding:9px 10px!important}
+.pbe13-news:has(.pbe13-note) .pbe13-input,
+.pbe13-news:has(.pbe13-note) .pbe13-select{height:38px!important;font-size:10.5px!important}
+.pbe13-news:has(.pbe13-note) .pbe13-featured{
+  grid-template-columns:minmax(0,1.55fr) minmax(290px,.62fr)!important;
+  gap:10px!important;
+  margin-top:10px!important;
+}
+.pbe13-news:has(.pbe13-note) .pbe13-lead{min-height:0!important;padding:19px 20px!important}
+.pbe13-news:has(.pbe13-note) .pbe13-lead h2{margin-top:10px!important;font-size:clamp(25px,2.55vw,37px)!important;line-height:.98!important}
+.pbe13-news:has(.pbe13-note) .pbe13-lead p{margin-top:10px!important;color:#a1adba!important;font-size:11px!important;line-height:1.58!important}
+.pbe13-news:has(.pbe13-note) .pbe13-lead-topic,
+.pbe13-news:has(.pbe13-note) .pbe13-source{font-size:7px!important}
+.pbe13-news:has(.pbe13-note) .pbe13-side{padding:12px!important}
+.pbe13-news:has(.pbe13-note) .pbe13-side-head{align-items:flex-start!important;margin-bottom:9px!important}
+.pbe13-news:has(.pbe13-note) .pbe13-side-head strong{font-size:17px!important}
+.pbe13-news:has(.pbe13-note) .pbe13-side-head span{max-width:105px!important;font-size:6px!important;line-height:1.35!important;text-align:right!important}
+.pbe13-news:has(.pbe13-note) .pbe13-affected{gap:6px!important}
+.pbe13-news:has(.pbe13-note) .pbe13-aff-row{
+  min-height:52px!important;
+  grid-template-columns:minmax(0,1fr) auto!important;
+  gap:10px!important;
+  padding:7px 9px!important;
+}
+.pbe13-news:has(.pbe13-note) .pbe13-aff-name{
+  display:flex!important;
+  align-items:center!important;
+  gap:9px!important;
+  min-width:0!important;
+  color:#eef2f6!important;
+  font-size:11px!important;
+  line-height:1.2!important;
+}
+.pbe13-news:has(.pbe13-note) .pbe13-aff-name>.pbe-player-headshot-v3{
+  width:34px!important;
+  height:34px!important;
+  flex:0 0 34px!important;
+  max-width:34px!important;
+  max-height:34px!important;
+  border-radius:9px!important;
+}
+.pbe13-news:has(.pbe13-note) .pbe13-aff-meta{margin-top:2px!important;font-size:6.5px!important}
+.pbe13-news:has(.pbe13-note) .pbe13-impact{font-size:18px!important}
+/* Story tags stay text-only. Repeating a photo in every chip adds noise and was
+   also the path that allowed unsized natural-resolution images onto this route. */
+.pbe13-news:has(.pbe13-note) .pbe13-tag.accent>.pbe-player-headshot-v3{display:none!important}
+.pbe13-news:has(.pbe13-note) .pbe13-tags{gap:5px!important;margin-top:9px!important}
+.pbe13-news:has(.pbe13-note) .pbe13-tag{padding:5px 7px!important;font-size:6.5px!important}
+/* Injury stories scan better as a chronological ledger than a tiled gallery. */
+.pbe13-news:has(.pbe13-note) .pbe13-feed{
+  grid-template-columns:1fr!important;
+  gap:7px!important;
+  margin-top:10px!important;
+}
+.pbe13-news:has(.pbe13-note) .pbe13-card{min-height:0!important;padding:13px 15px!important}
+.pbe13-news:has(.pbe13-note) .pbe13-card h3{margin-top:8px!important;font-size:19px!important;line-height:1.08!important}
+.pbe13-news:has(.pbe13-note) .pbe13-card p{max-width:1100px!important;margin-top:7px!important;color:#929fac!important;font-size:10px!important;line-height:1.52!important}
+.pbe13-news:has(.pbe13-note) .pbe13-card-top,
+.pbe13-news:has(.pbe13-note) .pbe13-card-foot{gap:14px!important}
+.pbe13-news:has(.pbe13-note) .pbe13-card-topic,
+.pbe13-news:has(.pbe13-note) .pbe13-card-time,
+.pbe13-news:has(.pbe13-note) .pbe13-card-source,
+.pbe13-news:has(.pbe13-note) .pbe13-card-link{font-size:6.5px!important}
+.pbe13-news:has(.pbe13-note) .pbe13-card-foot{margin-top:9px!important;padding-top:8px!important}
+
 /* Wrong article context is worse than less copy. Side stories keep image/headline/time;
    the featured story remains the only dashboard story with body copy. */
 .pbehome7 .pbe7-news-copy p{display:none!important}
@@ -82,9 +185,26 @@
   text-transform:uppercase!important;
 }
 
+@media(max-width:1050px){
+  .pbe13-news:has(.pbe13-note) .pbe13-featured{grid-template-columns:1fr!important}
+}
+@media(max-width:800px){
+  .pbe13-news:has(.pbe13-note) .pbe13-hero{grid-template-columns:1fr!important;padding:19px!important}
+  .pbe13-news:has(.pbe13-note) .pbe13-title{font-size:44px!important}
+  .pbe13-news:has(.pbe13-note) .pbe13-summary{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .pbe13-news:has(.pbe13-note) .pbe13-controls{grid-template-columns:1fr!important}
+  .pbe13-news:has(.pbe13-note) .pbe13-input{grid-column:auto!important}
+}
 @media(max-width:760px){
   #pbe-sports-shell .pbes-news-vp{padding-right:8px!important}
   #pbe-sports-shell .pbes-news-track{padding-right:50px!important;will-change:transform}
   #pbe-sports-shell .pbes-right{padding-left:6px!important}
   .pbehome7 .pbe7-news-item{min-height:88px!important}
+}
+@media(max-width:520px){
+  .pbe13-news:has(.pbe13-note) .pbe13-title{font-size:39px!important}
+  .pbe13-news:has(.pbe13-note) .pbe13-summary{grid-template-columns:1fr 1fr!important}
+  .pbe13-news:has(.pbe13-note) .pbe13-stat:last-child{grid-column:1/-1!important}
+  .pbe13-news:has(.pbe13-note) .pbe13-card{padding:12px!important}
+  .pbe13-news:has(.pbe13-note) .pbe13-card h3{font-size:18px!important}
 }
