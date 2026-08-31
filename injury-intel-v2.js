@@ -168,7 +168,7 @@
       else if (distance <= 130) score += 3;
       else if (distance <= 220) score += 1;
       if (article?.availability) score += 3;
-      if (!best || score > best.score) best = { player, score, inTitle, inSummary };
+      if (!best || score > best.score || (score === best.score && distance < best.distance)) best = { player, score, distance, inTitle, inSummary };
     });
 
     if (best) return best.player;
@@ -234,9 +234,10 @@
     if (structured) return structured;
     if (/\bseason[- ]ending\b|\bout for (?:the )?(?:season|year)\b|\blost for (?:the )?year\b/i.test(text)) return 'Out — season';
     if (/\breserve[\/-]pup\b|\breserve pup\b/i.test(text)) return 'Reserve/PUP';
-    if (/\binjured reserve\b|\bon (?:the )?ir\b|\bIR list\b/i.test(text)) return 'Injured Reserve';
+    if (/\bactivated from (?:the )?pup\b|\bactivation from (?:the )?pup\b|\bback from (?:the )?pup\b/i.test(text)) return 'Activated';
+    if (/\bpup(?:\s+list)?\b/i.test(text)) return 'PUP';
+    if (/\binjured reserve\b|\bon (?:the )?ir\b|\bto (?:the )?ir\b|\bIR list\b/i.test(text)) return 'Injured Reserve';
     if (/\bNFI\b|non-football injury/i.test(text)) return 'NFI';
-    if (/\bactivated from (?:the )?pup\b|\bactivation from (?:the )?pup\b/i.test(text)) return 'Activated';
     if (/\breturn(?:s|ed)? to practice\b|\bback at practice\b/i.test(text)) return 'Returned to practice';
     if (/\binactive\b/i.test(text)) return 'Inactive';
     if (/\bdoubtful\b/i.test(text)) return 'Doubtful';
