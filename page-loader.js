@@ -1,7 +1,7 @@
 /* PropBetEdge NFL - ordered page/product upgrade loader v44 recovery */
 (() => {
   'use strict';
-  const VERSION='20260830recovery1';
+  const VERSION='20260830recovery2';
   const upgrades=[
     /* Establish the final homepage authority first. v6 replaces the v5 DOM with
        .pbehome6; v7 historically registered itself after that without repainting
