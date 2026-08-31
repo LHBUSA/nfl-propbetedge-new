@@ -1,4 +1,4 @@
-/* PropBetEdge NFL - ordered page/product upgrade loader v42 */
+/* PropBetEdge NFL - ordered page/product upgrade loader v43 recovery */
 (() => {
   'use strict';
   const VERSION='20260830gamesintel2';
@@ -82,6 +82,10 @@
 
     /* Gated validation telemetry is aggregate/public-safe. */
     {css:'./pbe-validation-v1.css',js:'./pbe-validation-v1.js'},
+
+    /* New product surfaces stay additive on the known-good global runtime. */
+    {css:'./pbe-engine-story-v1.css',js:'./pbe-engine-story-v1.js'},
+    {css:'./pbe-prop-engine-v1.css',js:'./pbe-prop-engine-v1.js'},
 
     /* Last by design: scrollbar policy may style true scrollers, but it must
        never conceal overflow or substitute for responsive component layout. */
