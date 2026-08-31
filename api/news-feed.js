@@ -34,6 +34,19 @@ function proxiedImage(raw){
   return IMG_PROXY+encodeURIComponent(value);
 }
 
+function canonicalArticleUrl(row,slug){
+  const cleanSlug=String(slug||'').trim().replace(/^\/+|\/+$/g,'');
+  if(cleanSlug)return `https://propbetedge.ai/news/nfl/${cleanSlug}`;
+  const candidates=[row?.url,row?.article_url,row?.link].filter(Boolean);
+  for(const candidate of candidates){
+    try{
+      const url=new URL(String(candidate),'https://propbetedge.ai');
+      if(/(^|\.)propbetedge\.ai$/i.test(url.hostname)&&/^\/news\/nfl\//i.test(url.pathname))return url.href;
+    }catch{}
+  }
+  return null;
+}
+
 function impactBand(score){
   const n=Number(score);
   if(!Number.isFinite(n)||n<=0)return'CONTEXT';
@@ -85,7 +98,7 @@ function article(row){
   const title=row?.title ?? row?.headline ?? row?.name ?? '';
   const summary=row?.summary ?? row?.description ?? row?.dek ?? row?.excerpt ?? row?.take_summary ?? take?.summary ?? '';
   const slug=row?.slug ?? null;
-  const url=row?.url ?? row?.article_url ?? row?.link ?? (slug?`https://propbetedge.ai/news/nfl/${slug}`:null);
+  const url=canonicalArticleUrl(row,slug);
   const rawImage=row?.image_url ?? row?.imageUrl ?? row?.featured_image ?? row?.featuredImage ?? row?.thumbnail_url ?? row?.thumbnail ?? row?.image?.url ?? row?.image?.href ?? take?.image_url ?? null;
   const impactScore=row?.prop_impact_score ?? row?.impact_score ?? row?.take_impact ?? take?.impact_score ?? null;
   const isBreaking=Boolean(row?.is_breaking ?? row?.breaking ?? false);
@@ -114,6 +127,7 @@ function article(row){
     provenance: {
       semantics: 'NEWS',
       upstream: 'propbet-news-api',
+      canonical_host: url ? 'propbetedge.ai' : null,
       image_transport: rawImage ? 'propbet-img-proxy' : null,
       sport: row?.sport ?? 'nfl'
     }
@@ -155,6 +169,7 @@ export default async function handler(req,res){
         source:'propbet-news-api',
         count:rows.length,
         image_count:rows.filter(row=>row.image_url).length,
+        canonical_count:rows.filter(row=>row.url&&/^https:\/\/propbetedge\.ai\/news\/nfl\//i.test(row.url)).length,
         articles:rows,
         fetched_at:new Date().toISOString()
       });
