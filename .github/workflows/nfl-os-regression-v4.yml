@@ -75,9 +75,13 @@ jobs:
           done
           grep -Fq 'PBEcastV6?.focus' dashboard-v5.js
           grep -Fq 'PBEcastV6?.focus' sports-shell-v2.js
-          grep -Fq "['pbepicks','PBE Picks']" global-polish-v5.js
-          grep -Fq "['trackrecord','Record']" global-polish-v5.js
-          grep -Fq 'syncQuickNav' global-polish-v5.js
+          grep -Fq "['pbepicks','PBE Picks'" sports-shell-v2.js
+          grep -Fq "['trackrecord','Track Record'" sports-shell-v2.js
+          grep -Fq "['propchain','PropChain'" sports-shell-v2.js
+          grep -Fq '.pbe-v2-quicknav{display:none!important}' global-polish-v2.css
+          grep -Fq 'new Proxy(rawViews' app-core-v3.js
+          grep -Fq 'pendingRoute' app-core-v3.js
+          grep -Fq 'replayPendingRoute' page-loader.js
           grep -Fq "if(item.js==='./dashboard-v7.js'" page-loader.js
 
       - name: Require intended visual authority order
