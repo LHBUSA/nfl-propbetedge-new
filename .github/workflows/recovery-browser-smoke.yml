@@ -16,18 +16,19 @@ jobs:
           node-version: '22'
       - name: Wait for recovery preview
         shell: bash
+        env:
+          PBE_URL: https://nfl-propbetedge-new-git-recove-65e3e3-justins-projects-ad4f4bb7.vercel.app/?_vercel_share=aJqInZLvMgrCT4QtfHA22yjlynRi0hUz
         run: |
           set -euo pipefail
-          url='https://nfl-propbetedge-new-git-recove-65e3e3-justins-projects-ad4f4bb7.vercel.app'
           for i in $(seq 1 30); do
-            if curl -fsS "$url" >/dev/null; then exit 0; fi
+            if curl -L -fsS "$PBE_URL" | grep -Fq 'PropBetEdge NFL'; then exit 0; fi
             sleep 4
           done
-          echo 'Recovery preview did not become reachable'
+          echo 'Recovery preview did not become reachable as the NFL app'
           exit 1
       - name: Browser liveness and route smoke
         env:
-          PBE_URL: https://nfl-propbetedge-new-git-recove-65e3e3-justins-projects-ad4f4bb7.vercel.app
+          PBE_URL: https://nfl-propbetedge-new-git-recove-65e3e3-justins-projects-ad4f4bb7.vercel.app/?_vercel_share=aJqInZLvMgrCT4QtfHA22yjlynRi0hUz
           PBE_CHROME: /usr/bin/google-chrome
         run: node scripts/browser-smoke.mjs
       - name: Upload smoke log
