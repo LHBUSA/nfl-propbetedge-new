@@ -175,7 +175,9 @@ body:before {
 
 .sidebar {
   position: fixed !important;
-  z-index: 900 !important;
+  /* z-index intentionally omitted here too: this desktop rail is retired by
+     sports-shell-v1.css (display:none above 900px), so the pin was inert on
+     desktop but still outranked the mobile drawer's stacking. */
   top: calc(var(--v2-top) + var(--v2-ticker)) !important;
   left: 0 !important;
   bottom: 0 !important;
@@ -575,16 +577,19 @@ body:before {
   .pbe-v2-brand-sub { display:none; }
   .pbe-v2-brand-name { font-size:18px; }
 
+  /* z-index intentionally omitted: the sports shell owns the stacking order of
+     its own chrome (2500) and raises the drawer above it in sports-shell-v3.css.
+     Pinning 2100 !important here meant the later rule could never win and the
+     drawer opened underneath the header, ticker and scorebar. */
   .sidebar {
     top:0 !important;
     width:min(86vw,290px) !important;
     height:100vh !important;
-    z-index:2100 !important;
     transform:translateX(-105%) !important;
     transition:transform .2s ease !important;
   }
   .sidebar.open { transform:translateX(0) !important; }
-  .mobile-overlay.open { display:block !important; position:fixed !important; inset:0 !important; z-index:2000 !important; background:rgba(0,0,0,.62) !important; backdrop-filter:blur(3px); }
+  .mobile-overlay.open { display:block !important; position:fixed !important; inset:0 !important; background:rgba(0,0,0,.62) !important; backdrop-filter:blur(3px); }
   .mobile-header {
     display:flex !important;
     position:fixed !important;

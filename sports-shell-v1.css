@@ -2,7 +2,20 @@
    Broadcast-first shell aligned to the PropBetEdge news-site brand. */
 :root{--nfl-shell:#05080d;--nfl-panel:#090e15;--nfl-line:rgba(255,255,255,.09);--nfl-gold:#f0c45b;--nfl-live:#5fe293;--nfl-red:#ff5362;--nfl-blue:#7aa9ff}
 body{background:#05080d!important;color:#f5f7fa!important}
-.sidebar,.mobile-header,.mobile-bottom-nav,.mobile-overlay{display:none!important}
+/* The shell replaces the legacy DESKTOP sidebar, so the legacy chrome is retired
+   above the mobile breakpoint only. Retiring it at every width was the reason a
+   phone had no navigation at all: the shell ships no mobile nav of its own, so
+   the only way through the product was a 924px-wide horizontally scrolling strip
+   inside a 390px viewport. Below 901px the legacy drawer, overlay and bottom tab
+   bar are left to base-v3.css, which already styles them and whose handlers
+   (App.toggleMobile, pbeToggleSidebar, pbeMbnActive) are all still live.
+   .mobile-header stays retired at every width: the shell header already provides
+   the brand row, and base-v3 pins the legacy one to top:86px, which was measured
+   against the old layout and collides with the shell. */
+@media(min-width:901px){
+  .sidebar,.mobile-bottom-nav,.mobile-overlay{display:none!important}
+}
+.mobile-header{display:none!important}
 .shell{display:block!important;width:100%!important;max-width:none!important;margin:0!important;padding:0!important}
 .main-content{margin:0!important;padding:0 18px 70px!important;width:100%!important;max-width:none!important;min-width:0!important}
 .view-container{max-width:1680px!important;margin:0 auto!important;padding-top:12px!important}
