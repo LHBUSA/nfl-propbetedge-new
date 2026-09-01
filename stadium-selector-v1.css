@@ -1,37 +1,94 @@
-/* PropBetEdge NFL — stadium selector + visible background authority */
-:root{--pbe-stadium-image:url('https://commons.wikimedia.org/wiki/Special:Redirect/file/SofistadiumSept2022.jpg?width=2400')}
+/* PropBetEdge NFL — stadium atmosphere + selector.
+ *
+ * SINGLE BACKGROUND AUTHORITY. nfl-stadium-bg-v2/v3.css previously fought this
+ * file: they painted the venue on body::before, while this file painted it on the
+ * body background and killed the pseudo-elements with display:none. Whichever
+ * loaded last won, so one of the two stadium layers was always dead — on the
+ * shipped order the venue survived but was occluded by the hero, and on the other
+ * order both layers annihilated and the page went flat black. Both files are now
+ * deleted and this is the only place the venue is defined.
+ *
+ * Venue photography is self-hosted under /stadiums (see stadium-selector-v1.js
+ * for per-image credit). Hotlinking Wikimedia was rate-limited (HTTP 429) and
+ * cost a redirect hop plus a multi-megabyte original on every load.
+ */
+:root{
+  --pbe-stadium-image:url('/stadiums/sofi.jpg');
+  --pbe-stadium-image-sm:url('/stadiums/sofi@960.jpg');
+  /* Focal point per venue: a single crop cannot suit every photograph — at a
+     fixed `center 44%` the Mercedes-Benz frame landed on dark roof steelwork
+     and the venue disappeared. Set alongside the image in stadium-selector-v1.js. */
+  --pbe-stadium-pos:center;
+  --pbe-stadium-pos-sm:center;
+  /* Per-venue exposure. These are real photographs with very different dynamic
+     range: the Mercedes-Benz frame is a daylight interior whose roof and stands
+     sit in deep shadow, so under the product's dark treatment it read almost
+     black while the floodlit venues read fine. */
+  --pbe-stadium-filter:none;
+}
 
-/* The venue now lives on the actual document background. Previous pseudo-element
-   layers sat behind the document background and were then darkened again, which
-   made the stadium effectively invisible. */
 html{background:#090907!important}
+
+/* The venue is painted on the BODY background with background-attachment:fixed.
+   Two things this deliberately avoids:
+   1. attachment:scroll — `cover` then resolves against the body's padding box,
+      i.e. the whole scrolling document, so on a phone the image was blown up to
+      cover several thousand pixels of height and arrived as a smear.
+   2. a fixed negative-z pseudo-element — .pbe7-hero uses backdrop-filter, and it
+      does not sample such a layer, so the venue went dark under the hero exactly
+      where it most needs to read.
+   attachment:fixed sizes `cover` to the viewport on both desktop and mobile and
+   keeps the hero's backdrop-filter working. */
 body{
   min-height:100vh!important;
   background-color:#090907!important;
   background-image:
-    linear-gradient(180deg,rgba(5,6,7,.18) 0%,rgba(8,8,7,.28) 34%,rgba(9,8,6,.46) 72%,rgba(9,8,6,.62) 100%),
+    linear-gradient(180deg,rgba(5,6,7,.14) 0%,rgba(8,8,7,.22) 34%,rgba(9,8,6,.40) 72%,rgba(9,8,6,.58) 100%),
     radial-gradient(ellipse 72% 34% at 18% 2%,rgba(216,183,91,.10),transparent 60%),
     var(--pbe-stadium-image)!important;
   background-size:cover,cover,cover!important;
-  background-position:center,center,center 44%!important;
+  background-position:center,center,var(--pbe-stadium-pos,center)!important;
   background-repeat:no-repeat!important;
-  background-attachment:fixed!important;
+  background-attachment:fixed,fixed,fixed!important;
 }
 
-/* Retire the old hidden negative-z stadium/overlay stack. */
+/* Retire the competing negative-z stadium stack from nfl-brand-media-v1.css. */
 body::before,body::after{content:none!important;display:none!important;background:none!important}
-.main-content,#view-container,.view-container,.pbehome7{background:transparent!important}
 
-/* Product surfaces stay dark enough for contrast while allowing the venue to read. */
+/* Carried over from the deleted nfl-stadium-bg-v3.css: these product containers
+   must stay transparent or they paint over the venue layer. */
+.main-content,#view-container,.view-container,.pbehome7,.pbe7-main{background:transparent!important}
+
+/* The game hero is broadcast glass over the venue, not a lid on top of it.
+   The blur is deliberately shallow: at blur(7px) over a cover-scaled photo the
+   stadium became an unreadable smear, which is why the venue only registered in
+   the page gutters. Text contrast is held by the vertical scrim, which stays
+   heaviest at the bottom where the small metadata lines sit. */
 .pbe7-hero{
-  background-color:rgba(12,11,9,.32)!important;
+  background-color:rgba(12,11,9,.30)!important;
   background-image:
-    linear-gradient(180deg,rgba(8,9,9,.20),rgba(9,8,6,.52)),
+    linear-gradient(180deg,rgba(8,9,9,.10) 0%,rgba(9,8,6,.34) 52%,rgba(9,8,6,.62) 100%),
     linear-gradient(90deg,color-mix(in srgb,var(--pbe7-away,#1d3150) 20%,transparent),transparent 38%,transparent 62%,color-mix(in srgb,var(--pbe7-home,#3a253c) 20%,transparent))!important;
-  backdrop-filter:blur(7px) saturate(112%)!important;
-  -webkit-backdrop-filter:blur(7px) saturate(112%)!important;
+  backdrop-filter:blur(2.5px) saturate(116%)!important;
+  -webkit-backdrop-filter:blur(2.5px) saturate(116%)!important;
 }
-.pbe7-panel{background:linear-gradient(145deg,rgba(20,18,13,.78),rgba(11,10,8,.84))!important;backdrop-filter:blur(15px) saturate(108%)!important;-webkit-backdrop-filter:blur(15px) saturate(108%)!important}
+/* Legibility scrim for the hero's centre column. The status and venue lines are
+   small, low-weight text sitting straight on photography. Measured against the
+   brightest 5% of the backdrop they fell to 3.81:1 over the Allegiant crowd,
+   under the 4.5:1 AA floor. Scrimming just this column holds contrast without
+   darkening the whole hero, which is what hid the venue in the first place.
+   Painted as the element's own background, so there is no stacking-context
+   dependency and no layout shift. */
+.pbe7-scorebox{
+  background:radial-gradient(ellipse 78% 64% at 50% 48%,rgba(6,6,5,.62),rgba(6,6,5,.32) 58%,rgba(6,6,5,0) 80%)!important;
+  border-radius:20px!important;
+}
+
+.pbe7-panel{
+  background:linear-gradient(145deg,rgba(20,18,13,.74),rgba(11,10,8,.82))!important;
+  backdrop-filter:blur(10px) saturate(110%)!important;
+  -webkit-backdrop-filter:blur(10px) saturate(110%)!important;
+}
 
 .pbe-stadium-control{position:fixed;right:18px;bottom:18px;z-index:4950;font-family:'DM Sans',system-ui,sans-serif}
 .pbe-stadium-toggle{min-height:44px;display:flex;align-items:center;gap:9px;padding:0 14px;border:1px solid rgba(216,183,91,.34);border-radius:12px;background:rgba(12,11,9,.84);color:#eee7dc;box-shadow:0 16px 42px rgba(0,0,0,.34);backdrop-filter:blur(16px);cursor:pointer}
@@ -49,14 +106,32 @@ body::before,body::after{content:none!important;display:none!important;backgroun
 .pbe-stadium-option>i{width:108px;height:64px;border-radius:8px;background-image:linear-gradient(rgba(0,0,0,.02),rgba(0,0,0,.18)),var(--thumb);background-size:cover;background-position:center;box-shadow:inset 0 0 0 1px rgba(255,255,255,.06)}
 .pbe-stadium-option span{min-width:0}.pbe-stadium-option span b{display:block;color:#f4eee5;font-size:11px}.pbe-stadium-option span small{display:block;margin-top:4px;color:#9b9387;font:700 8px/1 'DM Mono',monospace;text-transform:uppercase}.pbe-stadium-option em{color:#e3c35e;font-style:normal;font-weight:900;text-align:center}
 
+/* CC BY / CC BY-SA attribution for the venue photograph. Required by every
+   image in the set, so it ships with the control rather than in a footer. */
+.pbe-stadium-credit{margin:9px 4px 1px;padding-top:9px;border-top:1px solid rgba(255,255,255,.08);color:#8d867b;font-size:8.5px;line-height:1.5}
+.pbe-stadium-credit a{color:#a89a72;text-decoration:underline}
+
 @media(max-width:760px){
   body{
     background-image:
-      linear-gradient(180deg,rgba(6,7,8,.28),rgba(9,8,6,.62)),
-      var(--pbe-stadium-image)!important;
+      linear-gradient(180deg,rgba(6,7,8,.24),rgba(9,8,6,.58)),
+      var(--pbe-stadium-image-sm)!important;
     background-size:cover,cover!important;
-    background-position:center,58% center!important;
-    background-attachment:scroll!important;
+    background-position:center,var(--pbe-stadium-pos-sm,center)!important;
+    background-attachment:fixed,fixed!important;
   }
+  /* On a phone the hero fills almost the whole viewport, so its backdrop-filter
+     blurs the entire venue into a smear — the mobile form of the same occlusion
+     this file exists to fix. Drop the blur and hold contrast with the scrim,
+     which is measured rather than assumed. */
+  .pbe7-hero{
+    backdrop-filter:none!important;
+    -webkit-backdrop-filter:none!important;
+    background-image:
+      linear-gradient(180deg,rgba(8,9,9,.26) 0%,rgba(9,8,6,.46) 52%,rgba(9,8,6,.68) 100%),
+      linear-gradient(90deg,color-mix(in srgb,var(--pbe7-away,#1d3150) 18%,transparent),transparent 40%,transparent 60%,color-mix(in srgb,var(--pbe7-home,#3a253c) 18%,transparent))!important;
+  }
+  .pbe7-panel{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+
   .pbe-stadium-control{right:10px;bottom:74px}.pbe-stadium-toggle{min-height:42px}.pbe-stadium-toggle>b{display:none}.pbe-stadium-menu{bottom:50px}.pbe-stadium-option{grid-template-columns:88px minmax(0,1fr) 20px}.pbe-stadium-option>i{width:88px;height:58px}
 }

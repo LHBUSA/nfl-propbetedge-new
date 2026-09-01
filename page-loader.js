@@ -11,7 +11,7 @@
     {css:'./dashboard-v6.css',js:'./dashboard-v6.js'},
     {css:'./dashboard-v7.css',js:'./dashboard-v7.js'},
     {css:'./dashboard-v8-enhance.css',js:'./dashboard-v8-enhance.js'},
-    {css:'./nfl-stadium-bg-v3.css',js:'./dashboard-v7-sanitize.js'},
+    {js:'./dashboard-v7-sanitize.js'},
 
     /* Current additive product surfaces. Both are event-driven and do not own
        page-wide mutation observers. */
