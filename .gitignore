@@ -1,3 +1,5 @@
 .vercel
 verify-all.log
 browser-smoke.log
+observer-alarm.log
+recovery-smoke.log

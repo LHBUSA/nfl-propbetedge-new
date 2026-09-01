@@ -79,7 +79,49 @@
    * so the event loop still gets to paint and accept input instead of the
    * whole main thread wedging. */
   let pending=0;
+
+  /* LOOP ALARM.
+   *
+   * The coalescing above makes a feedback loop survivable, but it would still
+   * spin silently forever. This makes it observable: if the observer fires
+   * more than ALARM_FIRES_PER_SEC times in a rolling second while the user has
+   * not touched the page, that is a self-feeding cycle rather than real
+   * activity, and it is reported once per cooldown instead of every frame.
+   *
+   * User input is excluded because legitimate interaction (typing, scrolling,
+   * filtering) can burst mutations far above the threshold.
+   */
+  /* Measured: legitimate route rendering peaks around 26 fires/sec on a fast
+   * machine. A genuine feedback loop is unbounded — thousands per second — so
+   * 60 gives better than 2x headroom over real traffic while still catching a
+   * runaway decisively. */
+  const ALARM_FIRES_PER_SEC=60;
+  const ALARM_COOLDOWN_MS=10000;
+  const alarm={fires:[],lastInput:0,lastAlarmAt:0,count:0,peak:0};
+  window.__PBE_OBSERVER_ALARM=alarm;
+
+  for(const evt of ['pointerdown','keydown','wheel','scroll','touchstart']){
+    window.addEventListener(evt,()=>{alarm.lastInput=Date.now()},{passive:true,capture:true});
+  }
+
+  function noteFire(){
+    const now=Date.now();
+    alarm.fires.push(now);
+    if(alarm.fires.length>200)alarm.fires.splice(0,alarm.fires.length-200);
+    while(alarm.fires.length&&now-alarm.fires[0]>1000)alarm.fires.shift();
+    const rate=alarm.fires.length;
+    if(rate>alarm.peak)alarm.peak=rate;
+    const idle=now-alarm.lastInput>1000;
+    if(rate>ALARM_FIRES_PER_SEC&&idle&&now-alarm.lastAlarmAt>ALARM_COOLDOWN_MS){
+      alarm.lastAlarmAt=now;
+      alarm.count+=1;
+      /* Distinctive, greppable, and captured by the browser smoke log. */
+      console.error(`[pbe-observer-loop] dashboard-v8-enhance observer fired ${rate}x/sec with no user input — probable feedback loop (alarm #${alarm.count})`);
+    }
+  }
+
   function scheduleEnhance(){
+    noteFire();
     if(pending||!active())return;
     pending=setTimeout(()=>{pending=0;renderMarket();renderNewsControls()},50);
   }
