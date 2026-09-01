@@ -219,3 +219,20 @@
   #pbe-sports-shell .pbes-nav-btn{min-height:34px!important;padding:0 10px!important;font-size:8px!important}
   #pbe-sports-shell .pbes-research .pbes-nav-btn{font-size:8px!important}
 }
+
+/* Phones navigate with the bottom tab bar and the drawer, not the desktop rails.
+   Left visible they were two horizontally scrolling strips whose contents ran to
+   924px inside a 390px viewport, so most destinations were simply off-screen. */
+@media(max-width:900px){
+  #pbe-sports-shell .pbes-primary,
+  #pbe-sports-shell .pbes-research{display:none!important}
+
+  /* The shell chrome sits at z-index 2500, above base-v3's drawer (2100) and
+     overlay (2000), so the drawer opened underneath the header, ticker and
+     scorebar and its logo, search and first nav item were unreachable. The shell
+     owns that stacking relationship, so it declares it here rather than having
+     base-v3 guess. Plain rules: this sheet loads after base-v3, so source order
+     is enough and no !important is needed. */
+  .mobile-overlay.open{z-index:2600}
+  .sidebar{z-index:2700}
+}
