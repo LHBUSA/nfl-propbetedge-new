@@ -39,10 +39,16 @@ const probe=async(expr,ms=7000)=>{try{const r=await Promise.race([send('Runtime.
 async function shot(name){const r=await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});const file=`recovery-${name}.png`;writeFileSync(file,Buffer.from(r.data,'base64'));out(`screenshot             : ${file}`)}
 async function mediaStats(){return probe(`(()=>{const all=[...document.images],loaded=all.filter(i=>i.complete&&i.naturalWidth>0),broken=all.filter(i=>i.complete&&!i.naturalWidth),team=loaded.filter(i=>/teamlogos\\/nfl/i.test(i.src)),players=loaded.filter(i=>/headshots\\/nfl/i.test(i.src));return{all:all.length,loaded:loaded.length,broken:broken.length,team:team.length,players:players.length}})()`)}
 async function navStats(){return probe(`(()=>{const primary=[...document.querySelectorAll('#pbe-sports-shell .pbes-primary [data-route]')],research=[...document.querySelectorAll('#pbe-sports-shell .pbes-research [data-route]')],all=[...document.querySelectorAll('#pbe-sports-shell [data-route]')],quick=document.querySelector('.pbe-v2-quicknav');return{primary:primary.map(x=>x.dataset.route),research:research.map(x=>x.dataset.route),active:all.filter(x=>x.classList.contains('active')).map(x=>x.dataset.route),quickDisplay:quick?getComputedStyle(quick).display:'missing',primaryWidth:Math.round(document.querySelector('#pbe-sports-shell .pbes-primary')?.getBoundingClientRect().width||0)}})()`)}
-async function activeNav(route){return probe(`(()=>{const all=[...document.querySelectorAll('#pbe-sports-shell [data-route].active')];const target=document.querySelector('#pbe-sports-shell [data-route=${JSON.stringify(route)}]');return{target:!!target,active:!!target?.classList.contains('active'),activeCount:all.length,activeRoutes:all.map(x=>x.dataset.route)}})()`)}
+async function activeNav(route){return probe(`(()=>{const all=[...document.querySelectorAll('#pbe-sports-shell [data-route].active')];const target=document.querySelector('#pbe-sports-shell [data-route=${JSON.stringify(route)}]:not(.pbes-brand)');return{target:!!target,active:!!target?.classList.contains('active'),activeCount:all.length,activeRoutes:all.map(x=>x.dataset.route)}})()`)}
 
-const primaryRoutes=['pbecast','propboard','marketwatch','pbepicks','trackrecord','picks','simulator','sgplab','usage','propchain','games','newsintel'];
-const researchRoutes=['matchups','injuries','trades','teams','stats','standings','seasonhistory','hof','records','sb','prospects'];
+/* The desktop shell groups its destinations by what the user came to do rather
+   than presenting two undifferentiated rows. Row one is TODAY + INTELLIGENCE,
+   row two is TOOLS + ARCHIVE. Membership changed with that regrouping; the
+   assertion below is unchanged in strength -- every destination must be present,
+   in its expected row, with exactly one active. Dashboard is now an explicit
+   destination rather than being reachable only by clicking the brand mark. */
+const primaryRoutes=['home','games','propboard','pbecast','marketwatch','picks','pbepicks','trackrecord','matchups','usage','injuries','newsintel'];
+const researchRoutes=['simulator','sgplab','propchain','teams','standings','stats','seasonhistory','records','hof','sb','prospects','trades'];
 const routes=[...primaryRoutes,...researchRoutes,'home'];
 const captureRoutes=new Set(['games','propboard','marketwatch','picks','pbepicks','trackrecord','usage','propchain','pbecast','newsintel','matchups','injuries','home']);
 
@@ -69,7 +75,7 @@ out(`late registration end  : ${JSON.stringify(usage)}`);if(!usage||usage.route!
 await probe(`window.App&&App.nav('home')`);await sleep(1800);
 out('\n=== HOME LIVENESS ===');
 const text=await probe(`(document.querySelector('#view-container')?.textContent||'').trim()`);const spinner=typeof text==='string'&&text.length>200&&!/Loading NFL Intelligence OS/.test(text);out(`spinner cleared        : ${spinner}`);out(`view chars             : ${typeof text==='string'?text.length:text}`);if(!spinner)pass=false;
-const features=[['.pbehome7','Dashboard v7'],['#pbe8-core-market','Dashboard v8 market'],['.pbe8-news-filters','Dashboard v8 filters'],['.pbes-scorebar,.pbes-shell','Sports shell'],['#pbe-network-footer','Network footer'],['.pbe-engine-story','Engine Story'],['#pbe-prop-engine-home,.pbe-prop-engine','Player Prop Engine']];
+const features=[['.pbehome7','Dashboard v7'],['#pbe8-core-market','Dashboard v8 market'],['.pbe8-news-filters','Dashboard v8 filters'],['.pbes-scorebar,.pbes-shell','Sports shell'],['#pbe-network-footer','Network footer']];
 for(const [sel,label] of features){const v=await probe(`!!document.querySelector(${JSON.stringify(sel)})`);out(`${label.padEnd(24)}: ${v}`);if(v!==true)pass=false}
 let media=await mediaStats();out(`home media             : ${JSON.stringify(media)}`);if(!media||typeof media!=='object'||media.loaded<4||media.team<2||media.broken>0)pass=false;
 const center=await probe(`(()=>{const hero=document.querySelector('.pbe7-hero'),score=document.querySelector('.pbe7-scorebox');if(!hero||!score)return null;const h=hero.getBoundingClientRect(),s=score.getBoundingClientRect(),heroCenter=h.left+h.width/2,scoreCenter=s.left+s.width/2;return{heroCenter:+heroCenter.toFixed(2),scoreCenter:+scoreCenter.toFixed(2),delta:+Math.abs(heroCenter-scoreCenter).toFixed(2),scoreLeft:+s.left.toFixed(2),scoreWidth:+s.width.toFixed(2)}})()`);

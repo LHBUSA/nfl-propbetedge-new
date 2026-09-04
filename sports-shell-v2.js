@@ -148,7 +148,15 @@
   }
 
   function go(route){state.route=route;syncActive();if(window.App?.nav)App.nav(route)}
-  function syncActive(){document.querySelectorAll('#pbe-sports-shell [data-route]').forEach(el=>el.classList.toggle('active',el.dataset.route===state.route))}
+  /* The brand mark also carries data-route="home" so the logo returns you to the
+     Dashboard. Once the grouped nav gained an explicit Dashboard button, both
+     matched on the home route and two items rendered active at once. The brand
+     is a logo, not a nav item, so it is excluded from the active state. */
+  function syncActive(){
+    document.querySelectorAll('#pbe-sports-shell [data-route]:not(.pbes-brand)')
+      .forEach(el=>el.classList.toggle('active',el.dataset.route===state.route));
+    document.querySelector('#pbe-sports-shell .pbes-brand')?.classList.remove('active');
+  }
 
   function attachLogoFallbacks(host){
     host?.querySelectorAll('img.pbes-team-logo').forEach(img=>{

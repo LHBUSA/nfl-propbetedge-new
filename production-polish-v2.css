@@ -20,7 +20,16 @@
   html[data-pbe-home="1"] .pbe7-hero{
     height:auto!important;
     min-height:430px!important;
+    /* The hero is a grid and its children were auto-placing into implicit
+       columns: the "SCHEDULE - FEATURED GAME" header took column 1 and the
+       matchup landed in column 2, pushing the featured game 60px off the
+       hero's centre axis. While the scorebox was absolutely positioned this
+       was invisible. Both children are full-width rows, so the hero is one
+       column and the matchup's own symmetric tracks centre the game. */
+    grid-template-columns:minmax(0,1fr)!important;
   }
+  html[data-pbe-home="1"] .pbe7-hero-top{grid-column:1!important}
+  html[data-pbe-home="1"] .pbe7-matchup{grid-column:1!important}
 }
 
 /* Injury Intelligence is a scanning/research surface, not a photo gallery.
