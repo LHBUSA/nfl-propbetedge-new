@@ -6,13 +6,13 @@
 .pbeval-head span{display:block;font-size:11px;font-weight:900;letter-spacing:1.35px;text-transform:uppercase;color:rgba(255,255,255,.3)}
 .pbeval-head strong{display:block;margin-top:4px;font-family:var(--font-d);font-size:21px;line-height:1;text-transform:uppercase;color:#fff}
 .pbeval-live{display:flex;align-items:center;gap:7px;white-space:nowrap;font-size:11px!important;color:rgba(255,255,255,.3)!important}
-.pbeval-live i{width:7px;height:7px;border-radius:50%;background:#55d68c;box-shadow:0 0 0 4px rgba(85,214,140,.07)}
+.pbeval-live i{width:7px;height:7px;border-radius:50%;background:var(--pbe-gold);box-shadow:0 0 0 4px rgba(85,214,140,.07)}
 .pbeval-feed{padding:6px 15px 10px;min-height:164px}
 .pbeval-line{display:grid;grid-template-columns:62px 62px minmax(0,1fr);gap:9px;align-items:baseline;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.035);font-family:'JetBrains Mono',monospace;font-size:11px;color:rgba(255,255,255,.48)}
 .pbeval-line:last-child{border-bottom:0}
 .pbeval-time{color:rgba(255,255,255,.23)}
-.pbeval-kind{font-weight:900;color:#7da7ff;letter-spacing:.5px}
-.pbeval-kind.commit{color:#d8b75b}.pbeval-kind.grade{color:#55d68c}.pbeval-kind.market{color:#67c9ff}
+.pbeval-kind{font-weight:900;color:var(--pbe-model);letter-spacing:.5px}
+.pbeval-kind.commit{color:var(--pbe-gold)}.pbeval-kind.grade{color:var(--pbe-gold)}.pbeval-kind.market{color:#67c9ff}
 .pbeval-empty{padding:28px 0;text-align:center;font-size:12px;line-height:1.5;color:rgba(255,255,255,.26)}
 .pbeval-proof{padding:14px 15px;display:grid;gap:10px}
 .pbeval-hash{padding:12px;border:1px solid rgba(216,183,91,.14);border-radius:9px;background:rgba(216,183,91,.035)}
@@ -26,7 +26,7 @@
 .pbeval-stat{padding:13px 14px;background:rgba(4,10,16,.96)}
 .pbeval-stat span{display:block;font-size:10px;font-weight:900;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,.25)}
 .pbeval-stat strong{display:block;margin-top:5px;font-family:var(--font-d);font-size:23px;color:#fff}
-.pbeval-stat strong.good{color:#55d68c}.pbeval-stat strong.gold{color:#d8b75b}
+.pbeval-stat strong.good{color:var(--pbe-pos)}.pbeval-stat strong.gold{color:var(--pbe-gold)}
 .pbeval-stat small{display:block;margin-top:3px;font-size:11px;line-height:1.35;color:rgba(255,255,255,.25)}
 .pbeval-rule{padding:14px 15px;border-top:1px solid rgba(255,255,255,.05);display:grid;grid-template-columns:minmax(0,1fr) minmax(240px,.55fr);gap:18px;align-items:start}
 .pbeval-rule strong{display:block;font-family:var(--font-d);font-size:18px;text-transform:uppercase;color:#fff}

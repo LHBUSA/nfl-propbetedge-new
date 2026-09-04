@@ -48,7 +48,7 @@ touch a single line of behavioural JavaScript.
 | 1.4 Swap font stack to Playfair / Inter / JetBrains Mono | `index.html` | Low |
 | 1.5 Add `pbe-system.css` — 10px type floor, `:focus-visible`, badge grammar, button/table primitives, reduced-motion | new + `page-loader.js` | Low |
 | 1.6 Retire the headline marquee; collapse shell 5 strips → 2 rows; group nav TODAY/INTELLIGENCE/TOOLS/ARCHIVE | `sports-shell-v2.js`, `sports-shell-v3.css` | **Medium-high** — nav is load-bearing; do last in the pass, verify every route |
-| 1.7 Retire the stadium background + floating chip (−3.2 MB) | `stadium-selector-v1.*`, `page-loader.js`, `nfl-brand-media-v1.css` | Low |
+| 1.7 ~~Retire stadium background~~ — **kept**; it is deliberate on-brand work and the picker is a well-behaved fixed control. Asset-weight reduction deferred to Pass 8 | `stadiums/*` | — |
 
 **Exit criteria:** zero console errors on all 18 routes × 4 widths; zero horizontal overflow;
 **zero text rendered below 10px**; zero contrast failures below 4.5:1 excluding known

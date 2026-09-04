@@ -7,9 +7,8 @@
   'use strict';
 
   const LIVE_API='/api/nfl-live';
-  const NEWS_API='/api/news-feed?limit=24';
   const PBE_LOGO='https://propbetedge.ai/logo/pbe-full-400.png';
-  const state={scoreboard:null,news:[],route:'home',poll:null,auto:null,paused:false};
+  const state={scoreboard:null,route:'home',poll:null,auto:null,paused:false};
   const esc=v=>String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
   const arr=v=>Array.isArray(v)?v:[];
 
@@ -31,21 +30,16 @@
       date:d.toLocaleDateString('en-US',{month:'short',day:'numeric',timeZone:'America/New_York'}).toUpperCase()
     };
   }
-  function newsItems(payload){
-    if(Array.isArray(payload))return payload;
-    for(const key of ['items','articles','news','data','results'])if(Array.isArray(payload?.[key]))return payload[key];
-    return[];
-  }
-  function titleOf(item){return item?.title||item?.headline||item?.name||item?.article_title||''}
-  function urlOf(item){return item?.url||item?.canonical_url||item?.article_url||item?.link||''}
-  function sourceOf(item){return item?.source_name||item?.source||item?.provider||'PBE'}
   function statusText(g){
     const s=g?.status||{};
     if(s.semantics==='LIVE')return s.short_detail||s.detail||`Q${s.period||''} ${s.clock||''}`;
     if(s.semantics==='FINAL')return s.short_detail||'FINAL';
     return s.short_detail||s.detail||'SCHEDULED';
   }
-  function scoreValue(t,sem){return sem==='SCHEDULE'?'—':(t?.score??'—')}
+  /* A game that has not kicked off has no score. Rendering an em-dash in the
+     score column made a row of non-values as visually loud as real scores;
+     leaving it empty lets the kickoff time in the meta row carry the fact. */
+  function scoreValue(t,sem){return sem==='SCHEDULE'?'':(t?.score??'—')}
   function logoFallback(abbr){
     const key=String(abbr||'').replace(/[^A-Za-z]/g,'').toLowerCase();
     return key?`https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/${key}.png`:'';
@@ -60,17 +54,41 @@
 
   /* One authoritative desktop product map. PBE Picks / Track Record are native
      here so late product modules never have to create a second navigation model. */
-  const PRIMARY=[
-    ['pbecast','⚡ PBEcast','cast'],['propboard','Props',''],['marketwatch','Market Watch',''],
-    ['pbepicks','PBE Picks',''],['trackrecord','Track Record',''],['picks','Model Lab',''],
-    ['simulator','Simulator',''],['sgplab','SGP Lab',''],['usage','Usage',''],
-    ['propchain','PropChain',''],['games','Games',''],['newsintel','News','']
+  /* Twenty-three destinations in two undifferentiated rows read as breadth
+     without a model. The same items, grouped by what the user came to do:
+     TODAY (what is happening), INTELLIGENCE (what it means), TOOLS (what I can
+     build), ARCHIVE (what happened before). Density is unchanged; the mental
+     model is not. */
+  const NAV_ROWS=[
+    [
+      ['TODAY',[
+        ['home','Dashboard',''],['games','Games',''],
+        ['propboard','Props',''],['pbecast','PBEcast','cast']
+      ]],
+      ['INTELLIGENCE',[
+        ['marketwatch','Market Watch',''],['picks','Model Lab',''],
+        ['pbepicks','PBE Picks',''],['trackrecord','Track Record',''],
+        ['matchups','Matchups',''],['usage','Usage',''],
+        ['injuries','Injuries',''],['newsintel','News','']
+      ]]
+    ],
+    [
+      ['TOOLS',[
+        ['simulator','Simulator',''],['sgplab','SGP Lab',''],['propchain','PropChain','']
+      ]],
+      ['ARCHIVE',[
+        ['teams','Teams',''],['standings','Standings',''],['stats','Stats',''],
+        ['seasonhistory','Seasons',''],['records','Records',''],['hof','Hall of Fame',''],
+        ['sb','Super Bowls',''],['prospects','Draft',''],['trades','Transactions','']
+      ]]
+    ]
   ];
-  const RESEARCH=[
-    ['matchups','Matchups'],['injuries','Injuries'],['trades','Transactions'],['teams','Teams'],
-    ['stats','2025 Stats'],['standings','2025 Standings'],['seasonhistory','Seasons'],
-    ['hof','Hall of Fame'],['records','Records'],['sb','Super Bowls'],['prospects','Draft Review']
-  ];
+
+  function navGroup([label,items]){
+    return `<span class="pbes-nav-group"><span class="pbes-nav-label">${esc(label)}</span>${
+      items.map(([r,l,c])=>`<button type="button" class="pbes-nav-btn ${c}" data-route="${r}">${esc(l)}${r==='pbecast'?'<span class="badge" id="pbes-cast-badge">CAST</span>':''}</button>`).join('')
+    }</span>`;
+  }
 
   function shellHtml(){
     const d=dateParts();
@@ -83,7 +101,6 @@
         <div class="pbes-center"><div id="pbes-live-pill" class="pbes-live-pill">Connecting to NFL slate…</div></div>
         <div class="pbes-right"><div class="pbes-date"><strong>${d.day}</strong><span>${d.date} · ET</span></div><button class="pbes-head-btn" type="button" id="pbes-search">⌘ K · Search</button><button class="pbes-head-btn pro" type="button" id="pbes-account">NFL Pro</button></div>
       </div>
-      <div class="pbes-news"><div class="pbes-news-badge">PBE NEWS</div><div class="pbes-news-vp"><div class="pbes-news-track" id="pbes-news-track"><div class="pbes-news-empty">Loading current NFL headlines…</div></div></div></div>
       <div class="pbes-scorebar">
         <div class="pbes-score-label" id="pbes-score-label">NFL</div>
         <div class="pbes-score-window">
@@ -92,8 +109,8 @@
           <button class="pbes-score-nav next" id="pbes-score-next" type="button" aria-label="Next games">›</button>
         </div>
       </div>
-      <div class="pbes-primary"><span class="pbes-nav-label">NFL</span>${PRIMARY.map(([r,l,c])=>`<button type="button" class="pbes-nav-btn ${c}" data-route="${r}">${l}${r==='pbecast'?'<span class="badge" id="pbes-cast-badge">CAST</span>':''}</button>`).join('')}<a class="pbes-nav-btn" style="display:inline-flex;align-items:center;text-decoration:none" href="https://propbetedge.ai/news/nfl">News Site ↗</a></div>
-      <div class="pbes-research"><span class="pbes-nav-label">Research</span>${RESEARCH.map(([r,l])=>`<button type="button" class="pbes-nav-btn" data-route="${r}">${l}</button>`).join('')}</div>
+      <nav class="pbes-primary" aria-label="Today and intelligence">${NAV_ROWS[0].map(navGroup).join('')}</nav>
+      <nav class="pbes-research" aria-label="Tools and archive">${NAV_ROWS[1].map(navGroup).join('')}<a class="pbes-nav-btn pbes-nav-ext" href="https://propbetedge.ai/news/nfl">PropBetEdge News ↗</a></nav>
     </div>`;
   }
 
@@ -197,25 +214,14 @@
     state.auto=setInterval(()=>{if(!state.paused&&document.visibilityState==='visible')stepScores(1)},5200);
   }
 
-  function renderNews(){
-    const host=document.getElementById('pbes-news-track');
-    if(!host)return;
-    const items=state.news.filter(x=>titleOf(x)).slice(0,16);
-    if(!items.length){host.innerHTML='<div class="pbes-news-empty">Current NFL newsroom feed unavailable.</div>';return}
-    const one=items.map(x=>{
-      const title=titleOf(x),url=urlOf(x),source=sourceOf(x),tag=x?.topic_kind||x?.kind||x?.category||'NFL';
-      return `<a class="pbes-news-item" ${url?`href="${esc(url)}" target="_blank" rel="noopener"`:'href="javascript:void(0)"'}><span>${esc(tag)}</span><strong>${esc(title)}</strong><span>${esc(source)}</span></a>`;
-    }).join('');
-    host.innerHTML=one+one;
-  }
-
   async function load(){
     ensure();
+    /* The shell no longer runs a headline marquee, so it no longer fetches the
+       news feed on every page load. The wire lives on the Dashboard. */
     await Promise.allSettled([
-      json(`${LIVE_API}?date=${sportsDay()}`).then(x=>state.scoreboard=x),
-      json(NEWS_API).then(x=>state.news=newsItems(x))
+      json(`${LIVE_API}?date=${sportsDay()}`).then(x=>state.scoreboard=x)
     ]);
-    renderScores();renderNews();schedule();
+    renderScores();schedule();
   }
   function schedule(){
     clearTimeout(state.poll);

@@ -1,17 +1,17 @@
 /* PropBetEdge NFL — Market Watch v3 institutional terminal */
 
 .pbe22-watch-v3{
-  --mw-bg:#060a0f;
+  --mw-bg:var(--pbe-ink-3);
   --mw-panel:rgba(7,12,18,.95);
   --mw-panel-2:rgba(10,17,25,.965);
   --mw-line:rgba(255,255,255,.075);
   --mw-text:#f5f7fa;
   --mw-muted:#738091;
-  --mw-green:#55d68c;
-  --mw-red:#ff6574;
-  --mw-cyan:#55d9ff;
-  --mw-orange:#ff9a4d;
-  --mw-gold:#d8b75b;
+  --mw-green:var(--pbe-gold);
+  --mw-red:var(--pbe-crimson-bright);
+  --mw-cyan:var(--pbe-model);
+  --mw-orange:var(--pbe-gold-bright);
+  --mw-gold:var(--pbe-gold);
   padding:6px 0 64px;
 }
 .pbe22-watch-v3 *{box-sizing:border-box}
@@ -38,7 +38,7 @@
 .pbe22-watch-v3 .pbe22-title{letter-spacing:-.048em}
 .pbe22-watch-v3 .pbe22-title em{color:var(--mw-cyan)}
 .pbe22-watch-v3 .pbe22-kicker{color:var(--mw-green)}
-.pbe22-watch-v3 .pbe22-copy{color:#8c98a7;max-width:850px}
+.pbe22-watch-v3 .pbe22-copy{color:var(--pbe-dim);max-width:850px}
 .pbe22-watch-v3 .pbe22-status{
   min-width:310px;
   border-color:rgba(85,217,255,.13);
@@ -53,7 +53,7 @@
   letter-spacing:.08em;text-transform:uppercase;
 }
 .pbe22-watch-v3 .pbe22-contract{
-  border-color:rgba(125,167,255,.10);background:rgba(7,12,18,.91);color:#748090;
+  border-color:rgba(125,167,255,.10);background:rgba(7,12,18,.91);color:var(--pbe-dim);
 }
 .pbe22-watch-v3 .pbe22-contract strong{color:#9fbaff}
 
@@ -87,12 +87,12 @@
 .pbe22-baseline-float{
   position:sticky;top:8px;z-index:12;margin:9px 0 0 auto;display:flex;align-items:center;gap:10px;width:max-content;max-width:100%;
   padding:9px 12px;border:1px solid rgba(85,217,255,.18);border-radius:10px;background:rgba(5,13,19,.94);
-  color:#e5f7ff;box-shadow:0 12px 35px rgba(0,0,0,.30),0 0 0 1px rgba(85,217,255,.02);cursor:pointer;
+  color:var(--pbe-paper);box-shadow:0 12px 35px rgba(0,0,0,.30),0 0 0 1px rgba(85,217,255,.02);cursor:pointer;
   -webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);
 }
 .pbe22-baseline-float>span{display:grid;place-items:center;width:26px;height:26px;border-radius:7px;background:rgba(85,217,255,.08);color:var(--mw-cyan);font-size:16px}
 .pbe22-baseline-float strong{display:block;font-size:11px;text-align:left}
-.pbe22-baseline-float small{display:block;margin-top:3px;color:#687688;font:700 10px/1.2 'JetBrains Mono',monospace;text-transform:uppercase}
+.pbe22-baseline-float small{display:block;margin-top:3px;color:var(--pbe-dim);font:700 10px/1.2 'JetBrains Mono',monospace;text-transform:uppercase}
 .pbe22-watch-v3 .pbe22-baseline.compact{background:rgba(7,12,18,.93)}
 
 .pbe22-watch-v3 .pbe22-table-wrap{
@@ -102,7 +102,7 @@
 .pbe22-watch-v3 .pbe22-scroll{max-height:69vh;background:rgba(4,8,12,.90)}
 .pbe22-watch-v3 .pbe22-table{min-width:1190px;font-variant-numeric:tabular-nums lining-nums}
 .pbe22-watch-v3 .pbe22-table th{
-  padding:10px 11px;background:rgba(7,13,20,.985);border-bottom-color:rgba(255,255,255,.085);color:#647284;
+  padding:10px 11px;background:rgba(7,13,20,.985);border-bottom-color:rgba(255,255,255,.085);color:var(--pbe-dim);
   -webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);
 }
 .pbe22-watch-v3 .pbe22-table td{
@@ -118,18 +118,18 @@
 .pbe22-watch-v3 .pbe22-range{color:#a7bcff;font-size:11px}
 .pbe22-watch-v3 .pbe22-player{font-size:12px}
 .pbe22-watch-v3 .pbe22-market{font-size:11px}
-.pbe22-watch-v3 .pbe22-sub{color:#4e5b6a}
+.pbe22-watch-v3 .pbe22-sub{color:var(--pbe-dim)}
 
 /* Sportsbook mark: favicon where known, compact house code fallback everywhere. */
-.pbe22-best{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;color:#eef5f8!important;font-family:'JetBrains Mono',monospace!important;font-size:11px!important}
+.pbe22-best{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;color:var(--pbe-paper)!important;font-family:'JetBrains Mono',monospace!important;font-size:11px!important}
 .pbe22-best strong{color:#fff;font-size:11px}
 .pbe22-best em{color:var(--mw-green);font-style:normal;font-weight:900}
 .pbe22-bookmark{
   display:inline-flex;align-items:center;justify-content:center;gap:3px;min-width:25px;height:19px;padding:0 5px;border:1px solid rgba(255,255,255,.075);
-  border-radius:5px;background:rgba(255,255,255,.025);color:#8390a0;font:900 10px/1 'JetBrains Mono',monospace;letter-spacing:.02em;
+  border-radius:5px;background:rgba(255,255,255,.025);color:var(--pbe-dim);font:900 10px/1 'JetBrains Mono',monospace;letter-spacing:.02em;
 }
 .pbe22-bookmark img{width:11px;height:11px;border-radius:2px;object-fit:contain;background:#fff}
-.pbe22-best-empty{color:#3f4a57}
+.pbe22-best-empty{color:var(--pbe-dim)}
 
 /* Dispersion heat map: green -> cyan -> orange; pulse only at exceptional 5+ point spreads. */
 .pbe22-dispersion{min-width:108px}
@@ -157,7 +157,7 @@
 @keyframes pbe22flashworse{0%{background:rgba(255,101,116,.30);box-shadow:inset 0 0 0 1px rgba(255,101,116,.35)}100%{background:rgba(4,9,14,.78);box-shadow:inset 0 0 0 1px transparent}}
 @keyframes pbe22flashneutral{0%{background:rgba(85,217,255,.25);box-shadow:inset 0 0 0 1px rgba(85,217,255,.30)}100%{background:rgba(4,9,14,.78);box-shadow:inset 0 0 0 1px transparent}}
 
-.pbe22-watch-v3 .pbe22-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:rgba(6,11,17,.96);color:#526071}
+.pbe22-watch-v3 .pbe22-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:rgba(6,11,17,.96);color:var(--pbe-dim)}
 .pbe22-empty.compact{min-height:160px}
 
 @media(max-width:1100px){

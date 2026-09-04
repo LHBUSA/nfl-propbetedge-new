@@ -323,10 +323,10 @@ for modelled series, `--pbe-pos`/`--pbe-neg` for divergence. Mono tabular axis l
   implemented in `nfl-player-media-v3.js` — preserved).
 - Editorial photography: full-bleed only in a genuine editorial module (News lead, Injury desk
   lead), always with a `--pbe-ink` gradient scrim under text.
-- **Retired:** the full-bleed stadium background and its floating `STADIUM · SoFi Stadium` chip
-  (P1-3) — 3.2 MB of JPEG competing with data and implying a venue that contradicts the game on
-  screen. The parent achieves atmosphere with `--pbe-scene-opacity: .21` and a grayscale filter;
-  if atmosphere is wanted, that is the inherited technique.
+- **Stadium atmosphere:** kept, cost reduced. It is deliberate, on-brand work and the parent uses
+  scene imagery too (`--pbe-scene-opacity: .21` with a grayscale/saturate filter). The 3.2 MB of
+  venue JPEGs (P1-3) should come down toward the parent's single-image approach; the picker itself
+  is a well-behaved fixed control and stays.
 - **Every image gets `width`/`height` or `aspect-ratio`, and `loading="lazy"` below the fold.**
   Parent lazy-loads 85 of 89 images; NFL lazy-loads 6 of 43 (P0-6).
 

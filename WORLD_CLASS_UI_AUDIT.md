@@ -265,18 +265,24 @@ time, the card's action buttons are clipped by the section below it, the full-bl
 photograph has visible seams at the container edges, and the team logos are pushed to the extreme
 left/right at mid-height on mobile while the market card runs down the centre.
 
-### P1-3 · Decorative stadium photography competes with the data and implies a false venue
+### P1-3 · Decorative stadium photography costs 3.2 MB
 
 A user-selectable full-bleed stadium background sits behind the Dashboard, Prop Board, Market
-Watch and Matchups. It defaults to SoFi Stadium. A floating `STADIUM · SoFi Stadium` chip is
-pinned over page content at every breakpoint.
+Watch and Matchups, defaulting to SoFi Stadium, with a `STADIUM · SoFi Stadium` picker chip.
 
-It is not literally a data claim — `stadium-selector-v1.js` is an atmosphere picker with proper CC
-attribution. But on a card reading *"Lumen Field · Seattle, WA"* a chip saying *"SoFi Stadium"*
-reads as one, and the chip overlaps real content (it lands on top of the KPI tiles on Prop Board
-and the paywall panel on Market Watch). Combined with 3.2 MB of JPEGs, this is decoration that
-costs performance, clarity and trust for atmosphere that a well-designed dark surface provides for
-free.
+**Correction to an earlier reading of this finding:** the chip is not floating over page content.
+It is `position:fixed; right:18px; bottom:18px`, a well-behaved bottom-right utility control, and
+it already raises itself to `bottom:74px` on mobile so it clears the bottom nav (measured: control
+at y=728 with a 42px height, bottom nav at y=784 — no overlap). What looked like an overlap was an
+artefact of full-page screenshots compositing fixed elements at their viewport offset.
+
+What does stand: `stadiums/*.jpg` totals **3.2 MB** (five venues, ~400 KB each, plus @960
+variants) for a decorative background, which is the performance concern in P0-6. The parent brand
+achieves the same effect at `--pbe-scene-opacity: .21` with a grayscale/saturate filter over a
+single shared image.
+
+Recommendation is to keep the atmosphere — it is on-brand and deliberately built — and reduce the
+asset cost, rather than remove the feature.
 
 ### P1-4 · Brand continuity with PropBetEdge.ai does not currently exist
 

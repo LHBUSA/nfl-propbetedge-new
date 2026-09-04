@@ -11,35 +11,35 @@
 .pbe25-game-intel.featured{margin-top:12px;border:1px solid rgba(180,211,241,.10);border-radius:10px;background:rgba(5,17,30,.38)}
 .pbe25-readiness{min-width:0}
 .pbe25-readiness-head{display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
-.pbe25-readiness-head>span{color:#8ca2b5;font:900 10px/1 'JetBrains Mono',monospace;letter-spacing:.09em;text-transform:uppercase}
-.pbe25-readiness-head small{display:block;margin-top:3px;color:#536d83;font:700 10px/1.2 'JetBrains Mono',monospace;letter-spacing:.05em}
-.pbe25-readiness-head>b{color:#62e2a1;font:900 20px/.85 'Inter',sans-serif}
+.pbe25-readiness-head>span{color:var(--pbe-paper-2);font:900 10px/1 'JetBrains Mono',monospace;letter-spacing:.09em;text-transform:uppercase}
+.pbe25-readiness-head small{display:block;margin-top:3px;color:var(--pbe-dim);font:700 10px/1.2 'JetBrains Mono',monospace;letter-spacing:.05em}
+.pbe25-readiness-head>b{color:var(--pbe-gold);font:900 20px/.85 'Inter',sans-serif}
 .pbe25-readiness-track{height:4px;margin-top:7px;overflow:hidden;border-radius:99px;background:rgba(255,255,255,.055)}
-.pbe25-readiness-track i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#68bfff,#62e2a1);box-shadow:0 0 12px rgba(98,226,161,.22)}
+.pbe25-readiness-track i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--pbe-model),var(--pbe-gold));box-shadow:0 0 12px rgba(98,226,161,.22)}
 .pbe25-ready-families{display:flex;flex-wrap:wrap;gap:4px;margin-top:7px}
-.pbe25-ready-pill{display:inline-flex;align-items:center;gap:5px;min-height:21px;padding:0 6px;border:1px solid rgba(180,211,241,.07);border-radius:5px;background:rgba(255,255,255,.018);color:#60788c;font:800 10px/1 'JetBrains Mono',monospace;letter-spacing:.035em;text-transform:uppercase}
-.pbe25-ready-pill b{color:#8ca2b6;font:900 10px/1 'JetBrains Mono',monospace}
+.pbe25-ready-pill{display:inline-flex;align-items:center;gap:5px;min-height:21px;padding:0 6px;border:1px solid rgba(180,211,241,.07);border-radius:5px;background:rgba(255,255,255,.018);color:var(--pbe-dim);font:800 10px/1 'JetBrains Mono',monospace;letter-spacing:.035em;text-transform:uppercase}
+.pbe25-ready-pill b{color:var(--pbe-paper-2);font:900 10px/1 'JetBrains Mono',monospace}
 .pbe25-ready-pill.live{border-color:rgba(98,226,161,.13);background:rgba(98,226,161,.035);color:#78caa1}.pbe25-ready-pill.live b{color:#bdf5d3}
 .pbe25-ready-pill.pending{opacity:.62}
 .pbe25-intel-chips{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;align-items:stretch}
-.pbe25-intel-chip{min-width:0;display:flex;flex-direction:column;justify-content:center;padding:7px 8px;border:1px solid rgba(180,211,241,.075);border-radius:7px;background:rgba(255,255,255,.018);color:#d9e5ef;font:900 12px/.95 'Inter',sans-serif;text-transform:uppercase}
-.pbe25-intel-chip b{display:block;margin-bottom:4px;color:#60798e;font:800 10px/1 'JetBrains Mono',monospace;letter-spacing:.06em}
+.pbe25-intel-chip{min-width:0;display:flex;flex-direction:column;justify-content:center;padding:7px 8px;border:1px solid rgba(180,211,241,.075);border-radius:7px;background:rgba(255,255,255,.018);color:var(--pbe-paper);font:900 12px/.95 'Inter',sans-serif;text-transform:uppercase}
+.pbe25-intel-chip b{display:block;margin-bottom:4px;color:var(--pbe-dim);font:800 10px/1 'JetBrains Mono',monospace;letter-spacing:.06em}
 .pbe25-intel-chip.hot{border-color:rgba(242,200,95,.20);background:rgba(242,200,95,.045);color:#f6d97f}.pbe25-intel-chip.hot b{color:#b99d54}
-.pbe25-intel-chip.environment{font-size:11px;line-height:1.15;color:#9fb2c2}
+.pbe25-intel-chip.environment{font-size:11px;line-height:1.15;color:var(--pbe-paper-2)}
 .pbe25-game-intel.loading{grid-template-columns:minmax(220px,.8fr) minmax(220px,1fr);align-items:center}
-.pbe25-intel-loading{display:flex;align-items:center;gap:8px;color:#698197;font:800 10px/1 'JetBrains Mono',monospace;letter-spacing:.06em;text-transform:uppercase}
-.pbe25-intel-loading i{width:7px;height:7px;border-radius:50%;background:#68bfff;box-shadow:0 0 0 4px rgba(104,191,255,.06);animation:pbe25IntelPulse 1.35s ease-in-out infinite}
+.pbe25-intel-loading{display:flex;align-items:center;gap:8px;color:var(--pbe-dim);font:800 10px/1 'JetBrains Mono',monospace;letter-spacing:.06em;text-transform:uppercase}
+.pbe25-intel-loading i{width:7px;height:7px;border-radius:50%;background:var(--pbe-model);box-shadow:0 0 0 4px rgba(104,191,255,.06);animation:pbe25IntelPulse 1.35s ease-in-out infinite}
 @keyframes pbe25IntelPulse{50%{opacity:.35;transform:scale(.78)}}
 .pbe25-game-intel.schedule-only{grid-template-columns:minmax(230px,.9fr) minmax(220px,1.1fr)}
 
 .pbe25-quickfilters{display:flex;align-items:center;flex-wrap:wrap;gap:5px;margin-top:9px;padding:8px 9px;border:1px solid rgba(180,211,241,.075);border-radius:9px;background:rgba(4,15,26,.36)}
-.pbe25-quickfilters>span{margin-right:3px;color:#647c91;font:900 10px/1 'JetBrains Mono',monospace;letter-spacing:.12em;text-transform:uppercase}
-.pbe25-quickfilters button{min-height:28px;padding:0 9px;border:1px solid rgba(180,211,241,.08);border-radius:6px;background:rgba(255,255,255,.018);color:#7f94a7;cursor:pointer;font:800 10px/1 'JetBrains Mono',monospace;letter-spacing:.045em;text-transform:uppercase}
-.pbe25-quickfilters button:hover{color:#e6f1f9;border-color:rgba(104,191,255,.22);background:rgba(104,191,255,.045)}
-.pbe25-quickfilters button.active{color:#07130d;border-color:#62e2a1;background:#62e2a1;box-shadow:0 0 18px rgba(98,226,161,.10)}
-.pbe25-quickfilters small{margin-left:auto;color:#4f677c;font:700 10px/1.3 'JetBrains Mono',monospace;text-transform:uppercase}
+.pbe25-quickfilters>span{margin-right:3px;color:var(--pbe-dim);font:900 10px/1 'JetBrains Mono',monospace;letter-spacing:.12em;text-transform:uppercase}
+.pbe25-quickfilters button{min-height:28px;padding:0 9px;border:1px solid rgba(180,211,241,.08);border-radius:6px;background:rgba(255,255,255,.018);color:var(--pbe-dim);cursor:pointer;font:800 10px/1 'JetBrains Mono',monospace;letter-spacing:.045em;text-transform:uppercase}
+.pbe25-quickfilters button:hover{color:var(--pbe-paper);border-color:rgba(104,191,255,.22);background:rgba(104,191,255,.045)}
+.pbe25-quickfilters button.active{color:#07130d;border-color:var(--pbe-gold);background:var(--pbe-gold);box-shadow:0 0 18px rgba(98,226,161,.10)}
+.pbe25-quickfilters small{margin-left:auto;color:var(--pbe-dim);font:700 10px/1.3 'JetBrains Mono',monospace;text-transform:uppercase}
 .pbe25-ops-hidden,.pbe25-day-hidden{display:none!important}
-.pbe25-intel-empty{margin:12px 0;padding:30px 16px;border:1px dashed rgba(180,211,241,.10);border-radius:11px;background:rgba(10,23,38,.55);color:#71889c;text-align:center;font:800 11px/1.5 'JetBrains Mono',monospace;text-transform:uppercase}
+.pbe25-intel-empty{margin:12px 0;padding:30px 16px;border:1px dashed rgba(180,211,241,.10);border-radius:11px;background:rgba(10,23,38,.55);color:var(--pbe-dim);text-align:center;font:800 11px/1.5 'JetBrains Mono',monospace;text-transform:uppercase}
 
 /* Make room for the market-intelligence strip without turning the card into a wall. */
 .pbe25-card{align-items:stretch!important}

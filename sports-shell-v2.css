@@ -106,7 +106,7 @@
 }
 #pbe-sports-shell[data-shell-version="2"] .pbes-score-meta strong{
   flex:0 0 auto;
-  color:#c3d3df;
+  color:var(--pbe-paper);
   font:900 12px/1 'JetBrains Mono',monospace;
 }
 #pbe-sports-shell[data-shell-version="2"] .pbes-score-meta span{
@@ -127,7 +127,7 @@
   border-left:1px solid rgba(255,255,255,.06);
   border-right:1px solid rgba(255,255,255,.06);
   background:rgba(7,14,23,.88);
-  color:#b9c8d4;
+  color:var(--pbe-paper-2);
   cursor:pointer;
   font:700 26px/1 'Inter',sans-serif;
   transition:background .15s,color .15s;

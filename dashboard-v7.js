@@ -89,6 +89,28 @@
     return semantics === 'SCHEDULE' ? '—' : (team?.score ?? '—');
   }
 
+  /* A game that has not kicked off has no score, and a placeholder rendered at
+     70-106px was reserving the hero's most prominent slot for a non-value.
+     Pre-game, the kickoff time IS the headline fact, so it takes the slot. */
+  function kickoffParts(game) {
+    const d = new Date(game?.date);
+    if (Number.isNaN(d.getTime())) return null;
+    const opts = { timeZone: 'America/New_York' };
+    return {
+      time: d.toLocaleString('en-US', { ...opts, hour: 'numeric', minute: '2-digit' }),
+      day: d.toLocaleString('en-US', { ...opts, weekday: 'short', month: 'short', day: 'numeric' }).toUpperCase()
+    };
+  }
+
+  function heroValue(game, semantics, away, home) {
+    if (semantics !== 'SCHEDULE') {
+      return `<div class="pbe7-score"><strong>${esc(score(away, semantics))}</strong><span>:</span><strong>${esc(score(home, semantics))}</strong></div>`;
+    }
+    const k = kickoffParts(game);
+    if (!k) return `<div class="pbe7-kickoff"><span class="pbe7-kickoff-label">KICKOFF</span><strong>TBD</strong></div>`;
+    return `<div class="pbe7-kickoff"><span class="pbe7-kickoff-label">KICKOFF · ${esc(k.day)}</span><strong>${esc(k.time)}</strong><span class="pbe7-kickoff-tz">ET</span></div>`;
+  }
+
   function statusText(game) {
     const s = game?.status || {};
     if (s.semantics === 'LIVE') return s.short_detail || s.detail || `Q${s.period || ''} ${s.clock || ''}`;
@@ -163,8 +185,8 @@
       <div class="pbe7-matchup">
         ${teamBlock(away, 'away')}
         <div class="pbe7-scorebox">
-          <div class="pbe7-score"><strong>${esc(score(away, semantics))}</strong><span>:</span><strong>${esc(score(home, semantics))}</strong></div>
-          <div class="pbe7-status">${esc(statusText(game))}</div>
+          ${heroValue(game, semantics, away, home)}
+          ${semantics === 'SCHEDULE' ? '' : `<div class="pbe7-status">${esc(statusText(game))}</div>`}
           <div class="pbe7-venue">${esc(venue || fmtDate(game?.date) || 'NFL game')}</div>
           <div class="pbe7-actions"><button class="pbe7-primary" data-cast="${esc(game.id)}">${semantics === 'LIVE' ? '⚡ Open Live PBEcast' : 'Open PBEcast'}</button><button data-route="propboard">Open Prop Board</button><button data-route="games">Full Slate</button></div>
         </div>

@@ -3,23 +3,17 @@
 
 
 body{font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
-button,input,select,textarea{font-size:13px}
-
-/* Global sports shell */
-.pbes-brand-sub,.pbes-live-pill,.pbes-date span,.pbes-head-btn,.pbes-news-badge,.pbes-nav-label,.pbes-nav-btn,
-.pbes-score-label,.pbes-score-meta,.pbes-news-item,.pbes-news-item strong,.pbes-news-item span{
+button,input,select,textarea{font-size:13px}/* Global sports shell */
+.pbes-brand-sub,.pbes-live-pill,.pbes-date span,.pbes-head-btn,.pbes-news-badge,.pbes-score-label,.pbes-score-meta,.pbes-news-item,.pbes-news-item strong,.pbes-news-item span{
   font-size:12px!important;line-height:1.25!important
 }
-.pbes-score-team{font-size:13px!important}.pbes-score-num{font-size:14px!important}.pbes-date strong{font-size:13px!important}
-.pbes-brand-sub,.pbes-date span,.pbes-score-meta,.pbes-news-item,.pbes-news-item span,.pbes-nav-label{color:var(--read-dim)!important}
-.pbes-news-item strong,.pbes-score-team,.pbes-nav-btn{color:var(--read-body)!important}
-.pbes-nav-btn.active{color:#fff!important}
+.pbes-score-team{font-size:13px!important}.pbes-score-num{font-size:14px!important}.pbes-date strong{font-size:13px!important}.pbes-brand-sub,.pbes-date span,.pbes-score-meta,.pbes-news-item,.pbes-news-item span{color:var(--read-dim)!important}.pbes-news-item strong,.pbes-score-team{color:var(--read-body)!important}
 
 /* Home */
 .home5-source,.home5-record,.home5-venue,.home5-sit span,.home5-card-state,.home5-card-meta,.home5-head span,
 .home5-news-tag,.home5-news-row time,.home5-player-copy span{font-size:12px!important;line-height:1.35!important;color:var(--read-dim)!important}
 .home5-name,.home5-news-row p,.home5-tool span{font-size:13px!important;line-height:1.5!important;color:var(--read-muted)!important}
-.home5-news-row b{font-size:13px!important;line-height:1.4!important;color:#f1f7fc!important}
+.home5-news-row b{font-size:13px!important;line-height:1.4!important;color:var(--pbe-paper)!important}
 .home5-head strong{font-size:19px!important}.home5-card-row b{font-size:13px!important}.home5-card-row strong{font-size:24px!important}
 .home5-btn{font-size:13px!important;min-height:42px!important}.home5-state{font-size:12px!important}
 .home5-sit b{font-size:23px!important}
@@ -31,16 +25,16 @@ button,input,select,textarea{font-size:13px}
   font-size:12px!important;line-height:1.35!important;color:var(--read-dim)!important
 }
 .cast4-btn{font-size:13px!important;min-height:41px!important}.cast4-panel-head strong{font-size:19px!important}
-.cast4-current-text{font-size:15px!important;line-height:1.58!important;color:#dce7f0!important}
-.cast4-person b{font-size:13px!important}.cast4-team-name{font-size:13px!important;color:#d9e5ef!important}
+.cast4-current-text{font-size:15px!important;line-height:1.58!important;color:var(--pbe-paper)!important}
+.cast4-person b{font-size:13px!important}.cast4-team-name{font-size:13px!important;color:var(--pbe-paper)!important}
 .cast4-sit b{font-size:23px!important}.cast4-chip-score{font-size:13px!important}.cast4-chip-score b{font-size:16px!important}
 .cast4-drive-desc{font-size:13px!important;line-height:1.45!important;color:var(--read-muted)!important}
-.cast4-play-copy b{font-size:13px!important;color:#f2f7fb!important}.cast4-play-copy p{font-size:13px!important;line-height:1.48!important;color:var(--read-muted)!important}
+.cast4-play-copy b{font-size:13px!important;color:var(--pbe-paper)!important}.cast4-play-copy p{font-size:13px!important;line-height:1.48!important;color:var(--read-muted)!important}
 .cast4-play-clock,.cast4-play-score{font-size:12px!important;color:var(--read-dim)!important}
 
 /* Prop board / dense research surfaces */
-.pbe3-table{font-size:13px!important}.pbe3-table th{font-size:12px!important;letter-spacing:.045em!important;color:#aebfd0!important}
-.pbe3-table td{font-size:13px!important;color:#dce7f0!important}.pbe3-table td strong{color:#fff!important}
+.pbe3-table{font-size:13px!important}.pbe3-table th{font-size:12px!important;letter-spacing:.045em!important;color:var(--pbe-paper-2)!important}
+.pbe3-table td{font-size:13px!important;color:var(--pbe-paper)!important}.pbe3-table td strong{color:#fff!important}
 .pbe3-kpi span,.pbe3-event-bar span,.pbe3-foot,.pbe3-meta,.pbe3-label{font-size:12px!important;color:var(--read-dim)!important}
 .pbe3-kpi b{font-size:24px!important}
 
@@ -52,9 +46,9 @@ button,input,select,textarea{font-size:13px}
 
 /* NFL Pro */
 .pbe-pro-kicker,.pbe-pro-plan-label,.pbe-pro-auth-copy,.pbe-pro-secure,.pbe-pro-user-card span{font-size:13px!important;line-height:1.45!important}
-.pbe-pro-pitch>p{font-size:14px!important;line-height:1.65!important;color:#d2dfE9!important}
-.pbe-pro-feature strong{font-size:13px!important;color:#fff!important}.pbe-pro-feature span{font-size:13px!important;line-height:1.5!important;color:#b7c8d7!important}
-.pbe-pro-renew{font-size:13px!important;line-height:1.5!important;color:#b0c1d0!important}.pbe-pro-email{font-size:14px!important}
+.pbe-pro-pitch>p{font-size:14px!important;line-height:1.65!important;color:var(--pbe-paper)!important}
+.pbe-pro-feature strong{font-size:13px!important;color:#fff!important}.pbe-pro-feature span{font-size:13px!important;line-height:1.5!important;color:var(--pbe-paper-2)!important}
+.pbe-pro-renew{font-size:13px!important;line-height:1.5!important;color:var(--pbe-paper-2)!important}.pbe-pro-email{font-size:14px!important}
 .pbe-pro-cta{font-size:13px!important;min-height:48px!important}.pbe-pro-account{font-size:12px!important;min-height:38px!important}
 .pbe-pro-message{font-size:13px!important}.pbe-pro-user-card strong{font-size:13px!important}
 
@@ -63,8 +57,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 ::selection{background:#62c8ff;color:#071421}
 
 @media(max-width:760px){
-  body{font-size:14px}
-  .pbes-nav-btn,.pbes-head-btn,.cast4-btn,.home5-btn{font-size:12px!important}
+  body{font-size:14px}.pbes-head-btn,.cast4-btn,.home5-btn{font-size:12px!important}
   .home5-source,.home5-record,.home5-venue,.home5-sit span,.home5-card-state,.home5-card-meta,.home5-head span,
   .cast4-live-tag,.cast4-source,.cast4-chip-state,.cast4-chip-meta,.cast4-panel-head span,.cast4-current-kicker,.cast4-sit span{
     font-size:12px!important
