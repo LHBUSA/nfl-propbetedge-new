@@ -223,7 +223,10 @@ const AUDIT_EXPR = `(() => {
   out.images = {
     total: imgs.length,
     broken: imgs.filter(i => i.complete && !i.naturalWidth).length,
-    noAlt: imgs.filter(i => !i.getAttribute('alt')).length,
+    // alt="" is the correct marker for a decorative image whose meaning is
+    // already carried by adjacent text; only a MISSING alt attribute is a defect.
+    noAlt: imgs.filter(i => i.getAttribute('alt') === null).length,
+    decorative: imgs.filter(i => i.getAttribute('alt') === '').length,
     noDims: imgs.filter(i => !i.getAttribute('width') && !i.style.aspectRatio && !getComputedStyle(i).aspectRatio.includes('/')).length,
     lazy: imgs.filter(i => i.loading === 'lazy').length
   };
