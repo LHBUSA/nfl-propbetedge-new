@@ -155,7 +155,7 @@ are checked against measurements, not against intent.
 
 ## Status — what shipped to the branch
 
-Four commits on `worldclass-pass`, each verified by rendering the working tree
+Six commits on `worldclass-pass`, each verified by rendering the working tree
 against live production APIs in headless Chrome at 390 / 768 / 1280 / 1440.
 
 **Measured across 68 route × width combinations, before → after:**
@@ -175,6 +175,8 @@ against live production APIs in headless Chrome at 390 / 768 / 1280 / 1440.
 | Market Watch rendered content | 869 chars | **4,303 chars** |
 | Featured-game hero on mobile | market panel 118px wide | **308px** |
 | News deks presented but uncorroborated | 8 of 12 | **0** |
+| Lock buttons inside the Prop Board table | 210 | **0** (3 locked column heads) |
+| Broken images | 0 | 0 |
 
 **Deep-link contract (Pass 7 core), verified by `scripts/deeplink-smoke.mjs`:**
 
