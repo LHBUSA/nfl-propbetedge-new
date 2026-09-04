@@ -388,3 +388,269 @@
   .mobile-overlay.open{z-index:2600}
   .sidebar{z-index:2700}
 }
+
+/* ===========================================================================
+   VISUAL FINISH — shell composition
+   ---------------------------------------------------------------------------
+   The shell was five stacked bands of small tracked uppercase text totalling
+   328px before any product content: brand 71, scores 96, nav 46, nav 38,
+   command bar 58. Every band carried the same visual weight, which is what made
+   the product read as an admin console rather than a consumer sports app.
+
+   This gives the bands a hierarchy and takes the stack to ~200px:
+     brand      strong, with real logo presence          64
+     slate      one line per game, richer, quieter       54
+     nav 1      primary destinations                     40
+     nav 2      secondary, visibly recessive             30
+     context    event selector only, crumbs retired      34
+   =========================================================================== */
+
+/* ---- band 1 · brand ---------------------------------------------------- */
+#pbe-sports-shell .pbes-top{
+  min-height:68px!important;
+  padding:0 clamp(16px,2vw,28px)!important;
+  gap:20px!important;
+  border-bottom:1px solid var(--pbe-line)!important;
+  background:var(--pbe-ink)!important;
+}
+#pbe-sports-shell .pbes-brand{gap:14px!important}
+#pbe-sports-shell .pbes-brand-logo{
+  width:auto!important;
+  height:44px!important;
+  filter:drop-shadow(0 2px 10px rgba(0,0,0,.5));
+}
+#pbe-sports-shell .pbes-brand-name{
+  font-family:var(--pbe-font-ui)!important;
+  font-size:17px!important;
+  font-weight:800!important;
+  letter-spacing:-.01em!important;
+  text-transform:none!important;
+  color:var(--pbe-paper)!important;
+  line-height:1.1!important;
+}
+#pbe-sports-shell .pbes-brand-sub{
+  font-family:var(--pbe-font-data)!important;
+  font-size:var(--fs-micro)!important;
+  font-weight:700!important;
+  letter-spacing:var(--ls-micro)!important;
+  text-transform:uppercase!important;
+  color:var(--pbe-faint)!important;
+  margin-top:3px!important;
+}
+#pbe-sports-shell .pbes-brand-pill{
+  padding:2px 6px!important;
+  border:1px solid var(--pbe-gold)!important;
+  border-radius:var(--r-xs)!important;
+  background:transparent!important;
+  color:var(--pbe-gold)!important;
+  font-family:var(--pbe-font-data)!important;
+  font-size:9px!important;
+  letter-spacing:.12em!important;
+  vertical-align:middle;
+}
+/* The live pill is the shell's one piece of live state; let it read as such. */
+#pbe-sports-shell .pbes-live-pill{
+  padding:7px 14px!important;
+  border:1px solid var(--pbe-line-strong)!important;
+  border-radius:var(--r-pill)!important;
+  background:transparent!important;
+  font-family:var(--pbe-font-data)!important;
+  font-size:var(--fs-label)!important;
+  font-weight:700!important;
+  letter-spacing:.1em!important;
+  color:var(--pbe-dim)!important;
+}
+#pbe-sports-shell .pbes-live-pill.is-live{
+  border-color:var(--pbe-live)!important;
+  color:var(--pbe-crimson-text)!important;
+}
+#pbe-sports-shell .pbes-head-btn{
+  min-height:34px!important;
+  padding:0 13px!important;
+  border:1px solid var(--pbe-line-strong)!important;
+  border-radius:var(--r-sm)!important;
+  background:transparent!important;
+  color:var(--pbe-dim)!important;
+  font-family:var(--pbe-font-data)!important;
+  font-size:var(--fs-micro)!important;
+  letter-spacing:.1em!important;
+}
+#pbe-sports-shell .pbes-head-btn:hover{border-color:var(--pbe-gold)!important;color:var(--pbe-paper)!important}
+#pbe-sports-shell .pbes-head-btn.pro{
+  border-color:var(--pbe-gold)!important;
+  color:var(--pbe-gold)!important;
+}
+
+/* ---- band 2 · the slate ------------------------------------------------ */
+#pbe-sports-shell[data-shell-version="2"] .pbes-scorebar,
+#pbe-sports-shell[data-shell-version="2"] .pbes-score-label,
+#pbe-sports-shell[data-shell-version="2"] .pbes-score-window,
+#pbe-sports-shell[data-shell-version="2"] .pbes-scores,
+#pbe-sports-shell[data-shell-version="2"] .pbes-score{
+  min-height:54px!important;
+}
+#pbe-sports-shell[data-shell-version="2"] .pbes-scorebar{
+  background:var(--pbe-ink-2)!important;
+  border-bottom:1px solid var(--pbe-line)!important;
+}
+#pbe-sports-shell[data-shell-version="2"] .pbes-score{
+  flex:0 0 auto!important;
+  width:auto!important;
+  min-width:0!important;
+  display:flex!important;
+  align-items:center!important;
+  gap:12px!important;
+  padding:0 16px!important;
+  grid-template-rows:none!important;
+  border-right:1px solid var(--pbe-line-faint)!important;
+  background:transparent!important;
+}
+#pbe-sports-shell[data-shell-version="2"] .pbes-score:hover{background:var(--pbe-ink-3)!important}
+#pbe-sports-shell .pbes-score-matchup{
+  display:flex;align-items:center;gap:7px;white-space:nowrap;
+}
+#pbe-sports-shell[data-shell-version="2"] .pbes-score-matchup .pbes-team-logo,
+#pbe-sports-shell[data-shell-version="2"] .pbes-score-matchup .pbes-score-logo-fallback{
+  width:22px!important;height:22px!important;min-width:22px!important;max-width:22px!important;max-height:22px!important;
+}
+#pbe-sports-shell .pbes-score-team{
+  font-family:var(--pbe-font-data)!important;
+  font-size:12px!important;
+  font-weight:700!important;
+  letter-spacing:.04em!important;
+  color:var(--pbe-paper)!important;
+}
+#pbe-sports-shell .pbes-score-num{
+  font-family:var(--pbe-font-data)!important;
+  font-variant-numeric:tabular-nums;
+  font-size:14px!important;
+  font-weight:600!important;
+  color:var(--pbe-paper)!important;
+  margin-left:1px;
+}
+#pbe-sports-shell .pbes-score-at{
+  font-family:var(--pbe-font-data);
+  font-size:11px;
+  color:var(--pbe-faint);
+  margin:0 3px;
+}
+#pbe-sports-shell .pbes-score-state{
+  display:flex;align-items:center;gap:6px;
+  font-family:var(--pbe-font-data);
+  font-size:var(--fs-micro);
+  font-weight:700;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  color:var(--pbe-faint);
+  white-space:nowrap;
+}
+#pbe-sports-shell .pbes-score.live .pbes-score-state{color:var(--pbe-crimson-text)}
+#pbe-sports-shell .pbes-score-livedot{
+  width:6px;height:6px;border-radius:50%;background:currentColor;
+  animation:pbe-live-pulse 2s ease-in-out infinite;
+}
+#pbe-sports-shell[data-shell-version="2"] .pbes-score.live{
+  box-shadow:inset 0 2px 0 var(--pbe-live)!important;
+  background:transparent!important;
+}
+#pbe-sports-shell .pbes-score-label{
+  font-family:var(--pbe-font-data)!important;
+  font-size:var(--fs-micro)!important;
+  letter-spacing:var(--ls-micro)!important;
+  color:var(--pbe-faint)!important;
+}
+
+/* ---- bands 3 & 4 · navigation, with row two recessive ------------------ */
+#pbe-sports-shell .pbes-primary{min-height:40px!important;background:var(--pbe-ink)!important}
+#pbe-sports-shell .pbes-research{
+  min-height:30px!important;
+  background:var(--pbe-ink)!important;
+  border-bottom:1px solid var(--pbe-line)!important;
+}
+#pbe-sports-shell .pbes-research .pbes-nav-btn{
+  padding:5px 10px!important;
+  font-size:var(--fs-micro)!important;
+  color:var(--pbe-faint)!important;
+}
+#pbe-sports-shell .pbes-research .pbes-nav-btn:hover{color:var(--pbe-paper)!important}
+#pbe-sports-shell .pbes-research .pbes-nav-label{opacity:.55!important;font-size:9px!important}
+#pbe-sports-shell .pbes-research .pbes-nav-group{border-right-color:var(--pbe-line-faint)!important}
+
+/* ---- band 5 · view context -------------------------------------------- */
+/* Reduced to the one thing nothing else on the page states -- which view you
+   are in -- plus the event selector that event-selector-v2.js appends. */
+.pbe-v2-commandbar{
+  min-height:44px!important;
+  /* It used a -24px inline margin to bleed past .main-content's padding, but
+     the padding is not 24px at every width, so the bar hung 6px past the
+     viewport on both sides -- the document's only horizontal overflow, present
+     on every route. It now sits inside the content box, which also lines its
+     rule up with the content below it. */
+  margin-inline:0!important;
+  padding-inline:0!important;
+  border-bottom:1px solid var(--pbe-line)!important;
+  background:var(--pbe-ink)!important;
+  backdrop-filter:none!important;
+  box-shadow:none!important;
+}
+.pbe-v2-crumbs{gap:12px!important;align-items:baseline!important}
+h1.pbe-v2-view-name{
+  margin:0!important;
+  font-family:var(--pbe-font-ui)!important;
+  font-size:16px!important;
+  font-weight:750!important;
+  letter-spacing:-.005em!important;
+  text-transform:none!important;
+  color:var(--pbe-paper)!important;
+}
+/* In tracked uppercase mono next to the title this read as breadcrumb debris
+   rather than as a description of the view. Sentence case, UI face. */
+.pbe-v2-view-meta{
+  font-family:var(--pbe-font-ui)!important;
+  font-size:12px!important;
+  font-weight:500!important;
+  letter-spacing:0!important;
+  text-transform:none!important;
+  color:var(--pbe-faint)!important;
+}
+
+/* Under 620px the brand copy had roughly eight characters of room and
+   truncated to "NFL INTE", which looks like a rendering fault rather than a
+   brand. The logo already says PropBetEdge, so the copy stands down. */
+@media(max-width:620px){
+  #pbe-sports-shell .pbes-top{min-height:58px!important;gap:10px!important}
+  #pbe-sports-shell .pbes-brand-logo{height:34px!important}
+  #pbe-sports-shell .pbes-brand-copy{display:none!important}
+}
+
+/* The stadium picker is a personalisation control, not a product surface. It
+   sat over the page's bottom-right corner as a permanently visible labelled
+   chip on every route. stadium-selector-v1.css already collapses it to its
+   icon on phones for exactly this reason; the same treatment now applies at
+   every width, with the label returning on hover, focus and while open. The
+   button keeps its accessible name throughout. */
+.pbe-stadium-toggle{
+  width:44px;
+  padding:0!important;
+  gap:0!important;
+  justify-content:center!important;
+  opacity:.6;
+  overflow:hidden;
+  transition:width .18s ease,opacity .18s ease,gap .18s ease;
+}
+.pbe-stadium-toggle>span,
+.pbe-stadium-toggle .pbe-stadium-current{
+  max-width:0;opacity:0;overflow:hidden;white-space:nowrap;
+  transition:max-width .18s ease,opacity .18s ease;
+}
+.pbe-stadium-control:hover .pbe-stadium-toggle,
+.pbe-stadium-control:focus-within .pbe-stadium-toggle,
+.pbe-stadium-control.open .pbe-stadium-toggle{
+  width:auto;padding:0 14px!important;gap:9px!important;opacity:1;
+}
+.pbe-stadium-control:hover .pbe-stadium-toggle>span,
+.pbe-stadium-control:focus-within .pbe-stadium-toggle>span,
+.pbe-stadium-control.open .pbe-stadium-toggle>span,
+.pbe-stadium-control:hover .pbe-stadium-toggle .pbe-stadium-current,
+.pbe-stadium-control:focus-within .pbe-stadium-toggle .pbe-stadium-current,
+.pbe-stadium-control.open .pbe-stadium-toggle .pbe-stadium-current{max-width:24ch;opacity:1}

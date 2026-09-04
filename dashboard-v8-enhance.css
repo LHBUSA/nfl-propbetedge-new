@@ -4,19 +4,22 @@
    Dashboard rule hid it because a persistent sidebar was once expected to own
    navigation, but sports-shell-v1 intentionally retires that sidebar. Keep the
    shell navigation visible on Home just like every other workspace. */
-html[data-pbe-home="1"] #pbe-sports-shell .pbes-top{min-height:66px!important}
-html[data-pbe-home="1"] #pbe-sports-shell .pbes-news{height:34px!important}
-html[data-pbe-home="1"] #pbe-sports-shell[data-shell-version="2"] .pbes-scorebar,
-html[data-pbe-home="1"] #pbe-sports-shell[data-shell-version="2"] .pbes-score-label,
-html[data-pbe-home="1"] #pbe-sports-shell[data-shell-version="2"] .pbes-score-window,
-html[data-pbe-home="1"] #pbe-sports-shell[data-shell-version="2"] .pbes-scores{min-height:94px!important}
-html[data-pbe-home="1"] #pbe-sports-shell[data-shell-version="2"] .pbes-score{min-height:94px!important}
+/* The Dashboard no longer gives the shell a taller variant of itself. One
+   chrome height across every surface is what makes the shell read as the
+   product's frame rather than as part of whichever page you happen to be on;
+   sports-shell-v3.css is the single authority for those band heights. */
 
-/* The home is no longer an index of product cards. Navigation already exists in
-   the sports shell; the dashboard should be active game + market + news intelligence. */
-html[data-pbe-home="1"] .pbe7-rail{display:none!important}
-html[data-pbe-home="1"] .pbe7-main{grid-template-columns:minmax(0,1fr)!important;gap:14px!important;margin-top:14px!important}
-html[data-pbe-home="1"] .pbe7-news-layout{grid-template-columns:minmax(0,1.16fr) minmax(420px,.84fr)!important}
+/* The rail was hidden on the reasoning that the shell already owns navigation,
+   which is true of NAVIGATION but left the Dashboard as three things: a game, a
+   news wire and a marketing footer. Nothing on it said what the product does or
+   how to pay for it. The rail is restored -- not as the six marketing cards it
+   used to be (see the module index in dashboard-v7.css), but as a dense index
+   of the intelligence modules plus the one conversion surface the home has. */
+html[data-pbe-home="1"] .pbe7-main{grid-template-columns:minmax(0,1fr) minmax(300px,336px)!important;gap:16px!important;margin-top:16px!important;align-items:start!important}
+html[data-pbe-home="1"] .pbe7-news-layout{grid-template-columns:minmax(0,1.1fr) minmax(340px,.9fr)!important}
+@media(max-width:1180px){
+  html[data-pbe-home="1"] .pbe7-main{grid-template-columns:minmax(0,1fr)!important}
+}
 
 /* Stronger optical containment over stadium ambience. */
 html[data-pbe-home="1"] .pbe7-hero{
@@ -96,7 +99,10 @@ html[data-pbe-home="1"] .pbe7-news-panel>header{min-height:76px!important;align-
 .pbe7-news-layout.pbe8-list-only .pbe7-news-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
 .pbe8-filter-empty{grid-column:1/-1;min-height:220px;display:grid;place-items:center;color:var(--pbe-dim);font:800 11px/1.4 'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.08em}
 
-@media(max-width:1100px){
+@media(max-width:1180px){
+  html[data-pbe-home="1"] .pbe7-news-layout{grid-template-columns:minmax(0,1.16fr) minmax(400px,.84fr)!important}
+}
+@media(max-width:1000px){
   html[data-pbe-home="1"] .pbe7-news-layout{grid-template-columns:1fr!important}
   html[data-pbe-home="1"] .pbe7-lead-story{border-right:0!important;border-bottom:1px solid rgba(255,255,255,.07)}
 }

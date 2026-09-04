@@ -51,9 +51,21 @@ body::before,body::after{content:none!important;display:none!important;backgroun
    stadium became an unreadable smear, which is why the venue only registered in
    the page gutters. Text contrast is held by the vertical scrim, which stays
    heaviest at the bottom where the small metadata lines sit. */
+/* The scrim is now split rather than uniform. The hero's upper half holds the
+   matchup -- crests and three-letter marks, large and high-contrast, which read
+   fine over photography and are the reason the venue is there at all. Its lower
+   half holds the market board: spread, total, moneyline and two probabilities,
+   set small. Prices read off a photograph of a crowd is what made the hero
+   look like a broadcast graphic rather than a market surface, so the scrim goes
+   nearly opaque from the matchup down. */
 .pbe7-hero{
   background-color:rgba(12,11,9,.30)!important;
-  background-image:linear-gradient(180deg,rgba(8,9,9,.10) 0%,rgba(9,8,6,.34) 52%,rgba(9,8,6,.62) 100%),
+  background-image:linear-gradient(180deg,
+      rgba(8,9,9,.10) 0%,
+      rgba(9,8,6,.26) 34%,
+      rgba(9,8,6,.72) 56%,
+      rgba(9,8,6,.90) 74%,
+      rgba(9,8,6,.94) 100%),
     linear-gradient(90deg,color-mix(in srgb,var(--pbe7-away,#1d3150) 20%,transparent),transparent 38%,transparent 62%,color-mix(in srgb,var(--pbe7-home,var(--pbe-ink-2)) 20%,transparent))!important;
   backdrop-filter:blur(2.5px) saturate(116%)!important;
   -webkit-backdrop-filter:blur(2.5px) saturate(116%)!important;
@@ -66,7 +78,7 @@ body::before,body::after{content:none!important;display:none!important;backgroun
    Painted as the element's own background, so there is no stacking-context
    dependency and no layout shift. */
 .pbe7-scorebox{
-  background:radial-gradient(ellipse 78% 64% at 50% 48%,rgba(6,6,5,.62),rgba(6,6,5,.32) 58%,rgba(6,6,5,0) 80%)!important;
+  background:radial-gradient(ellipse 86% 150% at 50% 50%,rgba(6,6,5,.58),rgba(6,6,5,.26) 62%,rgba(6,6,5,0) 84%)!important;
   border-radius:20px!important;
 }
 
@@ -113,7 +125,12 @@ body::before,body::after{content:none!important;display:none!important;backgroun
   .pbe7-hero{
     backdrop-filter:none!important;
     -webkit-backdrop-filter:none!important;
-    background-image:linear-gradient(180deg,rgba(8,9,9,.26) 0%,rgba(9,8,6,.46) 52%,rgba(9,8,6,.68) 100%),
+    background-image:linear-gradient(180deg,
+        rgba(8,9,9,.20) 0%,
+        rgba(9,8,6,.34) 30%,
+        rgba(9,8,6,.78) 50%,
+        rgba(9,8,6,.92) 70%,
+        rgba(9,8,6,.95) 100%),
       linear-gradient(90deg,color-mix(in srgb,var(--pbe7-away,#1d3150) 18%,transparent),transparent 40%,transparent 60%,color-mix(in srgb,var(--pbe7-home,var(--pbe-ink-2)) 18%,transparent))!important;
   }
   .pbe7-panel{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}

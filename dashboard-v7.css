@@ -20,7 +20,7 @@ body::after{
   width:100%!important;
   max-width:1800px!important;
   margin:0 auto!important;
-  padding:22px clamp(14px,1.45vw,26px) 84px!important;
+  padding:22px clamp(14px,1.45vw,26px) 36px!important;
   overflow:visible!important;
 }
 
@@ -513,13 +513,270 @@ body::after{
     max-width:none!important;
     transform:none!important;
   }
-  /* The market grid can now afford three real columns at full width. */
-  .pbe8-core-market .pbe8-market-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}
-  .pbe8-core-market .pbe8-prob-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  /* The market board's column count is now owned by the ribbon rules further
+     down: it spans the hero rather than sitting in a narrow card, so three
+     columns at 390px broke "NE +3.5" across two lines. */
   .pbe7-actions{
     display:grid!important;
     grid-template-columns:1fr 1fr!important;
     gap:var(--s-2)!important;
   }
   .pbe7-actions > :first-child{grid-column:1 / -1!important}
+}
+
+/* ===========================================================================
+   VISUAL FINISH — featured game
+   ---------------------------------------------------------------------------
+   Three composition faults, fixed here rather than restyled:
+
+   1. The team crests sat inside 118px rounded-square translucent panels. A
+      rounded square containing a mark is the visual grammar of an app icon,
+      and two of them either side of a dark box read as a launcher, not as a
+      matchup. The panel is removed; the crest is the object.
+   2. Kickoff time was the largest element in the hero. The matchup is the
+      story; kickoff is one fact about it. The two are reordered by size.
+   3. Venue, actions and the market board were stacked inside the centre grid
+      track, making it five items tall while the team tracks held one each.
+      That is what left the teams floating. Venue and actions are now a hero
+      footer and the market board spans the hero (see the ribbon below).
+   =========================================================================== */
+
+.pbe7-matchup{
+  align-items:center!important;
+  gap:clamp(20px,3vw,44px)!important;
+  margin-top:30px!important;
+}
+
+/* --- the crest is the object, not a tile ------------------------------- */
+.pbe7-team{gap:clamp(14px,1.4vw,22px)!important}
+.pbe7-team-logo{
+  width:clamp(88px,8vw,124px);
+  height:clamp(88px,8vw,124px);
+  flex:0 0 auto;
+  border:0;
+  border-radius:0;
+  background:none;
+  backdrop-filter:none;
+  box-shadow:none;
+}
+.pbe7-team-logo img{
+  width:100%;height:100%;
+  filter:drop-shadow(0 10px 26px rgba(0,0,0,.65)) drop-shadow(0 2px 3px rgba(0,0,0,.5));
+}
+.pbe7-team-logo b{
+  font-size:clamp(30px,3vw,42px);
+  color:var(--pbe-paper);
+  text-shadow:0 8px 22px rgba(0,0,0,.6);
+}
+
+/* Abbreviation leads, full name is the second read, record is the third. */
+.pbe7-team-copy strong{font-size:clamp(38px,3.5vw,58px)!important;line-height:.86!important}
+.pbe7-team-copy span{
+  margin-top:9px!important;
+  font-size:13px!important;
+  font-weight:600!important;
+  letter-spacing:.005em;
+  color:var(--pbe-paper-2)!important;
+}
+.pbe7-team-copy small{
+  margin-top:6px!important;
+  font-size:var(--fs-micro)!important;
+  letter-spacing:var(--ls-micro);
+  color:var(--pbe-faint)!important;
+}
+
+/* --- centre column: state, not spectacle ------------------------------- */
+.pbe7-scorebox{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+}
+.pbe7-kickoff{padding:0}
+.pbe7-kickoff strong{font-size:clamp(30px,3vw,42px)!important;font-weight:500!important}
+.pbe7-score{font-size:clamp(56px,5vw,84px)!important}
+
+/* --- market ribbon: the price on the game above it --------------------- */
+.pbe8-core-market{
+  max-width:none!important;
+  margin:26px 0 0!important;
+  padding:0!important;
+  border:0!important;
+  border-top:1px solid var(--pbe-line)!important;
+  border-radius:0!important;
+  background:none!important;
+  box-shadow:none!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+}
+.pbe8-market-head{
+  padding:13px 0 12px!important;
+  border-bottom:0!important;
+}
+.pbe8-market-grid,
+.pbe8-prob-grid{
+  margin:0!important;
+  gap:0!important;
+  border-top:1px solid var(--pbe-line-faint);
+}
+.pbe8-market-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+.pbe8-market-grid>div,
+.pbe8-prob-grid>div{
+  padding:13px 16px!important;
+  border:0!important;
+  border-right:1px solid var(--pbe-line-faint)!important;
+  border-radius:0!important;
+  background:none!important;
+}
+.pbe8-market-grid>div:first-child,
+.pbe8-prob-grid>div:first-child{padding-left:0!important}
+.pbe8-prob-grid>div:last-child{border-right:0!important}
+.pbe8-market-grid strong{font-size:23px!important}
+
+.pbe8-market-grid strong,
+.pbe8-market-grid small{white-space:nowrap}
+
+/* Below the desktop layout the three market cells stop fitting on one line and
+   "NE +3.5" breaks across two. Two-up, then one-up, keeps every price on a
+   single line, which is the whole point of a price. */
+@media(max-width:900px){
+  .pbe8-market-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .pbe8-market-grid>div:nth-child(3){grid-column:1/-1}
+  .pbe8-market-grid>div:nth-child(odd){padding-left:0!important}
+  .pbe8-market-grid>div:nth-child(2n){border-right:0!important}
+  .pbe8-market-grid>div+div{border-top:1px solid var(--pbe-line-faint)!important}
+  .pbe8-prob-grid>div:first-child{padding-left:0!important}
+}
+/* Two market cells still fit a phone -- "NE +3.5" is about 100px at this size
+   in a 170px cell -- and stacking all three made the hero a screen and a half
+   before the news. The probability pair is what has to go single-file: its
+   labels are long. */
+@media(max-width:480px){
+  .pbe8-prob-grid{grid-template-columns:minmax(0,1fr)!important}
+  .pbe8-prob-grid>div{padding-left:0!important;padding-right:0!important;border-right:0!important}
+  .pbe8-prob-grid>div+div{border-top:1px solid var(--pbe-line-faint)!important}
+  .pbe8-market-grid>div{padding-left:0!important;padding-right:12px!important}
+  .pbe8-market-grid>div:nth-child(2n){padding-left:12px!important;padding-right:0!important}
+}
+
+/* --- hero footer: context left, actions right -------------------------- */
+.pbe7-hero-foot{
+  position:relative;
+  z-index:2;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:18px;
+  flex-wrap:wrap;
+  margin-top:20px;
+  padding-top:16px;
+  border-top:1px solid var(--pbe-line);
+}
+.pbe7-hero-foot .pbe7-venue{
+  margin:0!important;
+  max-width:60ch;
+  text-align:left;
+  font-size:12px!important;
+  color:var(--pbe-dim)!important;
+}
+.pbe7-hero-foot .pbe7-actions{margin-top:0!important;justify-content:flex-end!important;flex:0 0 auto}
+
+@media(max-width:1000px){
+  .pbe7-hero-foot{flex-direction:column;align-items:stretch}
+  .pbe7-hero-foot .pbe7-venue{text-align:center}
+  .pbe7-hero-foot .pbe7-actions{justify-content:center!important}
+}
+
+/* ===========================================================================
+   VISUAL FINISH — module index (the rail)
+   ---------------------------------------------------------------------------
+   Six 158px cards in a 2-up grid, each with an icon, a badge, a kicker, a
+   title, a sentence of description and an "Open module ->" link, is a landing
+   page for the product, not a control in it. It is also the single strongest
+   AI-slop signal on the page.
+
+   The same six routes are now an index: one row each, name and purpose on one
+   line, entitlement stated by a rule not a pill. Nothing is removed -- every
+   route, badge and description is still present and still clickable.
+   =========================================================================== */
+.pbe7-rail{align-self:start}
+.pbe7-rail>header{min-height:0!important;padding:15px 16px 13px!important}
+.pbe7-rail>header h2{font-size:19px!important}
+.pbe7-rail>header small{display:none!important}
+.pbe7-rail>header h2{white-space:nowrap}
+
+.pbe7-tools{
+  display:block!important;
+  padding:0!important;
+}
+.pbe7-tool{
+  position:relative;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:baseline;
+  column-gap:10px;
+  width:100%;
+  min-height:0!important;
+  padding:12px 16px!important;
+  border:0!important;
+  border-bottom:1px solid var(--pbe-line-faint)!important;
+  border-radius:0!important;
+  background:none!important;
+  transition:background .14s ease!important;
+}
+.pbe7-tool:hover{
+  transform:none!important;
+  box-shadow:none!important;
+  background:var(--pbe-ink-3)!important;
+  border-color:var(--pbe-line-faint)!important;
+}
+/* The gold rule on hover is the parent's entry marker; it replaces the lift. */
+.pbe7-tool::before{
+  content:'';
+  position:absolute;left:0;top:0;bottom:0;width:2px;
+  background:var(--pbe-gold);
+  opacity:0;transition:opacity .14s ease;
+}
+.pbe7-tool:hover::before,.pbe7-tool:focus-visible::before{opacity:1}
+
+.pbe7-tool-top{grid-column:2;grid-row:1;justify-content:flex-end!important}
+.pbe7-tool-top i{display:none}
+.pbe7-tool-top span{
+  padding:2px 5px!important;
+  border-radius:var(--r-xs)!important;
+  font-size:9px!important;
+  letter-spacing:.1em!important;
+}
+.pbe7-tool>b{
+  grid-column:1;grid-row:1;
+  margin-top:0!important;
+  font-size:14px!important;
+  font-weight:750!important;
+  letter-spacing:0!important;
+  text-transform:none!important;
+}
+.pbe7-tool>small{grid-column:1;grid-row:2;display:none!important}
+.pbe7-tool>p{
+  grid-column:1/-1;grid-row:3;
+  margin:4px 0 0!important;
+  font-size:12px!important;
+  line-height:1.4!important;
+  color:var(--pbe-faint)!important;
+}
+.pbe7-tool>em{display:none!important}
+
+/* The conversion card is the one place on the Dashboard that should look like
+   an offer, so it keeps its weight -- but it is the only one. */
+.pbe7-engine-link{margin:0 16px 14px!important}
+.pbe7-pro-card{margin:0 16px 16px!important;padding:15px!important}
+
+/* A list row that only has a "mentions" line does not need the full impact
+   frame around it -- the frame is what signals a market read. */
+.pbe8-impact.quiet{
+  margin-top:8px!important;
+  padding:0!important;
+  border:0!important;
+  background:none!important;
+  backdrop-filter:none!important;
 }

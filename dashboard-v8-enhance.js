@@ -52,7 +52,12 @@
    * an unconditional write re-triggers the very observer that scheduled it.
    * Because observer callbacks and queueMicrotask both run as microtasks, that
    * cycle never yields to the event loop: no paint, no input, no DevTools. */
-  function renderMarket(){if(!active())return;const scorebox=document.querySelector('.pbe7-scorebox');if(!scorebox)return;let host=document.getElementById('pbe8-core-market');if(!host){host=document.createElement('section');host.id='pbe8-core-market';host.className='pbe8-core-market';const actions=scorebox.querySelector('.pbe7-actions');if(actions)scorebox.insertBefore(host,actions);else scorebox.appendChild(host)}const next=marketHtml();if(host.innerHTML!==next)host.innerHTML=next}
+  /* The market board is a sibling of the matchup, not a passenger inside the
+     score column. Inside the column it made the centre track as tall as five
+     stacked elements, so the two teams read as decoration either side of a dark
+     box instead of as the matchup. Spanning the hero it reads as what it is:
+     the price on the game above it. */
+  function renderMarket(){if(!active())return;const hero=document.querySelector('.pbe7-hero');if(!hero)return;let host=document.getElementById('pbe8-core-market');if(!host){host=document.createElement('section');host.id='pbe8-core-market';host.className='pbe8-core-market';const foot=hero.querySelector('.pbe7-hero-foot');if(foot)hero.insertBefore(host,foot);else hero.appendChild(host)}const next=marketHtml();if(host.innerHTML!==next)host.innerHTML=next}
 
   function category(item){const t=String(item?.topic_kind||'').toLowerCase();if(t==='injury'||/injur|inactive/.test(t))return'injury';if(['trade','signing','transaction'].includes(t))return'transaction';if(['lineup','return','depth_chart','depth chart'].includes(t))return'lineup';return'other'}
   /* scope is a list of entities the story is about, but it rendered as a bare
@@ -64,7 +69,26 @@
   function decorateStory(node){
     const title=node.querySelector('h3,h4')?.textContent||'';const item=findItem(title);if(!item)return;
     node.dataset.newsCategory=category(item);const meta=node.querySelector('.pbe7-story-meta');if(meta){const topic=meta.querySelector('span');if(topic)topic.classList.add(`pbe8-topic-${category(item)}`)}
-    const copy=node.querySelector('.pbe7-lead-copy,.pbe7-news-copy');if(!copy||copy.querySelector('.pbe8-impact'))return;const m=impact(item);const div=document.createElement('div');div.className=`pbe8-impact ${m.band.toLowerCase()}`;div.innerHTML=`<span>MARKET IMPACT · ${esc(m.band)}${m.score!==null?` · ${m.score}`:''}</span><p>${esc(m.text)}</p>${m.scope?`<small><i>Mentions</i> ${esc(m.scope)}</small>`:''}`;copy.appendChild(div)
+    const copy=node.querySelector('.pbe7-lead-copy,.pbe7-news-copy');if(!copy||copy.querySelector('.pbe8-impact'))return;
+    const m=impact(item);const lead=Boolean(node.querySelector('.pbe7-lead-copy'));
+    /* Every story in a normal window carries band CONTEXT and the same generic
+       sentence, so rendering the full block on all six rows printed one
+       identical paragraph five times under five different headlines -- which
+       reads as filler and devalues the rows where the band IS meaningful.
+       The lead keeps the full block. A list row shows the block only when the
+       band is not the default; otherwise it shows just what is specific to
+       that story, which is who it mentions. Nothing is invented and nothing
+       that differs between rows is dropped. */
+    const notable=m.band!=='CONTEXT';
+    const div=document.createElement('div');
+    if(lead||notable){
+      div.className=`pbe8-impact ${m.band.toLowerCase()}`;
+      div.innerHTML=`<span>MARKET IMPACT · ${esc(m.band)}${m.score!==null?` · ${m.score}`:''}</span><p>${esc(m.text)}</p>${m.scope?`<small><i>Mentions</i> ${esc(m.scope)}</small>`:''}`;
+    }else if(m.scope){
+      div.className='pbe8-impact quiet';
+      div.innerHTML=`<small><i>Mentions</i> ${esc(m.scope)}</small>`;
+    }else return;
+    copy.appendChild(div)
   }
   function filterNews(){const panel=document.querySelector('.pbe7-news-panel');if(!panel)return;let visible=0;panel.querySelectorAll('.pbe7-lead-story,.pbe7-news-item').forEach(node=>{const show=local.filter==='all'||node.dataset.newsCategory===local.filter;node.hidden=!show;if(show)visible++});const layout=panel.querySelector('.pbe7-news-layout');layout?.classList.toggle('pbe8-list-only',Boolean(panel.querySelector('.pbe7-lead-story')?.hidden));let empty=panel.querySelector('.pbe8-filter-empty');if(!visible){if(!empty){empty=document.createElement('div');empty.className='pbe8-filter-empty';empty.textContent='No current stories match this impact filter.';layout?.appendChild(empty)}}else empty?.remove();panel.querySelectorAll('[data-pbe8-filter]').forEach(b=>b.classList.toggle('active',b.dataset.pbe8Filter===local.filter))}
   function renderNewsControls(){

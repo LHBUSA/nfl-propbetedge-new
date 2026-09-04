@@ -193,13 +193,15 @@
         <div class="pbe7-scorebox">
           ${heroValue(game, semantics, away, home)}
           ${semantics === 'SCHEDULE' ? '' : `<div class="pbe7-status">${esc(statusText(game))}</div>`}
-          <div class="pbe7-venue">${esc(venue || fmtDate(game?.date) || 'NFL game')}</div>
-          <div class="pbe7-actions"><button class="pbe7-primary" data-cast="${esc(game.id)}">${semantics === 'LIVE' ? '⚡ Open Live PBEcast' : 'Open PBEcast'}</button><button data-route="propboard">Open Prop Board</button><button data-route="games">Full Slate</button></div>
         </div>
         ${teamBlock(home, 'home')}
       </div>
       ${liveFacts(game)}
       ${leaderStrip()}
+      <div class="pbe7-hero-foot">
+        <p class="pbe7-venue">${esc(venue || fmtDate(game?.date) || 'NFL game')}</p>
+        <div class="pbe7-actions"><button class="pbe7-primary" data-cast="${esc(game.id)}">${semantics === 'LIVE' ? '⚡ Open Live PBEcast' : 'Open PBEcast'}</button><button data-route="propboard">Prop Board</button><button data-route="games">Full Slate</button></div>
+      </div>
     </section>`;
   }
 

@@ -96,7 +96,7 @@
       <div class="pbes-top">
         <div class="pbes-brand" data-route="home">
           <img class="pbes-brand-logo" src="${PBE_LOGO}" alt="PropBetEdge" width="150" height="58">
-          <div class="pbes-brand-copy"><div class="pbes-brand-name">NFL Intelligence <span class="pbes-brand-pill">PBE</span></div><div class="pbes-brand-sub">Football intelligence · live market context</div></div>
+          <div class="pbes-brand-copy"><div class="pbes-brand-name">NFL Intelligence</div><div class="pbes-brand-sub">Football intelligence · live market context</div></div>
         </div>
         <div class="pbes-center"><div id="pbes-live-pill" class="pbes-live-pill">Connecting to NFL slate…</div></div>
         <div class="pbes-right"><div class="pbes-date"><strong>${d.day}</strong><span>${d.date} · ET</span></div><button class="pbes-head-btn" type="button" id="pbes-search">⌘ K · Search</button><button class="pbes-head-btn pro" type="button" id="pbes-account">NFL Pro</button></div>
@@ -188,13 +188,22 @@
       const rank=s=>s==='LIVE'?0:s==='SCHEDULE'?1:2;
       return rank(a.status?.semantics)-rank(b.status?.semantics)||new Date(a.date)-new Date(b.date);
     });
+    /* One line per game instead of two stacked team rows plus a status row.
+       Pre-game the old layout printed nothing but crests and em-dashes down
+       96px of permanent chrome on every surface; this reads as a matchup --
+       AWY @ HME -- with the state on the same line, in 54px. */
     host.innerHTML=ordered.map(g=>{
       const a=g.teams?.away||{},h=g.teams?.home||{},sem=g.status?.semantics||'UNAVAILABLE';
-      const liveClass=sem==='LIVE'?'live':'';
+      const liveClass=sem==='LIVE'?'live':sem==='FINAL'?'final':'';
+      const aScore=scoreValue(a,sem), hScore=scoreValue(h,sem);
+      const hasScore=aScore!==''&&hScore!=='';
       return `<button type="button" class="pbes-score ${liveClass}" data-cast-game="${esc(g.id)}" aria-label="${esc(a.display_name||a.abbreviation||'Away')} at ${esc(h.display_name||h.abbreviation||'Home')}">
-        <span class="pbes-score-teamrow">${teamLogo(a)}<span class="pbes-score-team">${esc(a.abbreviation||a.display_name||'AWY')}</span><b class="pbes-score-num">${esc(scoreValue(a,sem))}</b></span>
-        <span class="pbes-score-teamrow">${teamLogo(h)}<span class="pbes-score-team">${esc(h.abbreviation||h.display_name||'HME')}</span><b class="pbes-score-num">${esc(scoreValue(h,sem))}</b></span>
-        <span class="pbes-score-meta"><strong>${esc(sem)}</strong><span>${esc(statusText(g))}</span></span>
+        <span class="pbes-score-matchup">
+          ${teamLogo(a)}<span class="pbes-score-team">${esc(a.abbreviation||a.display_name||'AWY')}</span>${hasScore?`<b class="pbes-score-num">${esc(aScore)}</b>`:''}
+          <span class="pbes-score-at">@</span>
+          ${teamLogo(h)}<span class="pbes-score-team">${esc(h.abbreviation||h.display_name||'HME')}</span>${hasScore?`<b class="pbes-score-num">${esc(hScore)}</b>`:''}
+        </span>
+        <span class="pbes-score-state">${sem==='LIVE'?'<i class="pbes-score-livedot"></i>':''}${esc(statusText(g))}</span>
       </button>`;
     }).join('');
     attachLogoFallbacks(host);

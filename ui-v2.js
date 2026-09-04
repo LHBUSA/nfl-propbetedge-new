@@ -68,20 +68,18 @@
   }
 
   function commandBarHtml() {
+    /* This band used to carry a breadcrumb ("NFL INTELLIGENCE | Dashboard") and
+       a five-item quick nav, both of which the sports shell above it already
+       provides -- Overview/Props/Teams/Archive/News are all in the shell's own
+       nav rows. Two navigations stacked on top of each other is what made the
+       chrome read as a console. What is left is the one thing nothing else
+       says: which view you are in, and the event selector that
+       event-selector-v2.js appends here. */
     return `<div class="pbe-v2-commandbar" id="pbe-v2-commandbar">
       <div class="pbe-v2-crumbs">
-        <span class="pbe-v2-sport-tag">NFL INTELLIGENCE</span>
-        <span class="pbe-v2-command-sep"></span>
-        <span class="pbe-v2-view-name" id="pbe-v2-view-name">Dashboard</span>
+        <h1 class="pbe-v2-view-name" id="pbe-v2-view-name">Dashboard</h1>
         <span class="pbe-v2-view-meta" id="pbe-v2-view-meta">Football intelligence workspace</span>
       </div>
-      <nav class="pbe-v2-quicknav" aria-label="NFL quick navigation">
-        <button onclick="App.nav('home')">Overview</button>
-        <button class="primary" onclick="App.nav('propboard')">Prop Board</button>
-        <button onclick="App.nav('teams')">Teams</button>
-        <button onclick="App.nav('seasonhistory')">Archive</button>
-        <a href="https://propbetedge.ai/news/nfl">News ↗</a>
-      </nav>
     </div>`;
   }
 
