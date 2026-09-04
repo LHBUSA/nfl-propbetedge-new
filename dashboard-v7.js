@@ -7,7 +7,7 @@
 
   const LIVE_API = '/api/nfl-live';
   const NEWS_API = '/api/news-feed?limit=12';
-  const STADIUM = 'https://images.unsplash.com/photo-1781650104690-a5309d91a26b?auto=format&fit=crop&fm=jpg&q=82&w=2200';
+  const STADIUM = 'https://images.unsplash.com/photo-1781650104690-a5309d91a26b?auto=format&fit=crop&fm=webp&q=62&w=1400';
   const previous = window.PBEDashboardV6?.state || window.PBEDashboardV5?.state || {};
 
   const state = {

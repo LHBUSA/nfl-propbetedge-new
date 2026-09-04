@@ -38,8 +38,15 @@
       source:'https://commons.wikimedia.org/wiki/File:Peach_Bowl_Pre-game_(38723446434).jpg'
     }
   };
-  const full=s=>`url("/stadiums/${s.file}.jpg")`;
-  const small=s=>`url("/stadiums/${s.file}@960.jpg")`;
+  /* Responsive, display-aware assets. The originals were 1920x1080 and
+     1200x1600 JPEGs of 217-450 KB, and the picker was using the full portrait
+     file as a menu swatch -- so a page load pulled the active background plus
+     four more full-size images, about 1,965 KB. These are encoded for how the
+     layer is actually shown: opacity .18 behind a blur, where fine detail is
+     destroyed before a viewer sees it. */
+  const full=s=>`url("/stadiums/${s.file}-bg.webp")`;
+  const small=s=>`url("/stadiums/${s.file}-bgsm.webp")`;
+  const thumb=s=>`/stadiums/${s.file}-thumb.webp`;
 
   function saved(){
     try{const key=localStorage.getItem(STORAGE);return STADIUMS[key]?key:DEFAULT}catch(_){return DEFAULT}
@@ -79,7 +86,7 @@
     const options=Object.entries(STADIUMS).map(([key,s])=>`
       <button type="button" role="radio" aria-checked="${key===current?'true':'false'}"
         class="pbe-stadium-option ${key===current?'active':''}" data-stadium-choice="${key}"
-        style="--thumb:url('/stadiums/${s.file}@960.jpg')">
+        style="--thumb:url('${thumb(s)}')">
         <i></i><span><b>${esc(s.name)}</b><small>${esc(s.team)}</small></span><em>${key===current?'✓':''}</em>
       </button>`).join('');
     return `<div class="pbe-stadium-control">

@@ -1,0 +1,3 @@
+# Stadium masters stay in the repo as sources but are not deployed. The product
+# ships stadiums/*-bg.webp, *-bgsm.webp and *-thumb.webp, generated from these.
+stadiums/*.jpg

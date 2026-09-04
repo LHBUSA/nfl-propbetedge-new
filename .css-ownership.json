@@ -1,0 +1,392 @@
+[
+  {
+    "href": "dashboard-v5.css",
+    "total": 132,
+    "matchedAny": 0,
+    "routes": 0
+  },
+  {
+    "href": "pbecast-v4.css",
+    "total": 178,
+    "matchedAny": 0,
+    "routes": 0
+  },
+  {
+    "href": "pbecast-v5.css",
+    "total": 92,
+    "matchedAny": 0,
+    "routes": 0
+  },
+  {
+    "href": "simulator-v3-enhance.css",
+    "total": 39,
+    "matchedAny": 0,
+    "routes": 0
+  },
+  {
+    "href": "player-research-v2.css",
+    "total": 67,
+    "matchedAny": 0,
+    "routes": 0
+  },
+  {
+    "href": "model-lab-v2-enhance.css",
+    "total": 58,
+    "matchedAny": 0,
+    "routes": 0
+  },
+  {
+    "href": "prop-board-responsive-v5.css",
+    "total": 48,
+    "matchedAny": 0,
+    "routes": 0
+  },
+  {
+    "href": "command-palette-v2.css",
+    "total": 32,
+    "matchedAny": 1,
+    "routes": 24
+  },
+  {
+    "href": "dashboard-v6.css",
+    "total": 32,
+    "matchedAny": 2,
+    "routes": 24
+  },
+  {
+    "href": "prop-board-v4.css",
+    "total": 119,
+    "matchedAny": 2,
+    "routes": 1
+  },
+  {
+    "href": "nfl-player-media-v3.css",
+    "total": 12,
+    "matchedAny": 3,
+    "routes": 1
+  },
+  {
+    "href": "pbe-tokens.css",
+    "total": 4,
+    "matchedAny": 4,
+    "routes": 24
+  },
+  {
+    "href": "scrollbar-clean-v1.css",
+    "total": 13,
+    "matchedAny": 5,
+    "routes": 24
+  },
+  {
+    "href": "event-selector-v2.css",
+    "total": 37,
+    "matchedAny": 7,
+    "routes": 24
+  },
+  {
+    "href": "nfl-player-media-v2.css",
+    "total": 30,
+    "matchedAny": 8,
+    "routes": 8
+  },
+  {
+    "href": "production-polish-v2.css",
+    "total": 70,
+    "matchedAny": 9,
+    "routes": 24
+  },
+  {
+    "href": "pbe-system.css",
+    "total": 93,
+    "matchedAny": 11,
+    "routes": 24
+  },
+  {
+    "href": "inline",
+    "total": 16,
+    "matchedAny": 16,
+    "routes": 24
+  },
+  {
+    "href": "global-polish-v2.css",
+    "total": 18,
+    "matchedAny": 17,
+    "routes": 24
+  },
+  {
+    "href": "simulator-v2.css",
+    "total": 69,
+    "matchedAny": 21,
+    "routes": 1
+  },
+  {
+    "href": "sgp-lab-v2.css",
+    "total": 66,
+    "matchedAny": 21,
+    "routes": 1
+  },
+  {
+    "href": "paywall-polish-v1.css",
+    "total": 25,
+    "matchedAny": 23,
+    "routes": 24
+  },
+  {
+    "href": "readability-v1.css",
+    "total": 56,
+    "matchedAny": 25,
+    "routes": 24
+  },
+  {
+    "href": "draft-review-v2.css",
+    "total": 30,
+    "matchedAny": 29,
+    "routes": 1
+  },
+  {
+    "href": "paywall-funnel-v2.css",
+    "total": 31,
+    "matchedAny": 29,
+    "routes": 24
+  },
+  {
+    "href": "games-intel-v5.css",
+    "total": 60,
+    "matchedAny": 34,
+    "routes": 1
+  },
+  {
+    "href": "records-v2.css",
+    "total": 48,
+    "matchedAny": 35,
+    "routes": 1
+  },
+  {
+    "href": "sports-shell-v2.css",
+    "total": 41,
+    "matchedAny": 35,
+    "routes": 24
+  },
+  {
+    "href": "pbecast-v7-enhance.css",
+    "total": 53,
+    "matchedAny": 35,
+    "routes": 1
+  },
+  {
+    "href": "team-research-v3.css",
+    "total": 79,
+    "matchedAny": 37,
+    "routes": 1
+  },
+  {
+    "href": "market-watch-v2.css",
+    "total": 67,
+    "matchedAny": 37,
+    "routes": 1
+  },
+  {
+    "href": "stadium-selector-v1.css",
+    "total": 40,
+    "matchedAny": 37,
+    "routes": 24
+  },
+  {
+    "href": "market-watch-v3.css",
+    "total": 88,
+    "matchedAny": 39,
+    "routes": 1
+  },
+  {
+    "href": "pbe-validation-v1.css",
+    "total": 49,
+    "matchedAny": 39,
+    "routes": 1
+  },
+  {
+    "href": "stats-v2.css",
+    "total": 47,
+    "matchedAny": 40,
+    "routes": 1
+  },
+  {
+    "href": "world-class-v1.css",
+    "total": 111,
+    "matchedAny": 41,
+    "routes": 24
+  },
+  {
+    "href": "pbe-picks-v2.css",
+    "total": 199,
+    "matchedAny": 41,
+    "routes": 2
+  },
+  {
+    "href": "hof-v2.css",
+    "total": 49,
+    "matchedAny": 44,
+    "routes": 1
+  },
+  {
+    "href": "base-v3.css",
+    "total": 53,
+    "matchedAny": 45,
+    "routes": 24
+  },
+  {
+    "href": "model-lab.css",
+    "total": 104,
+    "matchedAny": 45,
+    "routes": 1
+  },
+  {
+    "href": "nfl-brand-media-v1.css",
+    "total": 111,
+    "matchedAny": 45,
+    "routes": 24
+  },
+  {
+    "href": "pbe-prop-engine-v1.css",
+    "total": 75,
+    "matchedAny": 46,
+    "routes": 2
+  },
+  {
+    "href": "games-v2.css",
+    "total": 77,
+    "matchedAny": 47,
+    "routes": 1
+  },
+  {
+    "href": "paywall.css",
+    "total": 87,
+    "matchedAny": 50,
+    "routes": 24
+  },
+  {
+    "href": "dashboard-v8-enhance.css",
+    "total": 71,
+    "matchedAny": 51,
+    "routes": 1
+  },
+  {
+    "href": "season-archive-v2.css",
+    "total": 73,
+    "matchedAny": 52,
+    "routes": 1
+  },
+  {
+    "href": "propchain-v2.css",
+    "total": 62,
+    "matchedAny": 53,
+    "routes": 1
+  },
+  {
+    "href": "games-command-v4.css",
+    "total": 60,
+    "matchedAny": 53,
+    "routes": 1
+  },
+  {
+    "href": "injury-readability-v5.css",
+    "total": 60,
+    "matchedAny": 56,
+    "routes": 1
+  },
+  {
+    "href": "pbe-engine-story-v1.css",
+    "total": 60,
+    "matchedAny": 60,
+    "routes": 2
+  },
+  {
+    "href": "sports-shell-v1.css",
+    "total": 87,
+    "matchedAny": 61,
+    "routes": 24
+  },
+  {
+    "href": "newsroom-v2.css",
+    "total": 70,
+    "matchedAny": 62,
+    "routes": 2
+  },
+  {
+    "href": "matchups-v2.css",
+    "total": 70,
+    "matchedAny": 63,
+    "routes": 1
+  },
+  {
+    "href": "super-bowls-v2.css",
+    "total": 70,
+    "matchedAny": 66,
+    "routes": 1
+  },
+  {
+    "href": "standings-v2.css",
+    "total": 70,
+    "matchedAny": 67,
+    "routes": 2
+  },
+  {
+    "href": "ui-v2.css",
+    "total": 176,
+    "matchedAny": 71,
+    "routes": 24
+  },
+  {
+    "href": "sports-shell-v3.css",
+    "total": 92,
+    "matchedAny": 74,
+    "routes": 24
+  },
+  {
+    "href": "usage-v2.css",
+    "total": 86,
+    "matchedAny": 78,
+    "routes": 1
+  },
+  {
+    "href": "network-footer-v1.css",
+    "total": 96,
+    "matchedAny": 79,
+    "routes": 24
+  },
+  {
+    "href": "prop-board-v3.css",
+    "total": 141,
+    "matchedAny": 83,
+    "routes": 1
+  },
+  {
+    "href": "news-intelligence-v2.css",
+    "total": 89,
+    "matchedAny": 83,
+    "routes": 1
+  },
+  {
+    "href": "injury-intel-v2.css",
+    "total": 115,
+    "matchedAny": 97,
+    "routes": 1
+  },
+  {
+    "href": "games-worldclass-v3.css",
+    "total": 134,
+    "matchedAny": 103,
+    "routes": 1
+  },
+  {
+    "href": "pbecast-v6.css",
+    "total": 190,
+    "matchedAny": 104,
+    "routes": 1
+  },
+  {
+    "href": "dashboard-v7.css",
+    "total": 205,
+    "matchedAny": 157,
+    "routes": 24
+  }
+]
