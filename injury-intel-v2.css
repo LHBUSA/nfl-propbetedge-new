@@ -21,7 +21,7 @@
 .pbe13-news.pbe13-injury-editorial .pbe13-copy{max-width:810px!important;margin-top:10px!important;color:var(--pbe-paper-2)!important;font-size:13px!important;line-height:1.55!important}
 .pbe13-news.pbe13-injury-editorial .pbe13-statusbox{min-width:0!important;padding:13px 14px!important;background:rgba(5,9,14,.72)!important}
 .pbe13-news.pbe13-injury-editorial .pbe13-statusbox b{font-size:21px!important}
-.pbe13-news.pbe13-injury-editorial .pbe13-statusbox span{font-size:10px!important;line-height:1.5!important}
+.pbe13-news.pbe13-injury-editorial .pbe13-statusbox span{font-size:12px!important;line-height:1.5!important}
 
 .pbe13-news.pbe13-injury-editorial .pbe13-editorial-note{
   margin-top:9px!important;
@@ -56,9 +56,9 @@
 .pbe13-news.pbe13-injury-editorial .pbe13-editorial-eyebrow{color:var(--pbe-crimson-text)!important;font:800 11px/1 'JetBrains Mono',monospace!important;letter-spacing:.14em!important;text-transform:uppercase!important}
 .pbe13-news.pbe13-injury-editorial .pbe13-editorial-lead h2{margin:12px 0 0!important;color:var(--pbe-paper)!important;font:900 clamp(31px,3.1vw,47px)/.93 'Inter',sans-serif!important;letter-spacing:-.025em!important;text-transform:none!important}
 .pbe13-news.pbe13-injury-editorial .pbe13-editorial-lead p{margin:13px 0 0!important;color:var(--pbe-paper-2)!important;font-size:12px!important;line-height:1.65!important}
-.pbe13-news.pbe13-injury-editorial .pbe13-editorial-meta{margin-top:13px!important;color:var(--pbe-dim)!important;font:700 10px/1.45 'JetBrains Mono',monospace!important;text-transform:uppercase!important;letter-spacing:.045em!important}
+.pbe13-news.pbe13-injury-editorial .pbe13-editorial-meta{margin-top:13px!important;color:var(--pbe-dim)!important;font:700 11px/1.45 'JetBrains Mono',monospace!important;text-transform:uppercase!important;letter-spacing:.045em!important}
 .pbe13-news.pbe13-injury-editorial .pbe13-editorial-chips{display:flex!important;flex-wrap:wrap!important;gap:5px!important;margin-top:13px!important}
-.pbe13-news.pbe13-injury-editorial .pbe13-editorial-chips span{padding:5px 7px!important;border:1px solid rgba(255,255,255,.065)!important;border-radius:999px!important;background:rgba(255,255,255,.018)!important;color:var(--pbe-dim)!important;font:700 10px/1 'JetBrains Mono',monospace!important}
+.pbe13-news.pbe13-injury-editorial .pbe13-editorial-chips span{padding:5px 7px!important;border:1px solid rgba(255,255,255,.065)!important;border-radius:999px!important;background:rgba(255,255,255,.018)!important;color:var(--pbe-dim)!important;font:700 11px/1 'JetBrains Mono',monospace!important}
 .pbe13-news.pbe13-injury-editorial .pbe13-editorial-chips .person{border-color:rgba(241,107,120,.14)!important;background:rgba(241,107,120,.04)!important;color:#e5808a!important}
 .pbe13-news.pbe13-injury-editorial .pbe13-editorial-cta{align-self:flex-start!important;display:inline-flex!important;align-items:center!important;gap:8px!important;margin-top:20px!important;padding:11px 13px!important;border-radius:7px!important;background:var(--pbe-crimson-bright)!important;color:#0a0e13!important;text-decoration:none!important;font:900 11px/1 'JetBrains Mono',monospace!important;text-transform:uppercase!important;letter-spacing:.055em!important}
 .pbe13-news.pbe13-injury-editorial .pbe13-editorial-cta:hover{filter:brightness(1.06)!important}
@@ -94,12 +94,12 @@
   background:radial-gradient(circle at 92% 20%,rgba(241,107,120,.10),transparent 19rem)!important;
 }
 .pbe13-news.pbe13-injury-editorial .pbe13-availability-head>div:first-child{min-width:0!important}
-.pbe13-news.pbe13-injury-editorial .pbe13-availability-head>div:first-child>span{color:var(--pbe-crimson-text)!important;font:800 10px/1 'JetBrains Mono',monospace!important;letter-spacing:.14em!important;text-transform:uppercase!important}
+.pbe13-news.pbe13-injury-editorial .pbe13-availability-head>div:first-child>span{color:var(--pbe-crimson-text)!important;font:800 11px/1 'JetBrains Mono',monospace!important;letter-spacing:.14em!important;text-transform:uppercase!important}
 .pbe13-news.pbe13-injury-editorial .pbe13-availability-head h2{margin:6px 0 0!important;color:var(--pbe-paper)!important;font:900 31px/.92 'Inter',sans-serif!important;letter-spacing:-.015em!important;text-transform:uppercase!important}
 .pbe13-news.pbe13-injury-editorial .pbe13-availability-head p{max-width:730px!important;margin:7px 0 0!important;color:var(--pbe-dim)!important;font-size:12px!important;line-height:1.55!important}
 .pbe13-news.pbe13-injury-editorial .pbe13-availability-coverage{flex:0 0 auto!important;min-width:116px!important;padding:10px 12px!important;border:1px solid rgba(241,107,120,.13)!important;border-radius:9px!important;background:rgba(241,107,120,.035)!important;text-align:right!important}
 .pbe13-news.pbe13-injury-editorial .pbe13-availability-coverage strong{display:block!important;color:#f38b96!important;font:900 24px/.9 'Inter',sans-serif!important}
-.pbe13-news.pbe13-injury-editorial .pbe13-availability-coverage span{display:block!important;margin-top:4px!important;color:var(--pbe-dim)!important;font:800 10px/1.2 'JetBrains Mono',monospace!important;text-transform:uppercase!important;letter-spacing:.07em!important}
+.pbe13-news.pbe13-injury-editorial .pbe13-availability-coverage span{display:block!important;margin-top:4px!important;color:var(--pbe-dim)!important;font:800 11px/1.2 'JetBrains Mono',monospace!important;text-transform:uppercase!important;letter-spacing:.07em!important}
 .pbe13-news.pbe13-injury-editorial .pbe13-availability-list{border-top:1px solid rgba(255,255,255,.065)!important}
 .pbe13-news.pbe13-injury-editorial .pbe13-availability-row{
   display:grid!important;
@@ -116,8 +116,8 @@
 .pbe13-news.pbe13-injury-editorial .pbe13-availability-row:hover{background:rgba(255,255,255,.022)!important}
 .pbe13-news.pbe13-injury-editorial .pbe13-availability-player,.pbe13-news.pbe13-injury-editorial .pbe13-availability-cell{min-width:0!important}
 .pbe13-news.pbe13-injury-editorial .pbe13-availability-player strong{display:block!important;color:var(--pbe-paper)!important;font:900 20px/.95 'Inter',sans-serif!important;letter-spacing:-.01em!important}
-.pbe13-news.pbe13-injury-editorial .pbe13-availability-player span{display:inline-block!important;margin-top:6px!important;padding:4px 6px!important;border:1px solid rgba(241,107,120,.13)!important;border-radius:999px!important;color:#e77d88!important;font:800 10px/1 'JetBrains Mono',monospace!important;letter-spacing:.06em!important}
-.pbe13-news.pbe13-injury-editorial .pbe13-availability-cell .label{display:block!important;color:var(--pbe-dim)!important;font:800 10px/1 'JetBrains Mono',monospace!important;letter-spacing:.09em!important;text-transform:uppercase!important}
+.pbe13-news.pbe13-injury-editorial .pbe13-availability-player span{display:inline-block!important;margin-top:6px!important;padding:4px 6px!important;border:1px solid rgba(241,107,120,.13)!important;border-radius:999px!important;color:#e77d88!important;font:800 11px/1 'JetBrains Mono',monospace!important;letter-spacing:.06em!important}
+.pbe13-news.pbe13-injury-editorial .pbe13-availability-cell .label{display:block!important;color:var(--pbe-dim)!important;font:800 11px/1 'JetBrains Mono',monospace!important;letter-spacing:.09em!important;text-transform:uppercase!important}
 .pbe13-news.pbe13-injury-editorial .pbe13-availability-cell>strong{display:block!important;margin-top:5px!important;color:var(--pbe-paper)!important;font:800 12px/1.3 'JetBrains Mono',monospace!important;overflow-wrap:anywhere!important}
 .pbe13-news.pbe13-injury-editorial .pbe13-avail-status{display:inline-flex!important;width:max-content!important;max-width:100%!important;padding:5px 7px!important;border-radius:999px!important;border:1px solid rgba(255,255,255,.08)!important;background:rgba(255,255,255,.025)!important;text-transform:uppercase!important;letter-spacing:.035em!important}
 .pbe13-news.pbe13-injury-editorial .pbe13-avail-status.is-out{border-color:rgba(241,107,120,.22)!important;background:rgba(241,107,120,.07)!important;color:#f38e98!important}
@@ -125,7 +125,7 @@
 .pbe13-news.pbe13-injury-editorial .pbe13-avail-status.is-returning{border-color:rgba(92,205,159,.20)!important;background:rgba(92,205,159,.055)!important;color:#83d7b4!important}
 .pbe13-news.pbe13-injury-editorial .pbe13-availability-cell.timeline>strong{color:var(--pbe-paper)!important;font-size:12px!important}
 .pbe13-news.pbe13-injury-editorial .pbe13-availability-cell.timeline.is-unknown>strong{color:var(--pbe-dim)!important}
-.pbe13-news.pbe13-injury-editorial .pbe13-availability-cell small{display:block!important;margin-top:4px!important;color:var(--pbe-dim)!important;font:700 10px/1.25 'JetBrains Mono',monospace!important;text-transform:uppercase!important;letter-spacing:.04em!important}
+.pbe13-news.pbe13-injury-editorial .pbe13-availability-cell small{display:block!important;margin-top:4px!important;color:var(--pbe-dim)!important;font:700 11px/1.25 'JetBrains Mono',monospace!important;text-transform:uppercase!important;letter-spacing:.04em!important}
 .pbe13-news.pbe13-injury-editorial .pbe13-availability-foot{padding:9px 20px 10px!important;border-top:1px solid rgba(255,255,255,.045)!important;background:rgba(4,8,12,.22)!important;color:var(--pbe-dim)!important;font-size:11px!important;line-height:1.45!important}
 
 .pbe13-news.pbe13-injury-editorial .pbe13-editorial-feed{display:block!important;margin-top:12px!important}
@@ -150,7 +150,7 @@
 .pbe13-news.pbe13-injury-editorial .pbe13-editorial-card p{margin:8px 0 0!important;color:var(--pbe-dim)!important;font-size:11px!important;line-height:1.58!important}
 .pbe13-news.pbe13-injury-editorial .pbe13-card-timeline{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:8px!important;margin-top:10px!important;padding:7px 8px!important;border:1px solid rgba(241,107,120,.12)!important;border-radius:7px!important;background:rgba(241,107,120,.035)!important}
 .pbe13-news.pbe13-injury-editorial .pbe13-card-timeline span{color:var(--pbe-dim)!important;font:800 10px/1 'JetBrains Mono',monospace!important;text-transform:uppercase!important}
-.pbe13-news.pbe13-injury-editorial .pbe13-card-timeline strong{color:#e9919a!important;font:800 10px/1.2 'JetBrains Mono',monospace!important;text-align:right!important}
+.pbe13-news.pbe13-injury-editorial .pbe13-card-timeline strong{color:#e9919a!important;font:800 11px/1.2 'JetBrains Mono',monospace!important;text-align:right!important}
 .pbe13-news.pbe13-injury-editorial .pbe13-editorial-card .pbe13-editorial-meta{margin-top:auto!important;padding-top:12px!important}
 .pbe13-news.pbe13-injury-editorial .pbe13-editorial-card .pbe13-editorial-chips{margin-top:9px!important}
 

@@ -318,7 +318,7 @@ body:not(.pbe-has-pro) .pbe2-table td:nth-child(8):after {
   place-items:center;
   color:var(--pro-gold-2);
   text-shadow:none;
-  font:800 10px/1 'JetBrains Mono',monospace;
+  font:800 11px/1 'JetBrains Mono',monospace;
   letter-spacing:.08em;
 }
 .pbe-pro-board-banner {

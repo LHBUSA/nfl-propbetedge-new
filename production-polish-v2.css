@@ -77,7 +77,7 @@
 .pbe13-news:has(.pbe13-note) .pbe13-side{padding:12px!important}
 .pbe13-news:has(.pbe13-note) .pbe13-side-head{align-items:flex-start!important;margin-bottom:9px!important}
 .pbe13-news:has(.pbe13-note) .pbe13-side-head strong{font-size:17px!important}
-.pbe13-news:has(.pbe13-note) .pbe13-side-head span{max-width:105px!important;font-size:10px!important;line-height:1.35!important;text-align:right!important}
+.pbe13-news:has(.pbe13-note) .pbe13-side-head span{max-width:105px!important;font-size:12px!important;line-height:1.35!important;text-align:right!important}
 .pbe13-news:has(.pbe13-note) .pbe13-affected{gap:6px!important}
 .pbe13-news:has(.pbe13-note) .pbe13-aff-row{
   min-height:52px!important;

@@ -71,7 +71,7 @@
 .pbe4-preview { min-height:83px; position:relative; overflow:hidden; padding:12px; border:1px solid rgba(216,183,91,.11); border-radius:9px; background:rgba(216,183,91,.035); }
 .pbe4-preview b { display:block; color:var(--pbe-gold-bright); font:900 21px/1 'Inter',sans-serif; filter:blur(5px); opacity:.28; }
 .pbe4-preview span { display:block; margin-top:5px; color:var(--pbe-dim); font:700 10px/1.35 'JetBrains Mono',monospace; text-transform:uppercase; }
-.pbe4-preview:after { content:'NFL PRO'; position:absolute; inset:0; display:grid; place-items:center; color:var(--pbe-gold-bright); font:800 10px/1 'JetBrains Mono',monospace; letter-spacing:.08em; }
+.pbe4-preview:after { content:'NFL PRO'; position:absolute; inset:0; display:grid; place-items:center; color:var(--pbe-gold-bright); font:800 11px/1 'JetBrains Mono',monospace; letter-spacing:.08em; }
 
 .pbe4-method-panel { padding:19px; }
 .pbe4-panel-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; }

@@ -102,7 +102,7 @@
 .pbe2-ticket-matchup{font-size:12px;color:rgba(255,255,255,.36);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pbe2-ticket-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:13px}
 .pbe2-ticket-stats>div{padding:8px;background:rgba(255,255,255,.025);border-radius:7px}
-.pbe2-ticket-stats span{display:block;font-size:10px;font-weight:900;letter-spacing:.8px;color:rgba(255,255,255,.26);text-transform:uppercase}
+.pbe2-ticket-stats span{display:block;font-size:12px;font-weight:900;letter-spacing:.8px;color:rgba(255,255,255,.26);text-transform:uppercase}
 .pbe2-ticket-stats strong{display:block;font-family:var(--font-d);font-size:15px;margin-top:3px;color:#fff}
 .pbe2-ticket-stats .edge strong{color:var(--pbe-gold)}
 .pbe2-ticket footer{display:flex;justify-content:space-between;gap:8px;margin-top:11px;padding-top:9px;border-top:1px solid rgba(255,255,255,.05);font-size:11px;color:rgba(255,255,255,.28)}

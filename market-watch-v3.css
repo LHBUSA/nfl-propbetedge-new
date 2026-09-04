@@ -126,7 +126,7 @@
 .pbe22-best em{color:var(--mw-green);font-style:normal;font-weight:900}
 .pbe22-bookmark{
   display:inline-flex;align-items:center;justify-content:center;gap:3px;min-width:25px;height:19px;padding:0 5px;border:1px solid rgba(255,255,255,.075);
-  border-radius:5px;background:rgba(255,255,255,.025);color:var(--pbe-dim);font:900 10px/1 'JetBrains Mono',monospace;letter-spacing:.02em;
+  border-radius:5px;background:rgba(255,255,255,.025);color:var(--pbe-dim);font:900 11px/1 'JetBrains Mono',monospace;letter-spacing:.02em;
 }
 .pbe22-bookmark img{width:11px;height:11px;border-radius:2px;object-fit:contain;background:#fff}
 .pbe22-best-empty{color:var(--pbe-dim)}
