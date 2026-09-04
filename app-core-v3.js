@@ -23,15 +23,52 @@
     }
   });
 
+  /* ---- Deep-link contract -------------------------------------------------
+     PropBetEdge News is the top of the funnel, so an article has to be able to
+     land a reader on the intelligence that article is about, not just on the
+     surface. ?event= already resolved across Market Watch, Model Lab, Matchups,
+     Usage, Simulator, SGP Lab and PropChain; this adds the player and team
+     halves and gives every consumer one place to read them.
+
+       https://nfl.propbetedge.ai/?event=<id>#marketwatch
+       https://nfl.propbetedge.ai/?player=Drake%20Maye#propboard
+       https://nfl.propbetedge.ai/?team=SEA#teams
+
+     Params are read from the query string, and also from a query appended to
+     the hash (#propboard?player=...) so a link can carry both without the
+     server ever seeing it. The routing contract itself is unchanged: nav()
+     still takes a route, and VIEWS still maps route -> renderer. */
+  function readParams() {
+    const out = {};
+    try {
+      new URLSearchParams(location.search).forEach((v, k) => { out[k] = v; });
+      const hash = String(location.hash || '').replace(/^#/, '');
+      const q = hash.indexOf('?');
+      if (q > -1) new URLSearchParams(hash.slice(q + 1)).forEach((v, k) => { out[k] = v; });
+    } catch (_) {}
+    return out;
+  }
+
   App = {
     VIEWS: views,
     current: 'home',
     booted: false,
     pendingRoute: null,
+    params: readParams(),
 
     normalize(route) {
-      const raw = String(route || 'home').replace(/^#/,'').trim().toLowerCase();
+      const raw = String(route || 'home').replace(/^#/,'').split('?')[0].trim().toLowerCase();
       return aliases[raw] || raw || 'home';
+    },
+
+    /* Canonical deep link, for the news site and for internal cross-links. */
+    link(route, params) {
+      const url = new URL(location.origin + '/');
+      Object.entries(params || {}).forEach(([k, v]) => {
+        if (v !== null && v !== undefined && v !== '') url.searchParams.set(k, String(v));
+      });
+      url.hash = this.normalize(route) === 'home' ? '' : this.normalize(route);
+      return url.href;
     },
 
     renderRegistered(view) {
@@ -52,6 +89,7 @@
     nav(route, options = {}) {
       const view = this.normalize(route);
       this.current = view;
+      this.params = readParams();
 
       document.querySelectorAll('.sidebar-nav .nav-item').forEach(el => el.classList.remove('active'));
       document.getElementById(`nav-${view}`)?.classList.add('active');
@@ -123,7 +161,26 @@
     },450);
   },{ once:true });
   window.addEventListener('hashchange',() => {
+    App.params = readParams();
     const route = App.normalize(location.hash);
     if (route !== App.current) App.nav(route,{ history:false });
   });
+
+  /* An article linking to a player opens the unified player drawer once the
+     research module has registered. The drawer already carries market, model,
+     news and archive with their own provenance, so it is the right landing
+     surface for "see this player's research" rather than a bare route. */
+  window.addEventListener('pbe:upgrades-ready',() => {
+    const player = App.params.player;
+    if (!player) return;
+    let tries = 0;
+    const open = () => {
+      if (typeof window.PBEPlayerResearch?.show === 'function') {
+        try { window.PBEPlayerResearch.show(player); } catch (error) { console.warn('[pbe-deeplink-player]',error?.message||error); }
+        return;
+      }
+      if (tries++ < 20) setTimeout(open,150);
+    };
+    setTimeout(open,400);
+  },{ once:true });
 })();

@@ -64,8 +64,8 @@
   max-width:100%;
 }
 .pbe4-worldclass .pbe3-side{gap:4px}
-.pbe4-worldclass .pbe3-line{font-size:clamp(8px,.72vw,10px)}
-.pbe4-worldclass .pbe3-price{font-size:clamp(6px,.56vw,7.5px)}
+.pbe4-worldclass .pbe3-line{font-size:clamp(12px,.95vw,14px)}
+.pbe4-worldclass .pbe3-price{font-size:clamp(10px,.8vw,12px)}
 .pbe4-worldclass .pbe4-edge-badge{
   min-width:0;
   width:min(100%,68px);
@@ -73,7 +73,7 @@
   font-size:clamp(17px,1.5vw,21px)!important;
 }
 .pbe4-worldclass .pbe4-prob-top{gap:3px;min-width:0}
-.pbe4-worldclass .pbe4-prob-top strong{font-size:clamp(9px,.88vw,12px)}
+.pbe4-worldclass .pbe4-prob-top strong{font-size:clamp(11px,.88vw,13px)}
 .pbe4-worldclass .pbe4-prob-top span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 /* Full institutional desktop: every field remains on-screen. */

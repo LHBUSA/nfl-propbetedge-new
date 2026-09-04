@@ -36,7 +36,7 @@ touch a single line of behavioural JavaScript.
 
 ---
 
-## PASS 1 — Foundation *(in progress)*
+## PASS 1 — Foundation ✅ **complete**
 
 **Goal:** one token authority, parent typography, the 10px floor, focus, no dead code.
 
@@ -56,7 +56,7 @@ gradient-button false positives; `node --test` green; recovery smoke green.
 
 ---
 
-## PASS 2 — Dashboard
+## PASS 2 — Dashboard ✅ **complete**
 
 Fixes P0-3 (5,043px desktop / 9,295px mobile manifesto) and P1-2 (broken hero).
 
@@ -86,7 +86,7 @@ Files: `games-v2.*`, `games-worldclass-v3.css`, `games-command-v4.*`, `games-int
 
 ---
 
-## PASS 4 — Prop Board + Market Watch + Model Lab
+## PASS 4 — Prop Board + Market Watch + Model Lab ✅ **conversion core complete**
 
 The commercial core.
 
@@ -116,7 +116,7 @@ Files: `matchups-v2.*`, `usage-v2.*`, `injury-intel-v2.*`, `injury-readability-v
 
 ---
 
-## PASS 7 — Paywall, onboarding, top-of-funnel continuity
+## PASS 7 — Paywall, onboarding, top-of-funnel continuity ✅ **deep-link contract complete**
 
 - Paywall as part of the product, not an interruption.
 - **URL state (P2-7):** extend `App.nav` to accept `#route?event=…&player=…&team=…` so a news
@@ -150,6 +150,48 @@ PBE_CHROME=... node scripts/recovery-browser-smoke.mjs   # fault-injection route
 width: horizontal overflow, every text node under 11px, every element under WCAG AA, sub-44px
 touch targets, broken/undimensioned images, console errors, and a full-page screenshot. Findings
 are checked against measurements, not against intent.
+
+---
+
+## Status — what shipped to the branch
+
+Four commits on `worldclass-pass`, each verified by rendering the working tree
+against live production APIs in headless Chrome at 390 / 768 / 1280 / 1440.
+
+**Measured across 68 route × width combinations, before → after:**
+
+| Metric | Before | After |
+|---|---|---|
+| Smallest rendered text | **4.6px** | **10px** (the design floor) |
+| Text nodes below 10px | 4,248 | **0** |
+| WCAG AA contrast failures | 2,281 | **0** |
+| Console errors | 0 | 0 |
+| Horizontal overflow | 0 | 0 |
+| Cumulative layout shift (home) | 0.175 | **0.005 – 0.038** |
+| Competing `:root` token blocks | 13 | **1** |
+| Unreferenced files | 31 (278 KB) | **0** |
+| Desktop shell chrome | 309px (5 strips) | **252px** (3 strips, grouped) |
+| Dashboard height (desktop / mobile) | 5,043 / 9,295px | ~3,100 / ~5,100px |
+| Market Watch rendered content | 869 chars | **4,303 chars** |
+| Featured-game hero on mobile | market panel 118px wide | **308px** |
+| News deks presented but uncorroborated | 8 of 12 | **0** |
+
+**Deep-link contract (Pass 7 core), verified by `scripts/deeplink-smoke.mjs`:**
+
+```
+https://nfl.propbetedge.ai/?player=Drake%20Maye#propboard   -> opens unified player research
+https://nfl.propbetedge.ai/?event=<id>#marketwatch          -> event-scoped market terminal
+https://nfl.propbetedge.ai/#propboard?player=Sam%20Darnold  -> params may ride the hash
+App.link('marketwatch', {event, player})                    -> canonical builder for the news site
+```
+
+All five cases pass; plain routes are unaffected.
+
+**Still open** (Passes 3, 5, 6, and the remainder of 8): per-surface type roles on
+Games / Prop Board / News (their remaining sub-11px text is all at the 10px floor,
+but some of it should be 11–13px body rather than micro); mobile document heights
+on Injuries and Games; the archive table grammar; and the load profile (66
+stylesheets / 70 scripts / 226 requests, and the 3.2 MB of stadium JPEGs).
 
 ---
 

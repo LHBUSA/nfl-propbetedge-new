@@ -90,6 +90,12 @@
   <link rel="stylesheet" href="./model-lab.css?v=20260828y1">
   <style>
     html{-webkit-text-size-adjust:100%;text-size-adjust:100%;background:#14110d;overflow-x:hidden}
+    /* Measured shell heights per breakpoint. Kept in the critical inline CSS so
+       the reservation applies before any stylesheet loads. */
+    #pbe-shell-slot{min-height:252px}
+    @media(max-width:900px){#pbe-shell-slot{min-height:175px}}
+    @media(max-width:560px){#pbe-shell-slot{min-height:163px}}
+    #pbe-shell-slot:has(#pbe-sports-shell){min-height:0}
     body{margin:0;min-width:0;overflow-x:hidden;overscroll-behavior-x:none}
     button,a,[role="button"],input,select,textarea{touch-action:manipulation}
     img,svg,video,canvas{max-width:100%}
@@ -107,6 +113,11 @@
 </head>
 <body>
 <a class="pbe-skip" href="#main-content">Skip to content</a>
+<!-- The shell is built by JS and inserted above .shell. Without a reserved slot
+     the whole page rendered at y=0 and then dropped by the shell's height,
+     which measured as 0.175 cumulative layout shift. This slot holds the space
+     from the first paint; sports-shell-v2.js mounts into it. -->
+<div id="pbe-shell-slot" aria-hidden="true"></div>
 <div class="ticker" id="ticker" aria-label="NFL market status"></div>
 <div class="shell">
   <aside class="sidebar" id="sidebar" role="navigation" aria-label="NFL Intelligence navigation">

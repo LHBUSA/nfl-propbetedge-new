@@ -118,8 +118,11 @@
     const existing=document.getElementById('pbe-sports-shell');
     if(existing?.dataset?.shellVersion==='2')return;
     existing?.remove();
-    const target=document.querySelector('.shell')||document.body.firstChild;
-    target.insertAdjacentHTML('beforebegin',shellHtml());
+    /* Mount into the reserved slot so the shell's height is already accounted
+       for at first paint; fall back to the historical position if absent. */
+    const slot=document.getElementById('pbe-shell-slot');
+    if(slot){slot.innerHTML=shellHtml()}
+    else{const target=document.querySelector('.shell')||document.body.firstChild;target.insertAdjacentHTML('beforebegin',shellHtml())}
     wire();
     syncActive();
   }
