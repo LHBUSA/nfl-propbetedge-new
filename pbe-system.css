@@ -1,0 +1,465 @@
+/* ============================================================================
+   PropBetEdge NFL — SYSTEM PRIMITIVES
+   ----------------------------------------------------------------------------
+   Component grammar for the parent -> NFL bridge. Consumes pbe-tokens.css.
+
+   This is not an override layer. It contains:
+     1. genuinely global base behaviour that was missing entirely (focus,
+        selection, tabular numerals, motion policy)
+     2. namespaced primitives (.pbe-*) that rebuilt surfaces compose from
+   It deliberately does not restyle legacy class names; those are migrated
+   surface by surface per WORLD_CLASS_UI_PLAN.md.
+
+   Structural devices are inherited from propbetedge.ai:
+     · the gold rule (2px bottom on section heads, 4px top on major heads)
+     · the mono eyebrow (uppercase, heavily tracked, JetBrains Mono)
+     · outline-not-fill badges (1px border + text in the semantic colour)
+     · one gold fill per view, on the single primary action
+   ========================================================================== */
+
+/* ---- 1 · GLOBAL BASE ---------------------------------------------------- */
+
+body {
+  font-family: var(--pbe-font-ui);
+  font-size: var(--fs-body);
+  line-height: 1.55;
+  color: var(--pbe-paper);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Focus was absent from 607 KB of CSS. Gold ring, never removed. */
+:focus-visible {
+  outline: 2px solid var(--pbe-gold);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+:focus:not(:focus-visible) { outline: none; }
+
+::selection { background: var(--pbe-gold-soft); color: var(--pbe-paper); }
+
+/* Numbers must align in columns wherever they appear. */
+.pbe-num,
+[data-pbe-num],
+.pbe-table td.num,
+.pbe-stat-value {
+  font-family: var(--pbe-font-data);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/* Skip link — keyboard users currently traverse 23 nav items to reach content. */
+.pbe-skip {
+  position: absolute; left: -9999px; top: 0; z-index: 9999;
+  padding: var(--s-3) var(--s-4);
+  background: var(--pbe-gold); color: var(--pbe-ink);
+  font: 700 var(--fs-label)/1 var(--pbe-font-data);
+  letter-spacing: var(--ls-label); text-transform: uppercase;
+  border-radius: 0 0 var(--r-sm) 0;
+}
+.pbe-skip:focus { left: 0; }
+
+
+/* ---- 2 · TYPOGRAPHY PRIMITIVES ----------------------------------------- */
+
+/* Playfair is rationed. This class is the only sanctioned way to invoke it. */
+.pbe-display {
+  font-family: var(--pbe-font-display);
+  font-size: var(--fs-display);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: var(--ls-tight);
+  color: var(--pbe-paper);
+  margin: 0;
+}
+.pbe-display em { font-style: italic; color: var(--pbe-gold); }
+
+/* The parent's signature eyebrow. */
+.pbe-eyebrow {
+  font-family: var(--pbe-font-data);
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  letter-spacing: var(--ls-micro);
+  text-transform: uppercase;
+  color: var(--pbe-faint);
+}
+
+.pbe-label {
+  font-family: var(--pbe-font-data);
+  font-size: var(--fs-label);
+  font-weight: 700;
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--pbe-dim);
+}
+
+/* Section head — parent .section-heading, 2px gold rule. */
+.pbe-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-4);
+  border-bottom: 2px solid var(--pbe-gold);
+  padding-bottom: var(--s-3);
+  margin: var(--s-7) 0 var(--s-5);
+}
+.pbe-section-head:first-child { margin-top: 0; }
+.pbe-section-head h2 {
+  font-family: var(--pbe-font-ui);
+  font-size: var(--fs-h2);
+  font-weight: 700;
+  letter-spacing: var(--ls-tight);
+  color: var(--pbe-paper);
+  margin: 0;
+}
+/* Editorial surfaces (news, injury desk, history) may take the serif. */
+.pbe-section-head.editorial h2 {
+  font-family: var(--pbe-font-display);
+  font-weight: 800;
+}
+.pbe-section-head .pbe-more {
+  font-family: var(--pbe-font-data);
+  font-size: var(--fs-label);
+  font-weight: 700;
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--pbe-dim);
+  text-decoration: none;
+  transition: color var(--t-fast);
+  white-space: nowrap;
+}
+.pbe-section-head .pbe-more:hover { color: var(--pbe-gold); }
+
+/* Major surface head — parent .sport-rail-header, 4px gold top rule. */
+.pbe-surface-head {
+  border-top: 4px solid var(--pbe-gold);
+  padding-top: var(--s-5);
+  margin-bottom: var(--s-5);
+}
+.pbe-surface-head h1 {
+  font-family: var(--pbe-font-ui);
+  font-size: var(--fs-h1);
+  font-weight: 800;
+  letter-spacing: var(--ls-tight);
+  color: var(--pbe-paper);
+  margin: 0 0 var(--s-1);
+}
+.pbe-surface-head .pbe-eyebrow { display: block; margin-bottom: var(--s-2); }
+
+
+/* ---- 3 · BADGES · the truth contract ----------------------------------- */
+/* Parent .impact-badge grammar: outline + text in the semantic colour, never
+   a fill, so no badge can compete with gold for identity. Every badge pairs
+   colour with a glyph or word so meaning never rests on colour alone. */
+
+.pbe-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  border: 1px solid currentColor;
+  border-radius: var(--r-xs);
+  background: rgba(20,17,13,.92);
+  font-family: var(--pbe-font-data);
+  font-size: var(--fs-micro);
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  line-height: 1;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.pbe-badge--live        { color: var(--pbe-live); }
+.pbe-badge--model       { color: var(--pbe-model); }
+.pbe-badge--pro         { color: var(--pbe-pro); }
+.pbe-badge--beta        { color: var(--pbe-dim); }
+.pbe-badge--unavailable { color: var(--pbe-unavailable); }
+
+/* The live dot is the only continuously animated element in the system. */
+.pbe-badge--live::before {
+  content: ""; width: 6px; height: 6px; border-radius: 50%;
+  background: currentColor;
+  animation: pbe-live-pulse 2s ease-in-out infinite;
+}
+@keyframes pbe-live-pulse { 0%,100% { opacity: 1 } 50% { opacity: .35 } }
+
+.pbe-badge--model::before       { content: "◆"; font-size: 8px; }
+.pbe-badge--pro::before         { content: "▲"; font-size: 8px; }
+.pbe-badge--unavailable::before { content: "—"; }
+
+/* Timestamps are not badges. Recency is meta. */
+.pbe-timestamp {
+  font-family: var(--pbe-font-data);
+  font-size: var(--fs-micro);
+  font-weight: 500;
+  letter-spacing: .08em;
+  color: var(--pbe-faint);
+  text-transform: uppercase;
+}
+
+
+/* ---- 4 · MOVEMENT · never colour alone --------------------------------- */
+
+.pbe-delta {
+  font-family: var(--pbe-font-data);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.pbe-delta--pos { color: var(--pbe-pos); }
+.pbe-delta--neg { color: var(--pbe-neg); }
+.pbe-delta--flat { color: var(--pbe-faint); }
+.pbe-delta--pos::before  { content: "▲"; font-size: .75em; }
+.pbe-delta--neg::before  { content: "▼"; font-size: .75em; }
+.pbe-delta--flat::before { content: "—"; }
+
+/* A value that just changed. 600ms, once — motion that explains state. */
+.pbe-flash-up   { animation: pbe-flash-up   .6s ease-out; }
+.pbe-flash-down { animation: pbe-flash-down .6s ease-out; }
+@keyframes pbe-flash-up   { 0% { background: var(--pbe-pos-soft) } 100% { background: transparent } }
+@keyframes pbe-flash-down { 0% { background: var(--pbe-neg-soft) } 100% { background: transparent } }
+
+
+/* ---- 5 · BUTTONS ------------------------------------------------------- */
+
+.pbe-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  min-height: 36px;
+  padding: 0 var(--s-4);
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  font-family: var(--pbe-font-ui);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  letter-spacing: .01em;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: all var(--t-fast);
+}
+/* Parent .nav-link.cta — the one gold fill per view. */
+.pbe-btn--primary {
+  background: var(--pbe-gold);
+  color: var(--pbe-ink);
+  font-weight: 700;
+  box-shadow: var(--sh-gold);
+}
+.pbe-btn--primary:hover { background: var(--pbe-gold-bright); }
+/* Parent .sport-rail-header .more-link */
+.pbe-btn--secondary {
+  background: transparent;
+  border-color: var(--pbe-line-strong);
+  color: var(--pbe-dim);
+}
+.pbe-btn--secondary:hover { border-color: var(--pbe-gold); color: var(--pbe-paper); }
+.pbe-btn--ghost { background: transparent; color: var(--pbe-dim); }
+.pbe-btn--ghost:hover { color: var(--pbe-paper); }
+.pbe-btn--danger {
+  background: transparent;
+  border-color: var(--pbe-crimson-bright);
+  color: var(--pbe-crimson-bright);
+}
+.pbe-btn[disabled], .pbe-btn[aria-disabled="true"] {
+  opacity: .45; cursor: not-allowed; box-shadow: none;
+}
+.pbe-btn:active:not([disabled]) { transform: translateY(1px); }
+
+@media (max-width: 768px) { .pbe-btn { min-height: 44px; } }
+
+
+/* ---- 6 · SURFACES ------------------------------------------------------ */
+
+.pbe-panel {
+  background: var(--pbe-ink-2);
+  border: 1px solid var(--pbe-line);
+  border-radius: var(--r-md);
+  padding: var(--s-4);
+}
+.pbe-panel--interactive { transition: all var(--t-fast); }
+.pbe-panel--interactive:hover {
+  background: var(--pbe-ink-3);
+  border-color: var(--pbe-line-strong);
+  box-shadow: var(--sh-2);
+}
+
+/* Stat cell: eyebrow -> number -> context. One --fs-data-xl per surface. */
+.pbe-stat .pbe-eyebrow { display: block; margin-bottom: var(--s-2); }
+.pbe-stat-value {
+  display: block;
+  font-size: var(--fs-data-lg);
+  font-weight: 600;
+  line-height: 1;
+  color: var(--pbe-paper);
+}
+.pbe-stat--hero .pbe-stat-value { font-size: var(--fs-data-xl); }
+.pbe-stat-context {
+  display: block;
+  margin-top: var(--s-2);
+  font-size: var(--fs-sm);
+  color: var(--pbe-dim);
+}
+
+
+/* ---- 7 · TABLES · terminal grammar ------------------------------------- */
+
+.pbe-table { width: 100%; border-collapse: collapse; }
+.pbe-table thead th {
+  position: sticky; top: 0; z-index: 2;
+  background: var(--pbe-ink-3);
+  border-bottom: 2px solid var(--pbe-gold);   /* the parent gold rule, on a column head */
+  padding: var(--s-3);
+  text-align: left;
+  font-family: var(--pbe-font-data);
+  font-size: var(--fs-label);
+  font-weight: 700;
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--pbe-dim);
+  white-space: nowrap;
+}
+.pbe-table thead th.num,
+.pbe-table tbody td.num { text-align: right; }
+.pbe-table tbody td {
+  padding: var(--s-3);
+  border-bottom: 1px solid var(--pbe-line-faint);
+  font-size: var(--fs-sm);
+  color: var(--pbe-paper-2);
+  vertical-align: middle;
+}
+.pbe-table tbody td.num {
+  font-family: var(--pbe-font-data);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--fs-data);
+  color: var(--pbe-paper);
+}
+.pbe-table tbody tr { transition: background var(--t-fast); }
+.pbe-table tbody tr:hover { background: var(--pbe-ink-3); }
+.pbe-table .entity {
+  font-family: var(--pbe-font-ui);
+  font-weight: 600;
+  color: var(--pbe-paper);
+}
+.pbe-table .entity-sub {
+  display: block;
+  font-family: var(--pbe-font-data);
+  font-size: var(--fs-micro);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--pbe-faint);
+  margin-top: 2px;
+}
+
+
+/* ---- 8 · LOCKED / PRO -------------------------------------------------- */
+/* Show real structure with unreadable values, and ONE call to action per
+   locked region — never one per row. */
+
+.pbe-locked-value {
+  font-family: var(--pbe-font-data);
+  font-size: var(--fs-data-sm);
+  letter-spacing: .18em;
+  color: var(--pbe-unavailable);
+  user-select: none;
+}
+.pbe-locked-value::after { content: "▮▮▮"; }
+
+.pbe-lock-col { position: relative; }
+.pbe-lock-col::after {
+  content: "";
+  position: absolute; inset: 0;
+  background: repeating-linear-gradient(
+    -45deg, transparent 0 6px, rgba(212,175,55,.035) 6px 12px);
+  pointer-events: none;
+}
+
+.pbe-lock-cta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-4);
+  padding: var(--s-4);
+  border: 1px solid var(--pbe-gold);
+  border-radius: var(--r-md);
+  background: linear-gradient(180deg, rgba(212,175,55,.06), transparent);
+}
+.pbe-lock-cta .pbe-lock-copy { flex: 1 1 260px; min-width: 0; }
+.pbe-lock-cta h3 {
+  margin: 0 0 var(--s-1);
+  font-size: var(--fs-h3);
+  font-weight: 700;
+  color: var(--pbe-paper);
+}
+.pbe-lock-cta p {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--pbe-dim);
+}
+
+
+/* ---- 9 · STATES · loading / empty / error / stale ---------------------- */
+
+.pbe-skeleton {
+  background: linear-gradient(90deg,
+    var(--pbe-ink-2) 0%, var(--pbe-ink-3) 50%, var(--pbe-ink-2) 100%);
+  background-size: 200% 100%;
+  border-radius: var(--r-sm);
+  animation: pbe-shimmer 1.4s ease-in-out infinite;
+}
+@keyframes pbe-shimmer { 0% { background-position: 200% 0 } 100% { background-position: -200% 0 } }
+.pbe-skeleton--line { height: 12px; margin-bottom: var(--s-2); }
+.pbe-skeleton--row  { height: 44px; margin-bottom: var(--s-1); }
+
+.pbe-empty {
+  padding: var(--s-7) var(--s-4);
+  text-align: center;
+}
+.pbe-empty h3 {
+  font-family: var(--pbe-font-display);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--pbe-paper);
+  margin: 0 0 var(--s-2);
+}
+.pbe-empty p {
+  font-size: var(--fs-body);
+  color: var(--pbe-dim);
+  margin: 0 auto var(--s-4);
+  max-width: 46ch;
+}
+
+.pbe-error {
+  padding: var(--s-4);
+  border: 1px solid var(--pbe-crimson);
+  border-left-width: 3px;
+  border-radius: var(--r-sm);
+  background: rgba(193,39,61,.06);
+  font-size: var(--fs-sm);
+  color: var(--pbe-paper-2);
+}
+
+/* Stale data is shown as stale, never silently. */
+.pbe-stale { color: var(--pbe-dim); }
+.pbe-stale .pbe-timestamp { color: var(--pbe-faint); }
+
+
+/* ---- 10 · ROUTE TRANSITION -------------------------------------------- */
+
+#view-container { animation: pbe-route-in .12s ease-out; }
+@keyframes pbe-route-in {
+  from { opacity: 0; transform: translateY(2px) }
+  to   { opacity: 1; transform: none }
+}
+
+
+/* ---- 11 · TOUCH TARGETS ------------------------------------------------ */
+/* index.html already asks for 44px minimums below 768px; the shell's own
+   controls were violating it (score nav at 26px wide, a 7px-tall link). */
+@media (max-width: 768px) {
+  .pbes-score-nav { min-width: 44px; min-height: 44px; }
+  .pbes-head-btn  { min-height: 44px; }
+}

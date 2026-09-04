@@ -7,7 +7,7 @@
 
   function source(){ return window.StatsView?.STATS || {}; }
   function sourceMeta(){ return window.StatsView?.source || {}; }
-  function crest(abbr,size=28){ try{ if(typeof teamCrest==='function')return teamCrest(abbr,size);}catch(_){} return `<strong style="color:#fff;font:900 11px 'Barlow Condensed',sans-serif">${esc(abbr)}</strong>`; }
+  function crest(abbr,size=28){ try{ if(typeof teamCrest==='function')return teamCrest(abbr,size);}catch(_){} return `<strong style="color:#fff;font:900 13px 'Inter',sans-serif">${esc(abbr)}</strong>`; }
 
   function category(){ return source()[state.tab] || Object.values(source())[0] || null; }
   function filteredRows(){

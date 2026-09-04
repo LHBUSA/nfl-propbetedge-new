@@ -30,11 +30,11 @@
   line-height:.92!important;
   letter-spacing:.025em!important;
 }
-#pbe-sports-shell .pbes-brand-pill{min-height:23px!important;padding:0 8px!important;font-size:9px!important}
+#pbe-sports-shell .pbes-brand-pill{min-height:23px!important;padding:0 8px!important;font-size:12px!important}
 #pbe-sports-shell .pbes-brand-sub{
   margin-top:6px!important;
   color:#9d968a!important;
-  font-size:10px!important;
+  font-size:12px!important;
   letter-spacing:.095em!important;
 }
 #pbe-sports-shell .pbes-center{gap:9px!important}
@@ -44,13 +44,13 @@
   border-color:rgba(235,219,178,.13)!important;
   background:rgba(255,255,255,.026)!important;
   color:#a9a296!important;
-  font-size:10px!important;
+  font-size:12px!important;
 }
 #pbe-sports-shell .pbes-live-pill.is-live{color:#62dc96!important;border-color:rgba(98,220,150,.30)!important;background:rgba(98,220,150,.07)!important}
 #pbe-sports-shell .pbes-right{gap:9px!important}
 #pbe-sports-shell .pbes-date{margin-right:7px!important}
 #pbe-sports-shell .pbes-date strong{font-size:14px!important;color:#f0ebe2!important}
-#pbe-sports-shell .pbes-date span{margin-top:5px!important;font-size:10px!important;color:#8d867a!important}
+#pbe-sports-shell .pbes-date span{margin-top:5px!important;font-size:12px!important;color:#8d867a!important}
 #pbe-sports-shell .pbes-head-btn{
   min-height:40px!important;
   padding:0 14px!important;
@@ -58,7 +58,7 @@
   border-radius:9px!important;
   background:rgba(255,255,255,.025)!important;
   color:#c5beb2!important;
-  font-size:10px!important;
+  font-size:12px!important;
 }
 #pbe-sports-shell .pbes-head-btn:hover{border-color:rgba(216,183,91,.28)!important;background:rgba(216,183,91,.05)!important;color:#fff!important}
 #pbe-sports-shell .pbes-head-btn.pro{color:#e5c665!important;border-color:rgba(216,183,91,.30)!important;background:linear-gradient(135deg,rgba(216,183,91,.09),rgba(255,255,255,.018))!important}
@@ -74,17 +74,17 @@
   background:rgba(216,183,91,.10)!important;
   border-right-color:rgba(216,183,91,.20)!important;
   color:#e1c15f!important;
-  font-size:10px!important;
+  font-size:12px!important;
 }
 #pbe-sports-shell .pbes-news-item{
   gap:9px!important;
   padding:0 22px!important;
   border-right-color:rgba(235,219,178,.08)!important;
   color:#a8a095!important;
-  font-size:11px!important;
+  font-size:13px!important;
 }
-#pbe-sports-shell .pbes-news-item strong{color:#ede7de!important;font-size:11px!important}
-#pbe-sports-shell .pbes-news-item span{color:#827b70!important;font-size:9px!important}
+#pbe-sports-shell .pbes-news-item strong{color:#ede7de!important;font-size:13px!important}
+#pbe-sports-shell .pbes-news-item span{color:#827b70!important;font-size:12px!important}
 
 /* Scoreboard */
 #pbe-sports-shell[data-shell-version="2"] .pbes-scorebar{
@@ -96,7 +96,7 @@
   min-height:108px!important;
   padding:0 11px!important;
   color:#aaa295!important;
-  font-size:9px!important;
+  font-size:12px!important;
   border-right-color:rgba(235,219,178,.10)!important;
 }
 #pbe-sports-shell[data-shell-version="2"] .pbes-score-window,
@@ -152,10 +152,10 @@
   min-height:24px!important;
   padding:5px 0 0 40px!important;
   color:#8d867a!important;
-  font-size:10px!important;
+  font-size:12px!important;
   line-height:1.15!important;
 }
-#pbe-sports-shell[data-shell-version="2"] .pbes-score-meta strong{color:#c8c0b4!important;font-size:9px!important}
+#pbe-sports-shell[data-shell-version="2"] .pbes-score-meta strong{color:#c8c0b4!important;font-size:12px!important}
 #pbe-sports-shell[data-shell-version="2"] .pbes-score.live{box-shadow:inset 0 3px 0 rgba(98,220,150,.75)!important;background:linear-gradient(180deg,rgba(98,220,150,.055),rgba(255,255,255,.008))!important}
 
 /* Main module nav */
@@ -169,19 +169,19 @@
 #pbe-sports-shell .pbes-nav-label{
   margin-right:9px!important;
   color:#817a70!important;
-  font-size:9px!important;
+  font-size:12px!important;
 }
 #pbe-sports-shell .pbes-nav-btn{
   min-height:36px!important;
   padding:0 13px!important;
   border-radius:8px!important;
   color:#aaa397!important;
-  font-size:10px!important;
+  font-size:12px!important;
 }
 #pbe-sports-shell .pbes-nav-btn:hover{background:rgba(216,183,91,.04)!important;color:#fff!important}
 #pbe-sports-shell .pbes-nav-btn.active{border-color:rgba(216,183,91,.18)!important;background:rgba(216,183,91,.07)!important;color:#f3ede4!important}
 #pbe-sports-shell .pbes-nav-btn.cast{min-height:38px!important;padding:0 15px!important;color:#151108!important;background:linear-gradient(135deg,#efd071,#cfa846)!important;border-color:#d4b052!important}
-#pbe-sports-shell .pbes-research .pbes-nav-btn{min-height:31px!important;padding:0 11px!important;font-size:9px!important}
+#pbe-sports-shell .pbes-research .pbes-nav-btn{min-height:31px!important;padding:0 11px!important;font-size:12px!important}
 
 @media(max-width:1050px){
   #pbe-sports-shell .pbes-top{grid-template-columns:1fr auto!important;min-height:68px!important}
@@ -197,27 +197,27 @@
   #pbe-sports-shell .pbes-brand-name{font-size:18px!important}
   #pbe-sports-shell .pbes-brand-sub{display:none!important}
   #pbe-sports-shell .pbes-date{display:none!important}
-  #pbe-sports-shell .pbes-head-btn{min-height:35px!important;padding:0 9px!important;font-size:8px!important}
+  #pbe-sports-shell .pbes-head-btn{min-height:35px!important;padding:0 9px!important;font-size:11px!important}
   #pbe-sports-shell .pbes-news{height:34px!important}
-  #pbe-sports-shell .pbes-news-badge{padding:0 10px!important;font-size:8px!important}
-  #pbe-sports-shell .pbes-news-item{padding:0 14px!important;font-size:9px!important}
-  #pbe-sports-shell .pbes-news-item strong{font-size:9px!important}
+  #pbe-sports-shell .pbes-news-badge{padding:0 10px!important;font-size:11px!important}
+  #pbe-sports-shell .pbes-news-item{padding:0 14px!important;font-size:12px!important}
+  #pbe-sports-shell .pbes-news-item strong{font-size:12px!important}
   #pbe-sports-shell[data-shell-version="2"] .pbes-scorebar{min-height:94px!important;grid-template-columns:36px minmax(0,1fr)!important}
-  #pbe-sports-shell[data-shell-version="2"] .pbes-score-label{min-height:94px!important;padding:0 5px!important;font-size:7px!important;writing-mode:vertical-rl;transform:rotate(180deg)}
+  #pbe-sports-shell[data-shell-version="2"] .pbes-score-label{min-height:94px!important;padding:0 5px!important;font-size:11px!important;writing-mode:vertical-rl;transform:rotate(180deg)}
   #pbe-sports-shell[data-shell-version="2"] .pbes-score-window{min-height:94px!important;grid-template-columns:26px minmax(0,1fr) 26px!important}
   #pbe-sports-shell[data-shell-version="2"] .pbes-scores{min-height:94px!important}
   #pbe-sports-shell[data-shell-version="2"] .pbes-score-nav{width:26px!important;min-width:26px!important;font-size:19px!important}
   #pbe-sports-shell[data-shell-version="2"] .pbes-score{flex-basis:184px!important;width:184px!important;min-width:184px!important;min-height:94px!important;grid-template-rows:28px 28px minmax(20px,auto)!important;padding:8px 8px 7px!important}
   #pbe-sports-shell[data-shell-version="2"] .pbes-score-teamrow{height:28px!important;min-height:28px!important;grid-template-columns:24px minmax(0,1fr) 29px!important;gap:6px!important}
   #pbe-sports-shell[data-shell-version="2"] .pbes-team-logo,#pbe-sports-shell[data-shell-version="2"] .pbes-score-logo-fallback{width:23px!important;height:23px!important;min-width:23px!important;max-width:23px!important;max-height:23px!important}
-  #pbe-sports-shell[data-shell-version="2"] .pbes-score-team{font-size:10px!important}
+  #pbe-sports-shell[data-shell-version="2"] .pbes-score-team{font-size:12px!important}
   #pbe-sports-shell[data-shell-version="2"] .pbes-score-num{font-size:13px!important;min-width:29px!important}
-  #pbe-sports-shell[data-shell-version="2"] .pbes-score-meta{padding-left:30px!important;font-size:8px!important}
+  #pbe-sports-shell[data-shell-version="2"] .pbes-score-meta{padding-left:30px!important;font-size:11px!important}
   #pbe-sports-shell .pbes-primary{min-height:45px!important}
   #pbe-sports-shell .pbes-research{min-height:34px!important}
   #pbe-sports-shell .pbes-nav-label{display:none!important}
-  #pbe-sports-shell .pbes-nav-btn{min-height:34px!important;padding:0 10px!important;font-size:8px!important}
-  #pbe-sports-shell .pbes-research .pbes-nav-btn{font-size:8px!important}
+  #pbe-sports-shell .pbes-nav-btn{min-height:34px!important;padding:0 10px!important;font-size:11px!important}
+  #pbe-sports-shell .pbes-research .pbes-nav-btn{font-size:11px!important}
 }
 
 /* Phones navigate with the bottom tab bar and the drawer, not the desktop rails.

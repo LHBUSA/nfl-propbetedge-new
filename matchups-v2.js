@@ -22,7 +22,7 @@
   function kickoff(){const e=event();return e.commence_time||e.start_time||e.game_time||null}
   function dateTime(v){if(!v)return'Time unavailable';const d=new Date(v);if(Number.isNaN(d.getTime()))return String(v);return d.toLocaleString('en-US',{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});}
   function team(abbrOrName){const text=String(abbrOrName||'').toLowerCase();return Object.values(window.NFL_TEAMS||{}).find(t=>text===String(t.name||'').toLowerCase()||text===String(t.abbr||'').toLowerCase()||text.includes(String(t.city||'').toLowerCase())||text.includes(String(t.name||'').toLowerCase().split(' ').pop()))||null;}
-  function crest(t,size=58){try{if(t?.abbr&&typeof teamCrest==='function')return teamCrest(t.abbr,size)}catch(_){}return `<strong style="color:#fff;font:900 15px 'Barlow Condensed',sans-serif">${esc(t?.abbr||'NFL')}</strong>`;}
+  function crest(t,size=58){try{if(t?.abbr&&typeof teamCrest==='function')return teamCrest(t.abbr,size)}catch(_){}return `<strong style="color:#fff;font:900 15px 'Inter',sans-serif">${esc(t?.abbr||'NFL')}</strong>`;}
 
   function standingsRows(){const src=window.StandingsView?.STANDINGS||{};const out=[];Object.entries(src).forEach(([conf,divs])=>Object.entries(divs||{}).forEach(([div,rows])=>(rows||[]).forEach(r=>out.push({...r,conf,div}))));return out;}
   function standingFor(t){if(!t)return null;return standingsRows().find(r=>r.abbr===t.abbr||String(r.name||'').toLowerCase()===String(t.name||'').toLowerCase())||null;}

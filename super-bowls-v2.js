@@ -7,7 +7,7 @@
   const games=()=>typeof SUPER_BOWLS!=='undefined'&&Array.isArray(SUPER_BOWLS)?SUPER_BOWLS:(Array.isArray(window.SUPER_BOWLS)?window.SUPER_BOWLS:[]);
   const teams=()=>typeof NFL_TEAMS!=='undefined'&&NFL_TEAMS&&typeof NFL_TEAMS==='object'?NFL_TEAMS:(window.NFL_TEAMS||{});
   function abbrByName(name){const t=teams();return Object.keys(t).find(k=>t[k].name===name)||'';}
-  function crest(abbr,size=25){try{if(abbr&&typeof teamCrest==='function')return teamCrest(abbr,size)}catch(_){}return abbr?`<strong style="color:#fff;font:900 10px 'Barlow Condensed',sans-serif">${esc(abbr)}</strong>`:'';}
+  function crest(abbr,size=25){try{if(abbr&&typeof teamCrest==='function')return teamCrest(abbr,size)}catch(_){}return abbr?`<strong style="color:#fff;font:900 12px 'Inter',sans-serif">${esc(abbr)}</strong>`:'';}
   function latest(){return games().slice().sort((a,b)=>(Number(b.year)||0)-(Number(a.year)||0))[0]||null;}
   function filtered(){const q=state.search.trim().toLowerCase();return games().slice().sort((a,b)=>(Number(b.year)||0)-(Number(a.year)||0)).filter(sb=>{const y=Number(sb.year)||0;let eraOk=true;if(state.era==='2020s')eraOk=y>=2020;if(state.era==='2010s')eraOk=y>=2010&&y<2020;if(state.era==='2000s')eraOk=y>=2000&&y<2010;if(state.era==='1990s')eraOk=y>=1990&&y<2000;if(state.era==='classic')eraOk=y<1990;const qOk=!q||[sb.winner,sb.loser,sb.mvp,sb.venue,sb.roman,sb.year,sb.note].some(v=>String(v||'').toLowerCase().includes(q));return eraOk&&qOk;});}
   function dynasty(){const counts=new Map();games().forEach(sb=>counts.set(sb.winner,(counts.get(sb.winner)||0)+1));return [...counts.entries()].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0])).slice(0,5);}

@@ -1,20 +1,6 @@
 /* PropBetEdge NFL — production brand + media layer
    Loaded after world-class-v1.css. This is the canonical late brand layer. */
-:root{
-  --pbe-ink:#14110d;
-  --pbe-ink-2:#1d1914;
-  --pbe-ink-3:#2a241c;
-  --pbe-paper:#f5f1eb;
-  --pbe-paper-2:#e8e1d4;
-  --pbe-muted:#b8b3a8;
-  --pbe-dim:#7e7a72;
-  --pbe-gold:#d4af37;
-  --pbe-gold-bright:#e9c75a;
-  --pbe-crimson:#c1273d;
-  --pbe-crimson-bright:#e63946;
-  --pbe-line:rgba(255,245,220,.10);
-  --pbe-line-strong:rgba(255,245,220,.18);
-}
+
 
 html,body{background:var(--pbe-ink)!important;color:var(--pbe-paper)!important}
 body{position:relative;z-index:0;background:var(--pbe-ink)!important;min-height:100vh}
@@ -141,7 +127,7 @@ body::after{
 .pbe26-drawer-crest img.pbe-official-team-logo{width:52px!important;height:52px!important;max-width:52px!important;max-height:52px!important}
 .pbe-official-team-logo,.home5-card-row>img{object-fit:contain!important;filter:drop-shadow(0 5px 9px rgba(0,0,0,.35))}
 .home5-card-row>img{width:25px!important;height:25px!important;max-width:25px!important}
-.pbe-team-logo-fallback{display:grid;place-items:center;min-width:30px;min-height:30px;padding:4px;border:1px solid var(--pbe-line);border-radius:50%;color:var(--pbe-gold-bright);font:900 9px/1 'DM Mono',monospace;background:#1d1914}
+.pbe-team-logo-fallback{display:grid;place-items:center;min-width:30px;min-height:30px;padding:4px;border:1px solid var(--pbe-line);border-radius:50%;color:var(--pbe-gold-bright);font:900 12px/1 'JetBrains Mono',monospace;background:#1d1914}
 
 /* Player imagery on market/research rows — identity context, not decoration. */
 .pbe3-player-name.pbe-player-name-enhanced{display:flex!important;align-items:center;gap:9px;min-height:38px}

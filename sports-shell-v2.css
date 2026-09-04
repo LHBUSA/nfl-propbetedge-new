@@ -82,7 +82,7 @@
   overflow:hidden!important;
   text-overflow:ellipsis!important;
   white-space:nowrap!important;
-  font-size:12px!important;
+  font-size:13px!important;
   line-height:1!important;
 }
 #pbe-sports-shell[data-shell-version="2"] .pbes-score-num{
@@ -101,13 +101,13 @@
   overflow:hidden!important;
   text-overflow:ellipsis;
   white-space:nowrap;
-  font-size:9px!important;
+  font-size:12px!important;
   line-height:1.15!important;
 }
 #pbe-sports-shell[data-shell-version="2"] .pbes-score-meta strong{
   flex:0 0 auto;
   color:#c3d3df;
-  font:900 9px/1 'DM Mono',monospace;
+  font:900 12px/1 'JetBrains Mono',monospace;
 }
 #pbe-sports-shell[data-shell-version="2"] .pbes-score-meta span{
   min-width:0;
@@ -129,7 +129,7 @@
   background:rgba(7,14,23,.88);
   color:#b9c8d4;
   cursor:pointer;
-  font:700 26px/1 'DM Sans',sans-serif;
+  font:700 26px/1 'Inter',sans-serif;
   transition:background .15s,color .15s;
 }
 #pbe-sports-shell[data-shell-version="2"] .pbes-score-nav:hover{
@@ -167,7 +167,7 @@
     min-height:92px!important;
     grid-template-columns:40px minmax(0,1fr)!important;
   }
-  #pbe-sports-shell[data-shell-version="2"] .pbes-score-label{min-height:92px!important;padding:0 6px!important;font-size:8px!important}
+  #pbe-sports-shell[data-shell-version="2"] .pbes-score-label{min-height:92px!important;padding:0 6px!important;font-size:11px!important}
   #pbe-sports-shell[data-shell-version="2"] .pbes-score-window{min-height:92px;grid-template-columns:28px minmax(0,1fr) 28px}
   #pbe-sports-shell[data-shell-version="2"] .pbes-scores{min-height:92px!important}
   #pbe-sports-shell[data-shell-version="2"] .pbes-score{
@@ -181,10 +181,10 @@
   #pbe-sports-shell[data-shell-version="2"] .pbes-score-teamrow{height:28px!important;min-height:28px!important;grid-template-columns:25px minmax(0,1fr) 28px!important;gap:6px!important}
   #pbe-sports-shell[data-shell-version="2"] .pbes-team-logo,
   #pbe-sports-shell[data-shell-version="2"] .pbes-score-logo-fallback{width:24px!important;height:24px!important;min-width:24px!important;max-width:24px!important;max-height:24px!important}
-  #pbe-sports-shell[data-shell-version="2"] .pbes-score-team{font-size:11px!important}
+  #pbe-sports-shell[data-shell-version="2"] .pbes-score-team{font-size:13px!important}
   #pbe-sports-shell[data-shell-version="2"] .pbes-score-num{min-width:28px;font-size:13px!important}
-  #pbe-sports-shell[data-shell-version="2"] .pbes-score-meta{padding-left:31px!important;font-size:8px!important;gap:4px}
-  #pbe-sports-shell[data-shell-version="2"] .pbes-score-meta strong{font-size:8px!important}
+  #pbe-sports-shell[data-shell-version="2"] .pbes-score-meta{padding-left:31px!important;font-size:11px!important;gap:4px}
+  #pbe-sports-shell[data-shell-version="2"] .pbes-score-meta strong{font-size:11px!important}
   #pbe-sports-shell[data-shell-version="2"] .pbes-score-nav{width:28px;min-width:28px;font-size:22px}
 }
 

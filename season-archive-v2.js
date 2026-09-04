@@ -5,7 +5,7 @@
   const esc=v=>String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
   const seasons=()=>Array.isArray(window.NFL_SEASONS)?NFL_SEASONS:[];
   const completed=()=>seasons().filter(s=>s&&s.champion&&s.champion!=='TBD');
-  const crest=(abbr,size=32)=>{try{if(typeof teamCrest==='function')return teamCrest(abbr,size)}catch(_){}return `<strong style="color:#fff;font:900 11px 'Barlow Condensed',sans-serif">${esc(abbr)}</strong>`};
+  const crest=(abbr,size=32)=>{try{if(typeof teamCrest==='function')return teamCrest(abbr,size)}catch(_){}return `<strong style="color:#fff;font:900 13px 'Inter',sans-serif">${esc(abbr)}</strong>`};
   function latestYear(){const rows=completed();return rows.length?Math.max(...rows.map(s=>Number(s.year)||0)):null;}
   function seasonByYear(year){return window.SEASON_BY_YEAR?.[year] || completed().find(s=>Number(s.year)===Number(year)) || null;}
   function teamName(abbr){return window.NFL_TEAMS?.[abbr]?.name || abbr || 'Unknown';}

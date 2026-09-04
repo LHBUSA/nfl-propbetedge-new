@@ -1,22 +1,6 @@
 /* PropBetEdge NFL — world-class visual layer v1
    Loaded last. Keeps factual HTML/data above custom cinematic brand artwork. */
-:root{
-  --wc-bg:#0b1623;
-  --wc-bg-2:#101e2e;
-  --wc-panel:rgba(19,34,51,.88);
-  --wc-panel-2:rgba(25,44,65,.82);
-  --wc-panel-soft:rgba(236,245,255,.055);
-  --wc-line:rgba(180,211,241,.16);
-  --wc-line-soft:rgba(180,211,241,.10);
-  --wc-text:#f7fbff;
-  --wc-muted:#a9bacb;
-  --wc-dim:#70869a;
-  --wc-blue:#54b7ff;
-  --wc-cyan:#62ddff;
-  --wc-gold:#f2c85f;
-  --wc-green:#62e2a1;
-  --wc-shadow:0 28px 85px rgba(1,8,18,.30);
-}
+
 
 html{background:var(--wc-bg)!important}
 body{
@@ -155,7 +139,7 @@ body:before{
 .home5-tool span{color:#8fa4b6!important}
 
 /* ---------- PBEcast: action photography is now the stage ---------- */
-:root{--cast-bg:#0c1a29!important;--cast-panel:#14263a!important;--cast-card:#183049!important;--cast-line:rgba(180,211,241,.16)!important;--cast-soft:rgba(180,211,241,.095)!important;--cast-muted:#a8b9c8!important;--cast-dim:#748ba0!important;--cast-blue:#68bfff!important}
+
 .pbecast4{color:#f7fbff!important}
 .cast4-topbar{padding-top:16px!important}
 .cast4-bolt{background:linear-gradient(145deg,rgba(242,200,95,.24),rgba(84,183,255,.10))!important;box-shadow:0 10px 26px rgba(2,8,18,.15)!important}

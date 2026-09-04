@@ -77,7 +77,12 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://a.espncdn.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,400;0,600;0,700;0,800;0,900;1,800&family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- Parent PropBetEdge brand typography: Playfair Display (editorial moments),
+       Inter (application UI), JetBrains Mono (odds, model output, data, eyebrows). -->
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,800;0,900;1,700;1,900&family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Single design-token authority. Must precede every component stylesheet. -->
+  <link rel="stylesheet" href="./pbe-tokens.css?v=20260904brand1">
+  <link rel="stylesheet" href="./pbe-system.css?v=20260904brand1">
   <link rel="stylesheet" href="./base-v3.css?v=20260828y1">
   <link rel="stylesheet" href="./ui-v2.css?v=20260828y1">
   <link rel="stylesheet" href="./paywall.css?v=20260828y1">
@@ -101,12 +106,13 @@
   </style>
 </head>
 <body>
+<a class="pbe-skip" href="#main-content">Skip to content</a>
 <div class="ticker" id="ticker" aria-label="NFL market status"></div>
 <div class="shell">
   <aside class="sidebar" id="sidebar" role="navigation" aria-label="NFL Intelligence navigation">
     <div class="sidebar-inner">
       <a href="javascript:void(0)" class="sidebar-logo" onclick="App.nav('home')" aria-label="PropBetEdge NFL Home">
-        <svg width="30" height="30" viewBox="0 0 34 34" fill="none" aria-hidden="true"><path d="M17 2L30.856 9.75V25.25L17 33L3.144 25.25V9.75L17 2Z" stroke="#55d68c" stroke-width="1.5" opacity=".48"/><path d="M17 7L26.392 12.25V22.75L17 28L7.608 22.75V12.25L17 7Z" fill="#55d68c" opacity=".09"/><circle cx="17" cy="17" r="3.5" fill="#55d68c"/><circle cx="17" cy="17" r="6" stroke="#55d68c" opacity=".32"/></svg>
+        <svg width="30" height="30" viewBox="0 0 34 34" fill="none" aria-hidden="true"><path d="M17 2L30.856 9.75V25.25L17 33L3.144 25.25V9.75L17 2Z" stroke="var(--pbe-gold)" stroke-width="1.5" opacity=".48"/><path d="M17 7L26.392 12.25V22.75L17 28L7.608 22.75V12.25L17 7Z" fill="var(--pbe-gold)" opacity=".09"/><circle cx="17" cy="17" r="3.5" fill="var(--pbe-gold)"/><circle cx="17" cy="17" r="6" stroke="var(--pbe-gold)" opacity=".32"/></svg>
         <div class="sidebar-logo-text"><div class="sl-brand">PropBet<em>Edge</em></div><div class="sl-sport">NFL Intelligence OS</div></div>
       </a>
       <div class="sidebar-search"><input type="search" id="global-search" placeholder="Search everything…  Ctrl K" autocomplete="off" aria-label="Open NFL command palette"><div class="search-results" id="search-results"></div></div>
@@ -114,21 +120,21 @@
         <div class="nav-group" id="intelligence-nav-group">
           <div class="nav-group-label">Intelligence</div>
           <a class="nav-item active" id="nav-home" href="javascript:void(0)" onclick="App.nav('home')"><span class="ni-icon">⌂</span> Dashboard</a>
-          <a class="nav-item" id="nav-games" href="javascript:void(0)" onclick="App.nav('games')"><span class="ni-icon">▦</span> Games & Schedule <span class="nav-badge" style="color:#7da7ff;background:rgba(125,167,255,.06)">2026</span></a>
-          <a class="nav-item" id="nav-propboard" href="javascript:void(0)" onclick="App.nav('propboard')"><span class="ni-icon">↗</span> Prop Board <span class="nav-badge" style="color:#55d68c;background:rgba(85,214,140,.06)">LIVE</span></a>
-          <a class="nav-item" id="nav-marketwatch" href="javascript:void(0)" onclick="App.nav('marketwatch')"><span class="ni-icon">◌</span> Market Watch <span class="nav-badge" style="color:#d8b75b;background:rgba(216,183,91,.06)">PRO</span></a>
+          <a class="nav-item" id="nav-games" href="javascript:void(0)" onclick="App.nav('games')"><span class="ni-icon">▦</span> Games & Schedule <span class="nav-badge">2026</span></a>
+          <a class="nav-item" id="nav-propboard" href="javascript:void(0)" onclick="App.nav('propboard')"><span class="ni-icon">↗</span> Prop Board <span class="nav-badge" style="color:var(--pbe-live)">LIVE</span></a>
+          <a class="nav-item" id="nav-marketwatch" href="javascript:void(0)" onclick="App.nav('marketwatch')"><span class="ni-icon">◌</span> Market Watch <span class="nav-badge" style="color:var(--pbe-pro)">PRO</span></a>
           <a class="nav-item" id="nav-matchups" href="javascript:void(0)" onclick="App.nav('matchups')"><span class="ni-icon">◫</span> Matchup Research</a>
-          <a class="nav-item" id="nav-picks" href="javascript:void(0)" onclick="App.nav('picks')"><span class="ni-icon">◈</span> Model Lab <span class="nav-badge" style="color:#d8b75b;background:rgba(216,183,91,.06)">PRO</span></a>
-          <a class="nav-item" id="nav-pbepicks" href="javascript:void(0)" onclick="App.nav('pbepicks')"><span class="ni-icon">◎</span> PBE Picks <span class="nav-badge" style="color:#55d68c;background:rgba(85,214,140,.06)">LIVE</span></a>
+          <a class="nav-item" id="nav-picks" href="javascript:void(0)" onclick="App.nav('picks')"><span class="ni-icon">◈</span> Model Lab <span class="nav-badge" style="color:var(--pbe-pro)">PRO</span></a>
+          <a class="nav-item" id="nav-pbepicks" href="javascript:void(0)" onclick="App.nav('pbepicks')"><span class="ni-icon">◎</span> PBE Picks <span class="nav-badge" style="color:var(--pbe-live)">LIVE</span></a>
           <a class="nav-item" id="nav-trackrecord" href="javascript:void(0)" onclick="App.nav('trackrecord')"><span class="ni-icon">▧</span> Track Record</a>
-          <a class="nav-item" id="nav-simulator" href="javascript:void(0)" onclick="App.nav('simulator')"><span class="ni-icon">⌁</span> Line Simulator <span class="nav-badge" style="color:#d8b75b;background:rgba(216,183,91,.06)">PRO</span></a>
-          <a class="nav-item" id="nav-sgplab" href="javascript:void(0)" onclick="App.nav('sgplab')"><span class="ni-icon">⎇</span> SGP Lab <span class="nav-badge" style="color:#d8b75b;background:rgba(216,183,91,.06)">PRO</span></a>
-          <a class="nav-item" id="nav-usage" href="javascript:void(0)" onclick="App.nav('usage')"><span class="ni-icon">▥</span> Usage Research <span class="nav-badge" style="color:#55d68c;background:rgba(85,214,140,.06)">BASELINE</span></a>
+          <a class="nav-item" id="nav-simulator" href="javascript:void(0)" onclick="App.nav('simulator')"><span class="ni-icon">⌁</span> Line Simulator <span class="nav-badge" style="color:var(--pbe-pro)">PRO</span></a>
+          <a class="nav-item" id="nav-sgplab" href="javascript:void(0)" onclick="App.nav('sgplab')"><span class="ni-icon">⎇</span> SGP Lab <span class="nav-badge" style="color:var(--pbe-pro)">PRO</span></a>
+          <a class="nav-item" id="nav-usage" href="javascript:void(0)" onclick="App.nav('usage')"><span class="ni-icon">▥</span> Usage Research <span class="nav-badge">BASELINE</span></a>
           <a class="nav-item" id="nav-propchain" href="javascript:void(0)" onclick="App.nav('propchain')"><span class="ni-icon">◇</span> PropChain <span class="nav-badge">BETA</span></a>
-          <a class="nav-item" id="nav-pbecast" href="javascript:void(0)" onclick="App.nav('pbecast')"><span class="ni-icon">◉</span> Game Center <span class="nav-badge" style="color:#7da7ff;background:rgba(125,167,255,.06)">EVENT</span></a>
-          <a class="nav-item" id="nav-newsintel" href="javascript:void(0)" onclick="App.nav('newsintel')"><span class="ni-icon">▤</span> News Intelligence <span class="nav-badge" style="color:#f16b78;background:rgba(241,107,120,.06)">NEWS</span></a>
-          <a class="nav-item" id="nav-injuries" href="javascript:void(0)" onclick="App.nav('injuries')"><span class="ni-icon">＋</span> Injury Intelligence <span class="nav-badge" style="color:#f16b78;background:rgba(241,107,120,.06)">NEWS</span></a>
-          <a class="nav-item" id="nav-trades" href="javascript:void(0)" onclick="App.nav('trades')"><span class="ni-icon">⇄</span> Transactions <span class="nav-badge" style="color:#7da7ff;background:rgba(125,167,255,.06)">NEWS</span></a>
+          <a class="nav-item" id="nav-pbecast" href="javascript:void(0)" onclick="App.nav('pbecast')"><span class="ni-icon">◉</span> Game Center <span class="nav-badge">EVENT</span></a>
+          <a class="nav-item" id="nav-newsintel" href="javascript:void(0)" onclick="App.nav('newsintel')"><span class="ni-icon">▤</span> News Intelligence <span class="nav-badge" style="color:var(--pbe-live)">NEWS</span></a>
+          <a class="nav-item" id="nav-injuries" href="javascript:void(0)" onclick="App.nav('injuries')"><span class="ni-icon">＋</span> Injury Intelligence <span class="nav-badge" style="color:var(--pbe-live)">NEWS</span></a>
+          <a class="nav-item" id="nav-trades" href="javascript:void(0)" onclick="App.nav('trades')"><span class="ni-icon">⇄</span> Transactions <span class="nav-badge" style="color:var(--pbe-live)">NEWS</span></a>
         </div>
         <div class="nav-group">
           <div class="nav-group-label">Season Archive</div>
@@ -141,7 +147,7 @@
           <div class="nav-group-label">History & Research</div>
           <a class="nav-item" id="nav-hof" href="javascript:void(0)" onclick="App.nav('hof')"><span class="ni-icon">★</span> Hall of Fame</a>
           <a class="nav-item" id="nav-records" href="javascript:void(0)" onclick="App.nav('records')"><span class="ni-icon">↗</span> Records & Milestones</a>
-          <a class="nav-item" id="nav-prospects" href="javascript:void(0)" onclick="App.nav('prospects')"><span class="ni-icon">⌖</span> Draft Research <span class="nav-badge" style="color:#f16b78;background:rgba(241,107,120,.06)">REVIEW</span></a>
+          <a class="nav-item" id="nav-prospects" href="javascript:void(0)" onclick="App.nav('prospects')"><span class="ni-icon">⌖</span> Draft Research <span class="nav-badge">REVIEW</span></a>
           <a class="nav-item" id="nav-sb" href="javascript:void(0)" onclick="App.nav('sb')"><span class="ni-icon">◆</span> Super Bowl History</a>
         </div>
         <div class="nav-group">

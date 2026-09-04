@@ -197,7 +197,7 @@
   function teamWall() {
     if (!window.NFL_TEAMS) return '<div class="pbe-v2-market-empty">Team directory loading.</div>';
     return Object.keys(NFL_TEAMS).map(abbr => {
-      let crest = `<strong style="font:900 12px 'Barlow Condensed',sans-serif">${esc(abbr)}</strong>`;
+      let crest = `<strong style="font:900 13px 'Inter',sans-serif">${esc(abbr)}</strong>`;
       try { if (typeof teamCrest === 'function') crest = teamCrest(abbr,28); } catch (_) {}
       return `<button class="pbe-v2-team-chip" title="${esc(NFL_TEAMS[abbr]?.name || abbr)}" onclick="if(window.TeamModal){TeamModal.show('${esc(abbr)}')}else{App.nav('teams')}">${crest}</button>`;
     }).join('');

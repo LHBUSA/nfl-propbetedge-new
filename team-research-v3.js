@@ -13,7 +13,7 @@
   const teamMap=()=>typeof NFL_TEAMS!=='undefined'&&NFL_TEAMS&&typeof NFL_TEAMS==='object'?NFL_TEAMS:(window.NFL_TEAMS||{});
   const teams=()=>Object.values(teamMap()).sort((a,b)=>String(a.name||'').localeCompare(String(b.name||'')));
   async function fetchJson(url){const r=await fetch(url,{cache:'no-store',headers:{Accept:'application/json'}});if(!r.ok)throw new Error(`HTTP ${r.status}`);return r.json();}
-  function crest(t,size=36){try{if(t?.abbr&&typeof teamCrest==='function')return teamCrest(t.abbr,size)}catch(_){}return `<strong style="color:#fff;font:900 12px 'Barlow Condensed',sans-serif">${esc(t?.abbr||'NFL')}</strong>`;}
+  function crest(t,size=36){try{if(t?.abbr&&typeof teamCrest==='function')return teamCrest(t.abbr,size)}catch(_){}return `<strong style="color:#fff;font:900 13px 'Inter',sans-serif">${esc(t?.abbr||'NFL')}</strong>`;}
   function standingRows(){const src=window.StandingsView?.STANDINGS||{},out=[];Object.entries(src).forEach(([conf,divs])=>Object.entries(divs||{}).forEach(([div,rows])=>(rows||[]).forEach(r=>out.push({...r,conf,div}))));return out;}
   function standing(t){return standingRows().find(r=>String(r.abbr||'').toUpperCase()===String(t?.abbr||'').toUpperCase()||String(r.name||'').toLowerCase()===String(t?.name||'').toLowerCase())||null;}
   function pointDiff(s){return s?(Number(s.pf)||0)-(Number(s.pa)||0):NaN;}

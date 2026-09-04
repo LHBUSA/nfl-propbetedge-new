@@ -4,3 +4,6 @@ browser-smoke.log
 observer-alarm.log
 recovery-smoke.log
 recovery-*.png
+workers/**/node_modules/
+workers/**/.wrangler/
+.ui-audit/

@@ -3,7 +3,7 @@
   'use strict';
   const state={conf:'all',search:''};
   const esc=v=>String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-  const crest=(abbr,size=25)=>{try{if(typeof teamCrest==='function')return teamCrest(abbr,size)}catch(_){}return `<strong style="color:#fff;font:900 11px 'Barlow Condensed',sans-serif">${esc(abbr)}</strong>`};
+  const crest=(abbr,size=25)=>{try{if(typeof teamCrest==='function')return teamCrest(abbr,size)}catch(_){}return `<strong style="color:#fff;font:900 13px 'Inter',sans-serif">${esc(abbr)}</strong>`};
   const source=()=>window.StandingsView?.STANDINGS||{};
   const sourceMeta=()=>window.StandingsView?.source||{};
   const record=t=>`${t.w}-${t.l}${Number(t.t)>0?`-${t.t}`:''}`;

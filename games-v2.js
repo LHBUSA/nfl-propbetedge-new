@@ -54,7 +54,7 @@
     const cityMatches=values.filter(t=>text===String(t.city||'').toLowerCase());
     return cityMatches.length===1?cityMatches[0]:null;
   }
-  function crest(t,size=42){try{if(t?.abbr&&typeof teamCrest==='function')return teamCrest(t.abbr,size)}catch(_){}return `<strong style="color:#fff;font:900 13px 'Barlow Condensed',sans-serif">${esc(t?.abbr||'NFL')}</strong>`;}
+  function crest(t,size=42){try{if(t?.abbr&&typeof teamCrest==='function')return teamCrest(t.abbr,size)}catch(_){}return `<strong style="color:#fff;font:900 13px 'Inter',sans-serif">${esc(t?.abbr||'NFL')}</strong>`;}
   function date(value){const d=new Date(value);return Number.isNaN(d.getTime())?null:d;}
   function dateLabel(value){const d=date(value);return d?d.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'}):'Date unavailable';}
   function shortDate(value){const d=date(value);return d?d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}):'Date unavailable';}

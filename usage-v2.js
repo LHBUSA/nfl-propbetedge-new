@@ -16,7 +16,7 @@
   function event(){return state.board?.event||{}}
   function teamByName(name){const text=String(name||'').toLowerCase();return Object.values(window.NFL_TEAMS||{}).find(t=>text===String(t.name||'').toLowerCase()||text===String(t.abbr||'').toLowerCase()||text.includes(String(t.city||'').toLowerCase())||text.includes(String(t.name||'').toLowerCase().split(' ').pop()))||null}
   function selectedTeams(){const e=event();return[teamByName(e.away_team||e.away),teamByName(e.home_team||e.home)].filter(Boolean)}
-  function crest(t,size=30){try{if(t?.abbr&&typeof teamCrest==='function')return teamCrest(t.abbr,size)}catch(_){}return`<strong style="color:#fff;font:900 11px 'Barlow Condensed',sans-serif">${esc(t?.abbr||'NFL')}</strong>`}
+  function crest(t,size=30){try{if(t?.abbr&&typeof teamCrest==='function')return teamCrest(t.abbr,size)}catch(_){}return`<strong style="color:#fff;font:900 13px 'Inter',sans-serif">${esc(t?.abbr||'NFL')}</strong>`}
 
   function statsSource(key){return window.StatsView?.STATS?.[key]||null}
   function rowsAsObjects(key){const cat=statsSource(key);if(!cat)return[];const headers=cat.headers||[];return(cat.rows||[]).map(row=>{const obj={};headers.forEach((h,i)=>obj[String(h).toUpperCase()]=row[i]);obj.__row=row;return obj})}

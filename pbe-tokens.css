@@ -1,0 +1,339 @@
+/* ============================================================================
+   PropBetEdge NFL — DESIGN TOKEN AUTHORITY
+   ----------------------------------------------------------------------------
+   This is the ONLY :root in the product. It is not an override layer.
+
+   The tree previously carried 13 competing :root blocks defining 182 custom
+   properties across 14 rival namespaces, arbitrated only by source order and
+   2,425 !important declarations. Those :root blocks have been removed from
+   their files; their component rules are untouched.
+
+   Part A defines the PropBetEdge design system, bridged from the parent brand
+   at propbetedge.ai (verified against assets/index-FpTlv2Qq.css, not memory).
+
+   Part B aliases every legacy property onto Part A. That is what lets ~600 KB
+   of existing component CSS re-skin itself to the parent brand without being
+   edited, and it is why this file REDUCES cascade conflict instead of adding
+   to it. As surfaces are rebuilt pass by pass, aliases retire with them.
+
+   See PROPBETEDGE_DESIGN_SYSTEM.md for the parent -> NFL rationale.
+   ========================================================================== */
+
+:root {
+  /* ==== A1 · GROUND & SURFACE ============================================ */
+  /* Direct from parent --ink / --ink-2 / --ink-3. Warm near-black, never cold. */
+  --pbe-ink:            #14110d;
+  --pbe-ink-2:          #1d1914;
+  --pbe-ink-3:          #2a241c;
+  /* ADAPTED: a terminal needs one step BELOW ground for wells and inputs. */
+  --pbe-ink-4:          #0d0b08;
+
+  /* ==== A2 · BORDERS ===================================================== */
+  /* Direct from parent --line / --line-strong. Warm white, never grey. */
+  --pbe-line:           rgba(255,245,220,.10);
+  --pbe-line-strong:    rgba(255,245,220,.18);
+  /* ADAPTED: 70-row tables need a lighter rule than editorial cards. */
+  --pbe-line-faint:     rgba(255,245,220,.055);
+
+  /* ==== A3 · TEXT ======================================================== */
+  /* Direct from parent --paper ramp. Adopting it wholesale resolves the
+     contrast failures measured in the audit (worst case was 2.53:1). */
+  --pbe-paper:          #f5f1eb;
+  --pbe-paper-2:        #e8e1d4;
+  --pbe-dim:            #b8b3a8;   /* parent --paper-dim  · floor for meaningful text */
+  --pbe-faint:          #7e7a72;   /* parent --paper-faint · 4.4:1 · never below 11px */
+  --pbe-subtle:         #524e47;   /* parent --paper-subtle · DECORATIVE ONLY, never text */
+
+  /* ==== A4 · BRAND ACCENT ================================================ */
+  /* Gold is the PropBetEdge brand accent. Parent discipline: gold is a LINE
+     before it is ever a surface. One gold fill per view, maximum. */
+  --pbe-gold:           #d4af37;
+  --pbe-gold-bright:    #e9c75a;
+  --pbe-gold-soft:      rgba(212,175,55,.18);
+
+  --pbe-crimson:        #c1273d;
+  --pbe-crimson-bright: #e63946;
+
+  /* ==== A5 · SEMANTICS =================================================== */
+  /* Meaning, never identity. Outline-and-text treatments only, so these can
+     never compete with gold. Every one is paired with a non-colour channel
+     (glyph, sign or word) at the component level. */
+  --pbe-live:           #e63946;   /* LIVE   · authorized provider data (parent crimson-bright) */
+  --pbe-model:          #7aa9ff;   /* MODEL  · PropBetEdge model output */
+  --pbe-pro:            #d4af37;   /* PRO    · premium; in this product premium IS the brand */
+  --pbe-unavailable:    #7e7a72;   /* UNAVAILABLE · deliberately colourless */
+  --pbe-pos:            #4ea373;   /* positive movement / favourable edge / healthy */
+  --pbe-neg:            #c1273d;   /* negative movement / unfavourable edge */
+  --pbe-pos-soft:       rgba(78,163,115,.14);
+  --pbe-neg-soft:       rgba(193,39,61,.14);
+  --pbe-model-soft:     rgba(122,169,255,.13);
+
+  /* ==== A6 · TYPOGRAPHY ================================================== */
+  /* Direct from parent --font-serif / --font-sans / --font-mono. */
+  --pbe-font-display: "Playfair Display", "Times New Roman", Georgia, serif;
+  --pbe-font-ui:      "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --pbe-font-data:    "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+
+  /* Scale. Hard 10px floor — the audit measured live text at 4.6px.
+     --fs-micro is reserved for tracked uppercase mono, which is legible at
+     10px in a way 10px sentence-case Inter is not. */
+  --fs-display:  clamp(26px, 3vw, 40px);
+  --fs-h1:       28px;
+  --fs-h2:       20px;
+  --fs-h3:       16px;
+  --fs-body:     14px;
+  --fs-sm:       13px;
+  --fs-label:    11px;
+  --fs-micro:    10px;   /* ABSOLUTE FLOOR */
+
+  --fs-data-xl:  28px;
+  --fs-data-lg:  20px;
+  --fs-data:     15px;
+  --fs-data-sm:  13px;
+
+  --ls-label:    .14em;  /* parent .nav-link */
+  --ls-micro:    .16em;  /* parent .sport-rail-header .sport-meta */
+  --ls-tight:    -.015em;
+
+  /* ==== A7 · STRUCTURE =================================================== */
+  --r-xs:   3px;
+  --r-sm:   6px;
+  --r-md:  10px;
+  --r-lg:  14px;
+  --r-pill: 999px;
+
+  --s-1:  4px;  --s-2:  8px;  --s-3: 12px;  --s-4: 16px;
+  --s-5: 24px;  --s-6: 32px;  --s-7: 48px;  --s-8: 64px;
+
+  --sh-1:    0 1px 3px rgba(0,0,0,.35);
+  --sh-2:    0 4px 16px rgba(0,0,0,.40);
+  --sh-3:    0 16px 50px rgba(0,0,0,.55);
+  --sh-gold: 0 4px 16px rgba(212,175,55,.25);   /* parent .nav-link.cta */
+
+  --t-fast: .15s;   /* parent tempo, used product-wide */
+  --t-mid:  .18s;
+
+
+  /* ========================================================================
+     B · LEGACY ALIASES
+     Every property below was previously defined in one of the 13 removed
+     :root blocks. Mapping them here means existing component rules keep
+     working and start resolving to the parent brand. These retire as their
+     surfaces are rebuilt.
+     ====================================================================== */
+
+  /* --- base-v3.css ---------------------------------------------------- */
+  --surface:        var(--pbe-ink-2);
+  --surface-2:      var(--pbe-ink-3);
+  --text:           var(--pbe-paper);
+  --text-2:         var(--pbe-dim);
+  --muted:          var(--pbe-faint);
+  --accent:         var(--pbe-gold);
+  --danger:         var(--pbe-crimson-bright);
+  --gold:           var(--pbe-gold);
+
+  /* --- ui-v2.css ------------------------------------------------------ */
+  --v2-bg:          var(--pbe-ink);
+  --v2-bg-2:        var(--pbe-ink-2);
+  --v2-panel:       var(--pbe-ink-2);
+  --v2-panel-2:     var(--pbe-ink-3);
+  --v2-panel-3:     var(--pbe-ink-3);
+  --v2-text:        var(--pbe-paper);
+  --v2-muted:       var(--pbe-dim);
+  --v2-dim:         var(--pbe-faint);
+  --v2-line:        var(--pbe-line);
+  --v2-line-strong: var(--pbe-line-strong);
+  --v2-green:       var(--pbe-gold);          /* was brand green — now brand gold */
+  --v2-green-soft:  var(--pbe-gold-soft);
+  --v2-gold:        var(--pbe-gold);
+  --v2-blue:        var(--pbe-model);
+  --v2-red:         var(--pbe-crimson-bright);
+  --v2-radius:      var(--r-md);
+  --v2-shadow:      var(--sh-2);
+  --v2-rail:        252px;
+  --v2-top:         64px;
+  --v2-ticker:      0px;                       /* marquee retired */
+
+  /* --- world-class-v1.css --------------------------------------------- */
+  --wc-bg:          var(--pbe-ink);
+  --wc-bg-2:        var(--pbe-ink-2);
+  --wc-panel:       var(--pbe-ink-2);
+  --wc-panel-2:     var(--pbe-ink-3);
+  --wc-panel-soft:  rgba(245,241,235,.045);
+  --wc-line:        var(--pbe-line);
+  --wc-line-soft:   var(--pbe-line-faint);
+  --wc-text:        var(--pbe-paper);
+  --wc-muted:       var(--pbe-dim);
+  --wc-dim:         var(--pbe-faint);
+  --wc-gold:        var(--pbe-gold);
+  --wc-green:       var(--pbe-pos);
+  --wc-blue:        var(--pbe-model);
+  --wc-cyan:        var(--pbe-model);
+  --wc-shadow:      var(--sh-3);
+
+  /* --- readability-v1.css --------------------------------------------- */
+  --read-text:      var(--pbe-paper);
+  --read-body:      var(--pbe-paper-2);
+  --read-muted:     var(--pbe-dim);
+  --read-dim:       var(--pbe-faint);
+  --read-line:      var(--pbe-line-strong);
+
+  /* --- sports-shell-v1.css -------------------------------------------- */
+  --nfl-shell:      var(--pbe-ink);
+  --nfl-panel:      var(--pbe-ink-2);
+  --nfl-line:       var(--pbe-line);
+  --nfl-gold:       var(--pbe-gold);
+  --nfl-live:       var(--pbe-live);
+  --nfl-red:        var(--pbe-crimson-bright);
+  --nfl-blue:       var(--pbe-model);
+
+  /* --- nfl-brand-media-v1.css ----------------------------------------- */
+  --pbe-muted:      var(--pbe-dim);
+
+  /* --- dashboard-v7.css ----------------------------------------------- */
+  --pbe7-bg:        var(--pbe-ink);
+  --pbe7-panel:     var(--pbe-ink-2);
+  --pbe7-panel-2:   var(--pbe-ink-3);
+  --pbe7-text:      var(--pbe-paper);
+  --pbe7-muted:     var(--pbe-dim);
+  --pbe7-dim:       var(--pbe-faint);
+  --pbe7-line:      var(--pbe-line);
+  --pbe7-line-strong: var(--pbe-line-strong);
+  --pbe7-gold:      var(--pbe-gold);
+  --pbe7-gold-2:    var(--pbe-gold-bright);
+  --pbe7-green:     var(--pbe-pos);
+  --pbe7-blue:      var(--pbe-model);
+  --pbe7-red:       var(--pbe-crimson-bright);
+
+  /* --- pbecast-v4.css / pbecast-v6.css -------------------------------- */
+  --cast-bg:        var(--pbe-ink);
+  --cast-panel:     var(--pbe-ink-2);
+  --cast-card:      var(--pbe-ink-3);
+  --cast-line:      var(--pbe-line);
+  --cast-soft:      var(--pbe-line-faint);
+  --cast-text:      var(--pbe-paper);
+  --cast-muted:     var(--pbe-dim);
+  --cast-dim:       var(--pbe-faint);
+  --cast-gold:      var(--pbe-gold);
+  --cast-live:      var(--pbe-live);
+  --cast-red:       var(--pbe-crimson-bright);
+  --cast-blue:      var(--pbe-model);
+  --cast6-bg:       var(--pbe-ink);
+  --cast6-panel:    var(--pbe-ink-2);
+  --cast6-panel-2:  var(--pbe-ink-3);
+  --cast6-line:     var(--pbe-line);
+  --cast6-line-strong: var(--pbe-line-strong);
+  --cast6-text:     var(--pbe-paper);
+  --cast6-muted:    var(--pbe-dim);
+  --cast6-dim:      var(--pbe-faint);
+  --cast6-gold:     var(--pbe-gold);
+  --cast6-green:    var(--pbe-pos);
+  --cast6-blue:     var(--pbe-model);
+  --cast6-red:      var(--pbe-crimson-bright);
+
+  /* --- prop-board-v3.css ---------------------------------------------- */
+  --pb-bg:          var(--pbe-ink);
+  --pb-panel:       var(--pbe-ink-2);
+  --pb-panel-2:     var(--pbe-ink-3);
+  --pb-panel-3:     var(--pbe-ink-3);
+  --pb-text:        var(--pbe-paper);
+  --pb-muted:       var(--pbe-dim);
+  --pb-dim:         var(--pbe-faint);
+  --pb-line:        var(--pbe-line-faint);
+  --pb-line-2:      var(--pbe-line);
+  --pb-green:       var(--pbe-pos);
+  --pb-red:         var(--pbe-neg);
+  --pb-blue:        var(--pbe-model);
+
+  /* --- market-watch-v2/v3.css ----------------------------------------- */
+  --mw-bg:          var(--pbe-ink);
+  --mw-panel:       var(--pbe-ink-2);
+  --mw-panel-2:     var(--pbe-ink-3);
+  --mw-line:        var(--pbe-line);
+  --mw-text:        var(--pbe-paper);
+  --mw-muted:       var(--pbe-dim);
+  --mw-gold:        var(--pbe-gold);
+  --mw-green:       var(--pbe-pos);
+  --mw-red:         var(--pbe-neg);
+  --mw-cyan:        var(--pbe-model);
+  --mw-orange:      var(--pbe-gold-bright);
+
+  /* --- model-lab.css (pbe4) ------------------------------------------- */
+  --pbe4-panel:      var(--pbe-ink-2);
+  --pbe4-panel-soft: var(--pbe-ink-3);
+  --pbe4-gold:       var(--pbe-gold);
+  --pbe4-green:      var(--pbe-pos);
+  --pbe4-green-soft: var(--pbe-pos-soft);
+  --pbe4-blue:       var(--pbe-model);
+  --pbe4-cyan:       var(--pbe-model);
+  --pbe4-orange:     var(--pbe-gold-bright);
+  --pbe4-red:        var(--pbe-crimson-bright);
+
+  /* --- games-worldclass-v3.css (g-) ----------------------------------- */
+  --g-bg:           var(--pbe-ink-2);
+  --g-bg-strong:    var(--pbe-ink);
+  --g-panel:        var(--pbe-ink-2);
+  --g-panel-hover:  var(--pbe-ink-3);
+  --g-line:         var(--pbe-line);
+  --g-line-strong:  var(--pbe-line-strong);
+  --g-text:         var(--pbe-paper);
+  --g-muted:        var(--pbe-dim);
+  --g-dim:          var(--pbe-faint);
+  --g-gold:         var(--pbe-gold);
+  --g-green:        var(--pbe-pos);
+  --g-green-soft:   var(--pbe-pos-soft);
+  --g-blue:         var(--pbe-model);
+  --g-blue-soft:    var(--pbe-model-soft);
+  --g-red:          var(--pbe-crimson-bright);
+
+  /* --- paywall.css (pro-) --------------------------------------------- */
+  --pro-bg:         var(--pbe-ink);
+  --pro-panel:      var(--pbe-ink-2);
+  --pro-line:       var(--pbe-line);
+  --pro-gold:       var(--pbe-gold);
+  --pro-gold-2:     var(--pbe-gold-bright);
+  --pro-green:      var(--pbe-pos);
+
+  /* --- assorted bare legacy names ------------------------------------- */
+  --bg:             var(--pbe-ink);
+  --panel:          var(--pbe-ink-2);
+  --panel-2:        var(--pbe-ink-3);
+  --panel-3:        var(--pbe-ink-3);
+  --line:           var(--pbe-line);
+  --line-strong:    var(--pbe-line-strong);
+  --dim:            var(--pbe-faint);
+  --green:          var(--pbe-pos);
+  --red:            var(--pbe-crimson-bright);
+  --blue:           var(--pbe-model);
+  --amber:          var(--pbe-gold-bright);
+  --team:           var(--pbe-gold);
+  --accent-soft:    var(--pbe-gold-soft);
+  --radius:         var(--r-md);
+
+  /* Legacy font aliases. Every surface that asked for the old families now
+     resolves to the parent stack. */
+  --display:        var(--pbe-font-display);
+  --body:           var(--pbe-font-ui);
+  --mono:           var(--pbe-font-data);
+}
+
+/* Responsive token overrides. These previously lived in per-file :root blocks
+   inside media queries (ui-v2.css) and are preserved verbatim so shell layout
+   metrics keep their existing breakpoint behaviour. */
+@media (max-width:1180px) {
+  :root { --v2-rail: 224px; }
+}
+@media (max-width:900px) {
+  :root { --v2-top: 56px; --v2-ticker: 0px; }
+}
+
+/* Reduced motion is honoured nowhere in the legacy tree. Establish it here so
+   every surface inherits it, including ones not yet rebuilt. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
