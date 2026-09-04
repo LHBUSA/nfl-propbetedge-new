@@ -182,6 +182,46 @@
     </tr>`;
   }
 
+  /* Free-tier Market Watch used to replace the entire terminal with one box and
+     a button -- 869 characters of rendered text on a 2,500px page. A user cannot
+     want a tool they have never seen. The rows, the columns and the real players
+     are all shown; only the four premium columns are obscured, and there is one
+     call to action for the whole surface rather than one per row. Consensus and
+     book range stay visible because the free Prop Board already shows them. */
+  function lockedRowHtml(r){
+    return `<tr data-row-key="${esc(r.key)}">
+      <td><span class="pbe22-star locked" aria-hidden="true">☆</span></td>
+      <td><div class="pbe22-player" data-player="${esc(r.player)}">${esc(r.player)}</div><div class="pbe22-sub">${esc(r.books.length)} books</div></td>
+      <td><div class="pbe22-market">${esc(marketLabel(r.market))}</div><div class="pbe22-sub">${esc(r.market)}</div></td>
+      <td class="pbe22-num"><span class="pbe22-line">${esc(fmt(r.consensus,1))}</span></td>
+      <td class="pbe22-num"><span class="pbe22-range">${esc(Number.isFinite(r.lo)&&Number.isFinite(r.hi)?`${fmt(r.lo,1)} – ${fmt(r.hi,1)}`:'—')}</span></td>
+      <td class="pbe22-num pbe22-locked-cell"><span class="pbe-locked-value" aria-label="NFL Pro"></span></td>
+      <td class="pbe22-num pbe22-locked-cell"><span class="pbe-locked-value" aria-label="NFL Pro"></span></td>
+      <td class="pbe22-num pbe22-locked-cell"><span class="pbe-locked-value" aria-label="NFL Pro"></span></td>
+      <td class="pbe22-num pbe22-locked-cell"><span class="pbe-locked-value" aria-label="NFL Pro"></span></td>
+    </tr>`;
+  }
+
+  function lockedBody(){
+    const rows=state.rows.slice(0,24);
+    return rows.length?rows.map(lockedRowHtml).join(''):`<tr><td colspan="9"><div class="pbe22-empty compact">No current provider market rows for this event.</div></td></tr>`;
+  }
+
+  function lockedShell(){
+    const rows=state.rows;
+    const books=new Set(rows.flatMap(r=>r.books)).size;
+    return `
+      <div class="pbe22-summary"><div class="pbe22-stat"><b>${rows.length}</b><span>Player / market rows</span></div><div class="pbe22-stat"><b>${books}</b><span>Sportsbooks priced</span></div><div class="pbe22-stat"><b class="gold">4</b><span>Pro columns locked</span></div><div class="pbe22-stat"><b>30s</b><span>Provider refresh</span></div></div>
+      <div class="pbe-lock-cta">
+        <div class="pbe-lock-copy">
+          <h3>Dispersion, best executable price and Local &Delta; are NFL Pro</h3>
+          <p>You are seeing every row and the live cross-book consensus. NFL Pro adds dispersion ranking across all ${rows.length} rows, the best over/under price with its book, a personal watchlist, and Local &Delta; against a baseline you capture yourself.</p>
+        </div>
+        <button class="pbe22-btn gold" onclick="PBEPro.open('upgrade')">Unlock NFL Pro &middot; $9.99/week</button>
+      </div>
+      <section class="pbe22-table-wrap pbe22-locked"><div class="pbe22-scroll"><table class="pbe22-table"><thead><tr><th>Watch</th><th>Player</th><th>Prop</th><th>Consensus</th><th>Book Range</th><th class="pbe22-th-locked">Dispersion</th><th class="pbe22-th-locked">Best Over</th><th class="pbe22-th-locked">Best Under</th><th class="pbe22-th-locked">Local &Delta;</th></tr></thead><tbody>${lockedBody()}</tbody></table></div><div class="pbe22-foot"><span>CURRENT = provider cross-section</span><span>${rows.length>24?`Showing 24 of ${rows.length} rows`:''}</span></div></section>`;
+  }
+
   function body(){
     const rows=visible();
     const max=Math.max(...state.rows.map(x=>num(x.spread)).filter(Number.isFinite),1);
@@ -201,7 +241,7 @@
     return `<section class="pbe22-watch pbe22-watch-v3">
       <header class="pbe22-hero"><div><div class="pbe22-kicker">NFL PRO · MARKET TERMINAL</div><h1 class="pbe22-title">Watch the market.<br><em>Spot the inefficiency.</em></h1><div class="pbe22-copy">Current cross-book pricing, best executable numbers, dispersion heat and a personal watchlist — structured for rapid line shopping without pretending a browser snapshot is provider history.</div></div><aside class="pbe22-status"><div class="pbe22-status-top"><b>${esc(eventLabel())}</b><span class="pbe22-auto">AUTO 30S</span></div><span id="pbe22-status-meta">${esc(state.board?.source?.semantics||'UNAVAILABLE')} · ${esc(rows.length)} rows · provider ${esc(timeLabel(state.board?.provider_last_update||state.board?.updated_at))} · refreshed ${refreshText}</span></aside></header>
       <div class="pbe22-contract"><strong>Market contract:</strong> cross-book range and dispersion are current provider data. Local Δ appears only after you explicitly capture a browser baseline. Successive refresh flashes are local comparisons between live provider responses, not a claim of stored 24-hour movement.</div>
-      ${!isPro()?`<div class="pbe22-prowall"><div><strong>NFL Pro Market Watch</strong><p>Watchlists, cross-book dispersion ranking, rapid line shopping and local movement comparison are premium workflow tools. The current sportsbook Prop Board remains available for free.</p><button class="pbe22-btn gold" onclick="PBEPro.open('upgrade')">Unlock NFL Pro · $9.99/week</button></div></div>`:`
+      ${!isPro()?lockedShell():`
       <div class="pbe22-summary"><div class="pbe22-stat"><b id="pbe22-stat-rows">${rows.length}</b><span>Player / market rows</span></div><div class="pbe22-stat"><b class="green" id="pbe22-stat-watch">${watched}</b><span>Watched rows</span></div><div class="pbe22-stat"><b id="pbe22-stat-books">${new Set(rows.flatMap(r=>r.books)).size}</b><span>Sportsbooks</span></div><div class="pbe22-stat hot"><b id="pbe22-stat-spread">${esc(fmt(maxSpread,1))}</b><span>Largest line spread</span></div><div class="pbe22-stat"><b class="gold" id="pbe22-stat-baseline">${state.baseline?'SET':'—'}</b><span>Local baseline</span></div></div>
       ${baselineControl()}
       <div class="pbe22-toolbar"><input id="pbe22-search" class="pbe22-input" placeholder="Search player or prop…" value="${esc(state.search)}"><select id="pbe22-market" class="pbe22-select"><option value="all">All markets</option>${markets.map(m=>`<option value="${esc(m)}" ${state.market===m?'selected':''}>${esc(marketLabel(m))}</option>`).join('')}</select><select id="pbe22-filter" class="pbe22-select"><option value="all" ${state.filter==='all'?'selected':''}>All rows</option><option value="watch" ${state.filter==='watch'?'selected':''}>Watchlist only</option></select><select id="pbe22-sort" class="pbe22-select"><option value="dispersion" ${state.sort==='dispersion'?'selected':''}>Largest dispersion</option><option value="movement" ${state.sort==='movement'?'selected':''} ${state.baseline?'':'disabled'}>Largest Local Δ</option><option value="books" ${state.sort==='books'?'selected':''}>Most books</option></select><button class="pbe22-refresh" id="pbe22-refresh" type="button" title="Refresh provider market now">↻ <span>Refresh</span></button></div>

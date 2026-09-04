@@ -89,6 +89,25 @@
     return model?.status || model?.decision_status || model?.model_status || 'MODEL';
   }
 
+  /* The free view previously printed 254.1 / 66.5% / +24.6 in the same tiles the
+     Pro view uses for real output. Those numbers were illustrative, but nothing
+     on screen said so, which breaks the data-truth contract: MODEL means model
+     output, and these were not. They are replaced by the actual sportsbook
+     consensus the surface already loads, with the model columns locked. */
+  function freeRows(board) {
+    const map=marketMap(board);
+    return [...map.entries()]
+      .filter(([,line]) => Number.isFinite(line))
+      .map(([key,line]) => ({key,line}))
+      .slice(0,12);
+  }
+
+  function freeRowName(board,key) {
+    const rows=(board?.market_summary || board?.quotes || []);
+    const hit=rows.find(r => String(playerOf(r) || '').toLowerCase() === key);
+    return hit ? playerOf(hit) : key.split(String.fromCharCode(32)).map(w=>w.charAt(0).toUpperCase()+w.slice(1)).join(String.fromCharCode(32));
+  }
+
   function freeView(board) {
     const event=eventMeta(board);
     const semantics=board?.source?.semantics || 'UNAVAILABLE';
@@ -98,7 +117,9 @@
         <div><div class="pbe4-kicker">PBE MODEL LAB · NFL PRO</div><h1 class="pbe4-title">Understand the model.<br><em>Not just the output.</em></h1><div class="pbe4-copy">Model Lab is the audit surface for PropBetEdge NFL. The current production passing model is kept separate from sportsbook pricing, missing inputs remain visible, and no synthetic pick cards are used when the model does not support a market.</div><div class="pbe4-actions"><button class="pbe4-button gold" type="button" onclick="PBEPro.open('upgrade')">Unlock NFL Pro · $9.99/week</button><button class="pbe4-button" type="button" onclick="App.nav('propboard')">View free market board</button></div></div>
         <aside class="pbe4-model-status"><div class="pbe4-status-label">Current event context</div><div class="pbe4-status-version">${esc(event.away)} @ ${esc(event.home)}</div><span class="pbe4-status-pill ${semantics==='LIVE'?'live':''}">MARKET ${esc(semantics)}</span><div class="pbe4-status-rule"></div><div class="pbe4-status-row"><span>Sportsbook provider</span><strong>${esc(provider)}</strong></div><div class="pbe4-status-row"><span>Model layer</span><strong style="color:#d8b75b">NFL PRO LOCKED</strong></div><div class="pbe4-status-row"><span>Model endpoint</span><strong>SERVER GATED</strong></div></aside>
       </header>
-      <div class="pbe4-free-wall"><section class="pbe4-free-panel"><strong>Proprietary model intelligence is protected.</strong><p>The underlying sportsbook market remains visible on the Prop Board. NFL Pro unlocks the PBE fair line, probability at the current consensus, fair-line gap, uncertainty and model input audit.</p><div class="pbe4-preview-grid"><div class="pbe4-preview"><b>254.1</b><span>PBE fair line</span></div><div class="pbe4-preview"><b>66.5%</b><span>Model over probability</span></div><div class="pbe4-preview"><b>+24.6</b><span>Fair-line gap</span></div></div></section><section class="pbe4-method-panel"><div class="pbe4-panel-head"><strong>What Model Lab exposes</strong><span>Truth-first analysis</span></div><div class="pbe4-method-list"><div class="pbe4-method-item"><b>Market vs. fair value</b><span>The sportsbook consensus is displayed separately from PBE fair value. The difference is labeled model gap, not guaranteed edge.</span></div><div class="pbe4-method-item"><b>Uncertainty and sample</b><span>Predictive standard deviation and effective sample size stay visible so a point estimate is never presented without context.</span></div><div class="pbe4-method-item"><b>Missing inputs</b><span>Unavailable adjustments remain explicit instead of being silently replaced by assumptions.</span></div><div class="pbe4-method-item"><b>Versioned model output</b><span>Model version/status comes from the current production response so the page does not hardcode a stale model identity.</span></div></div></section></div>
+      <div class="pbe4-free-wall"><section class="pbe4-free-panel"><strong>Proprietary model intelligence is protected.</strong><p>The sportsbook consensus below is current provider data and stays free. NFL Pro adds the PBE fair line, probability at that consensus, the fair-line gap, predictive uncertainty and the model input audit for every row.</p>
+      ${(() => { const rows=freeRows(board); return rows.length ? `<div class="pbe4-free-table"><div class="pbe4-free-head"><span>Player</span><span>Market consensus</span><span class="locked">PBE fair <i>PRO</i></span><span class="locked">Model gap <i>PRO</i></span><span class="locked">Over prob <i>PRO</i></span></div>${rows.map(r => `<div class="pbe4-free-row"><span class="pbe4-free-player">${esc(freeRowName(board,r.key))}</span><span class="pbe4-free-num">${esc(fmt(r.line,1))}</span><span class="pbe-locked-value"></span><span class="pbe-locked-value"></span><span class="pbe-locked-value"></span></div>`).join('')}</div>` : '<div class="pbe4-free-empty">No current passing-market rows are being returned for this event, so there is nothing to preview.</div>'; })()}
+      </section><section class="pbe4-method-panel"><div class="pbe4-panel-head"><strong>What Model Lab exposes</strong><span>Truth-first analysis</span></div><div class="pbe4-method-list"><div class="pbe4-method-item"><b>Market vs. fair value</b><span>The sportsbook consensus is displayed separately from PBE fair value. The difference is labeled model gap, not guaranteed edge.</span></div><div class="pbe4-method-item"><b>Uncertainty and sample</b><span>Predictive standard deviation and effective sample size stay visible so a point estimate is never presented without context.</span></div><div class="pbe4-method-item"><b>Missing inputs</b><span>Unavailable adjustments remain explicit instead of being silently replaced by assumptions.</span></div><div class="pbe4-method-item"><b>Versioned model output</b><span>Model version/status comes from the current production response so the page does not hardcode a stale model identity.</span></div></div></section></div>
     </section>`;
   }
 

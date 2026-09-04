@@ -2,11 +2,11 @@
 
 .pbe22-watch-v3{
   --mw-bg:var(--pbe-ink-3);
-  --mw-panel:rgba(7,12,18,.95);
-  --mw-panel-2:rgba(10,17,25,.965);
-  --mw-line:rgba(255,255,255,.075);
-  --mw-text:#f5f7fa;
-  --mw-muted:#738091;
+  --mw-panel:var(--pbe-ink-2);
+  --mw-panel-2:var(--pbe-ink-3);
+  --mw-line:var(--pbe-line);
+  --mw-text:var(--pbe-paper);
+  --mw-muted:var(--pbe-dim);
   --mw-green:var(--pbe-gold);
   --mw-red:var(--pbe-crimson-bright);
   --mw-cyan:var(--pbe-model);
@@ -36,7 +36,7 @@
   box-shadow:0 28px 80px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.025);
 }
 .pbe22-watch-v3 .pbe22-title{letter-spacing:-.048em}
-.pbe22-watch-v3 .pbe22-title em{color:var(--mw-cyan)}
+.pbe22-watch-v3 .pbe22-title em{color:var(--pbe-gold)}
 .pbe22-watch-v3 .pbe22-kicker{color:var(--mw-green)}
 .pbe22-watch-v3 .pbe22-copy{color:var(--pbe-dim);max-width:850px}
 .pbe22-watch-v3 .pbe22-status{
@@ -115,7 +115,7 @@
   font-feature-settings:'tnum' 1,'lnum' 1;
 }
 .pbe22-watch-v3 .pbe22-line{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:800;letter-spacing:-.02em}
-.pbe22-watch-v3 .pbe22-range{color:#a7bcff;font-size:11px}
+.pbe22-watch-v3 .pbe22-range{color:var(--pbe-dim);font-size:11px}
 .pbe22-watch-v3 .pbe22-player{font-size:12px}
 .pbe22-watch-v3 .pbe22-market{font-size:11px}
 .pbe22-watch-v3 .pbe22-sub{color:var(--pbe-dim)}
@@ -178,3 +178,48 @@
 @media(prefers-reduced-motion:reduce){
   .pbe22-dispersion.extreme .pbe22-meter span,.pbe22-flash-better,.pbe22-flash-worse,.pbe22-flash-neutral{animation:none!important}
 }
+/* ---------------------------------------------------------------------------
+   Locked (free-tier) Market Watch.
+   The premium columns keep their headers and their width so the shape of the
+   tool is legible; only the values are withheld. One call to action serves the
+   whole surface -- never one per row.
+   --------------------------------------------------------------------------- */
+.pbe22-th-locked{
+  color:var(--pbe-gold)!important;
+  position:relative;
+}
+.pbe22-th-locked::after{
+  content:"PRO";
+  margin-left:6px;
+  padding:2px 5px;
+  border:1px solid var(--pbe-gold);
+  border-radius:var(--r-xs);
+  font-size:var(--fs-micro);
+  font-weight:800;
+  letter-spacing:.1em;
+  vertical-align:middle;
+}
+.pbe22-locked-cell{
+  background:repeating-linear-gradient(-45deg,transparent 0 6px,rgba(212,175,55,.03) 6px 12px);
+}
+.pbe22-star.locked{opacity:.3;cursor:default}
+.pbe22-locked .pbe22-table tbody tr:hover{background:var(--pbe-ink-3)}
+
+/* Fade the tail of the locked preview so the 24-row cut does not read as the
+   end of the data -- the count in the footer says how many rows there really are. */
+.pbe22-locked .pbe22-scroll{position:relative}
+.pbe22-locked .pbe22-scroll::after{
+  content:"";
+  position:absolute;left:0;right:0;bottom:0;height:90px;
+  background:linear-gradient(180deg,transparent,var(--pbe-ink));
+  pointer-events:none;
+}
+
+/* The terminal hero was giving 250px and three wrapped lines to a slogan on a
+   surface whose job is a 72-row market table. Same words, proportionate size. */
+.pbe22-watch-v3 .pbe22-title{
+  font-size:clamp(30px,3.4vw,46px)!important;
+  line-height:.94!important;
+}
+.pbe22-watch-v3 .pbe22-hero{padding:20px 24px!important}
+.pbe22-watch-v3 .pbe22-hero:after{display:none}

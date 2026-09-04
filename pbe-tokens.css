@@ -41,8 +41,20 @@
   --pbe-paper:          #f5f1eb;
   --pbe-paper-2:        #e8e1d4;
   --pbe-dim:            #b8b3a8;   /* parent --paper-dim  · floor for meaningful text */
-  --pbe-faint:          #7e7a72;   /* parent --paper-faint · 4.4:1 · never below 11px */
+  /* ADAPTED from parent --paper-faint #7e7a72. The parent uses it on the page
+     ground where it measures 4.40:1; this product uses it for meta and footnote
+     text on --pbe-ink-2 / --pbe-ink-3 panels, where the same value falls to
+     4.09:1 / 3.59:1. Lifted on the identical hue to clear AA on every surface
+     tone while staying clearly dimmer than --pbe-dim. */
+  --pbe-faint:          #8a867d;
   --pbe-subtle:         #524e47;   /* parent --paper-subtle · DECORATIVE ONLY, never text */
+  /* The parent ramp is exact, but --paper-faint and --crimson-bright land just
+     under AA for SMALL text once the ground is a panel rather than the page
+     (4.09:1 and 4.19:1 on --pbe-ink-2, measured). These two are the same hues
+     lifted enough to clear 4.5:1 on every surface tone, and are used only where
+     the text is at or below --fs-sm. */
+  --pbe-faint-text:     #8e8a80;
+  --pbe-crimson-text:   #ef5a66;
 
   /* ==== A4 · BRAND ACCENT ================================================ */
   /* Gold is the PropBetEdge brand accent. Parent discipline: gold is a LINE

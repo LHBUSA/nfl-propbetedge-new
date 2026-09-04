@@ -31,11 +31,11 @@
 .pbe3-title {
   margin:9px 0 0;
   color:#fff;
-  font:900 clamp(46px,5.2vw,76px)/.83 'Inter',sans-serif;
+  font:900 clamp(30px,3.4vw,46px)/.83 'Inter',sans-serif;
   letter-spacing:-.045em;
   text-transform:uppercase;
 }
-.pbe3-title em { color:var(--pb-green); font-style:normal; }
+.pbe3-title em { color:var(--pbe-gold); font-style:normal; }
 .pbe3-copy { max-width:760px; margin-top:12px; color:var(--pbe-dim); font-size:13px; line-height:1.65; }
 .pbe3-top-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:7px; }
 .pbe3-button {

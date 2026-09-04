@@ -4,19 +4,19 @@
  */
 
 .pbe25-games{
-  --g-bg:rgba(13,27,43,.86);
-  --g-bg-strong:rgba(10,22,36,.96);
-  --g-panel:linear-gradient(145deg,rgba(24,44,65,.91),rgba(13,29,46,.94));
-  --g-panel-hover:linear-gradient(145deg,rgba(28,50,73,.96),rgba(15,33,51,.97));
-  --g-line:rgba(180,211,241,.13);
-  --g-line-strong:rgba(180,211,241,.22);
-  --g-text:#f7fbff;
-  --g-muted:#a6b8c8;
-  --g-dim:#71879b;
+  --g-bg:var(--pbe-ink-2);
+  --g-bg-strong:var(--pbe-ink);
+  --g-panel:var(--pbe-ink-2);
+  --g-panel-hover:var(--pbe-ink-3);
+  --g-line:var(--pbe-line);
+  --g-line-strong:var(--pbe-line-strong);
+  --g-text:var(--pbe-paper);
+  --g-muted:var(--pbe-dim);
+  --g-dim:var(--pbe-faint-text);
   --g-blue:var(--pbe-model);
-  --g-blue-soft:rgba(104,191,255,.11);
+  --g-blue-soft:var(--pbe-model-soft);
   --g-green:var(--pbe-gold);
-  --g-green-soft:rgba(98,226,161,.10);
+  --g-green-soft:var(--pbe-gold-soft);
   --g-gold:var(--pbe-gold-bright);
   --g-red:var(--pbe-crimson-bright);
   width:min(1480px,100%);
@@ -86,7 +86,7 @@
   letter-spacing:-.045em!important;
   text-transform:uppercase!important;
 }
-.pbe25-title em{color:var(--g-blue)!important;font-style:normal!important}
+.pbe25-title em{color:var(--pbe-gold)!important;font-style:normal!important}
 .pbe25-copy{
   max-width:690px!important;
   margin-top:17px!important;

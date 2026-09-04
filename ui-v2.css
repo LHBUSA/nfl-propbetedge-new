@@ -507,7 +507,7 @@ body:before {
 }
 .pbe2-kicker { color:var(--v2-green) !important; }
 .pbe2-title { color:#fff !important; font-size:clamp(42px,5vw,70px) !important; line-height:.86 !important; letter-spacing:-.04em !important; }
-.pbe2-title em { color:var(--v2-green) !important; }
+.pbe2-title em { color:var(--pbe-gold) !important; }
 .pbe2-subtitle { color:var(--pbe-dim) !important; font-size:13px !important; max-width:720px !important; }
 .pbe2-btn { background:var(--v2-green) !important; border-color:var(--v2-green) !important; border-radius:7px !important; color:#06110a !important; }
 .pbe2-btn.secondary { background:rgba(255,255,255,.025) !important; border-color:var(--v2-line-strong) !important; color:var(--pbe-paper) !important; }
