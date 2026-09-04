@@ -1,8 +1,27 @@
 # PropBetEdge NFL — Release Candidate Report
 
-**Branch:** `worldclass-pass` @ `7071a6a` (+ alt-audit commit)
-**Baseline:** `origin/main` @ `f83800a` — what production serves today
-**Production status:** untouched. Nothing has been merged or deployed.
+## Reconciled manifest — read from the actual remote, 2026-09-04
+
+| | |
+|---|---|
+| `origin/main` (production) | **`edd957e1bd9de309a203d43c5db14283014e1ac0`** |
+| `origin/worldclass-pass` (candidate) | **`518d90a23dc49fe416b075646855a06361036ed4`** |
+| merge base | `edd957e…` — identical to main, so the branch is a clean descendant |
+| commits unique to the candidate | **18** |
+| commits on main not in the candidate | **0** |
+| changed files vs main | **160** (5,789 insertions, 4,998 deletions) |
+| proposed production range | `edd957e..518d90a` |
+
+An earlier draft of this document said 13 commits and referenced an intermediate
+SHA. That was written mid-work and was wrong by the time it was committed. The
+numbers above are read from `git rev-list`/`git diff` against the fetched remote.
+
+The count grew from 13 because the branch has since gained the type-floor,
+table-grammar, Games-hierarchy, image and consolidation passes, the alt-audit
+correction, this report, the mobile-nav gate, and the merge of production main.
+
+**Production status:** the mobile-navigation hotfix has shipped (see §16). The
+worldclass candidate has NOT been merged.
 
 All figures below are measured by rendering the working tree against live
 production APIs in real headless Chrome, not estimated.
@@ -189,9 +208,47 @@ where entity resolution is uncertain.
 - Pro gating verified intact: Market Watch, Model Lab and Matchups render
   locked previews for a signed-out user with values withheld, not exposed.
 
-## 15 · Key surfaces
+## 15 · Exact-head acceptance test
 
-Captured at 1440 and 390, `scratchpad/shots/FINAL/`:
+Run against the **Vercel preview of `518d90a`** — real hosting, real routing,
+real `/api` functions, not local file substitution:
+`nfl-propbetedge-74s6beg6g-justins-projects-ad4f4bb7.vercel.app`
+
+**20 surfaces × 7 widths (390 / 430 / 768 / 900 / 901 / 1280 / 1440) = 140
+combinations.** Per combination: renders with a live renderer, no horizontal
+overflow, no broken images, no image missing an alt attribute, no text below
+10px, exactly one active nav item, nothing readable clipped, no fabricated
+content markers, no console exceptions.
+
+**Result: every check passes except the known pre-existing 901px 14px
+overflow**, which appears on all 20 surfaces because it is a shell-level issue,
+and which is confirmed identical on `main`.
+
+Targeted checks, all passing:
+
+```
+deep link: player   /?player=Drake%20Maye#propboard -> drawer opens on Drake Maye
+deep link: event    /?event=<id>#marketwatch
+deep link: hash     /#propboard?player=Sam%20Darnold
+locked states       Market Watch 24 rows / 96 locked cells / 1 CTA
+                    Prop Board 78 rows, 0 lock buttons in body, 3 locked headers
+                    Model Lab 2 free rows, no fabricated values
+news trust          guard installed, 5 of 12 deks suppressed,
+                    0 uncorroborated attributions, 0 false Mahomes
+player drawer       opens; funnel links Usage / Stats / Records / HOF / Prop Board
+                    layers MARKET CURRENT | MODEL PRO | NEWS NONE | ARCHIVE MATCHED
+```
+
+Visual review of the captured surfaces confirmed hierarchy, alignment,
+typography, tables, team/player media, and live/model/unavailable semantics.
+Game Center reads honestly pre-game: "WAITING FOR THE NEXT PUBLISHED PLAY",
+"PUBLISHED PLAYS 0", "WP UNAVAILABLE", "Unsupported live model and usage inputs
+remain explicitly offline". Injury Intelligence carries its provenance
+disclaimer and shows "Timeline not reported" rather than inventing one.
+
+### Key surfaces
+
+Captured at 1440 and 390, `scratchpad/shots/FINAL/` and `scratchpad/accept/`:
 
 - **Dashboard** — featured game centred (was 60px off axis), kickoff time as the
   hero value, core market inline, wire in Playfair under a gold rule, trust
@@ -206,25 +263,69 @@ Captured at 1440 and 390, `scratchpad/shots/FINAL/`:
 
 ## 16 · Commits proposed for production
 
-**Ship now, separately — `hotfix/mobile-nav` @ `edd957e`:**
+**Already shipped — mobile-navigation hotfix:**
 
 ```
 edd957e  Give phones a working navigation instead of an off-screen desktop rail
 ```
 
-Four files, 41 insertions, 4 deletions: `index.html`, `sports-shell-v1.css`,
-`sports-shell-v3.css`, `ui-v2.css`. Diff byte-identical to the isolated commit;
-contains zero redesign content. Gate: all checks pass at 390/430/768/900/901,
-with the one pre-existing 901px overflow confirmed identical on `main`.
+Merged fast-forward to `main` and deployed. Production went `f83800a` →
+`edd957e`. Verified live: the blanket-hide rule is gone from the served
+`sports-shell-v1.css`, the 901px media query and both added drawer destinations
+are present. Post-deploy gate against the deployed bundle passed at 390, 430,
+768, 900 and 1440 with the single known 901px exception; observer alarm
+installed and silent.
 
-**Ship after review — `worldclass-pass` @ HEAD**, 13 commits.
+**Proposed — worldclass candidate:** `edd957e..518d90a`, **18 commits, 160
+files**. Verified by acceptance test against the Vercel preview of that exact
+commit (§15).
 
-**Separate repo, not deployed — `C:\Workers\propbet-news-api`:** content
-integrity guard + 13 regression tests. See §17.
+**Rollback point:** production deployment `dpl_4XC7MuENrSrUA2c8kiRxCXboe8ns`
+(`f83800a`), flagged by Vercel as a rollback candidate. The currently live
+deployment is `dpl_9nwVc116doqVptFQumcusCPNZrrV` (`edd957e`), also a rollback
+candidate, which is the point to return to if the worldclass merge misbehaves.
 
 ## 17 · Known imperfect
 
-1. **The news corruption is not fixed at source.** Five of twelve NFL rows —
+0. **Game Center still renders an em-dash score placeholder.** `.cast6-score-center`
+   shows `—:—` beside the kickoff time on a scheduled game, which reads as two
+   blank bars. It is the same placeholder class fixed on the Dashboard hero, on
+   a surface this work did not rebuild; the kickoff time is present, so no
+   information is missing. Deliberately NOT changed after the acceptance run,
+   because editing the tree would invalidate the exact-head preview that 140
+   combinations were tested against. One-line fix, next change window.
+
+1. **The news corruption is contained, not fixed at source. The writer defect
+   is UNRESOLVED.** Root cause is now located precisely:
+   `propbet-news-enrich/src/index.js` hashes the scraped source body and, on a
+   hash match, clones the matched article's body, summary and entire take onto
+   the new row (`action: "cloned_from_duplicate"`). Its only precondition is
+   that the body is ≥200 characters; the titles are never compared. When the
+   source fetch returns the same non-article content for several URLs — a nav
+   shell, consent wall or block page — every one hashes identically and inherits
+   one real article's editorial.
+
+   Both workers are now under version control with their deployed state as the
+   first commit, and both fixes sit on branches, **neither deployed**:
+
+   - `propbet-news-api` `fix/content-integrity` — read-layer containment at the
+     single choke point every consumer shares. 13 tests. Verified against live
+     payloads twice: the original snapshot (5 shared summaries → 0, 5 false
+     Mahomes attributions → 0, 5 withheld / 7 intact) and the current feed
+     (4 → 0, 2 → 0, 4 withheld / 8 intact). Zero false positives.
+   - `propbet-news-enrich` `fix/duplicate-clone-guard` — requires the two titles
+     to share distinctive tokens before anything is cloned; on mismatch it
+     clones nothing, leaves the article unpublished, and records
+     `source_body_hash_collision_with_unrelated_title`. 7 tests. **Not
+     verifiable end to end from here** — the worker holds its Supabase
+     credentials as Cloudflare secrets — so the predicate is covered but the
+     integration is not.
+
+   Rows already corrupted in the database are not repaired by either change.
+   They need a backfill or re-enrichment; the read-layer guard is what protects
+   consumers meanwhile.
+
+2. **The old item 1 continues below.** Five of twelve NFL rows —
    every `pro-football-talk` row, with no healthy one — carry one Mahomes
    article's entire summary, body, take summary, take advice and player tag.
    `propbet-news-api` is a faithful pass-through of `v_news_with_takes`; the
