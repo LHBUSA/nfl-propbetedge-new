@@ -463,3 +463,72 @@ body {
   .pbes-score-nav { min-width: 44px; min-height: 44px; }
   .pbes-head-btn  { min-height: 44px; }
 }
+
+
+/* ---- 12 · TABLE NUMERICS · applied to the existing table families ---------
+   Numbers only align if they are monospaced AND tabular. These families each
+   grew their own numeric treatment; this is the one place the shared rule
+   lives, keyed to the classes the surfaces already emit rather than requiring
+   their markup to change.
+
+   Alignment is the point: a 70-row market table where 224.5 and 29.5 do not
+   share a decimal position cannot be scanned, only read. */
+.pbe6-table td.mono,
+.pbe6-table .mono,
+.pbe8-table td.mono,
+.pbe2-history td.num,
+.pbe2-table td.num,
+.pbe3-table .pbe3-line,
+.pbe3-table .pbe3-price,
+.pbe22-table .pbe22-num,
+.pbe22-table .pbe22-line,
+.pbe22-table .pbe22-range,
+.pbe25-score,
+.pbe7-metric b,
+.pbe26-mini b {
+  font-family: var(--pbe-font-data);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/* Right-align genuinely numeric columns so magnitudes line up. Entity columns
+   stay left-aligned; a right-aligned name is harder to scan, not easier. */
+.pbe6-table td.mono, .pbe6-table th.mono,
+.pbe8-table td.mono, .pbe8-table th.mono,
+.pbe2-history td.num, .pbe2-history th.num,
+.pbe2-table td.num, .pbe2-table th.num {
+  text-align: right;
+}
+
+/* A long archive table needs its rows separable at a glance. */
+.pbe6-table tbody tr,
+.pbe8-table tbody tr,
+.pbe2-history tbody tr {
+  transition: background var(--t-fast);
+}
+.pbe6-table tbody tr:hover,
+.pbe8-table tbody tr:hover,
+.pbe2-history tbody tr:hover {
+  background: var(--pbe-ink-3);
+}
+
+/* Mobile: a dense historical table scrolls inside its own container rather
+   than pushing the page sideways. The wrapper each surface already provides
+   becomes the scroller, and the sticky header keeps column meaning while it
+   scrolls. */
+@media (max-width: 768px) {
+  .pbe6-table-scroll,
+  .pbe8-table-wrap,
+  .pbe2-history-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .pbe6-table th,
+  .pbe8-table th,
+  .pbe2-history th,
+  .pbe6-table td,
+  .pbe8-table td,
+  .pbe2-history td {
+    padding: 9px 10px;
+  }
+}

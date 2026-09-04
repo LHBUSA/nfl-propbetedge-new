@@ -522,8 +522,30 @@ body:before {
 .pbe2-fair { color:var(--v2-blue) !important; }
 .pbe2-board { border-radius:12px !important; box-shadow:0 18px 55px rgba(0,0,0,.18) !important; }
 .pbe2-toolbar { min-height:50px !important; background:var(--pbe-ink) !important; }
-.pbe2-table th { background:var(--pbe-ink) !important; color:var(--pbe-dim) !important; }
-.pbe2-table td { border-color:rgba(255,255,255,.045) !important; }
+.pbe2-table th{
+  position:sticky;
+  top:0;
+  z-index:2;
+  padding:10px 12px;
+  background:var(--pbe-ink-3);
+  border-bottom:2px solid var(--pbe-gold);
+  color:var(--pbe-dim);
+  text-align:left;
+  font-family:var(--pbe-font-data);
+  font-size:var(--fs-label);
+  font-weight:700;
+  letter-spacing:var(--ls-label);
+  text-transform:uppercase;
+  white-space:nowrap;
+}
+.pbe2-table td{
+  padding:10px 12px;
+  border-bottom:1px solid var(--pbe-line-faint);
+  color:var(--pbe-paper-2);
+  font-family:var(--pbe-font-ui);
+  font-size:var(--fs-sm);
+  vertical-align:middle;
+}
 .pbe2-table tbody tr:hover { background:rgba(85,214,140,.025) !important; }
 
 /* Legacy views sit inside the new canvas instead of owning the shell */

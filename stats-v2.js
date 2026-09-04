@@ -32,7 +32,7 @@
     const rows=filteredRows();
     const meta=sourceMeta();
     if(!rows.length)return '<div class="pbe6-empty">No leaderboard rows match the current search.</div>';
-    return `<div class="pbe6-table-scroll"><table class="pbe6-table"><thead><tr>${data.headers.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows.map(row=>`<tr data-player="${esc(row[1])}">${row.map((cell,i)=>`<td class="${i===0?'rank':i===1?'player':i>=3?'mono':''}">${i===2?`<div style="display:flex;align-items:center;gap:7px">${crest(cell,22)}<span>${esc(cell)}</span></div>`:esc(cell)}</td>`).join('')}</tr>`).join('')}</tbody></table></div><div class="pbe6-foot">Verified ${esc(meta.provider||'NFL.com')} 2025 regular-season final leaders · checked ${esc(meta.verifiedAt||'2026-08-29')} · historical/reference data, not live 2026 statistics.</div>`;
+    return `<div class="pbe6-table-scroll"><table class="pbe6-table"><thead><tr>${data.headers.map((h,i)=>`<th class="${i===0?'rank':i===1?'player':i===2?'team':'mono'}">${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows.map(row=>`<tr data-player="${esc(row[1])}">${row.map((cell,i)=>`<td class="${i===0?'rank':i===1?'player':i>=3?'mono':''}">${i===2?`<div style="display:flex;align-items:center;gap:7px">${crest(cell,22)}<span>${esc(cell)}</span></div>`:esc(cell)}</td>`).join('')}</tr>`).join('')}</tbody></table></div><div class="pbe6-foot">Verified ${esc(meta.provider||'NFL.com')} 2025 regular-season final leaders · checked ${esc(meta.verifiedAt||'2026-08-29')} · historical/reference data, not live 2026 statistics.</div>`;
   }
 
   function render(){
