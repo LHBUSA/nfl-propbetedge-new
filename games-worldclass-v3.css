@@ -600,3 +600,33 @@
   .pbe25-feature-crest{width:50px;height:50px;border-radius:14px}
   .pbe25-card{border-radius:11px!important}
 }
+
+/* Per-game intelligence links.
+   The card is a three-column grid (time / matchup / status) and .pbe25-actions
+   carried no placement above 1180px, so it auto-placed into the first cell of
+   the next implicit row -- the 120px time column. Its own three-column grid
+   then gave each of six tool buttons 36px, which rendered them as "C...",
+   "D...", "R..." stubs. These are the surface's route into Props, Matchup,
+   Usage, SGP, Market and Game Center, so they get the card's full width. */
+@media(min-width:1181px){
+  .pbe25-card .pbe25-actions{
+    grid-column:1 / -1;
+    grid-template-columns:repeat(6,minmax(0,1fr))!important;
+    gap:8px!important;
+    margin-top:4px;
+  }
+  .pbe25-card .pbe25-tool{
+    min-width:0;
+    width:auto!important;
+    height:auto!important;
+    padding:9px 11px!important;
+    text-align:left;
+  }
+  .pbe25-card .pbe25-tool span,
+  .pbe25-card .pbe25-tool small{
+    display:block;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+}

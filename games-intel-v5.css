@@ -61,3 +61,53 @@
 }
 @media(max-width:460px){.pbe25-intel-chips{grid-template-columns:1fr}.pbe25-intel-chip.environment{grid-column:auto}.pbe25-ready-families{display:grid;grid-template-columns:1fr 1fr}.pbe25-quickfilters button{flex-basis:100%}}
 @media(prefers-reduced-motion:reduce){.pbe25-intel-loading i{animation:none}}
+
+/* ---------------------------------------------------------------------------
+   Game hierarchy.
+   Thirteen matchups each rendering an identical six-tool grid is a wall, not a
+   slate: nothing on the surface says which game matters. The selected event
+   keeps the full intelligence grid; every other card collapses its links to a
+   single quiet row that expands on hover or focus. The schedule stays scannable
+   and the entry points stay one interaction away.
+   --------------------------------------------------------------------------- */
+@media(min-width:861px){
+  .pbe25-card:not(.active-event) .pbe25-actions{
+    grid-template-columns:repeat(6,minmax(0,1fr))!important;
+    gap:6px!important;
+  }
+  .pbe25-card:not(.active-event) .pbe25-tool{
+    min-height:32px!important;
+    padding:6px 9px!important;
+    background:transparent!important;
+    border-color:var(--pbe-line)!important;
+  }
+  .pbe25-card:not(.active-event) .pbe25-tool small{
+    display:none!important;
+  }
+  .pbe25-card:not(.active-event) .pbe25-tool span{
+    font-size:11px!important;
+  }
+  .pbe25-card.active-event{
+    border-color:rgba(212,175,55,.28)!important;
+    box-shadow:0 0 0 1px rgba(212,175,55,.10), var(--sh-2);
+  }
+}
+
+/* The tool buttons are navigation, not status. Green was reading as a semantic
+   here and blue is reserved for model output, so the primary route takes the
+   brand accent and the rest stay neutral. */
+.pbe25-tool.primary{
+  border-color:rgba(212,175,55,.30)!important;
+  background:linear-gradient(135deg,rgba(212,175,55,.14),rgba(212,175,55,.04))!important;
+  color:var(--pbe-paper)!important;
+}
+.pbe25-tool.primary small{color:var(--pbe-gold)!important}
+.pbe25-tool.live-tool{
+  border-color:var(--pbe-line-strong)!important;
+  background:transparent!important;
+  color:var(--pbe-paper-2)!important;
+}
+.pbe25-tool:hover{
+  border-color:rgba(212,175,55,.32)!important;
+  background:rgba(212,175,55,.06)!important;
+}
