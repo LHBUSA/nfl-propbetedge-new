@@ -172,3 +172,33 @@ button.pbe4-toggle,button.pbe4-refresh { display:inline-flex;align-items:center;
 @media (prefers-reduced-motion:reduce) {
   .pbe4-toggle > span:before,.pbe4-worldclass * { transition:none !important; }
 }
+
+/* Locked model columns. The header carries the PRO mark once per column; the
+   cells show an obscured value. Replaces 210 identical call-to-action buttons
+   inside the table body with one per column plus the surface's own CTA. */
+/* The model columns are narrow, so an inline PRO chip was truncating the header
+   with it. It stacks under the label instead, where both stay fully legible. */
+.pbe3-table th.pbe3-th-locked{
+  color:var(--pbe-gold)!important;
+  white-space:normal!important;
+  line-height:1.25;
+}
+.pbe3-table th.pbe3-th-locked::after{
+  content:"PRO";
+  display:block;
+  width:max-content;
+  margin-top:4px;
+  padding:1px 5px;
+  border:1px solid var(--pbe-gold);
+  border-radius:var(--r-xs);
+  font-size:var(--fs-micro);
+  font-weight:800;
+  letter-spacing:.1em;
+}
+.pbe3-table td .pbe-locked-value{
+  font-family:var(--pbe-font-data);
+  font-size:var(--fs-data-sm);
+  letter-spacing:.16em;
+  color:var(--pbe-unavailable);
+  user-select:none;
+}

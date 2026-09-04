@@ -133,7 +133,9 @@ body::before,body::after{content:none!important;display:none!important;backgroun
     justify-content:center;
     opacity:.72;
   }
+  .pbe-stadium-toggle > span,
   .pbe-stadium-toggle .pbe-stadium-current,
   .pbe-stadium-toggle em{display:none}
+  .pbe-stadium-toggle{overflow:hidden}
   .pbe-stadium-control.open .pbe-stadium-toggle{opacity:1}
 }

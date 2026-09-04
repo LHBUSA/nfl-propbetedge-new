@@ -297,7 +297,13 @@
   }
 
   function modelCell(row,type) {
-    if (!isPro()) return `<button class="pbe3-lock" type="button" onclick="event.stopPropagation();PBEPro.open('upgrade')">◆ NFL Pro</button>`;
+    /* A free user was shown 210 identical gold "NFL Pro" buttons -- three
+       columns times seventy rows -- which is an advertisement repeated inside
+       the data rather than a view of what exists. The columns keep their
+       headers, which now carry the PRO mark once each, and the cells show an
+       obscured value. The single call to action for the surface lives above
+       the table. */
+    if (!isPro()) return '<span class="pbe-locked-value" aria-label="NFL Pro"></span>';
     if (!row.model) return '<span class="pbe3-sub">Not modeled</span>';
     if (type === 'fair') return `<span class="pbe3-model-fair">${esc(fmt(modelFair(row),1))}</span>`;
     if (type === 'prob') return `<span class="pbe3-model-prob">${esc(fmt(modelProb(row),1))}%</span>`;
@@ -415,7 +421,7 @@
       </div>
       <div class="pbe3-table-scroll">
         <table class="pbe3-table">
-          <thead><tr><th>Player</th><th>Prop</th><th>Best Over</th><th>Best Under</th><th>Consensus</th><th>Book Range</th><th>PBE Fair</th><th>PBE Over</th><th>Model Gap</th><th>Depth</th><th>Status</th></tr></thead>
+          <thead><tr><th>Player</th><th>Prop</th><th>Best Over</th><th>Best Under</th><th>Consensus</th><th>Book Range</th><th class="pbe3-th-locked">PBE Fair</th><th class="pbe3-th-locked">PBE Over</th><th class="pbe3-th-locked">Model Gap</th><th>Depth</th><th>Status</th></tr></thead>
           <tbody id="pbe3-table-body">${tableRowsHtml(rows)}</tbody>
         </table>
       </div>
