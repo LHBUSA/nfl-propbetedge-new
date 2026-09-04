@@ -353,3 +353,21 @@
   border-color:var(--pbe-live);
   background:transparent;
 }
+
+/* On phones the brand copy had clientWidth 71px but scrollWidth 186px with
+   overflow:visible, so "NFL Intelligence" and its PBE pill spilled 115px to the
+   right and landed on top of the search button (measured at 390px). The logo
+   already carries the brand at this size, so the copy is contained and the
+   inline pill is dropped rather than allowed to overlap a control. */
+@media(max-width:760px){
+  #pbe-sports-shell .pbes-brand{min-width:0;overflow:hidden}
+  #pbe-sports-shell .pbes-brand-copy{min-width:0;overflow:hidden}
+  #pbe-sports-shell .pbes-brand-name{
+    min-width:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    font-size:15px!important;
+  }
+  #pbe-sports-shell .pbes-brand-pill{display:none!important}
+}

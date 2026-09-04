@@ -232,14 +232,31 @@ const AUDIT_EXPR = `(() => {
   const srgb = c => { c /= 255; return c <= 0.03928 ? c/12.92 : Math.pow((c+0.055)/1.055, 2.4); };
   const lum = rgb => 0.2126*srgb(rgb[0]) + 0.7152*srgb(rgb[1]) + 0.0722*srgb(rgb[2]);
   const parse = s => { const m = s.match(/rgba?\\(([^)]+)\\)/); if (!m) return null; const p = m[1].split(',').map(x => parseFloat(x)); return p.length > 3 && p[3] < 0.95 ? null : p; };
+  // A gradient fill leaves backgroundColor transparent, so walking to the page
+  // ground reported dark-ink-on-gold buttons as 1.01:1 when they are really
+  // ~8.9:1. Resolve the gradient's first colour stop instead.
+  function gradientColor(cs) {
+    const img = cs.backgroundImage;
+    if (!img || img === 'none' || !/gradient\\(/.test(img)) return null;
+    const stops = [...img.matchAll(/rgba?\\(([^)]+)\\)/g)].map(m => m[1].split(',').map(x => parseFloat(x)));
+    if (!stops.length) return null;
+    // A gradient of near-transparent stops is an overlay, not a background --
+    // it does not determine what the text sits on, so keep walking the tree.
+    const opaque = stops.filter(p => p.length < 4 || p[3] > 0.6);
+    if (!opaque.length) return null;
+    return [0,1,2].map(i => Math.round(opaque.reduce((s,p) => s + p[i], 0) / opaque.length));
+  }
   function bgOf(el) {
     let e = el;
     while (e && e !== document.documentElement) {
-      const c = parse(getComputedStyle(e).backgroundColor);
+      const cs = getComputedStyle(e);
+      const g = gradientColor(cs);
+      if (g) return g;
+      const c = parse(cs.backgroundColor);
       if (c) return c;
       e = e.parentElement;
     }
-    return [6, 9, 15];
+    return [20, 17, 13];
   }
   const lowC = new Map();
   document.querySelectorAll('body *').forEach(el => {

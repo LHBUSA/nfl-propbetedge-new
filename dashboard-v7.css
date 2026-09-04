@@ -345,7 +345,7 @@ body::after{
   font-weight:700;
   letter-spacing:var(--ls-micro);
   text-transform:uppercase;
-  color:var(--pbe-faint);
+  color:var(--pbe-dim);
 }
 .pbe7-kickoff strong{
   font-family:var(--pbe-font-data);
@@ -365,4 +365,161 @@ body::after{
 }
 @media(max-width:768px){
   .pbe7-kickoff strong{font-size:40px}
+}
+
+/* ---------------------------------------------------------------------------
+   Dashboard section grammar. Inherits the parent's structural device: a 2px
+   gold rule under a section head, with a mono eyebrow above the title. The
+   panels previously had no consistent heading treatment at all.
+   --------------------------------------------------------------------------- */
+.pbe7-panel > header{
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  gap:var(--s-4);
+  border-bottom:2px solid var(--pbe-gold);
+  padding-bottom:var(--s-3);
+  margin-bottom:var(--s-4);
+}
+.pbe7-panel > header > div{min-width:0}
+.pbe7-panel > header span{
+  display:block;
+  margin-bottom:5px;
+  font-family:var(--pbe-font-data);
+  font-size:var(--fs-micro);
+  font-weight:700;
+  letter-spacing:var(--ls-micro);
+  text-transform:uppercase;
+  color:var(--pbe-gold);
+}
+/* The newsroom is the dashboard's one editorial moment, so it takes the
+   parent's display serif. Playfair appears nowhere else on this surface. */
+.pbe7-panel > header h2{
+  margin:0;
+  font-family:var(--pbe-font-display);
+  font-size:26px;
+  font-weight:800;
+  letter-spacing:var(--ls-tight);
+  color:var(--pbe-paper);
+}
+.pbe7-panel > header small{
+  flex:0 0 auto;
+  font-family:var(--pbe-font-data);
+  font-size:var(--fs-micro);
+  font-weight:700;
+  letter-spacing:var(--ls-micro);
+  text-transform:uppercase;
+  color:var(--pbe-dim);
+}
+
+/* Lead story headline: editorial, not a UI heading. */
+.pbe7-lead-copy h3{
+  font-family:var(--pbe-font-display);
+  font-size:clamp(26px,2.5vw,38px);
+  font-weight:800;
+  line-height:1.06;
+  letter-spacing:var(--ls-tight);
+  text-transform:none;
+}
+
+/* A story whose dek the trust guard could not corroborate shows nothing rather
+   than an unverified sentence. Keep the gap honest, not empty-looking. */
+.pbe27-nodek{
+  font-style:italic;
+  color:var(--pbe-faint);
+  font-size:var(--fs-sm);
+}
+
+/* Single entry point back to the engine story, which now lives on PBE Picks. */
+.pbe7-engine-link{
+  display:block;
+  padding:var(--s-4);
+  margin-bottom:var(--s-3);
+  border:1px solid var(--pbe-line);
+  border-left:3px solid var(--pbe-gold);
+  border-radius:var(--r-sm);
+  background:var(--pbe-ink-2);
+  text-decoration:none;
+  transition:all var(--t-fast);
+}
+.pbe7-engine-link:hover{background:var(--pbe-ink-3);border-color:var(--pbe-line-strong);border-left-color:var(--pbe-gold)}
+.pbe7-engine-eyebrow{
+  display:block;
+  margin-bottom:var(--s-2);
+  font-family:var(--pbe-font-data);
+  font-size:var(--fs-micro);
+  font-weight:700;
+  letter-spacing:var(--ls-micro);
+  text-transform:uppercase;
+  color:var(--pbe-gold);
+}
+.pbe7-engine-link strong{
+  display:block;
+  font-family:var(--pbe-font-display);
+  font-size:17px;
+  font-weight:700;
+  line-height:1.25;
+  color:var(--pbe-paper);
+}
+.pbe7-engine-link em{
+  display:block;
+  margin-top:var(--s-2);
+  font-family:var(--pbe-font-data);
+  font-size:var(--fs-micro);
+  font-weight:700;
+  letter-spacing:var(--ls-micro);
+  text-transform:uppercase;
+  font-style:normal;
+  color:var(--pbe-dim);
+}
+
+/* ---------------------------------------------------------------------------
+   Featured game on phones.
+   The three-column desktop matchup was being kept at 390px, which left the
+   core-market panel 118px wide (measured) and wrapped "CORE MARKET · CURRENT
+   CROSS-BOOK CONSENSUS" onto four lines while the team crests were pushed to
+   the screen edges. Mobile gets its own layout: the matchup reads across in one
+   row, then the market panel takes the full width beneath it.
+   --------------------------------------------------------------------------- */
+@media(max-width:768px){
+  .pbe7-matchup{
+    display:grid!important;
+    grid-template-columns:1fr 1fr!important;
+    grid-template-rows:auto auto!important;
+    gap:var(--s-3) var(--s-2)!important;
+    align-items:center!important;
+    width:100%!important;
+    margin:var(--s-4) 0 0!important;
+  }
+  .pbe7-team{
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:center!important;
+    text-align:center!important;
+    gap:var(--s-2)!important;
+    width:auto!important;
+    max-width:none!important;
+    position:static!important;
+    transform:none!important;
+    grid-row:1!important;
+  }
+  .pbe7-team.away{grid-column:1!important;justify-content:center!important}
+  .pbe7-team.home{grid-column:2!important;justify-content:center!important}
+  .pbe7-scorebox{
+    grid-column:1 / -1!important;
+    grid-row:2!important;
+    position:static!important;
+    width:100%!important;
+    max-width:none!important;
+    transform:none!important;
+  }
+  /* The market grid can now afford three real columns at full width. */
+  .pbe8-core-market .pbe8-market-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+  .pbe8-core-market .pbe8-prob-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .pbe7-actions{
+    display:grid!important;
+    grid-template-columns:1fr 1fr!important;
+    gap:var(--s-2)!important;
+  }
+  .pbe7-actions > :first-child{grid-column:1 / -1!important}
 }

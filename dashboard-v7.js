@@ -47,6 +47,12 @@
 
   function titleOf(x) { return x?.title || x?.headline || x?.name || ''; }
   function summaryOf(x) { return x?.summary || x?.description || x?.dek || x?.excerpt || ''; }
+  /* Never render a dek the trust guard could not corroborate. See
+     pbe-news-trust.js -- upstream currently serves a fallback dek on aggregated
+     wire stories, and printing it states things that are not true. */
+  function trustedSummary(x) {
+    return window.PBENewsTrust ? (window.PBENewsTrust.safeSummary(x) || '') : summaryOf(x);
+  }
   function urlOf(x) { return x?.url || x?.canonical_url || x?.article_url || x?.link || ''; }
   function dateOf(x) { return x?.published_at || x?.publishedAt || x?.published || x?.date || x?.created_at || ''; }
   function topicOf(x) { return x?.topic_kind || x?.kind || x?.category || 'NFL'; }
@@ -212,13 +218,13 @@
       <div class="pbe7-news-layout">
         <a class="pbe7-lead-story" ${leadUrl ? `href="${esc(leadUrl)}" target="_blank" rel="noopener"` : 'href="javascript:void(0)"'}>
           <div class="pbe7-lead-media">${imageTag(lead, 'pbe7-lead-img', true)}<div class="pbe7-lead-shade"></div></div>
-          <div class="pbe7-lead-copy"><div class="pbe7-story-meta"><span>${esc(topicOf(lead))}</span><b>${esc(sourceOf(lead))}</b></div><h3>${esc(titleOf(lead))}</h3><p>${esc(summaryOf(lead).slice(0, 240))}</p><time>${esc(fmtDate(dateOf(lead)))}</time></div>
+          <div class="pbe7-lead-copy"><div class="pbe7-story-meta"><span>${esc(topicOf(lead))}</span><b>${esc(sourceOf(lead))}</b></div><h3>${esc(titleOf(lead))}</h3>${trustedSummary(lead) ? `<p>${esc(trustedSummary(lead).slice(0, 240))}</p>` : ''}<time>${esc(fmtDate(dateOf(lead)))}</time></div>
         </a>
         <div class="pbe7-news-list">${rest.map(item => {
           const url = urlOf(item);
           return `<a class="pbe7-news-item" ${url ? `href="${esc(url)}" target="_blank" rel="noopener"` : 'href="javascript:void(0)"'}>
             <div class="pbe7-news-thumb">${imageTag(item, 'pbe7-news-img')}</div>
-            <div class="pbe7-news-copy"><div class="pbe7-story-meta"><span>${esc(topicOf(item))}</span><time>${esc(fmtDate(dateOf(item)))}</time></div><h4>${esc(titleOf(item))}</h4><p>${esc(summaryOf(item).slice(0, 125))}</p></div>
+            <div class="pbe7-news-copy"><div class="pbe7-story-meta"><span>${esc(topicOf(item))}</span><time>${esc(fmtDate(dateOf(item)))}</time></div><h4>${esc(titleOf(item))}</h4>${trustedSummary(item) ? `<p>${esc(trustedSummary(item).slice(0, 125))}</p>` : ''}</div>
           </a>`;
         }).join('')}</div>
       </div>
@@ -240,6 +246,11 @@
     return `<aside class="pbe7-panel pbe7-rail">
       <header><div><span>PRODUCT</span><h2>PBE Intelligence</h2></div><small>One NFL operating system</small></header>
       <div class="pbe7-tools">${items.map(([route, icon, name, kicker, desc, badge]) => `<button class="pbe7-tool" data-route="${route}"><div class="pbe7-tool-top"><i>${icon}</i><span class="${badge === 'PRO' ? 'pro' : ''}">${badge}</span></div><small>${kicker}</small><b>${name}</b><p>${desc}</p><em>Open module →</em></button>`).join('')}</div>
+      <a class="pbe7-engine-link" href="javascript:void(0)" data-route="pbepicks">
+        <span class="pbe7-engine-eyebrow">HOW THE MODEL WORKS</span>
+        <strong>We don't publish opinions. We make the market prove us wrong.</strong>
+        <em>Read the decision system →</em>
+      </a>
       <div class="pbe7-pro-card ${pro ? 'active' : ''}"><div><span>${pro ? 'NFL PRO ACTIVE' : 'NFL PRO'}</span><strong>${pro ? 'Premium intelligence unlocked.' : signedIn ? 'Your account is ready to upgrade.' : 'Unlock the proprietary PBE layer.'}</strong><p>${pro ? 'Model-backed Pro modules are available on this signed-in email.' : '$9.99/week or $99 Season Pass. One email ties sign-in and Stripe entitlement together.'}</p></div><button data-pro>${pro ? 'View Account' : signedIn ? 'Choose Plan' : 'Sign In · Pro'}</button></div>
     </aside>`;
   }
@@ -303,7 +314,7 @@
       state.scoreboard = scoreboard;
       state.featured = featured;
       if (detailResult.status === 'fulfilled') state.detail = detailResult.value;
-      if (newsResult.status === 'fulfilled') state.news = newsItems(newsResult.value);
+      if (newsResult.status === 'fulfilled') state.news = window.PBENewsTrust?.prepare(newsItems(newsResult.value)) || newsItems(newsResult.value);
       render();
     } catch (error) {
       state.error = error instanceof Error ? error.message : String(error);

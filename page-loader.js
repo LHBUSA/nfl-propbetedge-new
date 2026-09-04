@@ -7,6 +7,8 @@
        .pbehome6; v7 historically registered itself after that without repainting
        until the next navigation. The loader explicitly invokes v7 after install. */
     {js:'./team-globals-v1.js'},
+    /* Trust guard must be installed before any surface renders news copy. */
+    {js:'./pbe-news-trust.js'},
     {css:'./dashboard-v5.css',js:'./dashboard-v5.js'},
     {css:'./dashboard-v6.css',js:'./dashboard-v6.js'},
     {css:'./dashboard-v7.css',js:'./dashboard-v7.js'},

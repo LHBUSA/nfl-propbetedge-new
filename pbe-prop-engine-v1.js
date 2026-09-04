@@ -82,13 +82,8 @@
     return `<section class="pbe-prop-record"><header><span>PLAYER PROP TRACK RECORD</span><strong>${wins}-${losses}-${pushes}</strong></header><div class="pbe-prop-record-kpis"><div><span>ACTUAL UNITS</span><b>${units>=0?'+':''}${units.toFixed(2)}u</b></div><div><span>CLV BEAT</span><b>${clvPct===null?'—':`${clvPct.toFixed(1)}%`}</b></div><div><span>OFFICIAL PICKS</span><b>${rows.length}</b></div></div></section>`;
   }
 
-  function mountHome(){
-    const home=document.querySelector('.pbehome7');if(!home)return;
-    let host=document.getElementById('pbe-prop-engine-home');if(host)return;
-    host=document.createElement('div');host.id='pbe-prop-engine-home';host.innerHTML=engineCard(true);
-    const story=home.querySelector(':scope > .pbe-engine-story');
-    if(story)story.insertAdjacentElement('afterend',host);else home.querySelector('.pbe7-main')?.insertAdjacentElement('beforebegin',host);
-  }
+  /* Second copy of the same product-education card; see pbe-engine-story-v1.js.
+     The prop engine explainer lives on PBE Picks, not on the Dashboard. */
   function mountPicks(){
     const page=document.querySelector('.pbe2-wrap');if(!page)return;
     let host=document.getElementById('pbe-prop-engine-picks');if(host)return;
@@ -102,14 +97,13 @@
   }
   function paint(){
     const route=window.App?.current;
-    if(route==='home')mountHome();
     if(route==='pbepicks')mountPicks();
     if(route==='trackrecord')mountRecord();
   }
   function schedule(){
     timers.forEach(clearTimeout);timers=[];
     [0,80,300,900].forEach(delay=>timers.push(setTimeout(paint,delay)));
-    load().then(()=>{document.querySelectorAll('#pbe-prop-engine-home,#pbe-prop-engine-picks,#pbe-prop-engine-record').forEach(el=>el.remove());paint()});
+    load().then(()=>{document.querySelectorAll('#pbe-prop-engine-picks,#pbe-prop-engine-record').forEach(el=>el.remove());paint()});
   }
   document.addEventListener('DOMContentLoaded',schedule,{once:true});
   ['pbe:route-changed','pbe:upgrades-ready','pbe:pro-state'].forEach(name=>window.addEventListener(name,schedule));

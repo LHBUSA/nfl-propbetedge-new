@@ -120,3 +120,20 @@ body::before,body::after{content:none!important;display:none!important;backgroun
 
   .pbe-stadium-control{right:10px;bottom:74px}.pbe-stadium-toggle{min-height:42px}.pbe-stadium-toggle>b{display:none}.pbe-stadium-menu{bottom:50px}.pbe-stadium-option{grid-template-columns:88px minmax(0,1fr) 20px}.pbe-stadium-option>i{width:88px;height:58px}
 }
+
+/* On phones the atmosphere picker is a fixed 106px control sitting over the
+   bottom-right of whatever is on screen -- measured covering a market value in
+   the featured game. It collapses to its icon there; the label returns on tap
+   via the menu, and on tablet and desktop where there is room for it. */
+@media(max-width:768px){
+  .pbe-stadium-toggle{
+    min-height:40px;
+    width:40px;
+    padding:0;
+    justify-content:center;
+    opacity:.72;
+  }
+  .pbe-stadium-toggle .pbe-stadium-current,
+  .pbe-stadium-toggle em{display:none}
+  .pbe-stadium-control.open .pbe-stadium-toggle{opacity:1}
+}

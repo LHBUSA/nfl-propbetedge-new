@@ -8,51 +8,18 @@
 #pbe-sports-shell .pbes-right{position:relative;z-index:3;flex:0 0 auto;background:linear-gradient(90deg,rgba(12,11,9,0),rgba(12,11,9,.96) 18%)!important;padding-left:12px!important}
 #pbe-sports-shell .pbes-center{min-width:0!important;overflow:hidden!important}
 
-/* Dashboard featured game: the hero itself is the positioning authority.
-   The prior attempt positioned against .pbe7-matchup; browser measurement showed
-   that wrapper's coordinate system could drift hundreds of pixels from the hero.
-   Keep it only as a flow spacer and anchor score + teams directly to .pbe7-hero. */
-@media(min-width:1320px){
-  html[data-pbe-home="1"] .pbe7-hero{position:relative!important}
-  html[data-pbe-home="1"] .pbe7-matchup{
-    position:static!important;
-    display:block!important;
-    width:auto!important;
-    max-width:none!important;
-    min-height:360px!important;
-    margin:24px 0 0!important;
-  }
-  html[data-pbe-home="1"] .pbe7-scorebox{
-    position:absolute!important;
-    top:82px!important;
-    left:50%!important;
-    right:auto!important;
-    width:520px!important;
-    max-width:520px!important;
-    margin:0!important;
-    transform:translateX(-50%)!important;
-    z-index:4!important;
-  }
-  html[data-pbe-home="1"] .pbe7-team{
-    position:absolute!important;
-    top:52%!important;
-    width:calc(50% - 330px)!important;
-    max-width:480px!important;
-    margin:0!important;
-    transform:translateY(-50%)!important;
-    z-index:3!important;
-  }
-  html[data-pbe-home="1"] .pbe7-team.away{
-    left:0!important;
-    right:auto!important;
-    justify-content:flex-end!important;
-    text-align:right!important;
-  }
-  html[data-pbe-home="1"] .pbe7-team.home{
-    right:0!important;
-    left:auto!important;
-    justify-content:flex-end!important;
-    text-align:right!important;
+/* Dashboard featured game.
+   A previous generation absolutely positioned the scorebox at a hard-coded
+   top:82px inside a fixed-height hero. When the core-market panel was later
+   injected into that scorebox, its content grew past the hero's overflow:hidden
+   boundary and the action row was clipped by 33px (measured). The v8 layer
+   already provides a proper centred three-column grid from 1001px up, so the
+   absolute-positioning patch it superseded is retired rather than re-tuned, and
+   the hero is allowed to size to its own content. */
+@media(min-width:1001px){
+  html[data-pbe-home="1"] .pbe7-hero{
+    height:auto!important;
+    min-height:430px!important;
   }
 }
 

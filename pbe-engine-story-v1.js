@@ -99,18 +99,11 @@
     });
   }
 
-  function upsertHome(){
-    const page=document.querySelector('.pbehome7');
-    const main=page?.querySelector('.pbe7-main');
-    if(!page||!main)return false;
-    let story=page.querySelector(':scope > .pbe-engine-story');
-    if(!story){
-      main.insertAdjacentHTML('beforebegin',architecture());
-      story=page.querySelector(':scope > .pbe-engine-story');
-    }
-    wire(story);
-    return true;
-  }
+  /* The engine story is product education, and it is the same markup that PBE
+     Picks already renders. Mounting it on the Dashboard too put ~1,500px of
+     manifesto between the featured game and the day's intelligence, on every
+     visit, for a returning user who has already read it. It now lives on PBE
+     Picks only; the Dashboard links to it once. Nothing is deleted. */
 
   function upsertPicks(){
     const page=document.querySelector('.pbe2-wrap');
@@ -127,7 +120,6 @@
   }
 
   function paint(){
-    upsertHome();
     upsertPicks();
   }
 
