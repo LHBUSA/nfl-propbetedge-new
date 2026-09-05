@@ -1,0 +1,381 @@
+{
+ "COMPLETED PASS": {
+  "id": "401772936137",
+  "sequence": 13700,
+  "text": "(Shotgun) J.Love pass short left to D.Wicks pushed ob at WAS 46 for 13 yards (M.Lattimore).",
+  "short_text": "(Shotgun) J.Love pass short left to D.Wicks pushed ob at WAS 46 for 13 yards (M.Lattimore).",
+  "type": "Pass Reception",
+  "type_id": "24",
+  "period": 1,
+  "clock": "13:00",
+  "wallclock": "2025-09-12T00:19:40Z",
+  "scoring_play": false,
+  "score_value": null,
+  "team": {
+   "id": null,
+   "abbreviation": null,
+   "display_name": null,
+   "logo": null
+  },
+  "start": {
+   "down": 1,
+   "distance": 10,
+   "yard_line": 41,
+   "yards_to_endzone": 59,
+   "possession_text": "GB 41",
+   "down_distance_text": "1st & 10",
+   "team_id": "9"
+  },
+  "end": {
+   "down": 1,
+   "distance": 10,
+   "yard_line": 54,
+   "yards_to_endzone": 46,
+   "possession_text": "WSH 46",
+   "down_distance_text": "1st & 10",
+   "team_id": "9"
+  },
+  "home_score": 0,
+  "away_score": 0,
+  "participants": [],
+  "stat_yardage": 13,
+  "is_turnover": false,
+  "is_penalty": false,
+  "drive": {
+   "id": "4017729361",
+   "team": {
+    "id": "9",
+    "abbreviation": "GB",
+    "display_name": "Green Bay Packers",
+    "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/gb.png"
+   },
+   "result": "Downs",
+   "yards": 39
+  }
+ },
+ "RUSH": {
+  "id": "401772936647",
+  "sequence": 64700,
+  "text": "(No Huddle, Shotgun) J.Love scrambles right end to WAS 5 for 14 yards (J.Newton). GB-T.Kraft was injured during the play.",
+  "short_text": "(No Huddle, Shotgun) J.Love scrambles right end to WAS 5 for 14 yards (J.Newton). GB-T.Kraft was injured during the play.",
+  "type": "Rush",
+  "type_id": "5",
+  "period": 1,
+  "clock": "5:10",
+  "wallclock": "2025-09-12T00:39:05Z",
+  "scoring_play": false,
+  "score_value": null,
+  "team": {
+   "id": null,
+   "abbreviation": null,
+   "display_name": null,
+   "logo": null
+  },
+  "start": {
+   "down": 3,
+   "distance": 9,
+   "yard_line": 81,
+   "yards_to_endzone": 19,
+   "possession_text": "WSH 19",
+   "down_distance_text": "3rd & 9",
+   "team_id": "9"
+  },
+  "end": {
+   "down": 1,
+   "distance": 5,
+   "yard_line": 95,
+   "yards_to_endzone": 5,
+   "possession_text": "WSH 5",
+   "down_distance_text": "1st & Goal",
+   "team_id": "9"
+  },
+  "home_score": 0,
+  "away_score": 0,
+  "participants": [],
+  "stat_yardage": 14,
+  "is_turnover": false,
+  "is_penalty": false,
+  "drive": {
+   "id": "4017729363",
+   "team": {
+    "id": "9",
+    "abbreviation": "GB",
+    "display_name": "Green Bay Packers",
+    "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/gb.png"
+   },
+   "result": "Touchdown",
+   "yards": 96
+  }
+ },
+ "TOUCHDOWN": {
+  "id": "401772936672",
+  "sequence": 67200,
+  "text": "J.Love pass short right to R.Doubs for 5 yards, TOUCHDOWN. B.McManus extra point is GOOD, Center-M.Orzech, Holder-D.Whelan.",
+  "short_text": "J.Love pass short right to R.Doubs for 5 yards, TOUCHDOWN. B.McManus extra point is GOOD, Center-M.Orzech, Holder-D.Whelan.",
+  "type": "Passing Touchdown",
+  "type_id": "67",
+  "period": 1,
+  "clock": "4:33",
+  "wallclock": "2025-09-12T00:42:43Z",
+  "scoring_play": true,
+  "score_value": null,
+  "team": {
+   "id": null,
+   "abbreviation": null,
+   "display_name": null,
+   "logo": null
+  },
+  "start": {
+   "down": 1,
+   "distance": 5,
+   "yard_line": 95,
+   "yards_to_endzone": 5,
+   "possession_text": "WSH 5",
+   "down_distance_text": "1st & Goal",
+   "team_id": "9"
+  },
+  "end": {
+   "down": -1,
+   "distance": 10,
+   "yard_line": 100,
+   "yards_to_endzone": 0,
+   "possession_text": null,
+   "down_distance_text": null,
+   "team_id": "9"
+  },
+  "home_score": 7,
+  "away_score": 0,
+  "participants": [],
+  "stat_yardage": 5,
+  "is_turnover": false,
+  "is_penalty": false,
+  "drive": {
+   "id": "4017729363",
+   "team": {
+    "id": "9",
+    "abbreviation": "GB",
+    "display_name": "Green Bay Packers",
+    "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/gb.png"
+   },
+   "result": "Touchdown",
+   "yards": 96
+  }
+ },
+ "INCOMPLETE": {
+  "id": "401772936189",
+  "sequence": 18900,
+  "text": "(Shotgun) J.Love pass incomplete deep middle to R.Doubs.PENALTY on WAS-M.Lattimore, Defensive Holding, 5 yards, enforced at WAS 45 - No Play.",
+  "short_text": "(Shotgun) J.Love pass incomplete deep middle to R.Doubs.PENALTY on WAS-M.Lattimore, Defensive Holding, 5 yards, enforced at WAS 45 - No Play.",
+  "type": "Pass Incompletion",
+  "type_id": "3",
+  "period": 1,
+  "clock": "11:50",
+  "wallclock": "2025-09-12T00:20:55Z",
+  "scoring_play": false,
+  "score_value": null,
+  "team": {
+   "id": null,
+   "abbreviation": null,
+   "display_name": null,
+   "logo": null
+  },
+  "start": {
+   "down": 2,
+   "distance": 9,
+   "yard_line": 55,
+   "yards_to_endzone": 45,
+   "possession_text": "WSH 45",
+   "down_distance_text": "2nd & 9",
+   "team_id": "9"
+  },
+  "end": {
+   "down": 1,
+   "distance": 10,
+   "yard_line": 60,
+   "yards_to_endzone": 40,
+   "possession_text": "WSH 40",
+   "down_distance_text": "1st & 10",
+   "team_id": "9"
+  },
+  "home_score": 0,
+  "away_score": 0,
+  "participants": [],
+  "stat_yardage": 5,
+  "is_turnover": false,
+  "is_penalty": true,
+  "drive": {
+   "id": "4017729361",
+   "team": {
+    "id": "9",
+    "abbreviation": "GB",
+    "display_name": "Green Bay Packers",
+    "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/gb.png"
+   },
+   "result": "Downs",
+   "yards": 39
+  }
+ },
+ "SACK": {
+  "id": "401772936427",
+  "sequence": 42700,
+  "text": "(No Huddle, Shotgun) J.Daniels sacked at WAS 35 for -1 yards (D.Wyatt).",
+  "short_text": "(No Huddle, Shotgun) J.Daniels sacked at WAS 35 for -1 yards (D.Wyatt).",
+  "type": "Sack",
+  "type_id": "7",
+  "period": 1,
+  "clock": "9:48",
+  "wallclock": "2025-09-12T00:30:19Z",
+  "scoring_play": false,
+  "score_value": null,
+  "team": {
+   "id": null,
+   "abbreviation": null,
+   "display_name": null,
+   "logo": null
+  },
+  "start": {
+   "down": 2,
+   "distance": 7,
+   "yard_line": 64,
+   "yards_to_endzone": 64,
+   "possession_text": "WSH 36",
+   "down_distance_text": "2nd & 7",
+   "team_id": "28"
+  },
+  "end": {
+   "down": 3,
+   "distance": 8,
+   "yard_line": 65,
+   "yards_to_endzone": 65,
+   "possession_text": "WSH 35",
+   "down_distance_text": "3rd & 8",
+   "team_id": "28"
+  },
+  "home_score": 0,
+  "away_score": 0,
+  "participants": [],
+  "stat_yardage": -1,
+  "is_turnover": false,
+  "is_penalty": false,
+  "drive": {
+   "id": "4017729362",
+   "team": {
+    "id": "28",
+    "abbreviation": "WSH",
+    "display_name": "Washington Commanders",
+    "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/wsh.png"
+   },
+   "result": "Punt",
+   "yards": 6
+  }
+ },
+ "FIELD GOAL": {
+  "id": "4017729361709",
+  "sequence": 170900,
+  "text": "M.Gay 51 yard field goal is GOOD, Center-T.Ott, Holder-T.Way.",
+  "short_text": "M.Gay 51 yard field goal is GOOD, Center-T.Ott, Holder-T.Way.",
+  "type": "Field Goal Good",
+  "type_id": "59",
+  "period": 2,
+  "clock": "4:27",
+  "wallclock": "2025-09-12T01:26:43Z",
+  "scoring_play": true,
+  "score_value": null,
+  "team": {
+   "id": null,
+   "abbreviation": null,
+   "display_name": null,
+   "logo": null
+  },
+  "start": {
+   "down": 4,
+   "distance": 5,
+   "yard_line": 33,
+   "yards_to_endzone": 33,
+   "possession_text": "GB 33",
+   "down_distance_text": "4th & 5",
+   "team_id": "28"
+  },
+  "end": {
+   "down": -1,
+   "distance": 10,
+   "yard_line": 0,
+   "yards_to_endzone": 0,
+   "possession_text": null,
+   "down_distance_text": null,
+   "team_id": "28"
+  },
+  "home_score": 14,
+  "away_score": 3,
+  "participants": [],
+  "stat_yardage": 51,
+  "is_turnover": false,
+  "is_penalty": false,
+  "drive": {
+   "id": "4017729368",
+   "team": {
+    "id": "28",
+    "abbreviation": "WSH",
+    "display_name": "Washington Commanders",
+    "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/wsh.png"
+   },
+   "result": "Field Goal",
+   "yards": 37
+  }
+ },
+ "TURNOVER": {
+  "id": "4016718891047",
+  "sequence": 104700,
+  "text": "(No Huddle, Shotgun) J.Hurts pass deep right intended for A.Brown INTERCEPTED by B.Cook at KC 2. B.Cook ran ob at KC 2 for no gain.",
+  "short_text": "(No Huddle, Shotgun) J.Hurts pass deep right intended for A.Brown INTERCEPTED by B.Cook at KC 2. B.Cook ran ob at KC 2 for no gain.",
+  "type": "Pass Interception Return",
+  "type_id": "26",
+  "period": 2,
+  "clock": "14:21",
+  "wallclock": "2025-02-10T00:22:44Z",
+  "scoring_play": false,
+  "score_value": null,
+  "team": {
+   "id": null,
+   "abbreviation": null,
+   "display_name": null,
+   "logo": null
+  },
+  "start": {
+   "down": 3,
+   "distance": 10,
+   "yard_line": 70,
+   "yards_to_endzone": 30,
+   "possession_text": "KC 30",
+   "down_distance_text": "3rd & 10",
+   "team_id": "21"
+  },
+  "end": {
+   "down": 1,
+   "distance": 10,
+   "yard_line": 98,
+   "yards_to_endzone": 98,
+   "possession_text": "KC 2",
+   "down_distance_text": "1st & 10",
+   "team_id": "12"
+  },
+  "home_score": 7,
+  "away_score": 0,
+  "participants": [],
+  "stat_yardage": 0,
+  "is_turnover": true,
+  "is_penalty": false,
+  "drive": {
+   "id": "4016718895",
+   "team": {
+    "id": "21",
+    "abbreviation": "PHI",
+    "display_name": "Philadelphia Eagles",
+    "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/phi.png"
+   },
+   "result": "Interception",
+   "yards": 50
+  },
+  "__game": "401671889"
+ }
+}

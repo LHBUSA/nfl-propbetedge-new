@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PBEcast Arcade Replay — prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#14110d; --ink2:#1d1914; --ink3:#2a241c;
+  --paper:#f5f1eb; --paper2:#ded8cd; --dim:#b8b3a8; --faint:#8a867d;
+  --gold:#d4af37; --crimson:#ef5a66;
+  --line:rgba(235,225,205,.12); --line2:rgba(235,225,205,.22);
+  --ui:'Inter',system-ui,sans-serif; --mono:'JetBrains Mono',monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ink);color:var(--paper);font-family:var(--ui);font-size:14px}
+.wrap{max-width:1180px;margin:0 auto;padding:22px clamp(14px,3vw,28px) 70px}
+
+header.mast{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;padding-bottom:10px;border-bottom:2px solid var(--gold)}
+.eyebrow{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--faint)}
+h1{margin:6px 0 0;font-family:'Playfair Display',Georgia,serif;font-size:clamp(26px,3vw,38px);font-weight:700;line-height:1}
+.badge{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);border:1px solid var(--gold);border-radius:4px;padding:3px 7px}
+
+.contract{margin:14px 0 0;padding-left:11px;border-left:2px solid var(--line2);max-width:96ch;font-size:12.5px;line-height:1.6;color:var(--faint)}
+.contract b{color:var(--paper2)}
+
+.picker{display:flex;gap:5px;flex-wrap:wrap;margin:18px 0 0;padding-bottom:12px;border-bottom:1px solid var(--line)}
+.picker button{min-height:30px;padding:0 11px;border:1px solid transparent;border-radius:999px;background:transparent;color:var(--dim);
+  font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;cursor:pointer}
+.picker button:hover{color:var(--paper);border-color:var(--line2)}
+.picker button.active{background:var(--gold);border-color:var(--gold);color:var(--ink)}
+
+.stage{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(280px,.65fr);gap:22px;margin-top:18px}
+.canvasbox{position:relative;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:#0d0b09}
+canvas{display:block;width:100%;height:auto;image-rendering:pixelated;image-rendering:crisp-edges}
+.replaybar{position:absolute;left:0;right:0;top:0;display:none;align-items:center;justify-content:space-between;gap:10px;
+  padding:6px 9px;background:rgba(230,57,70,.92);font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+.replaybar.on{display:flex}
+.replaybar button{border:1px solid rgba(255,255,255,.5);background:transparent;color:#fff;border-radius:4px;padding:3px 8px;
+  font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;cursor:pointer}
+
+.controls{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+.controls button{min-height:32px;padding:0 12px;border:1px solid var(--line2);border-radius:6px;background:transparent;color:var(--paper);
+  font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;cursor:pointer}
+.controls button:hover{border-color:var(--gold)}
+.controls button[disabled]{opacity:.4;cursor:default}
+
+.side h2{margin:0 0 8px;font-family:'Playfair Display',Georgia,serif;font-size:19px;font-weight:700}
+.text{padding:11px 12px;border:1px solid var(--line);border-radius:6px;background:var(--ink2);font-size:13px;line-height:1.55;color:var(--paper2)}
+.text .lbl{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin-bottom:5px}
+
+table.prov{width:100%;border-collapse:collapse;margin-top:14px;font-size:12px}
+table.prov th{text-align:left;font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);
+  padding:0 0 6px;border-bottom:1px solid var(--line2)}
+table.prov td{padding:5px 8px 5px 0;border-bottom:1px solid rgba(235,225,205,.06);vertical-align:top}
+table.prov td.k{font-family:var(--mono);font-size:11px;color:var(--dim);white-space:nowrap}
+table.prov td.v{font-variant-numeric:tabular-nums;color:var(--paper)}
+.tag{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.09em;padding:2px 5px;border-radius:3px;white-space:nowrap}
+.t-SOURCE_FACT{color:#7fd6a6;background:rgba(78,163,115,.14);border:1px solid rgba(78,163,115,.4)}
+.t-DERIVED{color:#8fb6ff;background:rgba(122,169,255,.12);border:1px solid rgba(122,169,255,.36)}
+.t-TEXT_DERIVED{color:var(--gold);background:rgba(212,175,55,.10);border:1px solid rgba(212,175,55,.36)}
+.t-RECONSTRUCTED{color:var(--crimson);background:rgba(239,90,102,.10);border:1px solid rgba(239,90,102,.36)}
+.t-UNAVAILABLE{color:var(--faint);background:transparent;border:1px solid var(--line2)}
+
+details{margin-top:20px;border-top:1px solid var(--line);padding-top:14px}
+.contractbox{margin-top:6px;border-top:0;padding-top:0}
+.contractsum{display:none}
+@media(max-width:900px){
+  /* the statement stays one tap away rather than filling the first screen */
+  .contractbox{border:1px solid var(--line);border-radius:6px;padding:9px 11px;margin-top:12px}
+  .contractsum{display:list-item;color:var(--gold)}
+  .contractbox:not([open]) .contract{display:none}
+  .contractbox .contract{margin-top:9px}
+  .wrap{padding-top:16px}
+  h1{font-size:26px}
+}
+summary{cursor:pointer;font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+pre{overflow:auto;max-height:340px;margin:10px 0 0;padding:12px;border:1px solid var(--line);border-radius:6px;background:#0d0b09;
+  font-family:var(--mono);font-size:11px;line-height:1.5;color:var(--paper2)}
+
+.queue{margin-top:20px;border-top:1px solid var(--line);padding-top:14px}
+.queue h2{margin:0 0 4px;font-family:'Playfair Display',Georgia,serif;font-size:19px}
+.queue p{margin:0 0 10px;font-size:12px;color:var(--faint);line-height:1.5}
+.log{display:grid;gap:0;border-top:1px solid var(--line)}
+.log button{display:grid;grid-template-columns:58px 92px minmax(0,1fr) auto;gap:12px;align-items:baseline;width:100%;
+  padding:9px 0;border:0;border-bottom:1px solid rgba(235,225,205,.06);background:transparent;color:inherit;text-align:left;cursor:pointer;
+  font-family:var(--ui);font-size:13px}
+.log button:hover{background:rgba(255,255,255,.03)}
+.log button.cur{box-shadow:inset 2px 0 0 var(--gold);padding-left:9px}
+.log .tm,.log .kd{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.log .rs{font-family:var(--mono);font-size:11px;color:var(--dim);white-space:nowrap}
+
+@media(max-width:900px){
+  .stage{grid-template-columns:minmax(0,1fr)}
+  .log button{grid-template-columns:minmax(0,1fr) auto;gap:3px 10px}
+  .log .tm{grid-column:2;justify-self:end}.log .kd{grid-column:1}
+  .log .hd{grid-column:1/-1}.log .rs{grid-column:1/-1}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="mast">
+    <div>
+      <span class="eyebrow">PropBetEdge NFL &middot; prototype, not deployed</span>
+      <h1>PBEcast Arcade Replay</h1>
+    </div>
+    <span class="badge">Reconstructed from live play-by-play</span>
+  </header>
+
+  <details class="contractbox" open>
+    <summary class="contractsum">Truth contract</summary>
+  <p class="contract">
+    <b>This is not an exact replay.</b> The feed carries no X/Y player tracking. The snap spot, the destination,
+    the down and distance, the possession change and the result are taken from the published play and are exact.
+    Routes, running lanes, blocking, defender movement, formation and all 22 player positions are
+    <b>reconstructed for illustration</b> and are not historical tracking data. Player identities are read out of the
+    published play text because the feed has no structured participant list &mdash; they are marked
+    <span class="tag t-TEXT_DERIVED">TEXT_DERIVED</span> below. The offence always attacks right in this view;
+    that is a presentation choice, not the real field orientation.
+  </p>
+  </details>
+
+  <nav class="picker" id="picker"></nav>
+
+  <div class="stage">
+    <div>
+      <div class="canvasbox">
+        <div class="replaybar" id="replaybar">
+          <span id="replaylabel">Replay &middot; earlier play</span>
+          <button id="btn-live">Return to live</button>
+        </div>
+        <canvas id="field" width="240" height="108" aria-label="Reconstructed arcade replay of the selected play"></canvas>
+      </div>
+      <div class="controls">
+        <button id="btn-replay">Replay</button>
+        <button id="btn-pause">Pause</button>
+        <button id="btn-skip">Skip to result</button>
+        <button id="btn-reduced">Reduced motion: off</button>
+      </div>
+      <div class="text" style="margin-top:10px">
+        <span class="lbl">Published play text &middot; source fact</span>
+        <span id="playtext"></span>
+      </div>
+    </div>
+
+    <aside class="side">
+      <h2>Normalized ArcadePlay</h2>
+      <table class="prov"><thead><tr><th>Field</th><th>Value</th><th>Provenance</th></tr></thead>
+        <tbody id="prov"></tbody></table>
+    </aside>
+  </div>
+
+  <section class="queue">
+    <h2>Live queue &amp; game log</h2>
+    <p>
+      Simulates the live loop against real plays: a poll delivers new play ids, each is enqueued and animated once,
+      and the field lands on the published state. Selecting an older row enters <b>REPLAY</b> and offers
+      <b>RETURN TO LIVE</b>. If the queue grows past four, it skips to the live state rather than falling behind.
+    </p>
+    <div class="controls" style="margin:0 0 12px">
+        <button id="btn-poll">Simulate poll (next play)</button>
+        <button id="btn-burst">Simulate burst (3 plays at once)</button>
+        <span id="qstate" class="rs" style="align-self:center;font-family:var(--mono);font-size:11px;color:var(--faint)"></span>
+    </div>
+    <div class="log" id="log"></div>
+  </section>
+
+  <details>
+    <summary>Source play JSON from /api/nfl-live (plus the five upstream fields it currently drops)</summary>
+    <pre id="src"></pre>
+  </details>
+  <details>
+    <summary>Normalized ArcadePlay object</summary>
+    <pre id="norm"></pre>
+  </details>
+</div>
+
+<script type="module">
+import { normalizePlayForArcade } from './arcade-normalize.js';
+import { ArcadeReplay } from './arcade-renderer.js';
+
+const DEMO = await (await fetch('./demo-plays.json')).json();
+const TEAMS = {
+  default: { home:{abbreviation:'GB'}, away:{abbreviation:'WSH'} },
+  TURNOVER:{ home:{abbreviation:'KC'}, away:{abbreviation:'PHI'} }
+};
+const ORDER = ['COMPLETED PASS','RUSH','TOUCHDOWN','TURNOVER','INCOMPLETE','SACK','FIELD GOAL'];
+
+const norm = {};
+for (const label of ORDER) {
+  const play = DEMO[label];
+  if (!play) continue;
+  const t = TEAMS[label] || TEAMS.default;
+  norm[label] = { raw: play, arcade: normalizePlayForArcade(play, { drive: play.drive, homeTeam: t.home, awayTeam: t.away }) };
+}
+
+/* The statement stays first on a desktop page; on a phone it opens on tap so
+   the field is reachable without scrolling past a paragraph. */
+if (matchMedia('(max-width:900px)').matches) document.querySelector('.contractbox')?.removeAttribute('open');
+
+const canvas = document.getElementById('field');
+const replay = new ArcadeReplay(canvas, { compact: matchMedia('(max-width:640px)').matches });
+let current = ORDER.find(l => norm[l]);
+let liveIndex = 0;          // how many plays the simulated live feed has published
+let isReplayMode = false;
+const queue = [];
+
+function tag(p){ return `<span class="tag t-${p}">${p}</span>`; }
+function fmt(v){ return v === null || v === undefined ? '—' : (typeof v === 'boolean' ? String(v) : v); }
+
+const PROV_ROWS = ['kind','offense','defense','startYard','endYard','yardsGained','kickDistanceYards','fieldResultYards',
+  'down','distance','firstDownYard','scoring','possessionChange','clock','quarter',
+  'passer','receiver','rusher','tackler','interceptor','kicker','routes','runningLane','defenderMovement','formation','allTwentyTwoPositions'];
+
+function render(label, opts = {}) {
+  const { arcade, raw } = norm[label];
+  current = label;
+  document.querySelectorAll('#picker button').forEach(b => b.classList.toggle('active', b.dataset.label === label));
+  document.getElementById('playtext').textContent = arcade.actualText;
+  document.getElementById('src').textContent = JSON.stringify(raw, null, 1);
+  document.getElementById('norm').textContent = JSON.stringify(arcade, null, 1);
+
+  const body = document.getElementById('prov');
+  body.innerHTML = PROV_ROWS.map(k => {
+    const prov = arcade.provenance[k] || 'RECONSTRUCTED';
+    const val = k in arcade ? fmt(arcade[k]) : '(drawn only)';
+    return `<tr><td class="k">${k}</td><td class="v">${val}</td><td>${tag(prov)}</td></tr>`;
+  }).join('') +
+  `<tr><td class="k">confidence</td><td class="v" colspan="2">${arcade.confidence.level} — ${arcade.confidence.reason}</td></tr>` +
+  `<tr><td class="k">contract</td><td class="v" colspan="2">${arcade.contract}</td></tr>`;
+
+  replay.load(arcade);
+  if (!opts.hold) replay.start();
+  drawLog();
+}
+
+function setReplayMode(on, label) {
+  isReplayMode = on;
+  const bar = document.getElementById('replaybar');
+  bar.classList.toggle('on', on);
+  if (on) document.getElementById('replaylabel').textContent = `Replay · ${label}`;
+}
+
+/* ---- picker ------------------------------------------------------------- */
+document.getElementById('picker').innerHTML = ORDER.filter(l => norm[l])
+  .map(l => `<button data-label="${l}">${l}</button>`).join('');
+document.getElementById('picker').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  setReplayMode(false);
+  render(b.dataset.label);
+});
+
+/* ---- controls ----------------------------------------------------------- */
+document.getElementById('btn-replay').onclick = () => { replay.load(norm[current].arcade); replay.start(); };
+document.getElementById('btn-pause').onclick = e => {
+  if (replay.playing) { replay.pause(); e.target.textContent = 'Resume'; }
+  else { replay.resume(); e.target.textContent = 'Pause'; }
+};
+document.getElementById('btn-skip').onclick = () => { replay.toEnd(); document.getElementById('btn-pause').textContent = 'Pause'; };
+document.getElementById('btn-reduced').onclick = e => {
+  replay.reduced = !replay.reduced;
+  e.target.textContent = `Reduced motion: ${replay.reduced ? 'on' : 'off'}`;
+  replay.load(norm[current].arcade);
+  if (!replay.reduced) replay.start();
+};
+
+/* ---- simulated live loop ------------------------------------------------- */
+const MAX_QUEUE = 4;
+function enqueue(labels) {
+  labels.forEach(l => { if (norm[l]) queue.push(l); });
+  if (queue.length > MAX_QUEUE) {
+    /* never let the animation fall behind the game */
+    const last = queue[queue.length - 1];
+    queue.length = 0;
+    setQState(`queue exceeded ${MAX_QUEUE} — skipped to live`);
+    setReplayMode(false);
+    render(last);
+    return;
+  }
+  drain();
+}
+let draining = false;
+function drain() {
+  if (draining || !queue.length) return;
+  draining = true;
+  const next = queue.shift();
+  setQState(`playing ${next}${queue.length ? ` · ${queue.length} queued` : ''}`);
+  setReplayMode(false);
+  replay.onEnd = () => { draining = false; replay.onEnd = null; if (queue.length) drain(); else setQState('waiting for next published play'); };
+  render(next);
+}
+function setQState(s){ document.getElementById('qstate').textContent = s; }
+
+document.getElementById('btn-poll').onclick = () => {
+  const available = ORDER.filter(l => norm[l]);
+  if (liveIndex >= available.length) { setQState('no further published plays in this sample'); return; }
+  enqueue([available[liveIndex++]]);
+};
+document.getElementById('btn-burst').onclick = () => {
+  const available = ORDER.filter(l => norm[l]);
+  const batch = available.slice(liveIndex, liveIndex + 3);
+  liveIndex = Math.min(available.length, liveIndex + 3);
+  if (!batch.length) { setQState('no further published plays in this sample'); return; }
+  enqueue(batch);
+};
+document.getElementById('btn-live').onclick = () => {
+  const available = ORDER.filter(l => norm[l]);
+  const live = available[Math.max(0, Math.min(available.length - 1, liveIndex - 1))] || available[0];
+  setReplayMode(false);
+  render(live);
+};
+
+/* ---- game log ------------------------------------------------------------ */
+function drawLog() {
+  const available = ORDER.filter(l => norm[l]);
+  document.getElementById('log').innerHTML = available.map(l => {
+    const a = norm[l].arcade;
+    const res = a.scoring ? 'SCORE' : a.possessionChange ? 'TURNOVER'
+      : a.yardsGained !== null ? `${a.yardsGained >= 0 ? '+' : ''}${a.yardsGained} yd` : '—';
+    return `<button data-label="${l}" class="${l === current ? 'cur' : ''}">
+      <span class="tm">Q${a.quarter} ${a.clock}</span>
+      <span class="kd">${a.kind.replace(/_/g,' ')}</span>
+      <span class="hd">${a.actualText.slice(0, 88)}</span>
+      <span class="rs">${res}</span></button>`;
+  }).join('');
+}
+document.getElementById('log').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const available = ORDER.filter(l => norm[l]);
+  const liveLabel = available[Math.max(0, liveIndex - 1)];
+  setReplayMode(b.dataset.label !== liveLabel, b.dataset.label);
+  render(b.dataset.label);
+});
+
+addEventListener('resize', () => { replay._resize(); replay._draw(); });
+setQState('waiting for next published play');
+render(current, { hold: true });
+replay.start();
+</script>
+</body>
+</html>
