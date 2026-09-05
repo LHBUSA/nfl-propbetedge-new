@@ -98,6 +98,10 @@ for (const width of WIDTHS) {
       Object.assign(S, ${JSON.stringify(c.state)});
       S.tab = ${JSON.stringify(c.tab)};
       S.dna = null; S.prop = null; S.cmp = null; S.ctxCmp = null;
+      /* Clear the selected game exactly as the player-change handler does, so
+         each case resolves THIS quarterback's own next game rather than
+         inheriting the previous case's selection. */
+      S.eventId = null; S.ctx = null;
       await window.PBEQBDna.load();
       return true;
     })()`, 60000);

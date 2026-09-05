@@ -145,10 +145,19 @@ export default async function handler(req, res) {
   // A neutral-site game is NOT the home team's venue. Say so rather than
   // silently applying the wrong stadium's roof and coordinates.
   if (g.neutral_site) {
+    /* Nothing derived from the home team's stadium applies. Surface and roof are
+       cleared too — leaving surface populated would state a fact about a venue
+       this game is not being played in. */
+    const neutral = { ...g, venue: null, surface: null, surface_source: null,
+                      roof_source: null };
     return send(res, 200, {
-      ok: true, game: g,
+      ok: true, game: neutral,
       context: { roof: null, indoor: null },
-      unresolved: [{ field: 'venue', reason: 'neutral-site game - the home team venue does not apply' }],
+      unresolved: [{ field: 'venue',
+        reason: 'neutral-site game - the home team venue, roof and surface do not apply' }],
+      markets: { available: false, state: MARKET_UNAVAILABLE,
+                 reason: 'not resolved for a neutral-site game in this prototype' },
+      data_window: dataWindow(),
       compare_query: null
     }, 300);
   }

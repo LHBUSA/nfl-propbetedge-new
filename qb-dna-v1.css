@@ -551,3 +551,12 @@
   .qbd-field { flex: 1 1 100%; }
   .qbd-field > .qbd-select { flex: 1 1 auto; width: 100%; }
 }
+
+/* The reason a context field is unresolved is stated ONCE beneath the list,
+   not repeated in every cell it affects. */
+.qbd-env-why {
+  margin-top: var(--s-3); padding-top: var(--s-3);
+  border-top: 1px solid var(--pbe-line-faint);
+  font: 400 var(--fs-micro)/1.6 var(--pbe-font-ui); color: var(--pbe-unavailable);
+  font-style: italic;
+}

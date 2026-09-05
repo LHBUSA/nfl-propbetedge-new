@@ -295,7 +295,10 @@
     const g = c.game, ctx = c.context, f = c.forecast;
     const weatherReason = (c.unresolved || []).find(u => u.field === 'weather');
 
-    const env = [
+    /* Unresolved rows are marked, and the REASON is stated once beneath the
+       list. Repeating the same sentence in six cells is noise, and it buries
+       the values that did resolve. */
+    const envRows = [
       ['Venue', g.venue ? g.venue.venue : g.espn_venue],
       ['Roof', ctx.roof || null],
       ['Surface', g.surface || null],
@@ -304,10 +307,13 @@
       ['Temperature', f ? `${f.temp_f}°F` : null],
       ['Wind', f ? `${f.wind_mph} mph` : null],
       ['Precipitation', f ? (ctx.precip === 'none' ? 'none forecast' : ctx.precip) : null]
-    ].map(([k, v]) => `<div class="qbd-env-row"><span>${esc(k)}</span>${
-      v ? `<b>${esc(v)}</b>`
-        : `<b class="na">${esc((weatherReason || (c.unresolved || [])[0] || {}).reason
-            || 'not resolved')}</b>`}</div>`).join('');
+    ];
+    const env = envRows.map(([k, v]) => `<div class="qbd-env-row"><span>${esc(k)}</span>${
+      v ? `<b>${esc(v)}</b>` : '<b class="na">not resolved</b>'}</div>`).join('')
+      + ((c.unresolved || []).length
+        ? `<div class="qbd-env-why">${(c.unresolved || [])
+            .map(u => `${esc(u.field)}: ${esc(u.reason)}`).join('<br>')}</div>`
+        : '');
 
     const w = state.ctxCmp;
     const dom = w ? domainOf([
