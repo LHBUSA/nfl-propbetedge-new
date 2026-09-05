@@ -97,6 +97,16 @@
   }
 
   function render(){
+    /* Same route guard as dashboard-v7: this generation is superseded on the
+       home route but still boots, and its load() writes into #view-container
+       synchronously and again on resolve. Without the guard a cold load of a
+       different route -- /#injuries reproduced it -- gets the dashboard's
+       markup written over whatever that route rendered. The hash is
+       authoritative from the first byte; App.current is not, because App.boot
+       does not run until pbe:upgrades-ready. */
+    const pbeRaw=String(location.hash||'').replace(/^#/,'');
+    const pbeRoute=window.App?.normalize?window.App.normalize(pbeRaw):(pbeRaw.split('?')[0]||'home');
+    if(pbeRoute!=='home')return;
     const vc=document.getElementById('view-container');if(!vc)return;
     if(state.error&&!state.scoreboard){
       const fatal=`<section class="pbehome5" data-stale="true"><div class="home5-empty"><div><strong>NFL live layer unavailable</strong><p>${esc(state.error)}. No demo game is substituted.</p></div></div></section>`;
@@ -113,6 +123,16 @@
     clearTimeout(state.poll);
     const hasSnapshot=Boolean(state.scoreboard);
     state.error=null;
+    /* Same route guard as dashboard-v7: this generation is superseded on the
+       home route but still boots, and its load() writes into #view-container
+       synchronously and again on resolve. Without the guard a cold load of a
+       different route -- /#injuries reproduced it -- gets the dashboard's
+       markup written over whatever that route rendered. The hash is
+       authoritative from the first byte; App.current is not, because App.boot
+       does not run until pbe:upgrades-ready. */
+    const pbeRaw=String(location.hash||'').replace(/^#/,'');
+    const pbeRoute=window.App?.normalize?window.App.normalize(pbeRaw):(pbeRaw.split('?')[0]||'home');
+    if(pbeRoute!=='home')return;
     const vc=document.getElementById('view-container');
     if(!hasSnapshot&&vc&&!vc.querySelector('.pbehome5'))vc.innerHTML='<section class="pbehome5"><div class="home5-empty"><div><div style="font-size:35px;margin-bottom:9px">🏈</div><strong>Loading NFL Intelligence</strong><p>Connecting to the live scoreboard, game package and newsroom.</p></div></div></section>';
     try{

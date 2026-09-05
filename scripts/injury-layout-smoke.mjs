@@ -42,9 +42,9 @@ let desktop=await probe(`(()=>{
   const root=document.querySelector('.pbe13-news.pbe13-injury-editorial');
   if(!root)return{root:false};
   const hero=root.querySelector('.pbe13-editorial-hero');
-  const lead=root.querySelector('.pbe13-editorial-lead');
-  const leadImg=lead?.querySelector('.pbe13-editorial-lead-media img');
-  const cards=[...root.querySelectorAll('.pbe13-editorial-card')];
+  const lead=root.querySelector('.pbe13-feature');
+  const leadImg=lead?.querySelector('.pbe13-feature-media img');
+  const cards=[...root.querySelectorAll('.pbe13-coverage-row')];
   const board=root.querySelector('.pbe13-availability-board');
   const columns=board?.querySelector('.pbe13-availability-columns');
   const availabilityRows=[...root.querySelectorAll('.pbe13-availability-row')];
@@ -60,11 +60,14 @@ let desktop=await probe(`(()=>{
   const reportedTimelines=timelineValues.filter(value=>value&&value!=='Timeline not reported');
   const isPbeArticle=href=>{try{const u=new URL(href);return u.hostname==='propbetedge.ai'&&u.pathname.startsWith('/news/nfl/')}catch{return false}};
   const links=[...root.querySelectorAll('a[href]')].map(a=>a.href).filter(isPbeArticle);
-  const badLinks=[...root.querySelectorAll('.pbe13-editorial-lead a[href],.pbe13-editorial-card[href],.pbe13-availability-row[href]')].map(a=>a.href).filter(h=>!isPbeArticle(h));
-  const imgs=[...root.querySelectorAll('.pbe13-editorial-lead img,.pbe13-editorial-card img')];
+  const badLinks=[...root.querySelectorAll('.pbe13-feature a[href],.pbe13-coverage-row[href],.pbe13-availability-row[href]')].map(a=>a.href).filter(h=>!isPbeArticle(h));
+  const imgs=[...root.querySelectorAll('.pbe13-feature img,.pbe13-coverage-row img')];
+  /* Nothing on this page may be stretched past its source. */
+  const upscaled=imgs.filter(i=>i.naturalWidth&&i.getBoundingClientRect().width>i.naturalWidth*1.2);
   const loaded=imgs.filter(i=>i.complete&&i.naturalWidth>0);
   const broken=imgs.filter(i=>i.complete&&!i.naturalWidth);
   const controls=root.querySelectorAll('#pbe13-summary,.pbe13-controls,.pbe13-side,.pbe13-story-player,.pbe13-impact');
+  const shown=parseInt(board?.querySelector('.pbe13-availability-coverage strong')?.textContent||'0',10);
   const boardStyle=board?getComputedStyle(board):null;
   const rowCells=firstRow?[...firstRow.children].slice(0,5):[];
   const rowLefts=rowCells.map(el=>Math.round(el.getBoundingClientRect().left));
@@ -80,14 +83,22 @@ let desktop=await probe(`(()=>{
     articleLinks:links.length,
     badLinks:badLinks.length,
     images:imgs.length,
+    upscaled:upscaled.length,
+    maxMediaHeight:Math.round(imgs.reduce((m,i)=>Math.max(m,i.getBoundingClientRect().height),0)),
     loadedImages:loaded.length,
     broken:broken.length,
     telemetryNodes:controls.length,
     impactText:/impact score|selected-event team stories|affected players/i.test(root.textContent||''),
-    editorialText:/PropBetEdge Editorial/i.test(root.textContent||''),
+    /* The invariant is that the page states where its facts come from and what
+       they are not. The old check matched the brand string "PropBetEdge
+       Editorial" in a marketing headline that has been retired; the source
+       boundary itself is the thing worth asserting. */
+    editorialText:/reporting and analysis from propbetedge/i.test(root.textContent||'')
+      && /not the official nfl practice/i.test(root.textContent||''),
     availabilityBoard:!!board,
     availabilityRows:availabilityRows.length,
     reportedTimelines:reportedTimelines.length,
+    reportedTimelinesShown:Number.isFinite(shown)?shown:-1,
     availabilityText:/who's out & how long/i.test(root.textContent||''),
     readabilityAuthority:root.dataset.pbeInjuryReadability||null,
     columnCount:columns?.children?.length||0,
@@ -108,7 +119,29 @@ let desktop=await probe(`(()=>{
   };
 })()`);
 out(`desktop ${JSON.stringify(desktop)}`);
-if(!desktop||typeof desktop!=='object'||desktop.root!==true||desktop.heroHeight>255||desktop.lead!==true||desktop.leadImage!==true||desktop.leadMediaWidth<500||desktop.cards<5||desktop.articleLinks<6||desktop.badLinks!==0||desktop.images<6||desktop.loadedImages<1||desktop.broken>0||desktop.telemetryNodes!==0||desktop.impactText!==false||desktop.editorialText!==true||desktop.availabilityBoard!==true||desktop.availabilityRows<3||desktop.reportedTimelines<2||desktop.availabilityText!==true||desktop.readabilityAuthority!=='5'||desktop.columnCount!==5||desktop.columnDisplay!=='grid'||desktop.columnFont<9.5||desktop.teamColumn!==true||desktop.renderedColumns!==5||desktop.orderedColumns!==true||desktop.playerFont<18||desktop.teamFont<11||desktop.injuryFont<12||desktop.statusFont<10||desktop.timelineFont<13||desktop.footFont<9.5||!desktop.boardBg||desktop.boardBg==='rgba(0, 0, 0, 0)'||desktop.text<1500)pass=false;
+/* ASSERTIONS UPDATED BY THE VISUAL-FINISH MEDIA PASS.
+   Four of the original conditions encoded the layout this pass was asked to
+   replace, and one could not pass against live data at all:
+
+     lead / leadImage / leadMediaWidth >= 500
+       required the feature photograph to be at least 500px wide. It rendered
+       787x430 and put roughly 900px of page above the first injury fact. The
+       requirement is now the opposite and explicit: a feature frame exists and
+       is at most 220px wide.
+     cards >= 5, images >= 6
+       counted .pbe13-editorial-card, a three-up photo grid that no longer
+       exists. Coverage rows are counted instead, and imagery is asserted as
+       present-but-restrained plus never upscaled.
+     boardBg must not be transparent
+       required the availability board to sit on its own opaque panel. The page
+       now has its own reading plane and the board is set on rules, so a panel
+       would be a box inside a box.
+     reportedTimelines >= 2
+       was already failing at d07f9cd against live data -- the current feed
+       states no return windows at all, and inventing them is exactly what this
+       product must not do. It is now a self-consistency check: the count shown
+       equals the number of rows that actually state a timeline. */
+if(!desktop||typeof desktop!=='object'||desktop.root!==true||desktop.heroHeight>255||desktop.lead!==true||desktop.leadImage!==true||desktop.leadMediaWidth<40||desktop.leadMediaWidth>220||desktop.maxMediaHeight>220||desktop.cards<5||desktop.articleLinks<6||desktop.badLinks!==0||desktop.images<1||desktop.upscaled!==0||desktop.loadedImages<1||desktop.broken>0||desktop.telemetryNodes!==0||desktop.impactText!==false||desktop.editorialText!==true||desktop.availabilityBoard!==true||desktop.availabilityRows<3||desktop.reportedTimelines!==desktop.reportedTimelinesShown||desktop.availabilityText!==true||desktop.readabilityAuthority!=='5'||desktop.columnCount!==5||desktop.columnDisplay!=='grid'||desktop.columnFont<9.5||desktop.teamColumn!==true||desktop.renderedColumns!==5||desktop.orderedColumns!==true||desktop.playerFont<18||desktop.teamFont<11||desktop.injuryFont<12||desktop.statusFont<10||desktop.timelineFont<13||desktop.footFont<9.5||desktop.text<1500)pass=false;
 
 const binding=await probe(`(()=>{
   const api=window.PBEInjuryIntelV2;
@@ -139,8 +172,8 @@ await probe(`window.scrollTo(0,0)`);await sleep(900);
 const mobile=await probe(`(()=>{
   const root=document.querySelector('.pbe13-news.pbe13-injury-editorial');
   const hero=root?.querySelector('.pbe13-editorial-hero');
-  const lead=root?.querySelector('.pbe13-editorial-lead');
-  const leadImg=root?.querySelector('.pbe13-editorial-lead-media img');
+  const lead=root?.querySelector('.pbe13-feature');
+  const leadImg=root?.querySelector('.pbe13-feature-media img');
   const board=root?.querySelector('.pbe13-availability-board');
   const columns=board?.querySelector('.pbe13-availability-columns');
   const firstAvailability=root?.querySelector('.pbe13-availability-row');

@@ -188,10 +188,24 @@
 
   /* ---- imagery ----------------------------------------------------------- */
   /* Every row in this feed carries an image_url, so having an image is not by
-     itself a signal of anything. Scale is the signal: the lead is the only
-     story that gets a full-bleed photograph, majors get a contained frame, the
-     wire gets none. A wire row is not a card missing its picture. */
+     itself a signal of anything. Scale is the signal: the lead gets the largest
+     frame, majors get a contained one, the wire gets none. A wire row is not a
+     card missing its picture.
+
+     CROP. object-fit:cover crops along one axis only, and which axis depends on
+     the source aspect relative to the FRAME. Comparing against the frame is
+     what puts the bias on the axis actually being cut: a source taller than its
+     frame is pulled up towards helmets and faces, which sit in the upper third
+     of almost every action photograph; a source wider than its frame keeps its
+     horizontal centre, the conservative choice when the subject's position in
+     the frame is unknown.
+
+     QUALITY. An asset that would have to be stretched past 1.35x its natural
+     width is dropped rather than shown soft -- the frame collapses and the
+     story keeps its headline, which is better than a blurred photograph. */
   const imageOf = a => String(a?.image_url || '').trim();
+  const FOCUS = "var b=this.getBoundingClientRect();var f=b.width/b.height,r=this.naturalWidth/this.naturalHeight;this.style.objectPosition=r<f?'50% 26%':'50% 50%';if(this.naturalWidth&&b.width>this.naturalWidth*1.35){this.closest('[data-pbe-media]').classList.add('is-lowres')}";
+  const DROP = "this.closest('[data-pbe-media]').classList.add('is-lowres')";
 
   /* ---- ordering ---------------------------------------------------------- */
   function matchesFilters(a) {
@@ -270,7 +284,7 @@
     if (!a) return '<div class="pbe27-empty">No current NFL story matches these filters.</div>';
     const img = imageOf(a);
     return `<article class="pbe27-lead">
-      ${img ? `<a class="pbe27-lead-media" ${a.url ? `href="${esc(a.url)}" target="_blank" rel="noopener"` : 'href="javascript:void(0)"'}><img src="${esc(img)}" alt="${esc(a.image_alt || a.title || '')}" fetchpriority="high" decoding="async" onerror="this.closest('.pbe27-lead-media').hidden=true"></a>` : ''}
+      ${img ? `<a class="pbe27-lead-media" data-pbe-media ${a.url ? `href="${esc(a.url)}" target="_blank" rel="noopener"` : 'href="javascript:void(0)"'}><img src="${esc(img)}" alt="${esc(a.image_alt || a.title || '')}" fetchpriority="high" decoding="async" onload="${esc(FOCUS)}" onerror="${esc(DROP)}"></a>` : ''}
       <div class="pbe27-lead-copy">
         ${railLine(a)}
         <h2 class="pbe27-lead-title">${a.url ? `<a href="${esc(a.url)}" target="_blank" rel="noopener">${esc(a.title)}</a>` : esc(a.title)}</h2>
@@ -285,7 +299,7 @@
   function majorStory(a) {
     const img = imageOf(a);
     return `<article class="pbe27-major">
-      ${img ? `<a class="pbe27-major-media" ${a.url ? `href="${esc(a.url)}" target="_blank" rel="noopener"` : 'href="javascript:void(0)"'}><img src="${esc(img)}" alt="${esc(a.image_alt || a.title || '')}" loading="lazy" decoding="async" onerror="this.closest('.pbe27-major-media').hidden=true"></a>` : ''}
+      ${img ? `<a class="pbe27-major-media" data-pbe-media ${a.url ? `href="${esc(a.url)}" target="_blank" rel="noopener"` : 'href="javascript:void(0)"'}><img src="${esc(img)}" alt="${esc(a.image_alt || a.title || '')}" loading="lazy" decoding="async" onload="${esc(FOCUS)}" onerror="${esc(DROP)}"></a>` : ''}
       <div class="pbe27-major-copy">
         ${railLine(a)}
         <h3 class="pbe27-major-title">${a.url ? `<a href="${esc(a.url)}" target="_blank" rel="noopener">${esc(a.title)}</a>` : esc(a.title)}</h3>

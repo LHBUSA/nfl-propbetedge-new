@@ -10,19 +10,31 @@
   let burstToken = 0;
   const HEADERS = ['PLAYER','TEAM','INJURY','STATUS','REPORTED TIMELINE'];
 
+  /* The board is a five-column grid, so every row must contribute five cells.
+     This used to bail when a row carried no team span, which left that row with
+     four children and shifted its injury, status and timeline one column left --
+     visible as soon as team codes started being withheld for lack of
+     corroboration. The cell is now always created, and stays EMPTY when the
+     article's own text does not support a franchise. An empty cell is the
+     truthful answer; the previous 'NFL' fallback was a value nobody reported. */
   function splitTeamColumn(row) {
     if (!row || row.querySelector(':scope > .pbe13-availability-team')) return false;
     const player = row.querySelector(':scope > .pbe13-availability-player');
-    const source = player?.querySelector(':scope > span');
-    if (!player || !source) return false;
+    if (!player) return false;
+    const source = player.querySelector(':scope > span');
 
     const team = document.createElement('div');
     team.className = 'pbe13-availability-team';
-    const code = document.createElement('span');
-    code.className = 'team-code';
-    code.textContent = source.textContent?.trim() || 'NFL';
-    team.appendChild(code);
-    source.remove();
+    const label = source?.textContent?.trim() || '';
+    if (label) {
+      const code = document.createElement('span');
+      code.className = 'team-code';
+      code.textContent = label;
+      team.appendChild(code);
+    } else {
+      team.classList.add('is-unreported');
+    }
+    source?.remove();
     player.after(team);
     return true;
   }

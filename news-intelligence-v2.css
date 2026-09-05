@@ -174,28 +174,44 @@
   margin-top:16px;
 }
 
-/* --- lead: the only full-bleed photograph on the page ------------------- */
-.pbe27-lead{padding-right:34px;border-right:1px solid var(--pbe-line)}
+/* --- lead: photograph beside the story, not above it -------------------
+   A full-width 2.3:1 plate still rendered 790x344 at 1440 and pushed the dek
+   and the entity chips under the fold; the photograph was carrying more weight
+   than the story it illustrates. Side by side, the image holds about 300px of
+   height at a third of the column, and headline, dek, chips and research paths
+   are all visible beside it without scrolling. */
+.pbe27-lead{
+  display:grid;
+  grid-template-columns:336px minmax(0,1fr);
+  gap:24px;
+  padding-right:34px;
+  border-right:1px solid var(--pbe-line);
+}
 .pbe27-lead-media{
   display:block;
-  aspect-ratio:2.3/1;
-  max-height:min(40vh,344px);
+  width:336px;height:300px;
   overflow:hidden;
   background:var(--pbe-ink-2);
 }
 .pbe27-lead-media img{
   width:100%;height:100%;
   object-fit:cover;
+  object-position:50% 34%;
   transition:transform .5s ease;
 }
 .pbe27-lead-media:hover img{transform:scale(1.02)}
-.pbe27-lead-copy{padding-top:18px}
+/* A frame that would have to stretch its asset gives the column back to the
+   story rather than showing a soft photograph. */
+.pbe27-lead-media.is-lowres,
+.pbe27-major-media.is-lowres{display:none}
+.pbe27-lead:has(.pbe27-lead-media.is-lowres){grid-template-columns:minmax(0,1fr)}
+.pbe27-lead-copy{padding-top:0;min-width:0}
 .pbe27-lead-title{
   margin:10px 0 0;
   font-family:'Playfair Display',Georgia,serif;
-  font-size:clamp(29px,2.9vw,42px);
+  font-size:clamp(26px,2.2vw,34px);
   font-weight:700;
-  line-height:1.08;
+  line-height:1.12;
   letter-spacing:-.012em;
   color:var(--pbe-paper);
   text-wrap:balance;
@@ -214,8 +230,8 @@
 .pbe27-majors{display:flex;flex-direction:column;padding-left:26px}
 .pbe27-major{
   display:grid;
-  grid-template-columns:104px minmax(0,1fr);
-  gap:14px;
+  grid-template-columns:136px minmax(0,1fr);
+  gap:15px;
   padding:16px 0;
   border-bottom:1px solid var(--pbe-line-faint);
 }
@@ -223,12 +239,12 @@
 .pbe27-major:last-child{border-bottom:0;padding-bottom:0}
 .pbe27-major-media{
   display:block;
-  width:104px;height:72px;
+  width:136px;height:92px;
   overflow:hidden;
   border-radius:var(--r-xs);
   background:var(--pbe-ink-2);
 }
-.pbe27-major-media img{width:100%;height:100%;object-fit:cover}
+.pbe27-major-media img{width:100%;height:100%;object-fit:cover;object-position:50% 30%}
 .pbe27-major-copy{min-width:0}
 .pbe27-major-title{
   margin:8px 0 0;
@@ -469,7 +485,12 @@
    --------------------------------------------------------------------------- */
 @media(max-width:1100px){
   .pbe27-top{grid-template-columns:minmax(0,1fr);gap:26px}
-  .pbe27-lead{padding-right:0;border-right:0;padding-bottom:24px;border-bottom:1px solid var(--pbe-line)}
+  .pbe27-lead{
+    grid-template-columns:392px minmax(0,1fr);
+    padding-right:0;border-right:0;padding-bottom:24px;
+    border-bottom:1px solid var(--pbe-line);
+  }
+  .pbe27-lead-media{width:392px;height:276px}
   .pbe27-majors{
     display:grid;
     grid-template-columns:repeat(3,minmax(0,1fr));
@@ -485,6 +506,7 @@
   }
   .pbe27-major:first-child{border-left:0;padding-left:0}
   .pbe27-major-media{width:100%;height:auto;aspect-ratio:16/9;margin-bottom:12px}
+  .pbe27-major-media img{object-position:50% 34%}
 }
 
 @media(max-width:820px){
@@ -514,13 +536,17 @@
   .pbe27-search{max-width:none;min-width:0}
 
   .pbe27-top{margin-top:16px;gap:20px}
-  /* On a phone the lead photograph runs edge to edge: it is the first thing
-     under the shell and the strongest signal that this is football news. */
+  /* On a phone the split becomes a stack, and the photograph runs edge to edge
+     at 3:2 -- present enough to say this is football, short enough that the
+     headline and dek are still in the first screen. */
+  .pbe27-lead{grid-template-columns:minmax(0,1fr);gap:0}
   .pbe27-lead-media{
+    width:auto;height:auto;
     margin-inline:calc(-1 * var(--pbe27-pad));
     aspect-ratio:3/2;
-    max-height:none;
+    max-height:44vh;
   }
+  .pbe27-lead-copy{padding-top:14px}
   .pbe27-wire-main{display:block}
   .pbe27-wire-ents{margin-left:0;margin-top:7px}
   .pbe27-lead-copy{padding-top:14px}
@@ -531,7 +557,7 @@
   .pbe27-majors{grid-template-columns:minmax(0,1fr);gap:0}
   .pbe27-major{
     display:grid;
-    grid-template-columns:92px minmax(0,1fr);
+    grid-template-columns:104px minmax(0,1fr);
     gap:13px;
     padding:15px 0;
     border-left:0;
@@ -541,7 +567,7 @@
   .pbe27-major:first-child{padding-top:0}
   .pbe27-major:nth-child(3){grid-column:auto;padding-top:15px;border-top:0}
   .pbe27-major-media,
-  .pbe27-major:nth-child(3) .pbe27-major-media{display:block;width:92px;height:64px;aspect-ratio:auto;margin-bottom:0}
+  .pbe27-major:nth-child(3) .pbe27-major-media{display:block;width:104px;height:72px;aspect-ratio:auto;margin-bottom:0}
   .pbe27-major .pbe27-dek,
   .pbe27-major .pbe27-byline,
   .pbe27-major .pbe27-chips{display:none}
@@ -575,7 +601,7 @@
 @media(max-width:430px){
   .pbe27-lead-title{font-size:27px}
   .pbe27-section-head h2{font-size:21px}
-  .pbe27-major-media{width:82px;height:58px}
+  .pbe27-major-media{width:92px;height:64px}
   .pbe27-major-title{font-size:15px}
   .pbe27-paths{gap:6px}
 }

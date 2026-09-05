@@ -13,6 +13,48 @@
   const clean = value => String(value || '').replace(/\s+/g,' ').trim();
   const escapeRx = value => String(value || '').replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
 
+  /* This module reads article prose to state what a named player's injury,
+     status and return timeline are. The upstream feed serves one article's
+     summary and entity tags on many rows -- 27 of 50 measured on 2026-09-04 --
+     and that is exactly how "Patrick Mahomes - ACL" reached the availability
+     board from a borrowed Chiefs dek attached to unrelated headlines.
+
+     Every read of prose or entities below therefore goes through the trust
+     guard. When a summary was suppressed the only evidence left is the title,
+     which is the one field proven to be article-specific; a fact that cannot
+     be built from it is simply not asserted. */
+  const trustOf = a => a?._trust || null;
+  const safeSummary = a => (trustOf(a) ? trustOf(a).summary : (a?.summary || '')) || '';
+  const safePlayers = a => (trustOf(a) ? trustOf(a).players : (Array.isArray(a?.players) ? a.players : [])) || [];
+  let TEAM_TERMS = null;
+  function teamTerms() {
+    if (TEAM_TERMS && TEAM_TERMS.length) return TEAM_TERMS;
+    const map = (typeof window !== 'undefined' && window.NFL_TEAMS) || {};
+    TEAM_TERMS = Object.entries(map).map(([abbr,t]) => {
+      const name = String(t?.name || '');
+      const terms = [name, t?.city, name.split(/\s+/).slice(-1)[0], abbr]
+        .map(v => String(v || '').toLowerCase().replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim())
+        .filter(v => v.length > 1);
+      return { abbr:String(abbr).toUpperCase(), terms:[...new Set(terms)] };
+    });
+    return TEAM_TERMS;
+  }
+  function safeTeams(a) {
+    const declared = (Array.isArray(a?.teams) ? a.teams : []).map(x => String(x).toUpperCase());
+    if (!declared.length) return [];
+    const hay = `${a?.title || ''} ${safeSummary(a)}`.toLowerCase().replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
+    if (!hay) return [];
+    const index = teamTerms();
+    if (!index.length) return [];
+    return declared.filter(code => {
+      const row = index.find(t => t.abbr === code);
+      if (!row) return false;
+      return row.terms.some(term => term.length <= 3
+        ? new RegExp(`(^| )${term}( |$)`).test(hay)
+        : hay.includes(term));
+    });
+  }
+
   function timeAgo(value) {
     if (!value) return 'time unavailable';
     const d = new Date(value);
@@ -41,9 +83,12 @@
     }
   }
 
+  /* Whether a story is an injury story is itself decided on corroborated text.
+     A borrowed ACL dek would otherwise pull half a dozen unrelated headlines --
+     practice-squad signings, contract talk -- onto an injury page. */
   function injurySignal(article) {
     const title = clean(article?.title);
-    const summary = clean(article?.summary);
+    const summary = clean(safeSummary(article));
     const text = `${title} ${summary}`;
     const strong = /\b(injur(?:y|ies|ed)|injured reserve|reserve[\/-]pup|pup(?:\s+list)?|nfi|ir(?:\s+list)?|acl|mcl|achilles|hamstring|ankle|knee|shoulder|concussion|surgery|rehab|recovery|sidelined|questionable|doubtful|inactive|out through|out for|will not play|won't play|miss(?:es|ing)?\s+(?:week|game|season)|return(?:s|ed)?\s+to\s+practice)\b/i;
     if (strong.test(text)) return true;
@@ -68,7 +113,7 @@
   }
 
   function deckFor(article, summaryCounts) {
-    const summary = clean(article?.summary);
+    const summary = clean(safeSummary(article));
     if (summary.length < 36) return '';
     if ((summaryCounts.get(summary.toLowerCase()) || 0) > 1) return '';
     const titleTokens = tokens(article?.title);
@@ -81,7 +126,7 @@
   function summaryCounts(rows) {
     const map = new Map();
     rows.forEach(article => {
-      const summary = clean(article?.summary).toLowerCase();
+      const summary = clean(safeSummary(article)).toLowerCase();
       if (!summary) return;
       map.set(summary, (map.get(summary) || 0) + 1);
     });
@@ -90,15 +135,56 @@
 
   function contextChips(article, limit = 4) {
     const values = [];
-    (article?.teams || []).slice(0,2).forEach(team => values.push(`<span>${esc(team)}</span>`));
-    (article?.players || []).slice(0,2).forEach(player => values.push(`<span class="person">${esc(player)}</span>`));
+    safeTeams(article).slice(0,2).forEach(team => values.push(`<span>${esc(team)}</span>`));
+    safePlayers(article).slice(0,2).forEach(player => values.push(`<span class="person">${esc(player)}</span>`));
     return values.slice(0,limit).join('');
+  }
+
+  /* MEDIA
+     Photography supports the injury information; it is not the interface. The
+     old lead frame carried min-height:430px and stretched to 803x563 at 1440,
+     so the reader met a tunnel-entrance photograph before a single fact.
+
+     Preference order when a frame is filled:
+       1. the article's own photograph, cropped to the subject
+       2. the corroborated team's crest, on a flat plate
+       3. a restrained PropBetEdge mark
+     A crest is only used when the team survived corroboration, so the page
+     never labels a photo-less story with a franchise it cannot support.
+
+     CROP. Sports photography puts helmets and faces in the upper third, so a
+     centred crop of a landscape frame decapitates the subject as often as not.
+     onload reads the natural aspect and biases the focal point upward for wide
+     sources, which is where the player actually is; portrait sources are left
+     near centre because their subject already fills the frame. An asset that
+     would have to be stretched past 1.35x its natural width is dropped rather
+     than shown soft. */
+  const CREST_ALIAS = { WAS:'wsh', WSH:'wsh' };
+  function crestUrl(abbr) {
+    const key = String(CREST_ALIAS[abbr] || abbr || '').toLowerCase();
+    return key ? `https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/${key}.png` : '';
+  }
+  /* object-fit:cover crops along one axis only, and which axis depends on the
+     source aspect RELATIVE TO THE FRAME -- not relative to 1.0. A 1024x718
+     photograph in a 176x176 frame is cropped horizontally, so a vertical
+     object-position does nothing to it. Comparing against the frame is what
+     makes the bias land on the axis actually being cut: a source taller than
+     its frame is pulled up towards the head, a source wider than its frame
+     keeps its horizontal centre, which is the conservative choice when the
+     subject's position is unknown. */
+  const FOCUS_SCRIPT = "var box=this.getBoundingClientRect();var f=box.width/box.height,r=this.naturalWidth/this.naturalHeight;this.style.objectPosition=r<f?'50% 26%':'50% 50%';if(this.naturalWidth&&box.width>this.naturalWidth*1.35){this.closest('[data-pbe-media]').classList.add('is-lowres')}";
+
+  function crestFrame(article, className) {
+    const team = safeTeams(article)[0];
+    const url = team ? crestUrl(team) : '';
+    if (!url) return `<div class="${className} is-mark" data-pbe-media><span>PBE</span></div>`;
+    return `<div class="${className} is-crest" data-pbe-media><img src="${esc(url)}" alt="${esc(team)} crest" loading="lazy" decoding="async" onerror="this.remove()"><b>${esc(team)}</b></div>`;
   }
 
   function articleImage(article, className, eager = false) {
     const src = clean(article?.image_url);
-    if (!src) return `<div class="${className} is-placeholder"><span>PROPBETEDGE</span></div>`;
-    return `<div class="${className}"><img src="${esc(src)}" alt="${esc(article?.image_alt || article?.title || 'NFL injury coverage')}" ${eager?'fetchpriority="high"':'loading="lazy"'} decoding="async"></div>`;
+    if (!src) return crestFrame(article, className);
+    return `<div class="${className}" data-pbe-media><img src="${esc(src)}" alt="${esc(article?.image_alt || article?.title || 'NFL injury coverage')}" ${eager?'fetchpriority="high"':'loading="lazy"'} decoding="async" onload="${esc(FOCUS_SCRIPT)}" onerror="this.closest('[data-pbe-media]').classList.add('is-mark');this.remove()"></div>`;
   }
 
   function byline(article) {
@@ -143,9 +229,9 @@
 
   function reportedPlayer(article) {
     const title = clean(article?.title);
-    const summary = clean(article?.summary);
+    const summary = clean(safeSummary(article));
     const combined = `${title}. ${summary}`;
-    const players = (article?.players || []).map(clean).filter(Boolean);
+    const players = safePlayers(article).map(clean).filter(Boolean);
     if (!players.length) return null;
     const markers = injuryMarkerPositions(combined);
     const topic = clean(article?.topic_kind).toLowerCase();
@@ -177,9 +263,9 @@
   }
 
   function contextForPlayer(article, player) {
-    if (article?.availability) return `${clean(article?.title)} ${clean(article?.summary)}`;
+    if (article?.availability) return `${clean(article?.title)} ${clean(safeSummary(article))}`;
     const title = clean(article?.title);
-    const summary = clean(article?.summary);
+    const summary = clean(safeSummary(article));
     const terms = playerTerms(player);
     const pieces = [];
     const titleMention = terms.some(term => termPositions(title,term).length);
@@ -189,7 +275,7 @@
     summaryPoints.forEach(point => pieces.push(summary.slice(Math.max(0,point-180),Math.min(summary.length,point+240))));
 
     if (titleMention && !summaryPoints.length) {
-      const otherPlayerMention = (article?.players || []).map(clean).filter(Boolean).some(other => {
+      const otherPlayerMention = safePlayers(article).map(clean).filter(Boolean).some(other => {
         if (other.toLowerCase() === clean(player).toLowerCase()) return false;
         return playerTerms(other).some(term => termPositions(summary,term).length);
       });
@@ -285,7 +371,7 @@
     const score = (article?.availability?3:0) + (injury!=='Not specified'?1:0) + (status!=='Injury reported'?2:0) + (timeline!=='Timeline not reported'?4:0);
     return {
       player,
-      team:clean(article?.teams?.[0]) || 'NFL',
+      team:safeTeams(article)[0] || '',
       injury,
       status,
       timeline,
@@ -321,7 +407,7 @@
   function availabilityRow(fact) {
     const timelineUnknown = fact.timeline === 'Timeline not reported';
     return `<a class="pbe13-availability-row" href="${esc(fact.url)}" target="_blank" rel="noopener">
-      <div class="pbe13-availability-player"><strong>${esc(fact.player)}</strong><span>${esc(fact.team)}</span></div>
+      <div class="pbe13-availability-player"><strong>${esc(fact.player)}</strong>${fact.team?`<span>${esc(fact.team)}</span>`:''}</div>
       <div class="pbe13-availability-cell"><span class="label">INJURY</span><strong>${esc(fact.injury)}</strong></div>
       <div class="pbe13-availability-cell"><span class="label">STATUS</span><strong class="pbe13-avail-status ${statusClass(fact.status)}">${esc(fact.status)}</strong></div>
       <div class="pbe13-availability-cell timeline ${timelineUnknown?'is-unknown':''}"><span class="label">REPORTED TIMELINE</span><strong>${esc(fact.timeline)}</strong><small>${esc(timeAgo(fact.published_at))} · PBE coverage ↗</small></div>
@@ -342,71 +428,109 @@
     </section>`;
   }
 
-  function featuredAvailability(article) {
-    const fact = factForArticle(article);
-    if (!fact) return '';
-    return `<div class="pbe13-featured-availability">
-      <div><span>PLAYER</span><strong>${esc(fact.player)}</strong></div>
-      <div><span>INJURY / STATUS</span><strong>${esc(fact.injury)} · ${esc(fact.status)}</strong></div>
-      <div><span>REPORTED TIMELINE</span><strong>${esc(fact.timeline)}</strong></div>
-    </div>`;
+  /* The feature leads with the facts, not with the headline. Who, which team,
+     what the injury is, what status the reporting states and what timeline it
+     states -- then the story that says so. An unreported field is labelled as
+     unreported; nothing is inferred to fill the row. */
+  function factCells(fact) {
+    const cells = [
+      ['Injury', fact.injury, fact.injury === 'Not specified'],
+      ['Status', fact.status, false],
+      ['Reported timeline', fact.timeline, fact.timeline === 'Timeline not reported']
+    ];
+    return `<div class="pbe13-feature-facts">${cells.map(([label,value,unknown]) =>
+      `<div class="pbe13-feature-fact${unknown?' is-unreported':''}"><span>${esc(label)}</span><strong>${esc(value)}</strong></div>`
+    ).join('')}</div>`;
+  }
+
+  function researchPath(fact) {
+    if (!fact?.player) return '';
+    const last = fact.player.split(/\s+/).slice(-1)[0];
+    return `<button type="button" class="pbe13-feature-path" data-injury-player="${esc(fact.player)}">${esc(last)} research<i>&rarr;</i></button>`;
   }
 
   function leadStory(article, counts) {
     if (!article) return `<div class="pbe13-editorial-empty"><strong>No current injury features</strong><span>The PropBetEdge newsroom is live, but no canonical NFL injury article currently matches the editorial filter.</span></div>`;
     const deck = deckFor(article, counts);
-    return `<article class="pbe13-editorial-lead">
-      <a class="pbe13-editorial-lead-link" href="${esc(article.__pbeEditorialUrl)}" target="_blank" rel="noopener" aria-label="Read ${esc(article.title)} on PropBetEdge">
-        ${articleImage(article,'pbe13-editorial-lead-media',true)}
+    const fact = factForArticle(article);
+    const team = fact?.team || safeTeams(article)[0] || '';
+    return `<article class="pbe13-feature">
+      <a class="pbe13-feature-medialink" href="${esc(article.__pbeEditorialUrl)}" target="_blank" rel="noopener" tabindex="-1" aria-hidden="true">
+        ${articleImage(article,'pbe13-feature-media',true)}
       </a>
-      <div class="pbe13-editorial-lead-body">
-        <div class="pbe13-editorial-eyebrow">FEATURED INJURY STORY</div>
-        <h2>${esc(article.title)}</h2>
-        ${deck?`<p>${esc(deck)}</p>`:''}
-        ${featuredAvailability(article)}
-        <div class="pbe13-editorial-meta">${byline(article)}</div>
-        <div class="pbe13-editorial-chips">${contextChips(article)}</div>
-        <a class="pbe13-editorial-cta" href="${esc(article.__pbeEditorialUrl)}" target="_blank" rel="noopener">Read the full story on PropBetEdge <span>↗</span></a>
+      <div class="pbe13-feature-body">
+        <div class="pbe13-feature-rail"><span class="pbe13-feature-eyebrow">Featured injury</span><span class="pbe13-feature-time">${esc(timeAgo(article?.published_at))}</span></div>
+        ${fact ? `<div class="pbe13-feature-id"><h2>${esc(fact.player)}</h2>${team?`<span class="pbe13-feature-team">${esc(team)}</span>`:''}</div>
+        ${factCells(fact)}` : `<div class="pbe13-feature-id"><h2>${esc(article.title)}</h2></div>`}
+        <a class="pbe13-feature-story" href="${esc(article.__pbeEditorialUrl)}" target="_blank" rel="noopener">${esc(article.title)}</a>
+        ${deck?`<p class="pbe13-feature-deck">${esc(deck)}</p>`:''}
+        <div class="pbe13-feature-foot">
+          <span class="pbe13-editorial-meta">${byline(article)}</span>
+          ${researchPath(fact)}
+        </div>
       </div>
     </article>`;
   }
 
-  function storyCard(article, counts) {
+  /* Coverage rows, not a photo grid. Only a story that carries its own
+     corroborated deck earns a thumbnail; the rest are a headline, a team and a
+     time, which is all that is true of them. That is also what stops the page
+     reserving a 16:9 well for an image it does not have. */
+  function storyCard(article, counts, withMedia) {
     const deck = deckFor(article, counts);
-    const team = clean(article?.teams?.[0]);
+    const team = safeTeams(article)[0] || '';
     const fact = factForArticle(article);
-    return `<a class="pbe13-editorial-card" href="${esc(article.__pbeEditorialUrl)}" target="_blank" rel="noopener">
-      ${articleImage(article,'pbe13-editorial-card-media')}
-      <div class="pbe13-editorial-card-body">
-        <div class="pbe13-editorial-card-kicker"><span>${team?esc(team):'NFL'}</span><span>${esc(timeAgo(article?.published_at))}</span></div>
+    const media = withMedia && clean(article?.image_url);
+    return `<a class="pbe13-coverage-row${media?' has-media':''}" href="${esc(article.__pbeEditorialUrl)}" target="_blank" rel="noopener">
+      ${media?articleImage(article,'pbe13-coverage-media'):''}
+      <div class="pbe13-coverage-body">
+        <div class="pbe13-coverage-kicker">${team?`<span class="pbe13-coverage-team">${esc(team)}</span>`:''}<span>${esc(timeAgo(article?.published_at))}</span></div>
         <h3>${esc(article.title)}</h3>
         ${deck?`<p>${esc(deck)}</p>`:''}
         ${fact&&fact.timeline!=='Timeline not reported'?`<div class="pbe13-card-timeline"><span>${esc(fact.status)}</span><strong>${esc(fact.timeline)}</strong></div>`:''}
-        <div class="pbe13-editorial-meta">${byline(article)}</div>
         <div class="pbe13-editorial-chips">${contextChips(article,3)}</div>
       </div>
     </a>`;
   }
 
+  /* PAGE ORDER
+     The old top was a 240px marketing headline ("Injuries change everything."),
+     a disclaimer strip and an 803x563 photograph -- roughly 900px before the
+     first injury fact, so nothing useful was in the opening viewport at any
+     width. The order is now identity, the featured player's actual status, and
+     then the availability board, which is the strongest component on the page
+     and now begins in the second screen rather than the fourth. Editorial
+     coverage sits underneath the structured information, where it belongs. */
   function shell(state, rows) {
     const counts = summaryCounts(rows);
     const lead = rows[0] || null;
     const rest = rows.slice(1);
-    const deskLine = state?.error ? 'Coverage temporarily unavailable' : 'Reporting · analysis · availability';
-    return `<header class="pbe13-hero pbe13-editorial-hero">
-      <div>
-        <div class="pbe13-kicker">PROPBETEDGE EDITORIAL · NFL INJURIES</div>
-        <h1 class="pbe13-title">Injuries change everything.</h1>
-        <div class="pbe13-copy">The injury stories that matter — what happened, who it changes, how long they're expected out, and what to watch next. Full NFL injury coverage from PropBetEdge Editorial.</div>
+    const facts = availabilityFacts(rows);
+    const withTimeline = facts.filter(f => f.timeline !== 'Timeline not reported').length;
+    const nowLine = state?.error
+      ? 'Coverage temporarily unavailable'
+      : `${rows.length} current injury stories · ${facts.length} players with reported status · ${withTimeline} reported timelines`;
+    return `<header class="pbe13-masthead">
+      <div class="pbe13-mast-id">
+        <span class="pbe13-eyebrow">NFL &middot; Availability + verified status</span>
+        <h1 class="pbe13-wordmark">Injury Intelligence</h1>
       </div>
-      <aside class="pbe13-statusbox"><b>NFL INJURY DESK</b><span>${esc(deskLine)}</span></aside>
+      <div class="pbe13-mast-now"><span class="pbe13-now-line">${esc(nowLine)}</span></div>
     </header>
-    <div class="pbe13-editorial-note"><strong>Editorial coverage:</strong> reporting and analysis from PropBetEdge articles. This is not the official NFL practice/game injury report, and no status or return window is inferred beyond what the underlying reporting supports.</div>
+    <p class="pbe13-truth">Reporting and analysis from PropBetEdge articles &mdash; not the official NFL practice or game injury report. No status or return window is shown beyond what the underlying reporting states.</p>
     ${state?.error?`<div class="pbe13-editorial-empty"><strong>Injury coverage unavailable</strong><span>${esc(state.error)}</span></div>`:leadStory(lead,counts)}
-    ${!state?.error?`${availabilityBoard(rows)}<div class="pbe13-feed pbe13-editorial-feed" style="grid-template-columns:1fr"><section class="pbe13-editorial-latest">
-      <div class="pbe13-editorial-section-head"><div><span>PROPBETEDGE EDITORIAL</span><h2>Latest injury coverage</h2></div><a href="https://propbetedge.ai/news/nfl" target="_blank" rel="noopener">All NFL news ↗</a></div>
-      ${rest.length?`<div class="pbe13-editorial-grid">${rest.map(article=>storyCard(article,counts)).join('')}</div>`:`<div class="pbe13-editorial-empty compact"><span>No additional injury stories are currently available.</span></div>`}
-    </section></div>`:''}`;
+    ${!state?.error?`${availabilityBoard(rows)}<section class="pbe13-coverage">
+      <div class="pbe13-section-head"><h2>Latest injury coverage</h2><a href="https://propbetedge.ai/news/nfl" target="_blank" rel="noopener">All NFL news &#8599;</a></div>
+      ${rest.length?`<div class="pbe13-coverage-list">${rest.map((article,i)=>storyCard(article,counts,i<4)).join('')}</div>`:`<div class="pbe13-editorial-empty compact"><span>No additional injury stories are currently available.</span></div>`}
+    </section>`:''}`;
+  }
+
+  function wirePaths(root) {
+    root.querySelectorAll('[data-injury-player]').forEach(btn => btn.addEventListener('click', () => {
+      const name = btn.dataset.injuryPlayer;
+      if (window.PBEPlayerResearch?.show) window.PBEPlayerResearch.show(name);
+      else window.App?.nav('usage');
+    }));
   }
 
   function enhance() {
@@ -420,6 +544,7 @@
     root.classList.add('pbe13-injury-v2','pbe13-injury-editorial');
     root.dataset.pbeInjuryEditorialSignature = signature;
     root.innerHTML = shell(state, rows);
+    wirePaths(root);
     return true;
   }
 

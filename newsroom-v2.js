@@ -45,17 +45,53 @@
     return response.json();
   }
 
+  /* Corroborated views of an article. A suppressed summary is null, not the
+     shared one; an uncorroborated player is dropped, not guessed at. Teams are
+     corroborated against NFL_TEAMS by name, city, nickname or code appearing in
+     the text the reader can see. */
+  const trustOf = a => a?._trust || null;
+  const safeSummary = a => (trustOf(a) ? trustOf(a).summary : (a?.summary || '')) || '';
+  const safePlayers = a => (trustOf(a) ? trustOf(a).players : (Array.isArray(a?.players) ? a.players : [])) || [];
+  let TEAM_TERMS = null;
+  function teamTerms() {
+    if (TEAM_TERMS && TEAM_TERMS.length) return TEAM_TERMS;
+    const map = (typeof window !== 'undefined' && window.NFL_TEAMS) || {};
+    TEAM_TERMS = Object.entries(map).map(([abbr,t]) => {
+      const name = String(t?.name || '');
+      const terms = [name, t?.city, name.split(/\s+/).slice(-1)[0], abbr]
+        .map(v => String(v || '').toLowerCase().replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim())
+        .filter(v => v.length > 1);
+      return { abbr:String(abbr).toUpperCase(), terms:[...new Set(terms)] };
+    });
+    return TEAM_TERMS;
+  }
+  function safeTeams(a) {
+    const declared = (Array.isArray(a?.teams) ? a.teams : []).map(x => String(x).toUpperCase());
+    if (!declared.length) return [];
+    const hay = `${a?.title || ''} ${safeSummary(a)}`.toLowerCase().replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
+    if (!hay) return [];
+    const index = teamTerms();
+    if (!index.length) return [];
+    return declared.filter(code => {
+      const row = index.find(t => t.abbr === code);
+      if (!row) return false;
+      return row.terms.some(term => term.length <= 3
+        ? new RegExp(`(^| )${term}( |$)`).test(hay)
+        : hay.includes(term));
+    });
+  }
+
   function injuryArticle(a) {
     const topic = String(a.topic_kind || '').toLowerCase();
     if (topic === 'injury') return true;
-    const text = `${a.title || ''} ${a.summary || ''}`.toLowerCase();
+    const text = `${a.title || ''} ${safeSummary(a)}`.toLowerCase();
     return /\b(injury|injured|ankle|hamstring|knee|concussion|sidelined|questionable|doubtful|ir\b|injured reserve|rehab|surgery|return from injury|will not play|won't play|out for|miss(?:es|ing)?|sprain|strain)\b/i.test(text);
   }
 
   function transactionArticle(a) {
     const topic = String(a.topic_kind || '').toLowerCase();
     if (['trade','signing','transaction','lineup','discipline','frontoffice','front_office','release','waiver'].includes(topic)) return true;
-    const text = `${a.title || ''} ${a.summary || ''}`.toLowerCase();
+    const text = `${a.title || ''} ${safeSummary(a)}`.toLowerCase();
     return /\b(trade|traded|trading|signs?\b|signed|signing|contract|extension|waive|waived|waiver|release|released|roster|acquire|acquired|cut\b|cuts\b|suspend|suspended|depth chart|starter|starting job|promoted|activated)\b/i.test(text);
   }
 
@@ -65,20 +101,23 @@
   }
 
   function currentEventHit(a) {
-    return (a.teams || []).some(team => state.currentTeams.has(String(team).toUpperCase()));
+    return safeTeams(a).some(team => state.currentTeams.has(team));
   }
 
   function uniqueTeams(list) {
-    return [...new Set(list.flatMap(a => Array.isArray(a.teams) ? a.teams : []).filter(Boolean).map(t=>String(t).toUpperCase()))].sort();
+    return [...new Set(list.flatMap(safeTeams))].sort();
   }
 
   function uniquePlayers(list) {
-    return [...new Set(list.flatMap(a => Array.isArray(a.players) ? a.players : []).filter(Boolean))];
+    return [...new Set(list.flatMap(safePlayers))];
   }
 
   function frequency(list,key) {
     const map = new Map();
-    list.forEach(a => (Array.isArray(a[key]) ? a[key] : []).forEach(value => {
+    /* "Affected players" is a claim about who a story is about, so it counts
+       corroborated entities only. */
+    const pick = key === 'players' ? safePlayers : key === 'teams' ? safeTeams : (a => Array.isArray(a[key]) ? a[key] : []);
+    list.forEach(a => pick(a).forEach(value => {
       const name = String(value || '').trim();
       if (!name) return;
       const current = map.get(name) || {name,count:0,maxImpact:0};
@@ -97,8 +136,8 @@
   function visible(mode) {
     const q = state.search.trim().toLowerCase();
     let rows = baseList(mode).filter(a => {
-      const searchOk = !q || [a.title,a.summary,a.source,...(a.players||[]),...(a.teams||[])].some(v=>String(v||'').toLowerCase().includes(q));
-      const teamOk = state.team === 'all' || (a.teams || []).map(t=>String(t).toUpperCase()).includes(state.team);
+      const searchOk = !q || [a.title,safeSummary(a),a.source,...safePlayers(a),...safeTeams(a)].some(v=>String(v||'').toLowerCase().includes(q));
+      const teamOk = state.team === 'all' || safeTeams(a).includes(state.team);
       return searchOk && teamOk;
     });
     if (state.sort === 'impact') rows.sort((a,b)=>impact(b)-impact(a) || new Date(b.published_at||0)-new Date(a.published_at||0));
@@ -109,8 +148,8 @@
 
   function tags(a,mode) {
     const values = [];
-    (a.teams || []).slice(0,4).forEach(team => values.push(`<span class="pbe13-tag">${esc(team)}</span>`));
-    (a.players || []).slice(0,3).forEach(player => values.push(`<span class="pbe13-tag accent">${esc(player)}</span>`));
+    safeTeams(a).slice(0,4).forEach(team => values.push(`<span class="pbe13-tag">${esc(team)}</span>`));
+    safePlayers(a).slice(0,3).forEach(player => values.push(`<span class="pbe13-tag accent">${esc(player)}</span>`));
     if (mode === 'injuries' && a.topic_kind) values.push(`<span class="pbe13-tag">${esc(String(a.topic_kind).toUpperCase())}</span>`);
     return values.join('');
   }
@@ -139,11 +178,11 @@
 
   function leadCard(mode,a) {
     if (!a) return `<article class="pbe13-lead"><div class="pbe13-lead-topic">NEWS UNAVAILABLE</div><h2>No current ${mode==='injuries'?'injury':'transaction'} stories match this view.</h2><p>PropBetEdge will not substitute old hardcoded rows when the real current feed is empty.</p></article>`;
-    return `<article class="pbe13-lead"><div class="pbe13-lead-topic">${esc(String(a.topic_kind||mode).toUpperCase())}${currentEventHit(a)?'<span class="pbe13-current">CURRENT EVENT</span>':''}</div><h2>${esc(a.title)}</h2><p>${esc(a.summary || 'No summary available.')}</p><div class="pbe13-source">${esc(a.source || 'source unavailable')} · ${esc(timeAgo(a.published_at))} · impact ${esc(impact(a)||'—')}</div><div class="pbe13-tags">${tags(a,mode)}</div><div class="pbe13-lead-actions">${a.url?`<a class="pbe13-action primary" href="${esc(a.url)}">Read full story ↗</a>`:''}<button class="pbe13-action" onclick="App.nav('propboard')">Open Prop Board</button></div></article>`;
+    return `<article class="pbe13-lead"><div class="pbe13-lead-topic">${esc(String(a.topic_kind||mode).toUpperCase())}${currentEventHit(a)?'<span class="pbe13-current">CURRENT EVENT</span>':''}</div><h2>${esc(a.title)}</h2>${safeSummary(a)?`<p>${esc(safeSummary(a))}</p>`:''}<div class="pbe13-source">${esc(a.source || 'source unavailable')} · ${esc(timeAgo(a.published_at))} · impact ${esc(impact(a)||'—')}</div><div class="pbe13-tags">${tags(a,mode)}</div><div class="pbe13-lead-actions">${a.url?`<a class="pbe13-action primary" href="${esc(a.url)}">Read full story ↗</a>`:''}<button class="pbe13-action" onclick="App.nav('propboard')">Open Prop Board</button></div></article>`;
   }
 
   function card(mode,a) {
-    return `<article class="pbe13-card"><div class="pbe13-card-top"><span class="pbe13-card-topic">${esc(String(a.topic_kind||mode).toUpperCase())}${currentEventHit(a)?'<span class="pbe13-current">CURRENT EVENT</span>':''}</span><span class="pbe13-card-time">${esc(timeAgo(a.published_at))}</span></div><h3>${esc(a.title)}</h3><p>${esc(a.summary || 'No summary available.')}</p><div class="pbe13-tags">${tags(a,mode)}</div><div class="pbe13-card-foot"><span class="pbe13-card-source">${esc(a.source || 'source unavailable')} · impact ${esc(impact(a)||'—')}</span>${a.url?`<a class="pbe13-card-link" href="${esc(a.url)}">Open ↗</a>`:''}</div></article>`;
+    return `<article class="pbe13-card"><div class="pbe13-card-top"><span class="pbe13-card-topic">${esc(String(a.topic_kind||mode).toUpperCase())}${currentEventHit(a)?'<span class="pbe13-current">CURRENT EVENT</span>':''}</span><span class="pbe13-card-time">${esc(timeAgo(a.published_at))}</span></div><h3>${esc(a.title)}</h3>${safeSummary(a)?`<p>${esc(safeSummary(a))}</p>`:''}<div class="pbe13-tags">${tags(a,mode)}</div><div class="pbe13-card-foot"><span class="pbe13-card-source">${esc(a.source || 'source unavailable')} · impact ${esc(impact(a)||'—')}</span>${a.url?`<a class="pbe13-card-link" href="${esc(a.url)}">Open ↗</a>`:''}</div></article>`;
   }
 
   function feed(mode,list) {
@@ -174,7 +213,14 @@
         fetchJson('/api/news-feed?limit=100'),
         fetchJson(`${API}/api/odds/board?event_id=${encodeURIComponent(currentEventId())}&markets=player_pass_yds`).catch(()=>null)
       ]);
-      state.articles = Array.isArray(news?.articles) ? news.articles : [];
+      /* The upstream feed serves one article's summary, player tags and team
+         tags on many rows -- measured at 27 of 50 on 2026-09-04. This surface
+         states medical facts about named players, so it must not render or
+         reason over borrowed text. pbe-news-trust.js annotates each row with
+         the summary and players its own visible text supports; everything
+         downstream reads _trust rather than the raw fields. */
+      const raw = Array.isArray(news?.articles) ? news.articles : [];
+      state.articles = window.PBENewsTrust?.prepare(raw) || raw;
       state.fetchedAt = news?.fetched_at || new Date().toISOString();
       if (board) {
         const event = board.event || {};

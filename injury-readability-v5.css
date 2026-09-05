@@ -10,52 +10,60 @@
 }
 
 .pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-board{
-  margin-top:14px!important;
-  border:1px solid rgba(210,222,233,.15)!important;
-  border-radius:14px!important;
-  background:var(--pbe-ink)!important;
+  /* The board sits on the page's own ink plane now, so a second panel around
+     it -- border, 14px radius and a 58px drop shadow -- was a box inside a box.
+     The rows are the component; a gold rule under the head is the frame. */
+  margin-top:26px!important;
+  border:0!important;
+  border-radius:0!important;
+  background:none!important;
   background-image:none!important;
-  box-shadow:0 22px 58px rgba(0,0,0,.36),inset 0 1px 0 rgba(255,255,255,.025)!important;
+  box-shadow:none!important;
 }
 
 .pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-head{
-  align-items:center!important;
-  padding:22px 24px 20px!important;
-  border-bottom:1px solid rgba(210,222,233,.11)!important;
-  background:var(--pbe-ink)!important;
-  background-image:linear-gradient(105deg,rgba(255,255,255,.018),transparent 48%,rgba(241,107,120,.035))!important;
+  align-items:baseline!important;
+  padding:0 0 10px!important;
+  border-bottom:2px solid var(--pbe-gold)!important;
+  background:none!important;
+  background-image:none!important;
 }
 .pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-head>div:first-child>span{
-  color:#f28b95!important;
-  font-size:12px!important;
-  line-height:1!important;
-  letter-spacing:.14em!important;
+  /* "PLAYER AVAILABILITY" over "WHO'S OUT & HOW LONG" said the same thing
+     twice above a table whose columns already say it. */
+  display:none!important;
 }
 .pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-head h2{
-  margin-top:8px!important;
+  /* 54px uppercase was a marketing headline on top of the page's most useful
+     table. It is a section head, in the same grammar as the rest of the page. */
+  margin:0!important;
+  font-family:'Playfair Display',Georgia,serif!important;
+  font-size:24px!important;
+  font-weight:700!important;
+  line-height:1!important;
+  letter-spacing:0!important;
+  text-transform:none!important;
+  text-shadow:none!important;
   color:var(--pbe-paper)!important;
-  font-size:clamp(42px,3.6vw,54px)!important;
-  line-height:.92!important;
-  letter-spacing:-.022em!important;
-  text-shadow:0 1px 0 rgba(255,255,255,.04)!important;
 }
 .pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-head p{
-  max-width:830px!important;
-  margin-top:10px!important;
-  color:var(--pbe-paper-2)!important;
-  font-size:13px!important;
-  line-height:1.55!important;
+  /* The same caveat is stated under the table, where it belongs. */
+  display:none!important;
 }
 .pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-coverage{
-  min-width:145px!important;
-  padding:12px 14px!important;
-  border-color:rgba(241,107,120,.25)!important;
-  background:var(--pbe-ink)!important;
+  display:flex!important;
+  align-items:baseline!important;
+  gap:7px!important;
+  min-width:0!important;
+  padding:0!important;
+  border:0!important;
+  background:none!important;
   text-align:right!important;
 }
 .pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-coverage strong{
-  color:#ff9ca5!important;
-  font-size:31px!important;
+  color:var(--pbe-paper)!important;
+  font-family:var(--pbe-font-data)!important;
+  font-size:16px!important;
 }
 .pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-coverage span{
   margin-top:5px!important;
@@ -72,7 +80,7 @@
 .pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-columns{
   display:grid!important;
   align-items:center!important;
-  padding:12px 22px!important;
+  padding:12px 0!important;
   border-bottom:1px solid rgba(210,222,233,.12)!important;
   background:var(--pbe-ink)!important;
   color:var(--pbe-dim)!important;
@@ -87,7 +95,7 @@
 }
 .pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-row{
   min-height:66px!important;
-  padding:12px 22px!important;
+  padding:12px 0!important;
   border-bottom:1px solid rgba(210,222,233,.085)!important;
   background:var(--pbe-ink)!important;
   transition:background .15s ease,border-color .15s ease,box-shadow .15s ease!important;
@@ -184,10 +192,10 @@
   letter-spacing:.04em!important;
 }
 .pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-foot{
-  padding:12px 22px 13px!important;
-  border-top:1px solid rgba(210,222,233,.09)!important;
-  background:var(--pbe-ink)!important;
-  color:var(--pbe-paper-2)!important;
+  padding:12px 0 0!important;
+  border-top:0!important;
+  background:none!important;
+  color:var(--pbe-faint)!important;
   font-size:13px!important;
   line-height:1.55!important;
 }

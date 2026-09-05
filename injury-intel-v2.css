@@ -1,14 +1,5 @@
 /* PropBetEdge NFL — Injury Editorial authority v4 */
 .pbe13-news.pbe13-injury-editorial{padding:8px 0 64px!important;--accent:var(--pbe-crimson-bright);--accent-soft:rgba(241,107,120,.10)}
-.pbe13-news.pbe13-injury-editorial .pbe13-editorial-hero{
-  min-height:0!important;
-  grid-template-columns:minmax(0,1fr) minmax(225px,285px)!important;
-  align-items:center!important;
-  gap:24px!important;
-  padding:22px 24px!important;
-  border-radius:14px!important;
-  background:radial-gradient(circle at 88% 0,rgba(241,107,120,.13),transparent 24rem),linear-gradient(135deg,var(--pbe-ink),var(--pbe-ink) 68%,var(--pbe-ink))!important;
-}
 .pbe13-news.pbe13-injury-editorial .pbe13-kicker{font-size:11px!important;letter-spacing:.18em!important}
 .pbe13-news.pbe13-injury-editorial .pbe13-title{
   margin-top:8px!important;
@@ -22,60 +13,10 @@
 .pbe13-news.pbe13-injury-editorial .pbe13-statusbox{min-width:0!important;padding:13px 14px!important;background:rgba(5,9,14,.72)!important}
 .pbe13-news.pbe13-injury-editorial .pbe13-statusbox b{font-size:21px!important}
 .pbe13-news.pbe13-injury-editorial .pbe13-statusbox span{font-size:12px!important;line-height:1.5!important}
-
-.pbe13-news.pbe13-injury-editorial .pbe13-editorial-note{
-  margin-top:9px!important;
-  padding:9px 12px!important;
-  border:1px solid rgba(241,107,120,.14)!important;
-  border-radius:8px!important;
-  background:rgba(8,13,19,.94)!important;
-  color:var(--pbe-paper-2)!important;
-  font-size:12px!important;
-  line-height:1.5!important;
-}
-.pbe13-news.pbe13-injury-editorial .pbe13-editorial-note strong{color:var(--pbe-crimson-bright)!important}
-
-.pbe13-news.pbe13-injury-editorial .pbe13-editorial-lead{
-  display:grid!important;
-  grid-template-columns:minmax(0,1.18fr) minmax(360px,.82fr)!important;
-  min-height:430px!important;
-  margin-top:10px!important;
-  overflow:hidden!important;
-  border:1px solid rgba(255,255,255,.075)!important;
-  border-radius:14px!important;
-  background:linear-gradient(145deg,var(--pbe-ink),var(--pbe-ink))!important;
-  box-shadow:0 22px 64px rgba(0,0,0,.24)!important;
-}
-.pbe13-news.pbe13-injury-editorial .pbe13-editorial-lead-link{display:block!important;min-width:0!important;text-decoration:none!important}
-.pbe13-news.pbe13-injury-editorial .pbe13-editorial-lead-media{position:relative!important;width:100%!important;height:100%!important;min-height:430px!important;overflow:hidden!important;background:var(--pbe-ink)!important}
-.pbe13-news.pbe13-injury-editorial .pbe13-editorial-lead-media:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent 62%,rgba(9,15,22,.32))}
-.pbe13-news.pbe13-injury-editorial .pbe13-editorial-lead-media img{display:block!important;width:100%!important;height:100%!important;min-height:430px!important;max-height:none!important;object-fit:cover!important;object-position:center!important}
-.pbe13-news.pbe13-injury-editorial .pbe13-editorial-lead-media.is-placeholder{display:grid!important;place-items:center!important;background:radial-gradient(circle at 50% 35%,rgba(241,107,120,.14),transparent 20rem),var(--pbe-ink)!important}
-.pbe13-news.pbe13-injury-editorial .pbe13-editorial-lead-media.is-placeholder span{color:var(--pbe-crimson-bright);font:900 36px/1 'Inter',sans-serif;letter-spacing:.08em}
-.pbe13-news.pbe13-injury-editorial .pbe13-editorial-lead-body{display:flex!important;flex-direction:column!important;justify-content:center!important;padding:30px 31px!important;min-width:0!important}
-.pbe13-news.pbe13-injury-editorial .pbe13-editorial-eyebrow{color:var(--pbe-crimson-text)!important;font:800 11px/1 'JetBrains Mono',monospace!important;letter-spacing:.14em!important;text-transform:uppercase!important}
-.pbe13-news.pbe13-injury-editorial .pbe13-editorial-lead h2{margin:12px 0 0!important;color:var(--pbe-paper)!important;font:900 clamp(31px,3.1vw,47px)/.93 'Inter',sans-serif!important;letter-spacing:-.025em!important;text-transform:none!important}
-.pbe13-news.pbe13-injury-editorial .pbe13-editorial-lead p{margin:13px 0 0!important;color:var(--pbe-paper-2)!important;font-size:12px!important;line-height:1.65!important}
 .pbe13-news.pbe13-injury-editorial .pbe13-editorial-meta{margin-top:13px!important;color:var(--pbe-dim)!important;font:700 11px/1.45 'JetBrains Mono',monospace!important;text-transform:uppercase!important;letter-spacing:.045em!important}
 .pbe13-news.pbe13-injury-editorial .pbe13-editorial-chips{display:flex!important;flex-wrap:wrap!important;gap:5px!important;margin-top:13px!important}
 .pbe13-news.pbe13-injury-editorial .pbe13-editorial-chips span{padding:5px 7px!important;border:1px solid rgba(255,255,255,.065)!important;border-radius:999px!important;background:rgba(255,255,255,.018)!important;color:var(--pbe-dim)!important;font:700 11px/1 'JetBrains Mono',monospace!important}
 .pbe13-news.pbe13-injury-editorial .pbe13-editorial-chips .person{border-color:rgba(241,107,120,.14)!important;background:rgba(241,107,120,.04)!important;color:#e5808a!important}
-.pbe13-news.pbe13-injury-editorial .pbe13-editorial-cta{align-self:flex-start!important;display:inline-flex!important;align-items:center!important;gap:8px!important;margin-top:20px!important;padding:11px 13px!important;border-radius:7px!important;background:var(--pbe-crimson-bright)!important;color:#0a0e13!important;text-decoration:none!important;font:900 11px/1 'JetBrains Mono',monospace!important;text-transform:uppercase!important;letter-spacing:.055em!important}
-.pbe13-news.pbe13-injury-editorial .pbe13-editorial-cta:hover{filter:brightness(1.06)!important}
-
-.pbe13-news.pbe13-injury-editorial .pbe13-featured-availability{
-  display:grid!important;
-  grid-template-columns:minmax(0,.8fr) minmax(0,1fr) minmax(0,1fr)!important;
-  gap:8px!important;
-  margin-top:17px!important;
-  padding:12px 0!important;
-  border-top:1px solid rgba(255,255,255,.07)!important;
-  border-bottom:1px solid rgba(255,255,255,.07)!important;
-}
-.pbe13-news.pbe13-injury-editorial .pbe13-featured-availability div{min-width:0!important}
-.pbe13-news.pbe13-injury-editorial .pbe13-featured-availability span{display:block!important;color:var(--pbe-dim)!important;font:800 10px/1 'JetBrains Mono',monospace!important;letter-spacing:.09em!important;text-transform:uppercase!important}
-.pbe13-news.pbe13-injury-editorial .pbe13-featured-availability strong{display:block!important;margin-top:5px!important;color:var(--pbe-paper)!important;font:800 12px/1.25 'JetBrains Mono',monospace!important;overflow-wrap:anywhere!important}
-.pbe13-news.pbe13-injury-editorial .pbe13-featured-availability div:last-child strong{color:#f49aa3!important}
 
 .pbe13-news.pbe13-injury-editorial .pbe13-availability-board{
   margin-top:12px!important;
@@ -129,30 +70,9 @@
 .pbe13-news.pbe13-injury-editorial .pbe13-availability-foot{padding:9px 20px 10px!important;border-top:1px solid rgba(255,255,255,.045)!important;background:rgba(4,8,12,.22)!important;color:var(--pbe-dim)!important;font-size:11px!important;line-height:1.45!important}
 
 .pbe13-news.pbe13-injury-editorial .pbe13-editorial-feed{display:block!important;margin-top:12px!important}
-.pbe13-news.pbe13-injury-editorial .pbe13-editorial-latest{padding:0!important}
-.pbe13-news.pbe13-injury-editorial .pbe13-editorial-section-head{display:flex!important;align-items:flex-end!important;justify-content:space-between!important;gap:18px!important;padding:14px 2px 10px!important;border-bottom:1px solid rgba(255,255,255,.07)!important}
-.pbe13-news.pbe13-injury-editorial .pbe13-editorial-section-head span{color:var(--pbe-crimson-text)!important;font:800 10px/1 'JetBrains Mono',monospace!important;letter-spacing:.13em!important;text-transform:uppercase!important}
-.pbe13-news.pbe13-injury-editorial .pbe13-editorial-section-head h2{margin:5px 0 0!important;color:var(--pbe-paper)!important;font:900 28px/.95 'Inter',sans-serif!important;text-transform:uppercase!important;letter-spacing:-.01em!important}
-.pbe13-news.pbe13-injury-editorial .pbe13-editorial-section-head a{color:var(--pbe-dim)!important;text-decoration:none!important;font:800 10px/1 'JetBrains Mono',monospace!important;text-transform:uppercase!important;letter-spacing:.06em!important}
-
-.pbe13-news.pbe13-injury-editorial .pbe13-editorial-grid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:10px!important;margin-top:10px!important}
-.pbe13-news.pbe13-injury-editorial .pbe13-editorial-card{display:flex!important;flex-direction:column!important;min-width:0!important;overflow:hidden!important;border:1px solid rgba(255,255,255,.065)!important;border-radius:11px!important;background:linear-gradient(145deg,rgba(16,26,39,.92),rgba(9,15,23,.92))!important;color:inherit!important;text-decoration:none!important;transition:transform .16s ease,border-color .16s ease!important}
-.pbe13-news.pbe13-injury-editorial .pbe13-editorial-card:hover{transform:translateY(-3px)!important;border-color:rgba(241,107,120,.20)!important}
-.pbe13-news.pbe13-injury-editorial .pbe13-editorial-card-media{width:100%!important;aspect-ratio:16/9!important;overflow:hidden!important;background:var(--pbe-ink)!important}
-.pbe13-news.pbe13-injury-editorial .pbe13-editorial-card-media img{display:block!important;width:100%!important;height:100%!important;max-width:none!important;max-height:none!important;object-fit:cover!important;transition:transform .25s ease!important}
-.pbe13-news.pbe13-injury-editorial .pbe13-editorial-card:hover .pbe13-editorial-card-media img{transform:scale(1.025)!important}
-.pbe13-news.pbe13-injury-editorial .pbe13-editorial-card-media.is-placeholder{display:grid!important;place-items:center!important;background:radial-gradient(circle at 50% 20%,rgba(241,107,120,.10),transparent 15rem),var(--pbe-ink)!important}
-.pbe13-news.pbe13-injury-editorial .pbe13-editorial-card-media.is-placeholder span{color:var(--pbe-dim);font:900 22px/1 'Inter',sans-serif;letter-spacing:.08em}
-.pbe13-news.pbe13-injury-editorial .pbe13-editorial-card-body{display:flex!important;flex:1!important;flex-direction:column!important;padding:13px 14px 15px!important;min-width:0!important}
-.pbe13-news.pbe13-injury-editorial .pbe13-editorial-card-kicker{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:10px!important;color:var(--pbe-dim)!important;font:800 10px/1 'JetBrains Mono',monospace!important;text-transform:uppercase!important;letter-spacing:.06em!important}
-.pbe13-news.pbe13-injury-editorial .pbe13-editorial-card-kicker span:first-child{color:var(--pbe-crimson-text)!important}
-.pbe13-news.pbe13-injury-editorial .pbe13-editorial-card h3{margin:9px 0 0!important;color:var(--pbe-paper)!important;font:900 22px/1 'Inter',sans-serif!important;letter-spacing:-.012em!important;text-transform:none!important}
-.pbe13-news.pbe13-injury-editorial .pbe13-editorial-card p{margin:8px 0 0!important;color:var(--pbe-dim)!important;font-size:11px!important;line-height:1.58!important}
 .pbe13-news.pbe13-injury-editorial .pbe13-card-timeline{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:8px!important;margin-top:10px!important;padding:7px 8px!important;border:1px solid rgba(241,107,120,.12)!important;border-radius:7px!important;background:rgba(241,107,120,.035)!important}
 .pbe13-news.pbe13-injury-editorial .pbe13-card-timeline span{color:var(--pbe-dim)!important;font:800 10px/1 'JetBrains Mono',monospace!important;text-transform:uppercase!important}
 .pbe13-news.pbe13-injury-editorial .pbe13-card-timeline strong{color:#e9919a!important;font:800 11px/1.2 'JetBrains Mono',monospace!important;text-align:right!important}
-.pbe13-news.pbe13-injury-editorial .pbe13-editorial-card .pbe13-editorial-meta{margin-top:auto!important;padding-top:12px!important}
-.pbe13-news.pbe13-injury-editorial .pbe13-editorial-card .pbe13-editorial-chips{margin-top:9px!important}
 
 .pbe13-news.pbe13-injury-editorial .pbe13-editorial-empty{min-height:240px!important;display:grid!important;place-content:center!important;gap:7px!important;margin-top:10px!important;padding:24px!important;border:1px solid rgba(255,255,255,.065)!important;border-radius:11px!important;background:var(--pbe-ink)!important;text-align:center!important}
 .pbe13-news.pbe13-injury-editorial .pbe13-editorial-empty strong{color:#fff!important;font:900 26px/1 'Inter',sans-serif!important;text-transform:uppercase!important}
@@ -160,37 +80,362 @@
 .pbe13-news.pbe13-injury-editorial .pbe13-editorial-empty.compact{min-height:130px!important}
 
 @media(max-width:1120px){
-  .pbe13-news.pbe13-injury-editorial .pbe13-editorial-lead{grid-template-columns:minmax(0,1.05fr) minmax(320px,.95fr)!important}
-  .pbe13-news.pbe13-injury-editorial .pbe13-editorial-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
   .pbe13-news.pbe13-injury-editorial .pbe13-availability-row{grid-template-columns:minmax(155px,.9fr) minmax(105px,.6fr) minmax(120px,.7fr) minmax(200px,1.15fr)!important;gap:12px!important;padding-left:16px!important;padding-right:16px!important}
 }
 @media(max-width:800px){
-  .pbe13-news.pbe13-injury-editorial .pbe13-editorial-hero{grid-template-columns:1fr!important;gap:11px!important;padding:14px!important}
   .pbe13-news.pbe13-injury-editorial .pbe13-title{font-size:42px!important}
   .pbe13-news.pbe13-injury-editorial .pbe13-copy{font-size:12px!important}
-  .pbe13-news.pbe13-injury-editorial .pbe13-editorial-lead{grid-template-columns:1fr!important;min-height:0!important}
-  .pbe13-news.pbe13-injury-editorial .pbe13-editorial-lead-media,.pbe13-news.pbe13-injury-editorial .pbe13-editorial-lead-media img{min-height:0!important;height:auto!important;aspect-ratio:16/9!important}
-  .pbe13-news.pbe13-injury-editorial .pbe13-editorial-lead-body{padding:20px!important}
-  .pbe13-news.pbe13-injury-editorial .pbe13-featured-availability{grid-template-columns:1fr!important;gap:9px!important}
   .pbe13-news.pbe13-injury-editorial .pbe13-availability-head{align-items:flex-start!important;flex-direction:column!important;gap:12px!important;padding:15px!important}
   .pbe13-news.pbe13-injury-editorial .pbe13-availability-coverage{text-align:left!important}
   .pbe13-news.pbe13-injury-editorial .pbe13-availability-row{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px 14px!important;padding:13px 15px!important}
   .pbe13-news.pbe13-injury-editorial .pbe13-availability-foot{padding-left:15px!important;padding-right:15px!important}
-  .pbe13-news.pbe13-injury-editorial .pbe13-editorial-grid{grid-template-columns:1fr!important}
 }
 @media(max-width:520px){
   .pbe13-news.pbe13-injury-editorial{padding-top:4px!important}
-  .pbe13-news.pbe13-injury-editorial .pbe13-editorial-hero{padding:12px!important}
   .pbe13-news.pbe13-injury-editorial .pbe13-title{font-size:36px!important;line-height:.9!important}
   .pbe13-news.pbe13-injury-editorial .pbe13-copy{font-size:12px!important;line-height:1.48!important}
   .pbe13-news.pbe13-injury-editorial .pbe13-statusbox{padding:10px!important}
-  .pbe13-news.pbe13-injury-editorial .pbe13-editorial-note{font-size:11px!important}
-  .pbe13-news.pbe13-injury-editorial .pbe13-editorial-lead h2{font-size:29px!important}
-  .pbe13-news.pbe13-injury-editorial .pbe13-editorial-lead-body{padding:17px!important}
   .pbe13-news.pbe13-injury-editorial .pbe13-availability-head h2{font-size:28px!important}
   .pbe13-news.pbe13-injury-editorial .pbe13-availability-row{grid-template-columns:1fr!important;gap:10px!important}
   .pbe13-news.pbe13-injury-editorial .pbe13-availability-player strong{font-size:22px!important}
   .pbe13-news.pbe13-injury-editorial .pbe13-availability-cell>strong{font-size:12px!important}
-  .pbe13-news.pbe13-injury-editorial .pbe13-editorial-section-head{align-items:flex-start!important;flex-direction:column!important;gap:8px!important}
-  .pbe13-news.pbe13-injury-editorial .pbe13-editorial-card h3{font-size:21px!important}
+}
+
+/* ===========================================================================
+   VISUAL FINISH — Injury Intelligence composition + media
+   ---------------------------------------------------------------------------
+   The old top was a 240px marketing headline, a disclaimer strip and a lead
+   photograph whose frame carried min-height:430px and rendered 803x563 at
+   1440. Roughly 900px of page before the first injury fact, at every width.
+
+   Injury Intelligence is not an article landing page. Its value is who is
+   hurt, what happened, what the reporting states and when. So the photograph
+   is now a 176px identity frame beside the facts, the availability board --
+   the strongest component here -- moves up behind it, and editorial coverage
+   sits underneath the structured information.
+
+   Scope note: these selectors carry .pbe13-injury-editorial because
+   injury-intel-v2.js replaces the newsroom shell only on the injuries route.
+   Transactions keeps the newsroom layout untouched.
+   =========================================================================== */
+
+/* ---- masthead --------------------------------------------------------- */
+.pbe13-news.pbe13-injury-editorial .pbe13-masthead{
+  display:flex!important;
+  align-items:flex-end!important;
+  justify-content:space-between!important;
+  gap:24px!important;
+  flex-wrap:wrap!important;
+  padding:0 0 10px!important;
+  border-bottom:2px solid var(--pbe-gold)!important;
+}
+.pbe13-news.pbe13-injury-editorial .pbe13-eyebrow{
+  display:block;
+  font-family:var(--pbe-font-data);
+  font-size:var(--fs-micro);
+  font-weight:700;
+  letter-spacing:var(--ls-micro);
+  text-transform:uppercase;
+  color:var(--pbe-faint);
+}
+.pbe13-news.pbe13-injury-editorial .pbe13-wordmark{
+  margin:6px 0 0!important;
+  font-family:'Playfair Display',Georgia,serif!important;
+  font-size:clamp(30px,3.2vw,44px)!important;
+  font-weight:700!important;
+  line-height:1!important;
+  letter-spacing:-.01em!important;
+  text-transform:none!important;
+  color:var(--pbe-paper)!important;
+}
+.pbe13-news.pbe13-injury-editorial .pbe13-mast-now{padding-bottom:4px}
+.pbe13-news.pbe13-injury-editorial .pbe13-now-line{
+  font-family:var(--pbe-font-data);
+  font-size:var(--fs-label);
+  font-weight:700;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+  color:var(--pbe-dim);
+}
+/* The truth boundary is a standing condition of the page, not an alert. */
+.pbe13-news.pbe13-injury-editorial .pbe13-truth{
+  max-width:96ch;
+  margin:12px 0 0!important;
+  padding-left:11px;
+  border-left:2px solid var(--pbe-line-strong);
+  font-size:12px;
+  line-height:1.55;
+  color:var(--pbe-faint);
+}
+
+/* ---- featured injury: facts first, photograph as identity ------------- */
+.pbe13-news.pbe13-injury-editorial .pbe13-feature{
+  display:grid!important;
+  grid-template-columns:176px minmax(0,1fr)!important;
+  gap:22px!important;
+  margin-top:20px!important;
+  padding-bottom:22px!important;
+  border-bottom:1px solid var(--pbe-line)!important;
+}
+.pbe13-news.pbe13-injury-editorial .pbe13-feature-medialink{display:block;text-decoration:none}
+.pbe13-news.pbe13-injury-editorial .pbe13-feature-media{
+  position:relative;
+  width:176px;height:176px;
+  overflow:hidden;
+  border-radius:var(--r-sm);
+  background:var(--pbe-ink-2);
+}
+.pbe13-news.pbe13-injury-editorial .pbe13-feature-media img{
+  display:block;width:100%;height:100%;
+  object-fit:cover;
+  /* onload replaces this with a subject-biased value; the default is already
+     high rather than centred, because a centred crop of an action photograph
+     lands on a jersey number rather than on a face. */
+  object-position:50% 34%;
+}
+/* A frame that would have to stretch its asset, or has none, shows identity
+   instead of a soft photograph. */
+.pbe13-news.pbe13-injury-editorial .pbe13-feature-media.is-lowres img{display:none}
+.pbe13-news.pbe13-injury-editorial .pbe13-feature-media.is-lowres::after,
+.pbe13-news.pbe13-injury-editorial .pbe13-feature-media.is-mark::after{
+  content:"PBE";
+  position:absolute;inset:0;
+  display:grid;place-items:center;
+  color:var(--pbe-line-strong);
+  font:800 30px/1 "Inter",sans-serif;
+  letter-spacing:.1em;
+}
+.pbe13-news.pbe13-injury-editorial .pbe13-feature-media.is-crest{
+  display:grid;place-items:center;
+  background:var(--pbe-ink-2);
+}
+.pbe13-news.pbe13-injury-editorial .pbe13-feature-media.is-crest img{
+  width:62%;height:62%;object-fit:contain;object-position:50% 50%;
+  filter:drop-shadow(0 8px 18px rgba(0,0,0,.5));
+}
+.pbe13-news.pbe13-injury-editorial .pbe13-feature-media.is-crest b{
+  position:absolute;left:0;right:0;bottom:10px;
+  text-align:center;
+  font-family:var(--pbe-font-data);
+  font-size:var(--fs-micro);
+  letter-spacing:var(--ls-micro);
+  color:var(--pbe-faint);
+}
+
+.pbe13-news.pbe13-injury-editorial .pbe13-feature-body{min-width:0}
+.pbe13-news.pbe13-injury-editorial .pbe13-feature-rail{
+  display:flex;align-items:baseline;justify-content:space-between;gap:12px;
+}
+.pbe13-news.pbe13-injury-editorial .pbe13-feature-eyebrow,
+.pbe13-news.pbe13-injury-editorial .pbe13-feature-time{
+  font-family:var(--pbe-font-data);
+  font-size:var(--fs-micro);
+  font-weight:700;
+  letter-spacing:var(--ls-micro);
+  text-transform:uppercase;
+}
+.pbe13-news.pbe13-injury-editorial .pbe13-feature-eyebrow{color:var(--pbe-crimson-text)}
+.pbe13-news.pbe13-injury-editorial .pbe13-feature-time{color:var(--pbe-faint);font-weight:400}
+.pbe13-news.pbe13-injury-editorial .pbe13-feature-id{
+  display:flex;align-items:baseline;gap:11px;flex-wrap:wrap;margin-top:7px;
+}
+.pbe13-news.pbe13-injury-editorial .pbe13-feature-id h2{
+  margin:0!important;
+  font-family:var(--pbe-font-ui)!important;
+  font-size:clamp(26px,2.4vw,34px)!important;
+  font-weight:750!important;
+  line-height:1.05!important;
+  letter-spacing:-.015em!important;
+  text-transform:none!important;
+  color:var(--pbe-paper)!important;
+}
+.pbe13-news.pbe13-injury-editorial .pbe13-feature-team{
+  padding:3px 8px;
+  border:1px solid var(--pbe-line-strong);
+  border-radius:var(--r-pill);
+  font-family:var(--pbe-font-data);
+  font-size:var(--fs-label);
+  font-weight:700;
+  color:var(--pbe-dim);
+}
+
+/* Three reported facts on one rule. An unreported field is stated as
+   unreported and set back, never filled in. */
+.pbe13-news.pbe13-injury-editorial .pbe13-feature-facts{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  margin-top:14px;
+  border-top:1px solid var(--pbe-line-faint);
+  border-bottom:1px solid var(--pbe-line-faint);
+}
+.pbe13-news.pbe13-injury-editorial .pbe13-feature-fact{
+  padding:11px 16px 11px 0;
+  border-right:1px solid var(--pbe-line-faint);
+}
+.pbe13-news.pbe13-injury-editorial .pbe13-feature-fact:last-child{border-right:0}
+.pbe13-news.pbe13-injury-editorial .pbe13-feature-fact span{
+  display:block;
+  font-family:var(--pbe-font-data);
+  font-size:var(--fs-micro);
+  font-weight:700;
+  letter-spacing:var(--ls-micro);
+  text-transform:uppercase;
+  color:var(--pbe-faint);
+}
+.pbe13-news.pbe13-injury-editorial .pbe13-feature-fact strong{
+  display:block;margin-top:5px;
+  font-family:var(--pbe-font-ui);
+  font-size:16px;font-weight:700;line-height:1.2;
+  color:var(--pbe-paper);
+}
+.pbe13-news.pbe13-injury-editorial .pbe13-feature-fact.is-unreported strong{
+  color:var(--pbe-faint);font-weight:500;font-size:14px;
+}
+
+.pbe13-news.pbe13-injury-editorial .pbe13-feature-story{
+  display:block;margin-top:13px;
+  font-family:var(--pbe-font-ui);
+  font-size:15px;font-weight:650;line-height:1.35;
+  color:var(--pbe-paper-2);text-decoration:none;
+}
+.pbe13-news.pbe13-injury-editorial .pbe13-feature-story:hover{
+  color:var(--pbe-paper);text-decoration:underline;
+  text-decoration-color:var(--pbe-gold);text-underline-offset:4px;
+}
+.pbe13-news.pbe13-injury-editorial .pbe13-feature-deck{
+  max-width:70ch;margin:8px 0 0!important;
+  font-size:13px!important;line-height:1.55!important;color:var(--pbe-faint)!important;
+}
+.pbe13-news.pbe13-injury-editorial .pbe13-feature-foot{
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+  flex-wrap:wrap;margin-top:14px;
+}
+.pbe13-news.pbe13-injury-editorial .pbe13-feature-path{
+  display:inline-flex;align-items:center;gap:7px;
+  min-height:34px;padding:0 13px;
+  border:1px solid var(--pbe-line-strong);border-radius:var(--r-sm);
+  background:transparent;color:var(--pbe-paper);cursor:pointer;
+  font-family:var(--pbe-font-data);font-size:var(--fs-label);font-weight:700;
+  letter-spacing:.06em;text-transform:uppercase;
+}
+.pbe13-news.pbe13-injury-editorial .pbe13-feature-path i{font-style:normal;color:var(--pbe-gold)}
+.pbe13-news.pbe13-injury-editorial .pbe13-feature-path:hover{border-color:var(--pbe-gold)}
+
+/* ---- coverage: rows, with imagery as punctuation ---------------------- */
+.pbe13-news.pbe13-injury-editorial .pbe13-coverage{margin-top:26px}
+.pbe13-news.pbe13-injury-editorial .pbe13-section-head{
+  display:flex;align-items:baseline;justify-content:space-between;gap:16px;
+  padding-bottom:10px;border-bottom:2px solid var(--pbe-gold);
+}
+.pbe13-news.pbe13-injury-editorial .pbe13-section-head h2{
+  margin:0!important;
+  font-family:'Playfair Display',Georgia,serif!important;
+  font-size:24px!important;font-weight:700!important;line-height:1!important;
+  text-transform:none!important;letter-spacing:0!important;
+  color:var(--pbe-paper)!important;
+}
+.pbe13-news.pbe13-injury-editorial .pbe13-section-head a{
+  color:var(--pbe-faint)!important;text-decoration:none!important;
+  font-family:var(--pbe-font-data)!important;font-size:var(--fs-micro)!important;
+  letter-spacing:var(--ls-micro)!important;text-transform:uppercase!important;
+}
+.pbe13-news.pbe13-injury-editorial .pbe13-coverage-row{
+  display:grid;
+  grid-template-columns:minmax(0,1fr);
+  gap:0 18px;
+  padding:15px 0;
+  border-bottom:1px solid var(--pbe-line-faint);
+  color:inherit;text-decoration:none;
+}
+.pbe13-news.pbe13-injury-editorial .pbe13-coverage-row.has-media{
+  grid-template-columns:132px minmax(0,1fr);
+}
+.pbe13-news.pbe13-injury-editorial .pbe13-coverage-media{
+  position:relative;width:132px;height:88px;
+  overflow:hidden;border-radius:var(--r-xs);background:var(--pbe-ink-2);
+}
+.pbe13-news.pbe13-injury-editorial .pbe13-coverage-media img{
+  display:block;width:100%;height:100%;object-fit:cover;object-position:50% 32%;
+}
+/* A coverage row never shows a stretched or missing asset: the frame itself
+   is dropped and the row falls back to its text layout. */
+.pbe13-news.pbe13-injury-editorial .pbe13-coverage-media.is-lowres,
+.pbe13-news.pbe13-injury-editorial .pbe13-coverage-media.is-mark{display:none}
+.pbe13-news.pbe13-injury-editorial .pbe13-coverage-body{min-width:0}
+.pbe13-news.pbe13-injury-editorial .pbe13-coverage-kicker{
+  display:flex;align-items:baseline;gap:10px;
+  font-family:var(--pbe-font-data);font-size:var(--fs-micro);
+  letter-spacing:var(--ls-micro);text-transform:uppercase;color:var(--pbe-faint);
+}
+.pbe13-news.pbe13-injury-editorial .pbe13-coverage-team{color:var(--pbe-crimson-text);font-weight:700}
+.pbe13-news.pbe13-injury-editorial .pbe13-coverage-row h3{
+  margin:7px 0 0!important;
+  font-family:var(--pbe-font-ui)!important;
+  font-size:16px!important;font-weight:700!important;line-height:1.28!important;
+  text-transform:none!important;color:var(--pbe-paper)!important;
+}
+.pbe13-news.pbe13-injury-editorial .pbe13-coverage-row:hover h3{text-decoration:underline;text-decoration-color:var(--pbe-gold);text-underline-offset:4px}
+.pbe13-news.pbe13-injury-editorial .pbe13-coverage-row p{
+  max-width:78ch;margin:6px 0 0!important;
+  font-size:12.5px!important;line-height:1.5!important;color:var(--pbe-faint)!important;
+}
+
+/* ---- responsive: proportion designed per width, not scaled ------------ */
+@media(max-width:900px){
+  .pbe13-news.pbe13-injury-editorial .pbe13-feature{grid-template-columns:132px minmax(0,1fr);gap:16px}
+  .pbe13-news.pbe13-injury-editorial .pbe13-feature-media{width:132px;height:132px}
+  .pbe13-news.pbe13-injury-editorial .pbe13-feature-facts{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .pbe13-news.pbe13-injury-editorial .pbe13-feature-fact:nth-child(2){border-right:0}
+  .pbe13-news.pbe13-injury-editorial .pbe13-feature-fact:nth-child(3){grid-column:1/-1;border-top:1px solid var(--pbe-line-faint);border-right:0}
+}
+@media(max-width:640px){
+  /* The base rule aligns the masthead's two ends with align-items:flex-end,
+     which in a column direction pushes both lines to the right edge. These
+     need the same !important weight to win it back. */
+  .pbe13-news.pbe13-injury-editorial .pbe13-masthead{
+    align-items:flex-start!important;
+    flex-direction:column!important;
+    gap:9px!important;
+  }
+  .pbe13-news.pbe13-injury-editorial .pbe13-mast-now{padding-bottom:0}
+  /* A 96px square keeps the player identity present while leaving the status
+     facts in the first viewport. A full-width photograph here would push them
+     out, which is the fault this pass exists to remove. */
+  /* The photograph steps aside on a phone: an 84px identity square is enough
+     to say who this is, and the three reported facts get the full measure.
+     They are label over value rather than label opposite value, because
+     "Timeline not reported" wrapped to three lines in a 150px right column. */
+  .pbe13-news.pbe13-injury-editorial .pbe13-feature{
+    grid-template-columns:84px minmax(0,1fr)!important;
+    gap:12px!important;margin-top:16px!important;
+  }
+  .pbe13-news.pbe13-injury-editorial .pbe13-feature-media{width:84px;height:84px}
+  .pbe13-news.pbe13-injury-editorial .pbe13-feature-id h2{font-size:23px!important}
+  .pbe13-news.pbe13-injury-editorial .pbe13-feature-facts{
+    grid-template-columns:minmax(0,1fr);margin-top:13px;
+  }
+  .pbe13-news.pbe13-injury-editorial .pbe13-feature-fact{
+    padding:9px 0;border-right:0;border-bottom:1px solid var(--pbe-line-faint);
+  }
+  .pbe13-news.pbe13-injury-editorial .pbe13-feature-fact:nth-child(3){border-top:0}
+  .pbe13-news.pbe13-injury-editorial .pbe13-feature-fact:last-child{border-bottom:0}
+  .pbe13-news.pbe13-injury-editorial .pbe13-feature-fact strong{font-size:15px}
+  .pbe13-news.pbe13-injury-editorial .pbe13-feature-deck{display:none}
+  .pbe13-news.pbe13-injury-editorial .pbe13-coverage-row.has-media{grid-template-columns:96px minmax(0,1fr);gap:0 12px}
+  .pbe13-news.pbe13-injury-editorial .pbe13-coverage-media{width:96px;height:66px}
+  .pbe13-news.pbe13-injury-editorial .pbe13-coverage-row p{display:none}
+}
+
+/* ---- reading plane ----------------------------------------------------
+   Like News Intelligence, this page is set on rules and whitespace rather
+   than on opaque panels, so without its own ground the availability board and
+   the feature facts would be read straight off the stadium photograph in
+   body::before. The negative inline margin is exactly .view-container's own
+   padding, so the plane reaches the container edge without adding overflow. */
+.pbe13-news.pbe13-injury-editorial{
+  margin-inline:calc(-1 * clamp(14px,1.45vw,26px))!important;
+  padding:18px clamp(18px,2.6vw,46px) 60px!important;
+  background:var(--pbe-ink)!important;
+  border:1px solid var(--pbe-line)!important;
+  border-radius:var(--r-sm)!important;
 }

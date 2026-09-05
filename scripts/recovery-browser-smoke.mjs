@@ -101,9 +101,13 @@ for(const route of routes){
   if(!alive||cur!==route||!(Number(chars)>80)||!active||active.active!==true||active.activeCount!==1||Number(media?.broken||0)>0){pass=false;break}
   if(route==='usage'&&await probe(`!!document.querySelector('.pbe21-usage')`)!==true){pass=false;break}
   if(route==='injuries'){
-    const injuryLayout=await probe(`(()=>{const root=document.querySelector('.pbe13-news'),affected=[...document.querySelectorAll('.pbe13-aff-name>.pbe-player-headshot-v3')],tagPhotos=[...document.querySelectorAll('.pbe13-tags .pbe-player-headshot-v3')],feed=document.querySelector('.pbe13-feed'),cards=[...document.querySelectorAll('.pbe13-feed>.pbe13-card')];const maxAffected=affected.reduce((m,img)=>Math.max(m,img.getBoundingClientRect().width,img.getBoundingClientRect().height),0);const visibleTagPhotos=tagPhotos.filter(img=>{const s=getComputedStyle(img),r=img.getBoundingClientRect();return s.display!=='none'&&s.visibility!=='hidden'&&r.width>0&&r.height>0}).length;const columns=feed?getComputedStyle(feed).gridTemplateColumns:'';return{root:!!root,affected:affected.length,maxAffected:+maxAffected.toFixed(2),tagPhotos:tagPhotos.length,visibleTagPhotos,columns,cards:cards.length}})()`);
+    const injuryLayout=await probe(`(()=>{const root=document.querySelector('.pbe13-news'),affected=[...document.querySelectorAll('.pbe13-aff-name>.pbe-player-headshot-v3')],tagPhotos=[...document.querySelectorAll('.pbe13-tags .pbe-player-headshot-v3')],feed=document.querySelector('.pbe13-coverage-list,.pbe13-feed'),cards=[...document.querySelectorAll('.pbe13-feed>.pbe13-card,.pbe13-coverage-list>.pbe13-coverage-row')];const maxAffected=affected.reduce((m,img)=>Math.max(m,img.getBoundingClientRect().width,img.getBoundingClientRect().height),0);const visibleTagPhotos=tagPhotos.filter(img=>{const s=getComputedStyle(img),r=img.getBoundingClientRect();return s.display!=='none'&&s.visibility!=='hidden'&&r.width>0&&r.height>0}).length;const fcs=feed?getComputedStyle(feed):null;const columns=fcs?(fcs.display.indexOf('grid')>=0?fcs.gridTemplateColumns:'single'):'';return{root:!!root,affected:affected.length,maxAffected:+maxAffected.toFixed(2),tagPhotos:tagPhotos.length,visibleTagPhotos,columns,cards:cards.length}})()`);
     out(`injury layout          : ${JSON.stringify(injuryLayout)}`);
-    const injuryColumns=String(injuryLayout?.columns||'').trim().split(/\s+/).filter(Boolean).length;
+    /* The injury coverage feed must never become a multi-column card grid. The
+     visual-finish pass replaced .pbe13-feed's single-column grid with a plain
+     .pbe13-coverage-list of rows, which reports display:block rather than a
+     track list -- 'single' stands for that, and the invariant is unchanged. */
+  const injuryColumns=String(injuryLayout?.columns||'').trim().split(/\s+/).filter(Boolean).length;
     if(!injuryLayout||typeof injuryLayout!=='object'||injuryLayout.root!==true||Number(injuryLayout.maxAffected)>34.5||Number(injuryLayout.visibleTagPhotos)!==0||injuryColumns!==1)pass=false;
   }
   if(captureRoutes.has(route))await shot(`${route}-desktop`);
