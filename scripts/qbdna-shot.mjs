@@ -11,7 +11,11 @@ const OUT = process.argv[2] || 'shots';
 const WIDTHS = (process.argv[3] || '1440,430,390').split(',').map(Number);
 const TABS = (process.argv[4] || 'overview,props,conditions,compare').split(',');
 const PORT = process.env.PBE_PORT || '4321';
-const TARGET = `http://localhost:${PORT}`;
+/* PBE_BASE points the harness at a DEPLOYED preview instead of localhost.
+   PBE_SHARE carries a Vercel share token; the harness visits it once so the
+   bypass cookie is set before any measurement is taken. */
+const TARGET = process.env.PBE_BASE || `http://localhost:${PORT}`;
+const SHARE = process.env.PBE_SHARE || '';
 const CHROME = process.env.PBE_CHROME || 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const DP = 9900 + Math.floor(Math.random() * 90);
 
@@ -63,6 +67,12 @@ const evalIn = async (expr, ms = 30000) => {
   ]);
   return r.result?.value;
 };
+
+if (SHARE) {
+  await send('Page.navigate', { url: `${TARGET}/?_vercel_share=${SHARE}` });
+  await sleep(9000);
+  console.log('share bypass primed');
+}
 
 const report = [];
 for (const width of WIDTHS) {

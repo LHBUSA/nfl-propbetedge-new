@@ -823,6 +823,11 @@
         state[k] = el.value;
         if (k === 'playerId') {
           state.dna = null; state.prop = null; state.cmp = null; state.ctxCmp = null;
+          /* Release the selected game too. A quarterback's context must default
+             to HIS OWN next game — holding the previous selection would show a
+             New Orleans passer the Kansas City matchup. Picking a game
+             explicitly still overrides this on the next change. */
+          state.eventId = null; state.ctx = null;
         }
         if (k === 'market' || k === 'line') state.prop = null;
         if (k === 'comparePlayerId') state.cmp = null;
