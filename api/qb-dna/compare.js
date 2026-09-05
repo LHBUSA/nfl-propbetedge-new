@@ -188,7 +188,8 @@ function playersMode(res, q) {
     const sa = splitRows(ra, key), sb = splitRows(rb, key);
     const na = sa.rows.length, nb = sb.rows.length;
     if (!na || !nb) {
-      conditions[key] = { available: false, label: CONDITIONS[key].label,
+      conditions[key] = { available: false, key, group: CONDITIONS[key].group,
+        rollup: Boolean(CONDITIONS[key].rollup), label: CONDITIONS[key].label,
         games_a: na, games_b: nb,
         reason: !na && !nb ? 'neither quarterback has a game in this window'
               : !na ? 'player A has no game in this window'
@@ -197,7 +198,11 @@ function playersMode(res, q) {
     }
     const a = summarise(sa.rows), b = summarise(sb.rows);
     conditions[key] = {
-      available: true, label: CONDITIONS[key].label,
+      // key/group/rollup travel with the row so a grouped or de-duplicated
+      // view can exclude a rollup band instead of double counting its games
+      available: true, key, group: CONDITIONS[key].group,
+      rollup: Boolean(CONDITIONS[key].rollup),
+      label: CONDITIONS[key].label,
       a, b, deltas: deltaSet(a, b),
       // each side against ITS OWN baseline - the only honest way to read a split
       a_vs_own_baseline: baseA && baseA.passing_yards_avg
