@@ -25,17 +25,20 @@ const TARGET = process.env.PBE_BASE || `http://localhost:${process.env.PBE_PORT 
 const SHARE = process.env.PBE_SHARE || '';
 const CHROME = process.env.PBE_CHROME || 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const DP = 9900 + Math.floor(Math.random() * 90);
+const ROUTE = process.env.PBE_ROUTE || 'qbdna';
+const GLOBAL = ROUTE === 'wrdna' ? 'PBEWRDna' : 'PBEQBDna';
+/* Two receivers whose identity and history both resolve cleanly. */
+const IDS = ROUTE === 'wrdna'
+  ? { main: '00-0036322', other: '00-0036900', none: null }
+  : { main: '00-0033873', other: '00-0034857', none: '00-0039107' };
 
 /* Each surface: how to reach it, and what identity must be visible. */
 const SURFACES = [
-  { name: 'overview',  tab: 'overview',   state: { playerId: '00-0033873' } },
-  { name: 'conditions', tab: 'conditions', state: { playerId: '00-0033873' } },
-  { name: 'props',     tab: 'props',      state: { playerId: '00-0033873', openMarket: 'passing_yards' } },
-  { name: 'compare',   tab: 'compare',    state: { playerId: '00-0033873', comparePlayerId: '00-0034857' } },
-  { name: 'no-history', tab: 'overview',  state: { playerId: '00-0039107' } },
-  // in v2 the withheld market is a card inside the lab, not a whole panel
-  { name: 'market-unavailable', tab: 'props',
-    state: { playerId: '00-0033873', openMarket: 'passing_yards' } }
+  { name: 'overview',  tab: 'overview' },
+  { name: 'conditions', tab: 'conditions' },
+  { name: 'props',     tab: 'props' },
+  { name: 'compare',   tab: 'compare', both: true },
+  ...(IDS.none ? [{ name: 'no-history', tab: 'overview', player: IDS.none }] : [])
 ];
 
 mkdirSync(OUT, { recursive: true });
@@ -134,17 +137,18 @@ let failures = 0;
 for (const width of WIDTHS) {
   await send('Emulation.setDeviceMetricsOverride',
     { width, height: width <= 768 ? 844 : 900, deviceScaleFactor: 1, mobile: width <= 768 });
-  await send('Page.navigate', { url: `${TARGET}/#qbdna?t=${Date.now()}` });
+  await send('Page.navigate', { url: `${TARGET}/#${ROUTE}?t=${Date.now()}` });
   await sleep(15000);
-  await evalIn('window.App && App.nav("qbdna")', 15000);
+  await evalIn(`window.App && App.nav(${JSON.stringify(ROUTE)})`, 15000);
   await sleep(7000);
 
   for (const s of SURFACES) {
-    await evalIn(`(async()=>{const S=window.PBEQBDna.state;
-      Object.assign(S, ${JSON.stringify(s.state)});
+    await evalIn(`(async()=>{const S=window[${JSON.stringify(GLOBAL)}].state;
+      S.playerId = ${JSON.stringify(s.player || IDS.main)};
+      S.comparePlayerId = ${JSON.stringify(IDS.other)};
       S.tab=${JSON.stringify(s.tab)};
-      S.dna=null;S.prop=null;S.cmp=null;S.ctxCmp=null;S.eventId=null;S.ctx=null;
-      await window.PBEQBDna.load(); return true;})()`);
+      S.dna=null;S.prop=null;S.lab=null;S.cmp=null;S.ctxCmp=null;S.eventId=null;S.ctx=null;
+      await window[${JSON.stringify(GLOBAL)}].load(); return true;})()`);
     // give every lazy image a chance to actually decode before measuring
     await evalIn(`(async()=>{const im=[...document.querySelectorAll('.q2 img')];
       im.forEach(i=>i.loading='eager');

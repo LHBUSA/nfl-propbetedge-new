@@ -1,0 +1,222 @@
+{
+ "by_season": {
+  "2019": {
+   "plays": 47260,
+   "pass_attempts": 19985,
+   "pass_attempts_excl_2pt": 19897,
+   "targets_with_receiver_id": 17808,
+   "receiver_id_coverage_on_attempts_pct": 89.5,
+   "missing_columns": [],
+   "field_coverage_on_targets_pct": {
+    "receiver_player_name": 100.0,
+    "receiving_yards": 66.1,
+    "air_yards": 100.0,
+    "yards_after_catch": 66.1,
+    "complete_pass": 100.0,
+    "pass_touchdown": 100.0,
+    "epa": 100.0,
+    "first_down": 100.0,
+    "passer_player_id": 100.0
+   },
+   "completions_on_targets": 11778,
+   "completions_on_all_attempts": 11778,
+   "completions_without_a_receiver_id": 0,
+   "receiving_yards_on_incompletions_nonzero": 0
+  },
+  "2020": {
+   "plays": 47705,
+   "pass_attempts": 20271,
+   "pass_attempts_excl_2pt": 20169,
+   "targets_with_receiver_id": 18237,
+   "receiver_id_coverage_on_attempts_pct": 90.4,
+   "missing_columns": [],
+   "field_coverage_on_targets_pct": {
+    "receiver_player_name": 100.0,
+    "receiving_yards": 67.8,
+    "air_yards": 100.0,
+    "yards_after_catch": 67.8,
+    "complete_pass": 100.0,
+    "pass_touchdown": 100.0,
+    "epa": 100.0,
+    "first_down": 100.0,
+    "passer_player_id": 100.0
+   },
+   "completions_on_targets": 12362,
+   "completions_on_all_attempts": 12362,
+   "completions_without_a_receiver_id": 0,
+   "receiving_yards_on_incompletions_nonzero": 0
+  },
+  "2021": {
+   "plays": 49922,
+   "pass_attempts": 21086,
+   "pass_attempts_excl_2pt": 20972,
+   "targets_with_receiver_id": 18968,
+   "receiver_id_coverage_on_attempts_pct": 90.4,
+   "missing_columns": [],
+   "field_coverage_on_targets_pct": {
+    "receiver_player_name": 100.0,
+    "receiving_yards": 67.2,
+    "air_yards": 100.0,
+    "yards_after_catch": 67.2,
+    "complete_pass": 100.0,
+    "pass_touchdown": 100.0,
+    "epa": 100.0,
+    "first_down": 100.0,
+    "passer_player_id": 100.0
+   },
+   "completions_on_targets": 12741,
+   "completions_on_all_attempts": 12741,
+   "completions_without_a_receiver_id": 0,
+   "receiving_yards_on_incompletions_nonzero": 0
+  },
+  "2022": {
+   "plays": 49434,
+   "pass_attempts": 20458,
+   "pass_attempts_excl_2pt": 20362,
+   "targets_with_receiver_id": 18193,
+   "receiver_id_coverage_on_attempts_pct": 89.3,
+   "missing_columns": [],
+   "field_coverage_on_targets_pct": {
+    "receiver_player_name": 100.0,
+    "receiving_yards": 67.1,
+    "air_yards": 100.0,
+    "yards_after_catch": 67.1,
+    "complete_pass": 100.0,
+    "pass_touchdown": 100.0,
+    "epa": 100.0,
+    "first_down": 100.0,
+    "passer_player_id": 100.0
+   },
+   "completions_on_targets": 12199,
+   "completions_on_all_attempts": 12199,
+   "completions_without_a_receiver_id": 0,
+   "receiving_yards_on_incompletions_nonzero": 0
+  },
+  "2023": {
+   "plays": 49665,
+   "pass_attempts": 20797,
+   "pass_attempts_excl_2pt": 20713,
+   "targets_with_receiver_id": 18373,
+   "receiver_id_coverage_on_attempts_pct": 88.7,
+   "missing_columns": [],
+   "field_coverage_on_targets_pct": {
+    "receiver_player_name": 100.0,
+    "receiving_yards": 67.6,
+    "air_yards": 100.0,
+    "yards_after_catch": 67.6,
+    "complete_pass": 100.0,
+    "pass_touchdown": 100.0,
+    "epa": 100.0,
+    "first_down": 100.0,
+    "passer_player_id": 100.0
+   },
+   "completions_on_targets": 12427,
+   "completions_on_all_attempts": 12427,
+   "completions_without_a_receiver_id": 0,
+   "receiving_yards_on_incompletions_nonzero": 0
+  },
+  "2024": {
+   "plays": 49492,
+   "pass_attempts": 20082,
+   "pass_attempts_excl_2pt": 19972,
+   "targets_with_receiver_id": 17748,
+   "receiver_id_coverage_on_attempts_pct": 88.9,
+   "missing_columns": [],
+   "field_coverage_on_targets_pct": {
+    "receiver_player_name": 100.0,
+    "receiving_yards": 68.4,
+    "air_yards": 100.0,
+    "yards_after_catch": 68.4,
+    "complete_pass": 100.0,
+    "pass_touchdown": 100.0,
+    "epa": 100.0,
+    "first_down": 100.0,
+    "passer_player_id": 100.0
+   },
+   "completions_on_targets": 12136,
+   "completions_on_all_attempts": 12136,
+   "completions_without_a_receiver_id": 0,
+   "receiving_yards_on_incompletions_nonzero": 0
+  },
+  "2025": {
+   "plays": 48771,
+   "pass_attempts": 19819,
+   "pass_attempts_excl_2pt": 19721,
+   "targets_with_receiver_id": 17490,
+   "receiver_id_coverage_on_attempts_pct": 88.7,
+   "missing_columns": [],
+   "field_coverage_on_targets_pct": {
+    "receiver_player_name": 100.0,
+    "receiving_yards": 67.2,
+    "air_yards": 100.0,
+    "yards_after_catch": 67.2,
+    "complete_pass": 100.0,
+    "pass_touchdown": 100.0,
+    "epa": 100.0,
+    "first_down": 100.0,
+    "passer_player_id": 100.0
+   },
+   "completions_on_targets": 11749,
+   "completions_on_all_attempts": 11749,
+   "completions_without_a_receiver_id": 0,
+   "receiving_yards_on_incompletions_nonzero": 0
+  }
+ },
+ "player_metadata": {
+  "players_rows": 24828,
+  "wr_rows": 3248,
+  "wr_with_gsis": 3248,
+  "wr_with_espn_id": 2241,
+  "wr_with_pfr_id": 2888,
+  "wr_last_season_2025_plus": 412,
+  "positions_present": {
+   "WR": 3248,
+   "LB": 2610,
+   "RB": 2451,
+   "DB": 2309,
+   "DE": 1754,
+   "OT": 1694,
+   "TE": 1583,
+   "G": 1577,
+   "DT": 1480,
+   "CB": 1207,
+   "QB": 1006,
+   "C": 785
+  }
+ },
+ "participation": {
+  "2019": {
+   "rows": 48034,
+   "route_coverage_pct": 37.0,
+   "offense_players_coverage_pct": 100.0
+  },
+  "2020": {
+   "rows": 48513,
+   "route_coverage_pct": 37.5,
+   "offense_players_coverage_pct": 100.0
+  },
+  "2021": {
+   "rows": 50714,
+   "route_coverage_pct": 37.3,
+   "offense_players_coverage_pct": 100.0
+  },
+  "2022": {
+   "rows": 50150,
+   "route_coverage_pct": 36.2,
+   "offense_players_coverage_pct": 100.0
+  },
+  "2023": {
+   "rows": 46168,
+   "route_coverage_pct": 100.0,
+   "offense_players_coverage_pct": 100.0
+  },
+  "2024": {
+   "file": null,
+   "note": "not published for this season"
+  },
+  "2025": {
+   "file": null,
+   "note": "not published for this season"
+  }
+ }
+}

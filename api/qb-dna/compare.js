@@ -18,7 +18,7 @@
  */
 import { resolvePlayer, gamesFor, baseline, splitRows, provenance,
          CONDITIONS, MARKETS, SAMPLE } from '../_qbdna/engine.js';
-import { playerMedia, teamBlock } from '../_qbdna/media.js';
+import { playerMedia, teamBlock } from '../_playerdna/media.js';
 
 function send(res, status, body, ttl = 0) {
   res.statusCode = status;

@@ -69,7 +69,7 @@
         ['marketwatch','Market Watch',''],['picks','Model Lab',''],
         // QB DNA sits with the other per-player analysis surfaces: straight
         // after Model Lab, before the ledger and feed routes.
-        ['qbdna','QB DNA',''],
+        ['qbdna','QB DNA',''],['wrdna','WR DNA',''],
         ['pbepicks','PBE Picks',''],['trackrecord','Track Record',''],
         ['matchups','Matchups',''],['usage','Usage',''],
         ['injuries','Injuries',''],['newsintel','News','']

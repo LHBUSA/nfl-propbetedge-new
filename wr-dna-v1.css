@@ -1,0 +1,62 @@
+/* ============================================================================
+   PropBetEdge NFL — WR DNA
+   ----------------------------------------------------------------------------
+   The receiver product's OWN layer. Everything structural — glass, tabs,
+   charts, picker, market cards, sample labels — comes from
+   player-dna-v1.css, which both Player DNA products share. This file holds
+   only what a receiver surface needs and a quarterback surface does not.
+   ========================================================================== */
+
+/* ---- metric switch on the usage chart ----------------------------------
+   A receiver is read three ways — yards, targets, receptions — and which one
+   matters depends on the question. A segmented control is honest about that
+   in a way three separate charts would not be. */
+.q2-seg { display: inline-flex; border: 1px solid var(--pbe-line-strong); border-radius: var(--r-sm); overflow: hidden; }
+.q2-seg-btn {
+  appearance: none; background: none; border: 0; cursor: pointer;
+  padding: 7px 13px; min-height: 34px;
+  border-right: 1px solid var(--pbe-line);
+  font: 700 var(--fs-micro)/1 var(--pbe-font-data); letter-spacing: .12em;
+  text-transform: uppercase; color: var(--pbe-faint-text);
+  transition: color var(--t-fast), background var(--t-fast);
+}
+.q2-seg-btn:last-child { border-right: 0; }
+.q2-seg-btn:hover { color: var(--pbe-paper); }
+.q2-seg-btn.is-on { background: rgba(212,175,55,.12); color: var(--pbe-gold); }
+.q2-seg-btn:focus-visible { outline: 2px solid var(--pbe-gold); outline-offset: -3px; }
+
+/* ---- QB connection ------------------------------------------------------
+   The dimension a quarterback product does not have. It gets its own reading
+   weight because when a starter changes, this is the table that answers what
+   that means for the receiver. */
+.q2-qbc { min-width: 720px; }
+.q2-qbc-who { min-width: 190px; }
+.q2-qbc-who em {
+  display: block; margin-top: 3px; font-style: normal;
+  font: 500 9px/1.4 var(--pbe-font-data); color: var(--pbe-faint-text);
+}
+.q2-qbc-y { color: var(--pbe-paper); font-weight: 700; font-size: var(--fs-data); }
+.q2-den {
+  display: block; margin-top: 2px; font-style: normal;
+  font: 500 8px/1 var(--pbe-font-data); color: var(--pbe-subtle);
+}
+.q2-qbc tbody tr:first-child td { background: rgba(212,175,55,.045); }
+
+/* the receiver condition matrix carries targets where the QB one carries W-L */
+.q2-wr .q2-crow-rec em {
+  display: block; margin-top: 3px; font-style: normal;
+  font: 500 8px/1 var(--pbe-font-data); letter-spacing: .1em;
+  text-transform: uppercase; color: var(--pbe-subtle);
+}
+
+/* anytime TD is a PRICE, not a line, and the card says so */
+.q2-mkt-k i {
+  font-style: normal; margin-left: 6px; padding: 2px 6px;
+  border: 1px solid var(--pbe-line-strong); border-radius: var(--r-xs);
+  font-size: 8px; letter-spacing: .1em; color: var(--pbe-faint-text);
+}
+
+@media (max-width: 620px) {
+  .q2-seg { width: 100%; }
+  .q2-seg-btn { flex: 1; padding: 8px 6px; }
+}

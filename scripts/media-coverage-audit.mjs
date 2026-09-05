@@ -11,7 +11,7 @@
  * placeholder, and no fallback mark is counted as a resolved image.
  */
 import { readFileSync, writeFileSync } from 'node:fs';
-import { headshotUrl, teamLogoUrl } from '../api/_qbdna/media.js';
+import { headshotUrl, teamLogoUrl } from '../api/_playerdna/media.js';
 
 const OUT = process.argv[2] || 'data/dist/media-coverage.json';
 const CONCURRENCY = 8;
@@ -49,13 +49,16 @@ async function pool(items, fn) {
   return out;
 }
 
-const audit = JSON.parse(readFileSync('data/dist/active-qbs-2026.json', 'utf8'));
+/* Position is a parameter: the same gate serves every Player DNA product. */
+const POS = (process.argv[3] || 'QB').toUpperCase();
+const SRC = POS === 'WR' ? 'data/dist/active-wrs-2026.json' : 'data/dist/active-qbs-2026.json';
+const audit = JSON.parse(readFileSync(SRC, 'utf8'));
 const venues = JSON.parse(readFileSync('data/dist/nfl-venues.json', 'utf8'));
 
 /* ---- quarterbacks ------------------------------------------------------- */
 // one row per identity; a QB on two roster buckets is audited once
 const seen = new Map();
-for (const q of audit.quarterbacks) {
+for (const q of (audit.quarterbacks || audit.receivers)) {
   const key = q.gsis_id || `name:${q.name}`;
   if (!seen.has(key)) seen.set(key, q);
   else if (q.market_priced) seen.set(key, { ...seen.get(key), market_priced: true });
@@ -112,7 +115,7 @@ const summary = {
 writeFileSync(OUT, JSON.stringify({ summary, quarterbacks: qbRows, teams: teamRows }, null, 2));
 
 const Q = summary.quarterbacks, P = summary.market_priced_starters, T = summary.teams;
-console.log('=== HEADSHOT COVERAGE ===');
+console.log('=== HEADSHOT COVERAGE · ' + POS + ' ===');
 console.log(`  total roster identities   ${Q.total_identities}`);
 console.log(`  ESPN athlete id available ${Q.espn_id_available}`);
 console.log(`  headshot URL built        ${Q.headshot_url_built}`);

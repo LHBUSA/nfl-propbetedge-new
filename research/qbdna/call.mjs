@@ -10,7 +10,10 @@ const ROUTES = {
   'prop-history': 'api/qb-dna/prop-history.js',
   'compare': 'api/qb-dna/compare.js',
   'prop-lab': 'api/qb-dna/prop-lab.js',
-  'game-context': 'api/qb-dna/game-context.js'
+  'game-context': 'api/qb-dna/game-context.js',
+  'wr-dna': 'api/wr-dna.js',
+  'wr-prop-lab': 'api/wr-dna/prop-lab.js',
+  'wr-compare': 'api/wr-dna/compare.js'
 };
 
 export async function call(route, qs = '') {

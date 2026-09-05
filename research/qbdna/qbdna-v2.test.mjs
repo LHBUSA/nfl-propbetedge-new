@@ -10,7 +10,7 @@ import assert from 'node:assert/strict';
 import { call } from './call.mjs';
 import { dataset, gamesFor, conditionProfile, dnaSignals, splitRows,
          CONDITIONS, CONDITION_GROUPS, SIGNAL_TIERS } from '../../api/_qbdna/engine.js';
-import { MARKET_UNAVAILABLE } from '../../api/_qbdna/markets.js';
+import { MARKET_UNAVAILABLE } from '../../api/_playerdna/markets.js';
 
 const MAHOMES = '00-0033873', ALLEN = '00-0034857';
 const profileFor = id => conditionProfile(gamesFor(id), 'py', 1);

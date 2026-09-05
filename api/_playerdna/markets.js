@@ -15,9 +15,19 @@
  * confident-looking hit rate for a number nobody is actually offering.
  * ========================================================================== */
 
-import { dataset } from './engine.js';
+import { dataset as qbDataset } from '../_qbdna/engine.js';
+import { dataset as wrDataset } from '../_wrdna/engine.js';
 
 const GATEWAY = process.env.NFL_GATEWAY || 'https://nfl-api.propbetedge.ai';
+
+/* Receiving markets. Anytime TD is carried here because the market source
+   offers it, but it is priced as ODDS, not as a line — the receiver engine
+   handles it as a rate of touchdown games and never as a threshold. */
+export const RECEIVING_MARKET_MAP = {
+  player_reception_yds: 'receiving_yards',
+  player_receptions:    'receptions',
+  player_anytime_td:    'anytime_td'
+};
 
 /** Gateway market key ↔ our market key. Only these five are supported. */
 export const MARKET_MAP = {
@@ -57,8 +67,8 @@ export async function events() {
    spine is the only resolution used; an ambiguous or unknown name resolves to
    nothing and says so. A fuzzy match here would attach one quarterback's
    history to another quarterback's line, which is the worst error available. */
-function resolveByName(name) {
-  const D = dataset();
+function resolveByName(name, kind) {
+  const D = kind === 'receiving' ? wrDataset() : qbDataset();
   const want = String(name || '').toLowerCase().trim();
   if (!want) return { gsis_id: null, reason: 'no name on the quote' };
   const hits = D.players.filter(p => String(p.display_name).toLowerCase() === want);
@@ -74,9 +84,17 @@ function resolveByName(name) {
  * Current QB prop markets for one event, grouped by player.
  * Returns `{ available, event, players[], markets_offered, source }`.
  */
-export async function eventMarkets(eventId) {
+/**
+ * @param {string} eventId
+ * @param {'passing'|'receiving'} kind  which market family to read, and which
+ *        identity spine to resolve names against. Passing is the default so
+ *        every existing caller is unchanged.
+ */
+export async function eventMarkets(eventId, kind = 'passing') {
+  const map = kind === 'receiving' ? RECEIVING_MARKET_MAP : MARKET_MAP;
+  const keys = Object.keys(map);
   const url = `${GATEWAY}/api/odds/board?event_id=${encodeURIComponent(eventId)}`
-            + `&markets=${GATEWAY_MARKETS.join(',')}`;
+            + `&markets=${keys.join(',')}`;
   let board;
   try {
     board = await getJSON(url, 15000);
@@ -92,18 +110,36 @@ export async function eventMarkets(eventId) {
   if (!summary.length) {
     return {
       available: false, state: MARKET_UNAVAILABLE,
-      reason: 'the market source returned no quarterback passing markets for this event',
+      reason: kind === 'receiving'
+        ? 'the market source returned no receiving markets for this event'
+        : 'the market source returned no quarterback passing markets for this event',
       event_id: String(eventId), event: board.event || null,
       source: { gateway: GATEWAY, url, provider: board.source, provider_last_update: board.provider_last_update }
     };
   }
 
+  /* Anytime TD is priced as ODDS, so market_summary carries no line for it —
+     the price lives on the individual quotes. Collected here as the best
+     available YES price plus the range across books. No consensus is derived:
+     averaging American odds is not a meaningful operation. */
+  const priceBy = new Map();
+  if (map.player_anytime_td) {
+    for (const q of (Array.isArray(board.quotes) ? board.quotes : [])) {
+      if (q.market !== 'player_anytime_td') continue;
+      if (String(q.direction || '').toUpperCase() !== 'YES') continue;
+      const price = Number(q.price);
+      if (!Number.isFinite(price)) continue;
+      if (!priceBy.has(q.player)) priceBy.set(q.player, []);
+      priceBy.get(q.player).push({ price, book: q.book || q.book_key });
+    }
+  }
+
   const byPlayer = new Map();
   for (const s of summary) {
-    const our = MARKET_MAP[s.market];
+    const our = map[s.market];
     if (!our) continue;                     // a market we cannot count is ignored
     if (!byPlayer.has(s.player)) {
-      const r = resolveByName(s.player);
+      const r = resolveByName(s.player, kind);
       byPlayer.set(s.player, {
         player_name: s.player,
         gsis_id: r.gsis_id, matched_by: r.matched_by || null,
@@ -112,8 +148,27 @@ export async function eventMarkets(eventId) {
         markets: {}
       });
     }
+    if (our === 'anytime_td') {
+      const list = (priceBy.get(s.player) || []).sort((a, b) => b.price - a.price);
+      byPlayer.get(s.player).markets[our] = {
+        market: our, gateway_market: s.market,
+        kind: 'price',
+        // a price, not a line. best available first, with the spread stated.
+        line: list.length ? list[0].price : null,
+        price_best: list.length ? list[0].price : null,
+        price_best_book: list.length ? list[0].book : null,
+        price_low: list.length ? list[list.length - 1].price : null,
+        price_high: list.length ? list[0].price : null,
+        book_count: list.length || s.book_count || null,
+        books: s.books || [],
+        note: 'American odds for a touchdown to be scored. Not a line, and not '
+            + 'convertible to one.'
+      };
+      continue;
+    }
     byPlayer.get(s.player).markets[our] = {
       market: our, gateway_market: s.market,
+      kind: 'threshold',
       // the consensus line is the market's own number. we never round or adjust it.
       line: s.consensus_line ?? null,
       line_low: s.line_low ?? null, line_high: s.line_high ?? null,
@@ -124,7 +179,7 @@ export async function eventMarkets(eventId) {
 
   // every supported market, with the unavailable ones stated rather than absent
   for (const p of byPlayer.values()) {
-    p.unavailable_markets = Object.values(MARKET_MAP)
+    p.unavailable_markets = Object.values(map)
       .filter(m => !p.markets[m])
       .map(m => ({ market: m, state: MARKET_UNAVAILABLE,
                    reason: 'no book in the current market is offering this market for this player' }));
@@ -135,7 +190,8 @@ export async function eventMarkets(eventId) {
     event_id: String(eventId),
     event: board.event || null,
     players: [...byPlayer.values()],
-    markets_offered: [...new Set(summary.map(s => MARKET_MAP[s.market]).filter(Boolean))],
+    kind,
+    markets_offered: [...new Set(summary.map(s => map[s.market]).filter(Boolean))],
     quote_count: board.quote_count ?? null,
     source: {
       gateway: GATEWAY, url,
@@ -148,14 +204,16 @@ export async function eventMarkets(eventId) {
 }
 
 /** One player's markets for one event, or an explicit unavailable state. */
-export async function playerMarkets(eventId, gsisId) {
-  const m = await eventMarkets(eventId);
+export async function playerMarkets(eventId, gsisId, kind = 'passing') {
+  const m = await eventMarkets(eventId, kind);
   if (!m.available) return m;
   const hit = m.players.find(p => p.gsis_id === gsisId);
   if (!hit) {
     return {
       available: false, state: MARKET_UNAVAILABLE,
-      reason: 'the current market does not price this quarterback for this event',
+      reason: kind === 'receiving'
+        ? 'the current market does not price this receiver for this event'
+        : 'the current market does not price this quarterback for this event',
       event_id: m.event_id, event: m.event, source: m.source,
       priced_players: m.players.map(p => p.player_name)
     };

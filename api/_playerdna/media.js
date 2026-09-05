@@ -1,5 +1,9 @@
-/* Identity-safe media URLs. ONE place builds these, and both /api/nfl-media
- * and the QB DNA routes use it — this is not a second resolver.
+/* Identity-safe media URLs. ONE place builds these, and /api/nfl-media plus
+ * every Player DNA product use it — this is not a second resolver.
+ *
+ * Position-agnostic on purpose: a headshot is a headshot whether the identity
+ * is a quarterback or a receiver, which is why this lives in _playerdna rather
+ * than beside one product.
  * =============================================================================
  * The rule QB DNA adds on top of the product-wide media layer:
  *

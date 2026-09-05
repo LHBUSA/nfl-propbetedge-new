@@ -11,7 +11,7 @@
 import { resolvePlayer, gamesFor, baseline, conditionProfile, dnaSignals, provenance,
          dataWindow, MARKETS, SAMPLE, dataset } from './_qbdna/engine.js';
 import { gateReport, SERVED_FIELDS } from './_qbdna/gating.js';
-import { playerMedia, teamBlock } from './_qbdna/media.js';
+import { playerMedia, teamBlock } from './_playerdna/media.js';
 
 function send(res, status, body, ttl = 0) {
   res.statusCode = status;

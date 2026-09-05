@@ -15,7 +15,7 @@ import assert from 'node:assert/strict';
 import { call } from './call.mjs';
 import { dataset, gamesFor, dataWindow, MARKETS } from '../../api/_qbdna/engine.js';
 import { MARKET_MAP, GATEWAY_MARKETS, OUR_TO_GATEWAY, MARKET_UNAVAILABLE }
-  from '../../api/_qbdna/markets.js';
+  from '../../api/_playerdna/markets.js';
 
 const MAHOMES = '00-0033873';
 const withHistory = () => dataset().players.filter(p => gamesFor(p.gsis_id).length);

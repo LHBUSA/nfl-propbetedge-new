@@ -1,7 +1,13 @@
 /* ============================================================================
-   PropBetEdge NFL — QB DNA v2
+   PropBetEdge NFL — PLAYER DNA design system
    ----------------------------------------------------------------------------
-   Premium NFL broadcast graphics meeting an institutional data terminal.
+   The shared presentation layer for every Player DNA product: QB DNA, WR DNA,
+   and whatever positions follow. Premium NFL broadcast graphics meeting an
+   institutional data terminal.
+
+   Products share this file so they read as siblings rather than as two
+   surfaces that happen to look similar. What a product owns is its metrics and
+   its signals, not its glass, its charts or its picker.
 
    Composition rules:
    · The quarterback is the product. The hero establishes identity — real face,
@@ -15,31 +21,52 @@
    · An unavailable value is colourless and states its reason in place.
    · Team colour is allowed only as a thin contextual accent around identity.
 
-   Owns the .q2- namespace. No :root here — pbe-tokens.css is the authority.
+   Owns the .q2- namespace (Player DNA surface). No :root here — pbe-tokens.css
+   is the authority. The stadium photograph belongs to stadium-selector-v1;
+   nothing in this file paints an opaque ground over it.
    ========================================================================== */
 
 .q2 {
   --q2-gut: clamp(16px, 3vw, 40px);
   --q2-max: 1360px;
+  /* Glass tokens. One place decides how much venue each density of surface
+     lets through, so a chart panel and a hero cannot drift apart. */
+  --q2-glass-hi:  linear-gradient(145deg, rgba(20,18,13,.74), rgba(11,10,8,.82));
+  --q2-glass-mid: linear-gradient(145deg, rgba(20,18,13,.80), rgba(11,10,8,.87));
+  --q2-glass-dense: linear-gradient(145deg, rgba(18,16,12,.88), rgba(10,9,7,.92));
+  --q2-blur: blur(10px) saturate(110%);
   position: relative; z-index: 1;
   min-height: 100vh; padding-bottom: var(--s-8);
   color: var(--pbe-paper); font-family: var(--pbe-font-ui);
-}
-/* the shell's hero photograph is painted by an ancestor; a terminal reads on
-   its own ground, so this lays an opaque ink layer behind this view only */
-.q2::before {
-  content: ''; position: fixed; inset: 0; z-index: -1;
-  background: var(--pbe-ink); pointer-events: none;
+  /* TRANSPARENT. stadium-selector-v1 is the single background authority and it
+     paints the venue on the body; anything opaque here is a lid on top of it. */
+  background: transparent;
 }
 
 .q2-body, .q2-tabs, .q2-rail { max-width: var(--q2-max); margin-inline: auto; }
 .q2-body { padding: var(--s-5) var(--q2-gut) 0; }
 
 /* ============================ HERO ====================================== */
+/* Broadcast glass, not a lid. The venue stays visible through the top of the
+   hero where the identity sits; the scrim goes heavy from the name downward,
+   because that is where the small metadata and the market numbers live and
+   prices read off a photograph of a crowd is what makes a terminal look like a
+   graphic. The blur is deliberately shallow -- past ~3px a cover-scaled
+   stadium becomes a smear, which is the occlusion this is meant to avoid. */
 .q2-hero {
   max-width: var(--q2-max); margin-inline: auto;
   padding: var(--s-5) var(--q2-gut) var(--s-4);
   position: relative;
+  background-color: rgba(12,11,9,.26);
+  background-image: linear-gradient(180deg,
+    rgba(8,9,9,.06) 0%,
+    rgba(9,8,6,.22) 30%,
+    rgba(9,8,6,.62) 58%,
+    rgba(9,8,6,.84) 80%,
+    rgba(9,8,6,.90) 100%);
+  backdrop-filter: blur(2.5px) saturate(116%);
+  -webkit-backdrop-filter: blur(2.5px) saturate(116%);
+  border-radius: 0 0 var(--r-md) var(--r-md);
 }
 /* one restrained gold hairline under the identity, never a gold field */
 .q2-hero::after {
@@ -136,12 +163,13 @@
 }
 .q2-hero-line {
   appearance: none; cursor: pointer; text-align: left;
-  background: var(--pbe-ink-2); border: 1px solid var(--pbe-line-strong);
+  background: rgba(12,11,9,.72); border: 1px solid var(--pbe-line-strong);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
   border-radius: var(--r-sm); padding: 10px 14px;
   display: grid; gap: 3px; min-width: 116px;
   transition: border-color var(--t-fast), background var(--t-fast);
 }
-.q2-hero-line:hover { border-color: var(--pbe-gold); background: var(--pbe-ink-3); }
+.q2-hero-line:hover { border-color: var(--pbe-gold); background: rgba(28,24,18,.82); }
 .q2-hero-line:focus-visible { outline: 2px solid var(--pbe-gold); outline-offset: 2px; }
 .q2-hero-line span {
   font: 700 var(--fs-micro)/1 var(--pbe-font-data); letter-spacing: .12em;
@@ -167,6 +195,8 @@
   font: 500 var(--fs-micro)/1.5 var(--pbe-font-data); letter-spacing: .08em;
   color: var(--pbe-faint-text); text-transform: uppercase;
   border-bottom: 1px solid var(--pbe-line);
+  background: linear-gradient(180deg, rgba(11,10,8,.72), rgba(11,10,8,.82));
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
 }
 .q2-rail b { color: var(--pbe-dim); font-weight: 600; }
 .q2-rail-note { color: var(--pbe-subtle); text-transform: none; letter-spacing: 0;
@@ -176,7 +206,9 @@
 .q2-tabs {
   display: flex; align-items: center; gap: 0; padding: 0 var(--q2-gut);
   border-bottom: 1px solid var(--pbe-line);
-  position: sticky; top: 0; z-index: 6; background: var(--pbe-ink);
+  position: sticky; top: 0; z-index: 6;
+  background: linear-gradient(180deg, rgba(11,10,8,.93), rgba(11,10,8,.86));
+  backdrop-filter: var(--q2-blur); -webkit-backdrop-filter: var(--q2-blur);
   overflow-x: auto; scrollbar-width: none;
 }
 .q2-tabs::-webkit-scrollbar { display: none; }
@@ -204,9 +236,15 @@
 }
 
 /* ============================ PANELS ==================================== */
+/* Panels are glass. The venue reads through the page gutters and the gaps
+   between modules; inside a panel the surface carries enough weight for dense
+   type. Charts and tables get the denser tier because their ink is thin. */
 .q2-panel {
-  border: 1px solid var(--pbe-line); background: var(--pbe-ink-2);
+  border: 1px solid var(--pbe-line-strong);
+  background: var(--q2-glass-hi);
+  backdrop-filter: var(--q2-blur); -webkit-backdrop-filter: var(--q2-blur);
   border-radius: var(--r-sm); margin-bottom: var(--s-5); overflow: hidden;
+  box-shadow: 0 10px 34px rgba(0,0,0,.30);
 }
 .q2-head {
   display: flex; justify-content: space-between; align-items: baseline; gap: var(--s-3);
@@ -228,7 +266,7 @@
 }
 .q2-foot {
   padding: var(--s-3) var(--s-4); border-top: 1px solid var(--pbe-line-faint);
-  background: var(--pbe-ink-4);
+  background: rgba(9,8,6,.42);
   font: 400 var(--fs-micro)/1.7 var(--pbe-font-ui); color: var(--pbe-faint-text);
 }
 .q2-lead { margin: 0 0 var(--s-4); font: 500 var(--fs-body)/1.6 var(--pbe-font-ui);
@@ -309,8 +347,8 @@
   text-transform: uppercase; color: var(--pbe-faint-text);
 }
 .q2-legend i { width: 11px; height: 11px; border-radius: 2px; display: inline-block; margin-right: -8px; }
-.q2-legend .k-over  { background: rgba(92,187,133,.55); border: 1px solid #5cbb85; }
-.q2-legend .k-under { background: rgba(224,74,95,.5); border: 1px solid #e04a5f; }
+.q2-legend .k-over  { background: rgba(92,187,133,.78); border: 1px solid #5cbb85; }
+.q2-legend .k-under { background: rgba(224,74,95,.72); border: 1px solid #e04a5f; }
 .q2-legend .k-push  { background: var(--pbe-subtle); }
 .q2-legend .k-line  { background: var(--pbe-gold); height: 3px; border-radius: 0; }
 .q2-legend .k-avg   { background: var(--pbe-faint-text); height: 3px; border-radius: 0; }
@@ -330,8 +368,8 @@
   gap: var(--s-3); padding: var(--s-3) var(--s-4) var(--s-4);
 }
 .q2-sig {
-  border: 1px solid var(--pbe-line); border-left-width: 2px;
-  border-radius: var(--r-xs); padding: var(--s-3); background: var(--pbe-ink-4);
+  border: 1px solid var(--pbe-line-strong); border-left-width: 2px;
+  border-radius: var(--r-xs); padding: var(--s-3); background: rgba(9,8,6,.46);
 }
 /* direction is the message; gold for a lift, crimson for a drop */
 .q2-sig.t-up   { border-left-color: var(--pbe-gold); }
@@ -355,7 +393,7 @@
   display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
   font: 500 9px/1 var(--pbe-font-data); letter-spacing: .06em; color: var(--pbe-faint-text);
 }
-.q2-insuf { padding: var(--s-3) var(--s-4) var(--s-4); background: var(--pbe-ink-4); }
+.q2-insuf { padding: var(--s-3) var(--s-4) var(--s-4); background: rgba(9,8,6,.34); }
 .q2-insuf-k {
   font: 700 var(--fs-micro)/1 var(--pbe-font-data); letter-spacing: .16em;
   text-transform: uppercase; color: var(--pbe-faint-text); margin-bottom: 10px;
@@ -375,7 +413,7 @@
 .q2-today { border-left: 2px solid var(--pbe-gold); }
 .q2-today-grid { display: grid; grid-template-columns: minmax(240px, 320px) 1fr; }
 .q2-today-game {
-  padding: var(--s-4); border-right: 1px solid var(--pbe-line); background: var(--pbe-ink-4);
+  padding: var(--s-4); border-right: 1px solid var(--pbe-line); background: rgba(9,8,6,.40);
 }
 .q2-today-match { font: 700 var(--fs-h2)/1 var(--pbe-font-data); }
 .q2-today-venue { margin-top: 10px; font: 600 var(--fs-sm)/1.3 var(--pbe-font-ui); color: var(--pbe-dim); }
@@ -423,7 +461,7 @@
 }
 .q2-mkt-hit:hover { background: rgba(245,241,235,.022); }
 .q2-mkt-hit:focus-visible { outline: 2px solid var(--pbe-gold); outline-offset: -3px; }
-.q2-mkt.is-open { background: var(--pbe-ink-4); box-shadow: inset 2px 0 0 var(--pbe-gold); }
+.q2-mkt.is-open { background: rgba(9,8,6,.44); box-shadow: inset 2px 0 0 var(--pbe-gold); }
 .q2-mkt-k {
   font: 700 var(--fs-micro)/1 var(--pbe-font-data); letter-spacing: .14em;
   text-transform: uppercase; color: var(--pbe-faint-text);
@@ -472,7 +510,9 @@
 /* ============================ CONDITIONS ================================ */
 .q2-condintro {
   margin-bottom: var(--s-5); padding: var(--s-3) var(--s-4);
-  border-left: 2px solid var(--pbe-gold); background: var(--pbe-ink-4);
+  border-left: 2px solid var(--pbe-gold); background: var(--q2-glass-hi);
+  backdrop-filter: var(--q2-blur); -webkit-backdrop-filter: var(--q2-blur);
+  border-radius: var(--r-sm);
   font: 400 var(--fs-sm)/1.6 var(--pbe-font-ui); color: var(--pbe-dim); max-width: 90ch;
 }
 .q2-chead, .q2-crow {
@@ -534,7 +574,7 @@
 .q2-bar b.at-r { left:  calc(50% + var(--bar, 0px) + 5px); }
 
 /* ============================ COMPARE =================================== */
-.q2-vspanel { background: var(--pbe-ink-2); }
+
 .q2-vs { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; }
 .q2-vs-side { padding: var(--s-5) var(--s-4); text-align: center; }
 .q2-vs-face {
@@ -699,12 +739,12 @@
 }
 .q2-picker-panel {
   width: min(560px, 100%); max-height: 78vh; display: flex; flex-direction: column;
-  background: var(--pbe-ink-2); border: 1px solid var(--pbe-line-strong);
+  background: linear-gradient(160deg, rgba(22,20,15,.96), rgba(12,11,8,.97)); border: 1px solid var(--pbe-line-strong);
   border-radius: var(--r-md); box-shadow: var(--sh-3); overflow: hidden;
 }
 .q2-picker-head {
   display: flex; gap: var(--s-2); padding: var(--s-3);
-  border-bottom: 1px solid var(--pbe-line); background: var(--pbe-ink-4);
+  border-bottom: 1px solid var(--pbe-line); background: rgba(9,8,6,.6);
 }
 .q2-picker-input {
   flex: 1; min-width: 0; background: var(--pbe-ink); color: var(--pbe-paper);
@@ -721,7 +761,7 @@
 .q2-picker-body { overflow-y: auto; overscroll-behavior: contain; }
 .q2-picker-glabel {
   position: sticky; top: 0; z-index: 1; padding: 10px var(--s-4) 8px;
-  background: var(--pbe-ink-4); border-bottom: 1px solid var(--pbe-line-faint);
+  background: rgba(16,14,11,.96); border-bottom: 1px solid var(--pbe-line-faint);
   font: 700 9px/1 var(--pbe-font-data); letter-spacing: .16em;
   text-transform: uppercase; color: var(--pbe-faint-text);
 }
@@ -745,8 +785,10 @@
 
 /* ============================ SOURCES =================================== */
 .q2-sources {
-  border: 1px solid var(--pbe-line); border-radius: var(--r-sm);
-  background: var(--pbe-ink-2); margin-bottom: var(--s-6);
+  border: 1px solid var(--pbe-line-strong); border-radius: var(--r-sm);
+  background: var(--q2-glass-hi);
+  backdrop-filter: var(--q2-blur); -webkit-backdrop-filter: var(--q2-blur);
+  margin-bottom: var(--s-6);
 }
 .q2-sources > summary {
   padding: var(--s-4); cursor: pointer; list-style: none;
@@ -798,6 +840,16 @@
   color: var(--pbe-faint-text); text-transform: uppercase;
 }
 .q2-prov b { color: var(--pbe-dim); font-weight: 600; text-transform: none; }
+
+/* Dense ink needs a denser ground. A canvas of thin 1px strokes and a table of
+   9px labels are the two places where letting more venue through costs
+   legibility, so both step up a tier. */
+.q2-bigs, .q2-crows, .q2-cmprows, .q2-btrows, .q2-mkts { background: rgba(10,9,7,.34); }
+/* A chart is the densest ink on the page: hairline strokes and semi-transparent
+   fills. Over translucent glass they wash out, so the chart well and the table
+   well are effectively opaque. This is where legibility beats atmosphere. */
+.q2-chart { background: rgba(8,7,5,.88); }
+.q2-tablewrap { background: rgba(9,8,6,.62); }
 
 /* ============================ RESPONSIVE ================================ */
 @media (max-width: 1100px) {
@@ -873,6 +925,24 @@
   .q2-h2h-mid { padding: 0 var(--s-3); }
 }
 
+/* On a phone the hero and panels fill the viewport, so a backdrop blur turns
+   the whole venue into a smear -- the mobile form of the occlusion this glass
+   system exists to avoid. Drop the blur and hold contrast with the scrim. */
+@media (max-width: 760px) {
+  .q2-hero, .q2-panel, .q2-tabs, .q2-rail, .q2-sources, .q2-condintro, .q2-hero-line {
+    backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+  }
+  .q2-hero {
+    background-image: linear-gradient(180deg,
+      rgba(8,9,9,.18) 0%,
+      rgba(9,8,6,.42) 26%,
+      rgba(9,8,6,.80) 52%,
+      rgba(9,8,6,.92) 74%,
+      rgba(9,8,6,.95) 100%);
+  }
+  .q2-panel { background: var(--q2-glass-dense); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .q2 * { transition: none !important; animation: none !important; }
 }
@@ -882,3 +952,36 @@
 .q2-bar b.inside { color: var(--pbe-paper); }
 .q2-bar b.at-l.inside { right: calc(50% + 6px); left: auto; }
 .q2-bar b.at-r.inside { left: calc(50% + 6px); right: auto; }
+
+/* ============================ CHANGE PLAYER ==============================
+   The affordance has to be visible. Hiding "you can switch quarterbacks"
+   behind a hover state on a photograph means most readers never find it, and
+   on a touch screen there is no hover at all. */
+.q2-change {
+  appearance: none; cursor: pointer;
+  margin-top: var(--s-4);
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 16px; border-radius: var(--r-pill);
+  border: 1px solid var(--pbe-gold);
+  background: rgba(212,175,55,.10);
+  color: var(--pbe-gold);
+  font: 700 var(--fs-micro)/1 var(--pbe-font-data);
+  letter-spacing: .16em; text-transform: uppercase;
+  min-height: 44px;
+  transition: background var(--t-fast), color var(--t-fast);
+}
+.q2-change:hover { background: var(--pbe-gold); color: var(--pbe-ink); }
+.q2-change:focus-visible { outline: 2px solid var(--pbe-gold); outline-offset: 3px; }
+.q2-change svg { flex: none; }
+.q2-change em { font-style: normal; font-size: 11px; opacity: .8; margin-left: 1px; }
+/* the compare hero carries two of them, so they step down a size */
+.q2-change.sm {
+  margin-top: var(--s-3); padding: 8px 13px; min-height: 38px;
+  font-size: 9px; letter-spacing: .14em;
+}
+
+@media (max-width: 620px) {
+  /* a phone needs the biggest, most obvious version of this control */
+  .q2-change { width: 100%; justify-content: center; margin-top: var(--s-3); }
+  .q2-change.sm { width: auto; }
+}

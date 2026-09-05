@@ -107,7 +107,9 @@
     /* QB DNA — v2 is the sole UI authority for the qbdna route. v1 is retired
        and deliberately NOT loaded; stacking it would leave two renderers
        fighting over the same view container. */
-    {css:'./qb-dna-v2.css',js:'./qb-dna-v2.js'}
+    {css:'./player-dna-v1.css'},
+    {js:'./qb-dna-v2.js'},
+    {css:'./wr-dna-v1.css',js:'./wr-dna-v1.js'}
   ];
 
   const PRO_MODULES=[

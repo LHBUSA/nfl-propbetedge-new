@@ -15,8 +15,8 @@
  */
 import { resolvePlayer, gamesFor, propThreshold, splitRows, provenance, dataWindow,
          MARKETS, CONDITIONS, SAMPLE } from '../_qbdna/engine.js';
-import { eventMarkets, MARKET_MAP, MARKET_UNAVAILABLE } from '../_qbdna/markets.js';
-import { playerMedia, teamBlock } from '../_qbdna/media.js';
+import { eventMarkets, MARKET_MAP, MARKET_UNAVAILABLE } from '../_playerdna/markets.js';
+import { playerMedia, teamBlock } from '../_playerdna/media.js';
 
 function send(res, status, body, ttl = 0) {
   res.statusCode = status;

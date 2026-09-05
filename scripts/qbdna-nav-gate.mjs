@@ -26,6 +26,9 @@ const TARGET = process.env.PBE_BASE || `http://localhost:${process.env.PBE_PORT 
 const SHARE = process.env.PBE_SHARE || '';
 const CHROME = process.env.PBE_CHROME || 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const DP = 9900 + Math.floor(Math.random() * 90);
+/* Which Player DNA product this run is gating. */
+const ROUTE = process.env.PBE_ROUTE || 'qbdna';
+const LABEL = process.env.PBE_LABEL || 'QB DNA';
 
 mkdirSync(OUT, { recursive: true });
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -89,7 +92,7 @@ for (const width of WIDTHS) {
         to the drawer, for EVERY route. Asserting a desktop expectation at a
         width the product runs as a drawer would be measuring my assumption
         rather than the product. */
-  await nav(`${TARGET}/#qbdna?t=${Date.now()}`, 17000);
+  await nav(`${TARGET}/#${ROUTE}?t=${Date.now()}`, 17000);
   const model = await evalIn(`(()=>{
     const prim=document.querySelector('.pbes-primary');
     const bar=document.getElementById('mobile-bottom-nav');
@@ -103,8 +106,8 @@ for (const width of WIDTHS) {
     + ` bottom bar ${model.bottomBarShown ? 'shown' : 'hidden'})`);
 
   const direct = await evalIn(`(()=>{
-    const shellBtn=[...document.querySelectorAll('.pbes-nav-btn')].find(b=>b.dataset.route==='qbdna');
-    const drawer=document.getElementById('nav-qbdna');
+    const shellBtn=[...document.querySelectorAll('.pbes-nav-btn')].find(b=>b.dataset.route===${JSON.stringify(ROUTE)});
+    const drawer=document.getElementById('nav-'+${JSON.stringify(ROUTE)});
     return {
       route: window.App && window.App.current,
       rendered: !!document.querySelector('.q2'),
@@ -114,15 +117,15 @@ for (const width of WIDTHS) {
       drawerActive: !!(drawer && drawer.classList.contains('active')),
       hash: location.hash
     };})()`);
-  check(width, 'direct /#qbdna renders the surface', direct.rendered, `route=${direct.route}`);
-  check(width, 'direct load highlights QB DNA',
+  check(width, `direct /#${ROUTE} renders the surface`, direct.rendered, `route=${direct.route}`);
+  check(width, `direct load highlights ${LABEL}`,
     mobile ? direct.drawerActive : (direct.shellBtnActive || direct.drawerActive),
     `shell=${direct.shellBtnActive} drawer=${direct.drawerActive}`);
 
   if (!mobile) {
     /* 2. SHELL NAV ------------------------------------------------------- */
     const shell = await evalIn(`(()=>{
-      const b=[...document.querySelectorAll('.pbes-nav-btn')].find(x=>x.dataset.route==='qbdna');
+      const b=[...document.querySelectorAll('.pbes-nav-btn')].find(x=>x.dataset.route===${JSON.stringify(ROUTE)});
       if(!b) return {exists:false};
       const r=b.getBoundingClientRect();
       const row=b.closest('nav');
@@ -142,7 +145,7 @@ for (const width of WIDTHS) {
         rowWraps: rr && r.bottom>rr.bottom+1,
         rect:{x:Math.round(r.x),y:Math.round(r.y),w:Math.round(r.width),h:Math.round(r.height)}
       };})()`);
-    check(width, 'QB DNA button exists in the shell', shell.exists, shell.text);
+    check(width, `${LABEL} button exists in the shell`, shell.exists, shell.text);
     check(width, 'button is visible and inside the viewport',
       shell.exists && shell.visible && shell.inViewport, shell.rect);
     check(width, 'button is not covered by another element', shell.exists && !shell.covered);
@@ -154,17 +157,17 @@ for (const width of WIDTHS) {
     /* 3. CLICK ROUTES ---------------------------------------------------- */
     await nav(`${TARGET}/#home?t=${Date.now()}`, 15000);
     const clicked = await evalIn(`(async()=>{
-      const b=[...document.querySelectorAll('.pbes-nav-btn')].find(x=>x.dataset.route==='qbdna');
+      const b=[...document.querySelectorAll('.pbes-nav-btn')].find(x=>x.dataset.route===${JSON.stringify(ROUTE)});
       if(!b) return {ok:false, reason:'no button'};
       b.click();
       await new Promise(r=>setTimeout(r,6000));
-      const b2=[...document.querySelectorAll('.pbes-nav-btn')].find(x=>x.dataset.route==='qbdna');
+      const b2=[...document.querySelectorAll('.pbes-nav-btn')].find(x=>x.dataset.route===${JSON.stringify(ROUTE)});
       return { ok:true, route: window.App && window.App.current,
                rendered: !!document.querySelector('.q2'),
                active: !!(b2 && b2.classList.contains('active')),
                hash: location.hash };})()`);
-    check(width, 'clicking QB DNA routes to the surface',
-      clicked.ok && clicked.rendered && clicked.route === 'qbdna',
+    check(width, `clicking ${LABEL} routes to the surface`,
+      clicked.ok && clicked.rendered && clicked.route === ROUTE,
       `hash=${clicked.hash}`);
     check(width, 'active state applies after the click', clicked.active);
 
@@ -179,21 +182,21 @@ for (const width of WIDTHS) {
       const fwd = { route: window.App && window.App.current, hash: location.hash,
                     qbd: !!document.querySelector('.q2') };
       return { back, fwd };})()`);
-    check(width, 'back leaves QB DNA', backFwd.back.hash !== '#qbdna', JSON.stringify(backFwd.back));
-    check(width, 'forward returns to QB DNA',
-      backFwd.fwd.hash === '#qbdna' && backFwd.fwd.qbd, JSON.stringify(backFwd.fwd));
+    check(width, `back leaves ${LABEL}`, backFwd.back.hash !== '#'+ROUTE, JSON.stringify(backFwd.back));
+    check(width, `forward returns to ${LABEL}`,
+      backFwd.fwd.hash === '#'+ROUTE && backFwd.fwd.qbd, JSON.stringify(backFwd.fwd));
   } else {
     /* 5. DRAWER MODEL ----------------------------------------------------- */
     const peer = await evalIn(`(()=>{
-      const q=[...document.querySelectorAll('.pbes-nav-btn')].find(b=>b.dataset.route==='qbdna');
+      const q=[...document.querySelectorAll('.pbes-nav-btn')].find(b=>b.dataset.route===${JSON.stringify(ROUTE)});
       const p=[...document.querySelectorAll('.pbes-nav-btn')].find(b=>b.dataset.route==='picks');
       const box=e=>e?Math.round(e.getBoundingClientRect().width):null;
       return { qb:box(q), peer:box(p),
-               qbInDrawer:!!document.getElementById('nav-qbdna'),
+               qbInDrawer:!!document.getElementById('nav-'+${JSON.stringify(ROUTE)}),
                peerInDrawer:!!document.getElementById('nav-picks') };})()`);
-    check(width, 'QB DNA is hidden in the shell row exactly like its peers',
+    check(width, `${LABEL} is hidden in the shell row exactly like its peers`,
       peer.qb === peer.peer, `qbdna=${peer.qb}px picks=${peer.peer}px`);
-    check(width, 'QB DNA is in the drawer alongside its peers',
+    check(width, `${LABEL} is in the drawer alongside its peers`,
       peer.qbInDrawer && peer.peerInDrawer);
 
     await nav(`${TARGET}/#home?t=${Date.now()}`, 16000);
@@ -206,7 +209,7 @@ for (const width of WIDTHS) {
       // TAP 1 - open the drawer
       menu.click();
       await new Promise(r=>setTimeout(r,1600));
-      const link=document.getElementById('nav-qbdna');
+      const link=document.getElementById('nav-'+${JSON.stringify(ROUTE)});
       if(!link) return {ok:false, reason:'QB DNA is not in the drawer', barItems, barVisible};
       const r=link.getBoundingClientRect();
       const cs=getComputedStyle(link);
@@ -225,23 +228,23 @@ for (const width of WIDTHS) {
                height:Math.round(r2.height),
                route: window.App && window.App.current,
                rendered: !!document.querySelector('.q2'),
-               active: !!document.getElementById('nav-qbdna')?.classList.contains('active'),
+               active: !!document.getElementById('nav-'+${JSON.stringify(ROUTE)})?.classList.contains('active'),
                drawerClosed: !document.querySelector('#sidebar.open'),
                hash: location.hash };})()`);
     check(width, 'bottom bar is present and not overloaded',
       m.ok && m.barVisible && m.barItems <= 6, `${m.barItems} items`);
     check(width, 'tap 1: Menu opens the drawer', m.ok && m.drawerOpen);
-    check(width, 'QB DNA is in the drawer and reachable',
+    check(width, `${LABEL} is in the drawer and reachable`,
       m.ok && m.visible && m.reachable, `h=${m.height}px`);
-    check(width, 'tap 2: QB DNA renders the surface',
-      m.ok && m.rendered && m.route === 'qbdna', `hash=${m.hash}`);
+    check(width, `tap 2: ${LABEL} renders the surface`,
+      m.ok && m.rendered && m.route === ROUTE, `hash=${m.hash}`);
     check(width, 'active state applies on mobile', m.ok && m.active);
     check(width, 'drawer closes after navigating', m.ok && m.drawerClosed);
     check(width, 'reachable in <= 2 taps', m.ok && m.rendered);
   }
 
   /* 6. NO SHELL COLLISION / HIDDEN CONTENT / ROUTE RACE ------------------ */
-  await nav(`${TARGET}/#qbdna?t=${Date.now()}`, 17000);
+  await nav(`${TARGET}/#${ROUTE}?t=${Date.now()}`, 17000);
   const layout = await evalIn(`(async()=>{
     // let any late loader finish and confirm it did not steal the route
     await new Promise(r=>setTimeout(r,7000));
@@ -268,10 +271,10 @@ for (const width of WIDTHS) {
       zeroHeightPanels: [...root.querySelectorAll('.q2-panel')]
         .filter(p=>p.getBoundingClientRect().height<10).length
     };})()`);
-  check(width, 'no route race: still QB DNA after the loader settles',
-    layout.rendered && layout.route === 'qbdna', `route=${layout.route}`);
+  check(width, `no route race: still ${LABEL} after the loader settles`,
+    layout.rendered && layout.route === ROUTE, `route=${layout.route}`);
   check(width, 'no horizontal document overflow', layout.docOverflowX === false);
-  check(width, 'no shell band covering QB DNA content', layout.covered === false,
+  check(width, `no shell band covering ${LABEL} content`, layout.covered === false,
     layout.coveredBy || '');
   check(width, 'no hidden/zero-height panels', layout.zeroHeightPanels === 0,
     `${layout.panels} panels`);

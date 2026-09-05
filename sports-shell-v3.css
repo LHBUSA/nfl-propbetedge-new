@@ -635,4 +635,10 @@ h1.pbe-v2-view-name{
   #pbe-sports-shell .pbes-nav-btn{padding:8px 7px}
   #pbe-sports-shell .pbes-nav-group{gap:2px}
   #pbe-sports-shell .pbes-primary,#pbe-sports-shell .pbes-research{gap:14px}
+  /* INTELLIGENCE now carries ten routes. Tightening alone no longer fits them
+     at 1280, and the row is an overflow scroller with no affordance -- the
+     last item simply disappears. Wrapping shows every destination instead of
+     hiding one, which is the whole point of a navigation row. */
+  #pbe-sports-shell .pbes-primary{flex-wrap:wrap;row-gap:2px}
+  #pbe-sports-shell .pbes-nav-group{flex-wrap:wrap}
 }

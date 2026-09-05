@@ -1,4 +1,4 @@
-import { headshotUrl, teamLogoUrl } from './_qbdna/media.js';
+import { headshotUrl, teamLogoUrl } from './_playerdna/media.js';
 
 export default async function handler(req, res) {
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -96,7 +96,7 @@ async function resolvePlayer(query) {
   };
 }
 
-// one builder, shared with the QB DNA routes - see api/_qbdna/media.js
+// one builder, shared with every Player DNA product - see api/_playerdna/media.js
 function logoFromAbbreviation(abbreviation) {
   return teamLogoUrl(abbreviation);
 }

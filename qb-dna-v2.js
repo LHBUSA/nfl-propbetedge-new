@@ -80,6 +80,11 @@
      explicit absence; it never borrows a mark to stand in for a face. */
   const IMG_FAIL = "this.classList.add('is-broken');this.removeAttribute('src')";
 
+  const SEARCH_ICON = `<svg viewBox="0 0 16 16" aria-hidden="true" width="13" height="13">
+    <circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.7"/>
+    <path d="M10.6 10.6 L14 14" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+  </svg>`;
+
   function headshot(player, size, cls) {
     const url = player && player.media && player.media.headshot_url;
     const name = (player && player.name) || 'Quarterback';
@@ -119,7 +124,7 @@
     ink: '#14110d', line: 'rgba(255,245,220,.09)', lineStrong: 'rgba(255,245,220,.22)',
     text: '#a5a096', paper: '#e8e1d4', gold: '#e9c75a',
     pos: '#5cbb85', neg: '#e04a5f', dim: '#6b665e',
-    posFill: 'rgba(92,187,133,.55)', negFill: 'rgba(224,74,95,.5)'
+    posFill: 'rgba(92,187,133,.78)', negFill: 'rgba(224,74,95,.72)'
   };
 
   function fitCanvas(cv, h) {
@@ -376,6 +381,11 @@
           <h1 class="q2-hero-name">${esc(p.name)}</h1>
           <div class="q2-hero-meta">${esc(p.position || 'QB')}
             <i></i>${esc((t && (t.name || t.abbreviation)) || p.current_team || '')}</div>
+          <!-- The headshot stays clickable, but the affordance cannot live in a
+               hover state: a reader has to SEE that the quarterback is a choice. -->
+          <button type="button" class="q2-change" data-picker="playerId">
+            ${SEARCH_ICON}Change QB<em aria-hidden="true">&#9662;</em>
+          </button>
           ${noHist ? `<div class="q2-hero-flag">${esc(SAMPLE_UNAVAILABLE)}</div>` : ''}
           ${heroNext()}
         </div>
@@ -832,6 +842,10 @@
       <div class="q2-vs-team">${esc((pl.team_identity
         && (pl.team_identity.name || pl.team_identity.abbreviation)) || pl.team || '')}</div>
       <div class="q2-vs-n">N=${esc(games)} games</div>
+      <button type="button" class="q2-change sm"
+        data-picker="${side === 'a' ? 'playerId' : 'comparePlayerId'}">
+        ${SEARCH_ICON}Change<em aria-hidden="true">&#9662;</em>
+      </button>
     </div>`;
 
     const val = (side, m) => {
