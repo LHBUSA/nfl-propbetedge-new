@@ -59,6 +59,10 @@
   image-rendering:pixelated;
   image-rendering:crisp-edges;
 }
+/* [hidden] is a UA rule and loses to any class rule that sets display, so the
+   replay band stayed on screen during live playback until this was explicit. */
+.cast-arc-replaybar[hidden],
+.cast-arc-stage[hidden]{display:none!important}
 .cast-arc-replaybar{
   position:absolute;
   left:0;right:0;top:0;

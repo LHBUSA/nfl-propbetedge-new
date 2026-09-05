@@ -318,6 +318,12 @@
            then cleared, because the next refresh would call chooseActive() and
            replace the demo game with one from the current slate. */
         await window.PBEcastV6.focus(String(eventId));
+        /* focus() resolves once its own fetch settles, but PBEcast may still be
+           mid-patch; wait for the plays to actually be on state before the
+           caller starts stepping through them. */
+        for (let i = 0; i < 40 && !(state().detail?.plays || []).length; i++) {
+          await new Promise(r => setTimeout(r, 150));
+        }
         try { clearTimeout(state().poll); } catch {}
         local.lastPlayId = null;
         mount(); applyMode(); wireLog();
