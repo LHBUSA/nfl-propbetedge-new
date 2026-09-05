@@ -1,11 +1,17 @@
 /* ============================================================================
-   PropBetEdge NFL — WR DNA v1   ·   route /#wrdna
+   PropBetEdge NFL — RB DNA v1   ·   route /#rbdna
    ----------------------------------------------------------------------------
-   The receiver sibling of QB DNA. It shares the Player DNA design system
-   (player-dna-v1.css, the .q2- namespace), the identity media layer, the
-   market reader and the sample-label grammar — so the two products read as
-   one family — and it owns receiver metrics, receiver signals and the one
-   dimension a quarterback product does not have: WHO IS THROWING HIM THE BALL.
+   The third member of the Player DNA family. It shares the design system
+   (player-dna-v1.css, the .q2- namespace), the portalled player switcher, the
+   identity media layer, the market reader, the charts and the sample-label
+   grammar — so the four products read as one family.
+
+   What it does NOT share is the question it asks. A quarterback product asks
+   how a passer performs; a receiver product asks who is throwing to him.
+   A back is judged on USAGE: how much of his team's work he takes, and in
+   what mix. So this surface leads with USAGE DNA, its baseline metric is
+   SCRIMMAGE YARDS rather than rushing yards, and its charts default to
+   touches.
 
    It DRAWS. Every figure, split, signal and series is computed in the engine.
 
@@ -14,6 +20,7 @@
      · a percentage never appears without its numerator, denominator or N
      · an unavailable value states its reason where the number would have been
      · "historical clear rate", never "chance"
+     · snap share and routes run are WITHHELD, and the surface says so
      · these are counted facts and current market context, NOT PropBetEdge
        model picks and NOT a projection
    ========================================================================== */
@@ -21,25 +28,25 @@
   'use strict';
 
   const PD = window.PBEPlayerDNA;
-
-  const esc = v => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  const { esc, n1, pctSigned, samp, den, priceLabel, longDate, kickoffLabel,
+          headshot, crest, matchupLine, SEARCH_ICON } = PD;
 
   const MARKET_UNAVAILABLE = 'CURRENT MARKET UNAVAILABLE';
   const SAMPLE_UNAVAILABLE = 'NFL SAMPLE UNAVAILABLE';
 
   const state = {
     tab: 'overview',
-    playerId: '00-0036322',          // Justin Jefferson
-    comparePlayerId: '00-0036900',   // Ja'Marr Chase
+    playerId: '00-0034844',          // Saquon Barkley
+    comparePlayerId: '00-0032764',   // Derrick Henry
     eventId: null,
-    openMarket: 'receiving_yards',
-    formMetric: 'value',             // value | targets | receptions
+    openMarket: 'rushing_yards',
+    formMetric: 'value',             // value (scrimmage) | touches | carries
     players: null, dna: null, lab: null, cmp: null, ctxCmp: null, ctx: null, slate: null,
     error: null
   };
 
   const LABELS = {
+    rushing_yards: 'Rush yds', rush_attempts: 'Carries',
     receiving_yards: 'Rec yds', receptions: 'Receptions', anytime_td: 'Anytime TD'
   };
 
@@ -51,12 +58,6 @@
     }
     return j;
   }
-
-  /* Formatting, identity media and the canvas charts all come from the
-     shared Player DNA layer. Two receiver surfaces drifting apart on how
-     they round a number or label a sample would break the family. */
-  const { n1, pctSigned, samp, den, priceLabel, longDate, kickoffLabel,
-          headshot, crest, matchupLine, SEARCH_ICON } = PD;
 
   /* ---- HERO -------------------------------------------------------------- */
 
@@ -75,16 +76,14 @@
     }
     const mine = c.markets.players.find(p => p.gsis_id === state.playerId);
     if (!mine) {
-      return `<div class="q2-hero-lines is-none">${esc(MARKET_UNAVAILABLE)} — this receiver
+      return `<div class="q2-hero-lines is-none">${esc(MARKET_UNAVAILABLE)} — this back
         is not priced for this game</div>`;
     }
-    const cards = ['receiving_yards', 'receptions', 'anytime_td']
+    const cards = ['rushing_yards', 'rush_attempts', 'anytime_td']
       .filter(k => mine.markets[k]).map(k => {
         const m = mine.markets[k];
         const td = k === 'anytime_td';
-        // an American price is meaningless without its sign
-        const shown = td && typeof m.line === 'number'
-          ? (m.line > 0 ? '+' + m.line : String(m.line)) : m.line;
+        const shown = td ? priceLabel(m.line) : m.line;
         return `<button type="button" class="q2-hero-line" data-jump="${esc(k)}">
           <span>${esc(LABELS[k])}</span><b>${esc(shown ?? '—')}</b>
           <em>${td ? `best price · ${esc(m.book_count)} book${m.book_count === 1 ? '' : 's'}`
@@ -122,20 +121,20 @@
     return `<header class="q2-hero">
       <div class="q2-hero-top">
         <div class="q2-hero-lead">
-          <div class="q2-hero-eyebrow">WR DNA</div>
-          ${PD.familySwitch('wrdna')}
+          <div class="q2-hero-eyebrow">RB DNA</div>
+          ${PD.familySwitch('rbdna')}
         </div>
         ${t ? `<div class="q2-hero-club">${crest(t, 30)}<span>${esc(t.name || t.abbreviation)}</span></div>` : ''}
       </div>
       <div class="q2-hero-body">
-        <button type="button" class="q2-hero-face" data-picker="playerId" title="Change receiver">
-          ${headshot(p, 148, 'Receiver')}<span class="q2-hero-face-cta">Change</span></button>
+        <button type="button" class="q2-hero-face" data-picker="playerId" title="Change running back">
+          ${headshot(p, 148, 'Running back')}<span class="q2-hero-face-cta">Change</span></button>
         <div class="q2-hero-copy">
           <h1 class="q2-hero-name">${esc(p.name)}</h1>
-          <div class="q2-hero-meta">${esc(p.position || 'WR')}
+          <div class="q2-hero-meta">${esc(p.position || 'RB')}
             <i></i>${esc((t && (t.name || t.abbreviation)) || p.current_team || '')}</div>
           <button type="button" class="q2-change" data-picker="playerId">
-            ${SEARCH_ICON}Change WR<em aria-hidden="true">&#9662;</em></button>
+            ${SEARCH_ICON}Change RB<em aria-hidden="true">&#9662;</em></button>
           ${noHist ? `<div class="q2-hero-flag">${esc(SAMPLE_UNAVAILABLE)}</div>` : ''}
           ${heroNext()}
         </div>
@@ -148,12 +147,12 @@
     const w = (state.dna && state.dna.data_window) || (state.players && state.players.data_window);
     if (!w) return '';
     const games = state.players && state.players.provenance
-      ? state.players.provenance.receiver_games_in_dataset : null;
+      ? state.players.provenance.player_games_in_dataset : null;
     return `<div class="q2-rail">
       <span>History through <b>${esc(longDate(w.data_through))}</b></span>
       <span>${esc(w.seasons[0])}&ndash;${esc(w.latest_season)}</span>
-      ${games ? `<span>${esc(games.toLocaleString())} receiver games</span>` : ''}
-      <span>WR only</span>
+      ${games ? `<span>${esc(games.toLocaleString())} back games</span>` : ''}
+      <span>RB only</span>
     </div>`;
   }
 
@@ -171,20 +170,113 @@
 
   function snapshot() {
     const b = state.dna.baseline;
-    const ry = b.receiving_yards || {};
+    const scr = b.scrimmage_yards || {};
     return `<section class="q2-panel">
-      <div class="q2-head"><h2>WR snapshot</h2>
+      <div class="q2-head"><h2>RB snapshot</h2>
         <span>career in window · ${esc(b.games)} games</span></div>
       <div class="q2-bigs">
-        ${bigStat('Rec yds / game', ry.mean, null, `median ${esc(ry.median)} · N=${esc(b.games)}`)}
-        ${bigStat('Targets / game', b.targets_per_game.mean, null, `${esc(b.targets)} career targets`)}
-        ${bigStat('Receptions / game', b.receptions_per_game.mean, null, `${esc(b.receptions)} career`)}
-        ${bigStat('Target share', b.target_share.pct, '%', `${den(b.target_share)} team targets`)}
-        ${bigStat('Catch rate', b.catch_rate.pct, '%', `${den(b.catch_rate)} targets`)}
-        ${bigStat('Yards / target', b.yards_per_target.value, null, `${den(b.yards_per_target)} targets`)}
-        ${bigStat('Air yds / game', b.air_yards_per_game.mean, null,
-          `${esc(b.air_yards_share.pct === null ? '—' : b.air_yards_share.pct + '%')} of team air yards`)}
+        ${bigStat('Scrimmage yds / g', scr.mean, null, `median ${esc(scr.median)} · N=${esc(b.games)}`)}
+        ${bigStat('Touches / game', b.touches_per_game.mean, null,
+          `${esc(b.touches)} career touches`)}
+        ${bigStat('Rush yds / game', b.rush_yards.mean, null, `${esc(b.carries)} career carries`)}
+        ${bigStat('Rec yds / game', b.receiving_yards.mean, null, `${esc(b.receptions)} career catches`)}
+        ${bigStat('Yards / carry', b.yards_per_carry.value, null, `${den(b.yards_per_carry)} carries`)}
+        ${bigStat('Yards / touch', b.yards_per_touch.value, null, `${den(b.yards_per_touch)} touches`)}
+        ${bigStat('Carry share', b.carry_share.pct, '%', `${den(b.carry_share)} team carries`)}
         ${bigStat('TD games', b.td_games, `of ${b.games}`, `${esc(b.td_game_rate.pct)}% of games`)}
+      </div>
+    </section>`;
+  }
+
+  /* ---- USAGE DNA · the panel that makes this a running-back product ------- */
+
+  /** A two-tone bar showing what a back's own touches are made of. */
+  function mixBar(u) {
+    const m = u && u.rush_share_of_touches;
+    if (!m || m.pct === null) {
+      return `<div class="q2-mix is-off">no touch in this window &mdash; not zero, simply none</div>`;
+    }
+    const rush = m.pct, rec = +(100 - rush).toFixed(1);
+    return `<div class="q2-mix">
+      <div class="q2-mix-bar" role="img"
+        aria-label="${esc(rush)}% of his touches are carries, ${esc(rec)}% are receptions">
+        <span class="q2-mix-run" style="width:${rush}%"><b>${esc(rush)}%</b></span>
+        <span class="q2-mix-rec" style="width:${rec}%"><b>${esc(rec)}%</b></span>
+      </div>
+      <div class="q2-mix-key">
+        <span><i class="k-run"></i>Carries <b>${esc(m.numerator)}</b></span>
+        <span><i class="k-rec"></i>Receptions <b>${esc(m.denominator - m.numerator)}</b></span>
+        <em>of ${esc(m.denominator)} touches</em>
+      </div>
+    </div>`;
+  }
+
+  /** One share, always with both of its numbers under it. */
+  function shareCell(k, r, note) {
+    if (!r || r.pct === null) {
+      return `<div class="q2-share is-empty"><div class="q2-share-k">${esc(k)}</div>
+        <div class="q2-share-v">Not available</div>
+        <div class="q2-share-n">${esc((r && r.note) || 'no denominator')}</div></div>`;
+    }
+    return `<div class="q2-share">
+      <div class="q2-share-k">${esc(k)}</div>
+      <div class="q2-share-v">${esc(r.pct)}<small>%</small></div>
+      <div class="q2-share-track"><i style="width:${Math.min(100, r.pct)}%"></i></div>
+      <div class="q2-share-n">${esc(den(r))}${note ? ' ' + esc(note) : ''}</div>
+    </div>`;
+  }
+
+  function usageDna() {
+    const u = state.dna.usage_dna;
+    if (!u || !u.career) return '';
+    const c = u.career, s = u.current_season, l = u.last_5;
+    const col = (w, label) => {
+      if (!w || !w.games) {
+        return `<div class="q2-ucol is-off"><div class="q2-ucol-k">${esc(label)}</div>
+          <div class="q2-why">no game in this window</div></div>`;
+      }
+      return `<div class="q2-ucol">
+        <div class="q2-ucol-k">${esc(label)}<em>N=${esc(w.games)}</em></div>
+        <div class="q2-ucol-hero">${esc(n1(w.touches_per_game))}<small>touches / g</small></div>
+        <ul class="q2-ucol-list">
+          <li><span>Carries / g</span><b>${esc(n1(w.carries_per_game))}</b></li>
+          <li><span>Targets / g</span><b>${esc(n1(w.targets_per_game))}</b></li>
+          <li><span>Scrimmage yds / g</span><b>${esc(n1(w.scrimmage_yards_per_game))}</b></li>
+          <li><span>Yards / touch</span><b>${esc(w.yards_per_touch.value ?? '—')}</b></li>
+        </ul>
+        ${samp(w.sample_label)}
+      </div>`;
+    };
+    return `<section class="q2-panel q2-usage">
+      <div class="q2-head"><h2>Usage DNA</h2>
+        <span>how much of his team's work he takes, and in what mix</span></div>
+      <div class="q2-ugrid">
+        ${col(c, 'Career in window')}
+        ${col(s, `${esc(s && s.season)} season`)}
+        ${col(l, 'Last 5')}
+      </div>
+      <div class="q2-usplit">
+        <div class="q2-usplit-c">
+          <div class="q2-sub">Touch mix &mdash; career</div>
+          ${mixBar(c)}
+          <p class="q2-note">${esc(u.mix_note)}</p>
+        </div>
+        <div class="q2-usplit-c">
+          <div class="q2-sub">Share of his team</div>
+          <div class="q2-shares">
+            ${shareCell('Carry share', c.carry_share, 'team carries')}
+            ${shareCell('Target share', c.target_share, 'team targets')}
+          </div>
+          <p class="q2-note">Shares are of ALL of a team's carries and targets, including
+            quarterbacks, receivers and every other back on the roster.</p>
+        </div>
+      </div>
+      <div class="q2-withheld">
+        <div class="q2-withheld-k">Withheld</div>
+        <ul>${(u.withheld || []).map(w =>
+          `<li><b>${esc(w.field)}</b>${esc(w.reason)}</li>`).join('')}</ul>
+        <p>A snap share drawn from a partially charted file would look like a fact and
+          behave like a guess, so it is not shown at all.</p>
       </div>
     </section>`;
   }
@@ -192,9 +284,9 @@
   function form() {
     const d = state.dna, fs = d.form_series;
     const metric = state.formMetric;
-    const line = metric === 'value' ? currentLine('receiving_yards')
-      : metric === 'receptions' ? currentLine('receptions') : null;
-    const games = fs.games.map(g => ({ ...g, value: g[metric] }));
+    const line = metric === 'value' ? null
+      : metric === 'carries' ? currentLine('rush_attempts') : null;
+    const games = fs.games.map(g => ({ ...g, value: g[metric === 'value' ? 'value' : metric] }));
     const mean = metric === 'value' ? fs.mean
       : +(games.reduce((a, g) => a + (g.value || 0), 0) / (games.length || 1)).toFixed(1);
     const cfg = JSON.stringify({ games, mean, median: metric === 'value' ? fs.median : null,
@@ -202,24 +294,24 @@
     const chips = ['last_5', 'last_10', 'current_season', 'career'].map(k => {
       const w = d.recent[k];
       if (!w || !w.available) return '';
-      const s = w.receiving_yards || {};
+      const s = w.scrimmage_yards || {};
       return `<div class="q2-formchip">
         <div class="q2-formchip-k">${esc(w.label)}</div>
-        <div class="q2-formchip-v">${esc(n1(s.mean))}<small>yds</small></div>
+        <div class="q2-formchip-v">${esc(n1(s.mean))}<small>scrim yds</small></div>
         <div class="q2-formchip-n">N=${esc(w.games)}${w.shortfall_note ? ' · ' + esc(w.shortfall_note) : ''}
-          · ${esc(n1(w.targets_per_game.mean))} tgt/g · ${esc(w.catch_rate.pct)}% catch</div>
+          · ${esc(n1(w.touches_per_game.mean))} touch/g · ${esc(w.yards_per_carry.value ?? '—')} ypc</div>
         ${samp(w.sample_label)}
       </div>`;
     }).join('');
-    const MET = [['value', 'Yards'], ['targets', 'Targets'], ['receptions', 'Receptions']];
+    const MET = [['value', 'Scrimmage yds'], ['touches', 'Touches'], ['carries', 'Carries']];
     return `<section class="q2-panel">
-      <div class="q2-head"><h2>Usage &amp; form</h2>
+      <div class="q2-head"><h2>Workload &amp; form</h2>
         <div class="q2-seg">${MET.map(([k, l]) =>
           `<button type="button" class="q2-seg-btn${metric === k ? ' is-on' : ''}"
             data-metric="${k}">${l}</button>`).join('')}</div></div>
       <div class="q2-formchips">${chips}</div>
       <div class="q2-chart"><canvas data-chart="series" data-cfg='${esc(cfg)}'
-        aria-label="Receiver usage by game"></canvas></div>
+        aria-label="Running back workload by game"></canvas></div>
       <div class="q2-legend">
         <i class="k-over"></i>${typeof line === 'number' ? 'Over the line' : 'Above average'}
         <i class="k-under"></i>${typeof line === 'number' ? 'Under the line' : 'Below average'}
@@ -233,10 +325,10 @@
     return `<article class="q2-sig t-${tier}">
       <div class="q2-sig-top"><div class="q2-sig-label">${esc(x.label)}</div>
         <div class="q2-sig-move">${esc(pctSigned(x.baseline_delta_pct))}</div></div>
-      <div class="q2-sig-val">${esc(n1(x.receiving_yards_avg))}<small>yds / game</small></div>
+      <div class="q2-sig-val">${esc(n1(x.scrimmage_yards_avg))}<small>scrim yds / game</small></div>
       <div class="q2-sig-meta">
-        <span>${esc(n1(x.targets_avg))} tgt/g</span>
-        <span>${esc(x.catch_rate.pct)}% catch</span>
+        <span>${esc(n1(x.touches_avg))} touch/g</span>
+        <span>${esc(x.carry_share.pct)}% carry sh</span>
         <span>N=${esc(x.games)}</span>${samp(x.sample_label)}
       </div>
     </article>`;
@@ -247,8 +339,8 @@
     if (!g) return '';
     const any = g.strengths.length + g.watchouts.length + g.signals.length;
     return `<section class="q2-panel">
-      <div class="q2-head"><h2>Receiver DNA</h2>
-        <span>versus his own baseline of ${esc(g.baseline_mean)} yds / game over N=${esc(g.baseline_n)}</span></div>
+      <div class="q2-head"><h2>Back DNA</h2>
+        <span>versus his own baseline of ${esc(g.baseline_mean)} scrimmage yds / game over N=${esc(g.baseline_n)}</span></div>
       ${any ? `
         ${g.strengths.length ? `<div class="q2-sigrow"><div class="q2-sigrow-k">Strength</div>
           <div class="q2-sigs">${g.strengths.map(x => sigCard(x, 'up')).join('')}</div></div>` : ''}
@@ -257,40 +349,13 @@
         ${g.signals.length ? `<div class="q2-sigrow">
           <div class="q2-sigrow-k">Signal <em>small sample</em></div>
           <div class="q2-sigs">${g.signals.map(x => sigCard(x, 'sig')).join('')}</div></div>` : ''}`
-        : '<div class="q2-empty">No condition moves this receiver far enough from his own baseline to report.</div>'}
+        : '<div class="q2-empty">No condition moves this back far enough from his own baseline to report.</div>'}
       ${g.insufficient.length ? `<div class="q2-insuf">
         <div class="q2-insuf-k">Too few games to call either way</div>
         <div class="q2-insuf-list">${g.insufficient.map(x =>
           `<span>${esc(x.label)} <b>${esc(pctSigned(x.baseline_delta_pct))}</b> N=${esc(x.games)}</span>`).join('')}</div>
         <p>${esc(g.policy.rule)}</p></div>` : ''}
-    </section>`;
-  }
-
-  /** The dimension a quarterback product does not have. */
-  function qbConnection() {
-    const c = state.dna.qb_connection;
-    if (!c || !c.connections.length) return '';
-    const top = c.connections[0];
-    return `<section class="q2-panel">
-      <div class="q2-head"><h2>QB connection</h2>
-        <span>${esc(c.total_passers)} passer${c.total_passers === 1 ? '' : 's'} with 5+ targets</span></div>
-      <div class="q2-tablewrap"><table class="q2-table q2-qbc">
-        <thead><tr><th>Quarterback</th><th>Games</th><th>Tgt/g</th><th>Rec/g</th>
-          <th>Yds/g</th><th>Catch</th><th>Yds/tgt</th><th>TD</th><th>Sample</th></tr></thead>
-        <tbody>${c.connections.map(x => `<tr>
-          <td class="t-txt q2-qbc-who">${esc(x.name)}
-            <em>${esc(x.teams.join(', '))} · ${esc(x.date_range[0])} to ${esc(x.date_range[1])}</em></td>
-          <td class="t-num">${esc(x.games)}</td>
-          <td class="t-num">${esc(x.targets_per_game)}</td>
-          <td class="t-num">${esc(x.receptions_per_game)}</td>
-          <td class="t-num q2-qbc-y">${esc(x.receiving_yards_per_game)}</td>
-          <td class="t-num">${esc(x.catch_rate.pct)}%<em class="q2-den">${esc(den(x.catch_rate))}</em></td>
-          <td class="t-num">${esc(x.yards_per_target.value)}</td>
-          <td class="t-num">${esc(x.touchdowns)}</td>
-          <td class="t-txt">${samp(x.sample_label)}</td>
-        </tr>`).join('')}</tbody></table></div>
-      <div class="q2-foot">${esc(c.method)} ${esc(c.disclaimer)}
-        Most targets came from <b>${esc(top.name)}</b> (${esc(top.targets)} over N=${esc(top.games)}).</div>
+      ${g.policy.note ? `<div class="q2-foot">${esc(g.policy.note)}</div>` : ''}
     </section>`;
   }
 
@@ -298,24 +363,22 @@
     const w = state.ctxCmp, c = state.ctx;
     if (!c || !w) return '';
     const g = c.game;
-    const line = currentLine('receiving_yards');
-    const key = PD.similarCondition(state.ctxCmp, 5);
+    const line = currentLine('rushing_yards');
+    const key = PD.similarCondition(w, 5);
     const lead = key ? w.windows[key] : null;
     const lab = state.lab && state.lab.history_available
-      ? (state.lab.markets || []).find(m => m.market === 'receiving_yards' && m.available) : null;
+      ? (state.lab.markets || []).find(m => m.market === 'rushing_yards' && m.available) : null;
     const sim = lab && lab.windows.similar_conditions;
-    const qbNow = todaysPasser();
 
     const facts = [
-      ['Current rec yds line', typeof line === 'number' ? line : null,
+      ['Current rush yds line', typeof line === 'number' ? line : null,
         typeof line === 'number' ? 'current market' : MARKET_UNAVAILABLE],
-      ['Career baseline', w.baseline.receiving_yards_avg, `N=${w.baseline.games} games`],
-      lead ? [lead.label, lead.receiving_yards_avg,
+      ['Career baseline', w.baseline.scrimmage_yards_avg, `scrimmage yds · N=${w.baseline.games} games`],
+      ['Touches / game', w.baseline.touches_avg, `carry share ${w.baseline.carry_share.pct}% · ${den(w.baseline.carry_share)}`],
+      lead ? [lead.label, lead.scrimmage_yards_avg,
         `${pctSigned(lead.vs_baseline.pct)} vs baseline · N=${lead.games}`] : null,
       sim && sim.available ? ['Cleared in similar conditions', `${sim.over}/${sim.total}`,
-        `${sim.over_pct}% historical clear rate · ${sim.sample_label}`] : null,
-      qbNow ? [`With ${qbNow.name}`, qbNow.receiving_yards_per_game,
-        `yds/game · ${qbNow.targets_per_game} tgt/g · N=${qbNow.games} · ${qbNow.sample_label}`] : null
+        `${sim.over_pct}% historical clear rate · ${sim.sample_label}`] : null
     ].filter(Boolean);
 
     return `<section class="q2-panel q2-today">
@@ -345,23 +408,11 @@
     </section>`;
   }
 
-  /** The passer this receiver's team is expected to start, from the market. */
-  function todaysPasser() {
-    const d = state.dna;
-    if (!d || !d.qb_connection || !state.ctx) return null;
-    const mk = state.ctx.markets;
-    if (!mk || !mk.available) return null;
-    // the QB priced for THIS receiver's team in this game, matched on the
-    // connection's own passer names rather than on a roster guess
-    const names = new Set(mk.players.map(p => p.player_name));
-    return d.qb_connection.connections.find(c => names.has(c.name)) || null;
-  }
-
   function overview() {
     const d = state.dna;
     if (!d) return '';
     if (d.history_available === false) return noHistoryPanel();
-    return `${todaysTest()}${snapshot()}${form()}${qbConnection()}${dna()}`;
+    return `${todaysTest()}${snapshot()}${usageDna()}${form()}${dna()}`;
   }
 
   function noHistoryPanel() {
@@ -374,8 +425,8 @@
         <div class="q2-bigs">
           ${bigStat('NFL games', null, null, 'nothing to count')}
           ${bigStat('Baseline', null, null, 'needs one completed game')}
+          ${bigStat('Usage DNA', null, null, 'needs one completed game')}
           ${bigStat('Condition splits', null, null, 'needs one completed game')}
-          ${bigStat('QB connection', null, null, 'needs one completed game')}
         </div>
         <p class="q2-note">${esc(d.disclosure)}${p.market_priced_2026
           ? ' The current market is pricing him, but there is no NFL history to measure that against.'
@@ -455,7 +506,8 @@
 
     return `<section class="q2-panel">
       <div class="q2-head"><h2>${esc(c.market_label)} · ${esc(isTd ? priceLabel(c.market_price) : c.line)}</h2>
-        <span>${isTd ? 'games with a receiving touchdown' : "every completed game against today's number"}</span></div>
+        <span>${isTd ? 'games with a rushing or receiving touchdown'
+          : "every completed game against today's number"}</span></div>
       ${isTd ? `<div class="q2-foot">${esc(c.note)}</div>` : ''}
       <div class="q2-dist">
         <div class="q2-dist-c"><div class="q2-sub">Distribution of ${esc(c.distribution.length)} games</div>
@@ -479,9 +531,10 @@
     const offered = (lab.markets || []).filter(m => m.available);
     if (!offered.length) {
       return `<section class="q2-panel q2-unavail">
-        <div class="q2-head"><h2>${esc(MARKET_UNAVAILABLE)}</h2><span>no receiving market for this game</span></div>
+        <div class="q2-head"><h2>${esc(MARKET_UNAVAILABLE)}</h2>
+          <span>no rushing market for this game</span></div>
         <div class="q2-pad"><p class="q2-lead">${esc((lab.markets[0] || {}).reason
-          || 'the market source is not offering receiving markets for this receiver')}</p>
+          || 'the market source is not offering rushing markets for this back')}</p>
         <p class="q2-note">No default line is inserted.</p></div></section>`;
     }
     return `<section class="q2-panel">
@@ -510,17 +563,17 @@
     const bar = typeof p === 'number' ? Math.min(half, Math.abs(p) / domain * half) : 0;
     return `<div class="q2-crow">
       <div class="q2-crow-k">${esc(c.label)}</div>
-      <div class="q2-crow-rec">${esc(n1(c.targets_avg))}<em>tgt / g</em></div>
+      <div class="q2-crow-rec">${esc(n1(c.touches_avg))}<em>touch / g</em></div>
       <div class="q2-crow-n">N=${esc(c.games)}</div>
       <div class="q2-bar" style="--bar:${bar.toFixed(1)}px">
         <span class="q2-bar-fill${p < 0 ? ' neg' : ''}"
           style="${p < 0 ? 'right:50%' : 'left:50%'};width:${bar.toFixed(1)}px"></span>
         <b class="${p < 0 ? 'at-l' : 'at-r'}${bar / half > 0.55 ? ' inside' : ''}">${esc(pctSigned(p))}</b>
       </div>
-      <div class="q2-crow-v">${esc(n1(c.receiving_yards_avg))}</div>
-      <div class="q2-crow-x">${esc(n1(c.receptions_avg))}<em>rec</em></div>
-      <div class="q2-crow-x">${esc(c.catch_rate.pct)}%<em>catch</em></div>
-      <div class="q2-crow-x">${esc(c.target_share.pct)}%<em>tgt sh</em></div>
+      <div class="q2-crow-v">${esc(n1(c.scrimmage_yards_avg))}</div>
+      <div class="q2-crow-x">${esc(n1(c.carries_avg))}<em>car</em></div>
+      <div class="q2-crow-x">${esc(c.yards_per_carry.value ?? '—')}<em>ypc</em></div>
+      <div class="q2-crow-x">${esc(c.carry_share.pct)}%<em>car sh</em></div>
       <div class="q2-crow-s">${samp(c.sample_label)}</div>
     </div>`;
   }
@@ -542,33 +595,37 @@
       const domain = domainFor(rows.filter(c => c.available && c.games));
       return `<section class="q2-panel">
         <div class="q2-head"><h2>${esc(groups[gk] || gk)}</h2>
-          <span>vs own baseline ${esc(d.sample.baseline_mean)} yds / game</span></div>
+          <span>vs own baseline ${esc(d.sample.baseline_mean)} scrimmage yds / game</span></div>
         <div class="q2-chead">
-          <span>Condition</span><span>Targets</span><span>Games</span>
+          <span>Condition</span><span>Touches</span><span>Games</span>
           <span class="q2-chead-bar">&minus;${domain}% · baseline · +${domain}%</span>
-          <span>Yds/g</span><span>Rec</span><span>Catch</span><span>Tgt sh</span><span>Sample</span>
+          <span>Scrim</span><span>Carries</span><span>YPC</span><span>Car sh</span><span>Sample</span>
         </div>
         <div class="q2-crows">${rows.map(c => condRow(c, domain)).join('')}</div>
+        ${gk === 'market' ? `<div class="q2-foot">Favourite and underdog are a record of how he
+          was used in games his team was favoured or not. They describe what happened; they do
+          not show that the spread caused it.</div>` : ''}
       </section>`;
     }).join('');
-    return `<div class="q2-condintro">Every figure is measured against this receiver's own
-      baseline, not against the league. Roofed games are excluded from weather windows by
-      construction, and team win-loss is deliberately not the headline here — a receiver's
-      production is not the same question as his team's result.</div>${blocks}`;
+    return `<div class="q2-condintro">Every figure is measured against this back's own baseline,
+      not against the league. Roofed games are excluded from weather windows by construction,
+      and the headline metric is scrimmage yards, because a back who loses carries and gains
+      catches has not necessarily lost work.</div>${blocks}`;
   }
 
   /* ---- COMPARE ----------------------------------------------------------- */
 
   const CMP = [
-    { k: 'receiving_yards_avg', label: 'Rec yds / game', better: 'high', fmt: n1 },
-    { k: 'targets_avg', label: 'Targets / game', better: 'high', fmt: n1 },
-    { k: 'receptions_avg', label: 'Receptions / game', better: 'high', fmt: n1 },
-    { k: 'target_share', label: 'Target share', better: 'high', rate: true },
+    { k: 'scrimmage_yards_avg', label: 'Scrimmage yds / game', better: 'high', fmt: n1 },
+    { k: 'touches_avg', label: 'Touches / game', better: 'high', fmt: n1 },
+    { k: 'carries_avg', label: 'Carries / game', better: null, fmt: n1, note: 'usage, not quality' },
+    { k: 'targets_avg', label: 'Targets / game', better: null, fmt: n1, note: 'usage, not quality' },
+    { k: 'carry_share', label: 'Carry share', better: 'high', rate: true },
+    { k: 'target_share', label: 'Target share', better: null, rate: true, note: 'role, not rank' },
+    { k: 'yards_per_carry', label: 'Yards / carry', better: 'high', ratio: true },
+    { k: 'yards_per_touch', label: 'Yards / touch', better: 'high', ratio: true },
     { k: 'catch_rate', label: 'Catch rate', better: 'high', rate: true },
-    { k: 'yards_per_reception', label: 'Yards / reception', better: 'high', ratio: true },
-    { k: 'yards_per_target', label: 'Yards / target', better: 'high', ratio: true },
-    { k: 'air_yards_avg', label: 'Air yards / game', better: null, fmt: n1, note: 'usage, not quality' },
-    { k: 'yac_avg', label: 'YAC / game', better: 'high', fmt: n1 },
+    { k: 'fumble_rate', label: 'Fumble rate', better: 'low', rate: true, note: 'per touch' },
     { k: 'td_game_rate', label: 'TD game rate', better: 'high', rate: true }
   ];
 
@@ -584,7 +641,7 @@
     }
     const face = (pl, games, side) => `<div class="q2-vs-side ${side}">
       <button type="button" class="q2-vs-face" data-picker="${side === 'a' ? 'playerId' : 'comparePlayerId'}"
-        title="Change receiver">${headshot(pl, 108, 'Receiver')}
+        title="Change running back">${headshot(pl, 108, 'Running back')}
         ${crest(pl.team_identity, 34, 'q2-vs-crest')}
         <span class="q2-hero-face-cta">Change</span></button>
       <div class="q2-vs-name">${esc(pl.name)}</div>
@@ -624,6 +681,15 @@
       </div>`;
     }).join('');
 
+    /* Two backs' touch mixes side by side — the clearest single picture of how
+       differently two players in the same position are actually used. */
+    const mixVs = `<div class="q2-mixvs">
+      ${[[c.player_a, A], [c.player_b, B]].map(([pl, s]) => `<div class="q2-mixvs-c">
+        <div class="q2-sub">${esc(pl.name)}</div>
+        ${mixBar({ rush_share_of_touches: s.rush_share_of_touches })}
+      </div>`).join('')}
+    </div>`;
+
     const battle = Object.values(c.conditions)
       .filter(x => x.available && !x.rollup)
       .sort((a, b) => Math.abs(b.a_vs_own_baseline || 0) - Math.abs(a.a_vs_own_baseline || 0))
@@ -650,24 +716,28 @@
         <div class="q2-vs-mid">VS</div>${face(c.player_b, B.games, 'b')}</div>
     </section>
     <section class="q2-panel">
+      <div class="q2-head"><h2>How each one is used</h2>
+        <span>carries and receptions as a share of his own touches</span></div>
+      ${mixVs}
+      <div class="q2-foot">Two backs can share a yardage figure and do entirely different jobs.
+        This is the picture that shows it.</div>
+    </section>
+    <section class="q2-panel">
       <div class="q2-head"><h2>Career baseline</h2>
-        <span>each receiver over his own full window</span></div>
+        <span>each back over his own full window</span></div>
       <div class="q2-cmprows">${rows}</div>
-      <div class="q2-foot">Gold marks the better figure where "better" is defined. Air yards
-        are usage rather than quality, so they are not scored. Sample sizes differ:
-        N=${esc(A.games)} and N=${esc(B.games)}.</div>
+      <div class="q2-foot">Gold marks the better figure where "better" is defined. Carries,
+        targets and target share are role rather than quality, so they are not scored.
+        Sample sizes differ: N=${esc(A.games)} and N=${esc(B.games)}.</div>
     </section>
     <section class="q2-panel">
       <div class="q2-head"><h2>Condition response</h2>
         <span>each side versus HIS OWN baseline</span></div>
       <div class="q2-btrows">${battle}</div>
       <div class="q2-foot">Not a comparison of raw output. Each percentage is how far that
-        receiver moves from his own average in that condition.</div>
+        back moves from his own average in that condition.</div>
     </section>`;
   }
-
-  /* ---- PICKER ------------------------------------------------------------ */
-
 
   /* ---- SOURCES ----------------------------------------------------------- */
 
@@ -687,7 +757,7 @@
             </ul>
             <p class="q2-attr">${p.sources.map(s => esc(s.attribution || s.name)).join('<br>')}</p>
           </div>
-          <div><h4>How a receiver is counted</h4>
+          <div><h4>How a back is counted</h4>
             <ul class="q2-rules">
               ${Object.entries(p.count_rules || {}).map(([k, v]) =>
                 `<li><b>${esc(k.replace(/_/g, ' '))}</b>${esc(v)}</li>`).join('')}
@@ -726,7 +796,7 @@
 
   function body() {
     if (state.error) return `<div class="q2-error">${esc(state.error)}</div>`;
-    if (!state.dna) return '<div class="q2-loading">Loading receiver intelligence&hellip;</div>';
+    if (!state.dna) return '<div class="q2-loading">Loading back intelligence&hellip;</div>';
     if (state.tab === 'props') return props();
     if (state.tab === 'conditions') return conditions();
     if (state.tab === 'compare') return compare();
@@ -736,7 +806,7 @@
   function render() {
     const vc = document.getElementById('view-container');
     if (!vc) return;
-    vc.innerHTML = `<div class="q2 q2-wr">
+    vc.innerHTML = `<div class="q2 q2-rb">
       ${hero()}${statusRail()}
       <nav class="q2-tabs" role="tablist">
         ${TABS.map(([k, v]) => `<button type="button" role="tab" class="q2-tab${
@@ -774,7 +844,7 @@
         const target = b.dataset.picker;
         PD.openPicker({
           players: (state.players && state.players.players) || [],
-          positionNoun: 'receiver',
+          positionNoun: 'running back',
           returnFocusTo: b,
           onPick: id => {
             if (target === 'comparePlayerId') { state.comparePlayerId = id; state.cmp = null; }
@@ -787,12 +857,9 @@
           }
         });
       }));
-
-
   }
 
   /* ---- data -------------------------------------------------------------- */
-
 
   let seq = 0;
   async function load() {
@@ -801,9 +868,9 @@
     render();
     const stale = () => mine !== seq;
     try {
-      if (!state.players) state.players = await get('/api/wr-dna?list=1');
+      if (!state.players) state.players = await get('/api/rb-dna?list=1');
       if (stale()) return;
-      if (!state.dna) state.dna = await get(`/api/wr-dna?player_id=${encodeURIComponent(state.playerId)}`);
+      if (!state.dna) state.dna = await get(`/api/rb-dna?player_id=${encodeURIComponent(state.playerId)}`);
       if (stale()) return;
       if (!state.ctx) await loadContext();
       if (stale()) return;
@@ -811,32 +878,32 @@
       const sim = PD.similarCondition(state.ctxCmp, 5);
       const needLab = (state.tab === 'props' || state.tab === 'overview') && !state.lab;
       if (needLab && state.ctx && state.ctx.market_event_id) {
-        state.lab = await get('/api/wr-dna/prop-lab?'
+        state.lab = await get('/api/rb-dna/prop-lab?'
           + `player_id=${encodeURIComponent(state.playerId)}`
           + `&event_id=${encodeURIComponent(state.ctx.market_event_id)}`
           + (sim ? `&condition=${encodeURIComponent(sim)}` : ''));
       } else if (needLab) {
         state.lab = { history_available: state.dna.history_available !== false,
-          markets: [{ available: false, market_label: 'Receiving markets',
+          markets: [{ available: false, market_label: 'Rushing markets',
             reason: 'no current market event is matched to the selected game' }],
           disclosure: { caveat: '' } };
       }
       if (state.tab === 'compare' && !state.cmp) {
-        state.cmp = await get('/api/wr-dna/compare?'
+        state.cmp = await get('/api/rb-dna/compare?'
           + `player_a=${encodeURIComponent(state.playerId)}`
           + `&player_b=${encodeURIComponent(state.comparePlayerId)}`);
       }
       if (stale()) return;
     } catch (e) {
       if (stale()) return;
-      state.error = `Could not load WR DNA: ${e.message}`;
+      state.error = `Could not load RB DNA: ${e.message}`;
     }
     render();
   }
 
   async function loadContext() {
     try {
-      // the schedule/venue/forecast resolver is shared with QB DNA
+      // the schedule/venue/forecast resolver is shared with the family
       if (!state.slate) state.slate = await get('/api/qb-dna/game-context');
       if (!state.slate.games.length) return;
       if (!state.eventId) {
@@ -846,7 +913,7 @@
         state.eventId = (mineG || state.slate.games[0]).espn_event_id;
       }
       state.ctx = await get(`/api/qb-dna/game-context?event_id=${encodeURIComponent(state.eventId)}`
-        + '&kind=receiving');
+        + '&kind=rushing');
       state.ctxCmp = null;
       if (state.dna.history_available === false) return;
       const g = state.ctx.game, c = state.ctx.context;
@@ -860,10 +927,10 @@
       if (c.temp_f !== undefined) q.push(`temp_f=${c.temp_f}`);
       if (c.wind_mph !== undefined) q.push(`wind_mph=${c.wind_mph}`);
       if (c.precip !== undefined) q.push(`precip=${c.precip}`);
-      state.ctxCmp = await get('/api/wr-dna/compare?' + q.join('&'));
+      state.ctxCmp = await get('/api/rb-dna/compare?' + q.join('&'));
     } catch (e) {
       state.ctx = null; state.ctxCmp = null;
-      console.warn('[wrdna] game context unavailable:', e.message);
+      console.warn('[rbdna] game context unavailable:', e.message);
     }
   }
 
@@ -871,13 +938,13 @@
 
   function install() {
     if (!window.App || !window.App.VIEWS) return false;
-    App.VIEWS.wrdna = view;
-    App.VIEWS['wr-dna'] = view;
+    App.VIEWS.rbdna = view;
+    App.VIEWS['rb-dna'] = view;
     return true;
   }
 
   window.addEventListener('resize', onResize);
-  window.PBEWRDna = { render, load, state };
+  window.PBERBDna = { render, load, state };
   install();
   document.addEventListener('DOMContentLoaded', install, { once: true });
   window.addEventListener('pbe:upgrades-ready', install);

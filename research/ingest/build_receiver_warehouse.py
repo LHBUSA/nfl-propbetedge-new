@@ -42,7 +42,7 @@ PLAY_COLS = ['game_id', 'play_id', 'posteam', 'defteam', 'pass_attempt',
              'two_point_attempt', 'complete_pass', 'receiver_player_id',
              'receiver_player_name', 'passer_player_id', 'receiving_yards',
              'air_yards', 'yards_after_catch', 'pass_touchdown', 'epa',
-             'first_down', 'interception']
+             'first_down', 'interception', 'yardline_100']
 
 rec_games, pair_games = [], []
 for y in SEASONS:
@@ -61,6 +61,13 @@ for y in SEASONS:
     tg['yac'] = np.where(tg['reception'] == 1, tg['yards_after_catch'].fillna(0), 0)
     tg['rec_td'] = np.where(tg['reception'] == 1, tg['pass_touchdown'].fillna(0), 0)
     tg['rec_fd'] = np.where(tg['reception'] == 1, tg['first_down'].fillna(0), 0)
+    # RED ZONE: yardline_100 is yards to the OPPONENT goal line, so <= 20 is
+    # inside the opponent twenty. Coverage is 100% on targeted plays, measured.
+    # A red-zone target requires both a receiver identity and a source-supplied
+    # field position; a play missing either is not counted either way.
+    tg['is_rz'] = np.where(tg['yardline_100'].notna() & (tg['yardline_100'] <= 20), 1, 0)
+    tg['rz_rec'] = tg['is_rz'] * tg['reception']
+    tg['rz_td'] = tg['is_rz'] * tg['rec_td']
 
     # Group on the STABLE ID only. nflverse can carry two spellings of the same
     # player in one game ("M.Jones" and "M.Jones Jr." for 00-0029293), and
@@ -77,6 +84,9 @@ for y in SEASONS:
         yac=('yac', 'sum'),
         target_epa=('epa', 'sum'),
         interceptions_on_target=('interception', 'sum'),
+        rz_targets=('is_rz', 'sum'),
+        rz_receptions=('rz_rec', 'sum'),
+        rz_tds=('rz_td', 'sum'),
     ).reset_index()
     # the label the source used most often for this id in this game
     names = (tg.groupby(['game_id', 'receiver_player_id', 'posteam'])['receiver_player_name']
@@ -88,6 +98,7 @@ for y in SEASONS:
         team_targets=('play_id', 'count'),
         team_air_yards=('air_yards', 'sum'),
         team_rec_yards=('rec_yards', 'sum'),
+        team_rz_targets=('is_rz', 'sum'),
     ).reset_index()
     agg = agg.merge(team, on=['game_id', 'posteam'], how='left')
     agg = agg.merge(g, on='game_id', how='left')
@@ -126,6 +137,9 @@ R['target_share'] = np.where(R['team_targets'] > 0, R['targets'] / R['team_targe
 # negative or zero aggregate air yards makes the ratio meaningless
 R['air_yards_share'] = np.where(R['team_air_yards'] > 0,
                                 R['air_yards'] / R['team_air_yards'], np.nan)
+# red-zone share only where the team actually entered the red zone that game
+R['rz_target_share'] = np.where(R['team_rz_targets'] > 0,
+                                R['rz_targets'] / R['team_rz_targets'], np.nan)
 R['is_home'] = R['posteam'] == R['home_team']
 R['opponent'] = np.where(R['is_home'], R['away_team'], R['home_team'])
 R['team_score'] = np.where(R['is_home'], R['home_score'], R['away_score'])
@@ -150,6 +164,10 @@ bad = int((R['targets'] > R['team_targets']).sum())
 print(f'rows where player targets exceed team targets: {bad}  (must be 0)')
 share = R['target_share'].dropna()
 print(f'target_share range: {share.min():.3f} - {share.max():.3f}')
+rz_bad = int((R['rz_targets'] > R['targets']).sum())
+print(f'rows where red-zone targets exceed total targets: {rz_bad}  (must be 0)')
+rz_bad2 = int((R['rz_receptions'] > R['rz_targets']).sum())
+print(f'rows where red-zone receptions exceed red-zone targets: {rz_bad2}  (must be 0)')
 # a pairing must never exceed the receiver-game it belongs to
 chk = PP.groupby(['game_id', 'receiver_player_id'])['targets'].sum().reset_index()
 chk = chk.merge(R[['game_id', 'receiver_player_id', 'targets']],

@@ -1,0 +1,169 @@
+{
+ "by_season": {
+  "2019": {
+   "plays": 47260,
+   "missing_columns": [],
+   "rush_attempts": 14030,
+   "rush_attempts_excl_2pt_kneel": 13578,
+   "carries_with_rusher_id": 13578,
+   "rusher_id_coverage_pct": 100.0,
+   "field_coverage_on_carries_pct": {
+    "rushing_yards": 100.0,
+    "rush_touchdown": 100.0,
+    "yards_gained": 100.0,
+    "yardline_100": 100.0,
+    "epa": 100.0
+   },
+   "targets": 17891,
+   "targets_with_yardline": 17891,
+   "yardline_coverage_on_targets_pct": 100.0,
+   "red_zone_targets": 2366
+  },
+  "2020": {
+   "plays": 47705,
+   "missing_columns": [],
+   "rush_attempts": 14504,
+   "rush_attempts_excl_2pt_kneel": 14015,
+   "carries_with_rusher_id": 14015,
+   "rusher_id_coverage_pct": 100.0,
+   "field_coverage_on_carries_pct": {
+    "rushing_yards": 100.0,
+    "rush_touchdown": 100.0,
+    "yards_gained": 100.0,
+    "yardline_100": 100.0,
+    "epa": 100.0
+   },
+   "targets": 18337,
+   "targets_with_yardline": 18337,
+   "yardline_coverage_on_targets_pct": 100.0,
+   "red_zone_targets": 2549
+  },
+  "2021": {
+   "plays": 49922,
+   "missing_columns": [],
+   "rush_attempts": 15164,
+   "rush_attempts_excl_2pt_kneel": 14710,
+   "carries_with_rusher_id": 14710,
+   "rusher_id_coverage_pct": 100.0,
+   "field_coverage_on_carries_pct": {
+    "rushing_yards": 100.0,
+    "rush_touchdown": 100.0,
+    "yards_gained": 100.0,
+    "yardline_100": 100.0,
+    "epa": 100.0
+   },
+   "targets": 19077,
+   "targets_with_yardline": 19077,
+   "yardline_coverage_on_targets_pct": 100.0,
+   "red_zone_targets": 2742
+  },
+  "2022": {
+   "plays": 49434,
+   "missing_columns": [],
+   "rush_attempts": 15479,
+   "rush_attempts_excl_2pt_kneel": 15005,
+   "carries_with_rusher_id": 15005,
+   "rusher_id_coverage_pct": 100.0,
+   "field_coverage_on_carries_pct": {
+    "rushing_yards": 100.0,
+    "rush_touchdown": 100.0,
+    "yards_gained": 100.0,
+    "yardline_100": 100.0,
+    "epa": 100.0
+   },
+   "targets": 18285,
+   "targets_with_yardline": 18285,
+   "yardline_coverage_on_targets_pct": 100.0,
+   "red_zone_targets": 2467
+  },
+  "2023": {
+   "plays": 49665,
+   "missing_columns": [],
+   "rush_attempts": 15332,
+   "rush_attempts_excl_2pt_kneel": 14830,
+   "carries_with_rusher_id": 14830,
+   "rusher_id_coverage_pct": 100.0,
+   "field_coverage_on_carries_pct": {
+    "rushing_yards": 100.0,
+    "rush_touchdown": 100.0,
+    "yards_gained": 100.0,
+    "yardline_100": 100.0,
+    "epa": 100.0
+   },
+   "targets": 18450,
+   "targets_with_yardline": 18450,
+   "yardline_coverage_on_targets_pct": 100.0,
+   "red_zone_targets": 2351
+  },
+  "2024": {
+   "plays": 49492,
+   "missing_columns": [],
+   "rush_attempts": 15481,
+   "rush_attempts_excl_2pt_kneel": 15006,
+   "carries_with_rusher_id": 15006,
+   "rusher_id_coverage_pct": 100.0,
+   "field_coverage_on_carries_pct": {
+    "rushing_yards": 100.0,
+    "rush_touchdown": 100.0,
+    "yards_gained": 100.0,
+    "yardline_100": 100.0,
+    "epa": 100.0
+   },
+   "targets": 17848,
+   "targets_with_yardline": 17848,
+   "yardline_coverage_on_targets_pct": 100.0,
+   "red_zone_targets": 2460
+  },
+  "2025": {
+   "plays": 48771,
+   "missing_columns": [],
+   "rush_attempts": 15347,
+   "rush_attempts_excl_2pt_kneel": 14863,
+   "carries_with_rusher_id": 14863,
+   "rusher_id_coverage_pct": 100.0,
+   "field_coverage_on_carries_pct": {
+    "rushing_yards": 100.0,
+    "rush_touchdown": 100.0,
+    "yards_gained": 100.0,
+    "yardline_100": 100.0,
+    "epa": 100.0
+   },
+   "targets": 17582,
+   "targets_with_yardline": 17582,
+   "yardline_coverage_on_targets_pct": 100.0,
+   "red_zone_targets": 2492
+  }
+ },
+ "position_metadata": {
+  "RB": {
+   "rows": 2451,
+   "with_gsis": 2451,
+   "with_espn_id": 1437,
+   "active_2025_plus": 230
+  },
+  "FB": {
+   "rows": 210,
+   "with_gsis": 210,
+   "with_espn_id": 181,
+   "active_2025_plus": 9
+  },
+  "TE": {
+   "rows": 1583,
+   "with_gsis": 1583,
+   "with_espn_id": 1113,
+   "active_2025_plus": 224
+  },
+  "WR": {
+   "rows": 3248,
+   "with_gsis": 3248,
+   "with_espn_id": 2241,
+   "active_2025_plus": 412
+  },
+  "QB": {
+   "rows": 1006,
+   "with_gsis": 1006,
+   "with_espn_id": 626,
+   "active_2025_plus": 133
+  }
+ }
+}

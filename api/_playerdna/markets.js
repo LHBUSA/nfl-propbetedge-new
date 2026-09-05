@@ -17,8 +17,22 @@
 
 import { dataset as qbDataset } from '../_qbdna/engine.js';
 import { dataset as wrDataset } from '../_wrdna/engine.js';
+import { dataset as teDataset } from '../_tedna/engine.js';
+import { dataset as rbDataset } from '../_rbdna/engine.js';
 
 const GATEWAY = process.env.NFL_GATEWAY || 'https://nfl-api.propbetedge.ai';
+
+/* RUSHING markets, for the running-back product. Audited against the live
+   gateway before being listed here — nothing is declared that the provider
+   does not actually return. A back is also a receiver, so his family carries
+   the receiving markets too. */
+export const RUSHING_MARKET_MAP = {
+  player_rush_yds:      'rushing_yards',
+  player_rush_attempts: 'rush_attempts',
+  player_reception_yds: 'receiving_yards',
+  player_receptions:    'receptions',
+  player_anytime_td:    'anytime_td'
+};
 
 /* Receiving markets. Anytime TD is carried here because the market source
    offers it, but it is priced as ODDS, not as a line — the receiver engine
@@ -67,8 +81,11 @@ export async function events() {
    spine is the only resolution used; an ambiguous or unknown name resolves to
    nothing and says so. A fuzzy match here would attach one quarterback's
    history to another quarterback's line, which is the worst error available. */
+const SPINES = {
+  passing: qbDataset, receiving: wrDataset, tight_end: teDataset, rushing: rbDataset
+};
 function resolveByName(name, kind) {
-  const D = kind === 'receiving' ? wrDataset() : qbDataset();
+  const D = (SPINES[kind] || qbDataset)();
   const want = String(name || '').toLowerCase().trim();
   if (!want) return { gsis_id: null, reason: 'no name on the quote' };
   const hits = D.players.filter(p => String(p.display_name).toLowerCase() === want);
@@ -91,7 +108,9 @@ function resolveByName(name, kind) {
  *        every existing caller is unchanged.
  */
 export async function eventMarkets(eventId, kind = 'passing') {
-  const map = kind === 'receiving' ? RECEIVING_MARKET_MAP : MARKET_MAP;
+  const map = kind === 'rushing' ? RUSHING_MARKET_MAP
+    : (kind === 'receiving' || kind === 'tight_end') ? RECEIVING_MARKET_MAP
+    : MARKET_MAP;
   const keys = Object.keys(map);
   const url = `${GATEWAY}/api/odds/board?event_id=${encodeURIComponent(eventId)}`
             + `&markets=${keys.join(',')}`;
@@ -110,9 +129,10 @@ export async function eventMarkets(eventId, kind = 'passing') {
   if (!summary.length) {
     return {
       available: false, state: MARKET_UNAVAILABLE,
-      reason: kind === 'receiving'
-        ? 'the market source returned no receiving markets for this event'
-        : 'the market source returned no quarterback passing markets for this event',
+      reason: kind === 'passing'
+        ? 'the market source returned no quarterback passing markets for this event'
+        : `the market source returned no ${kind === 'rushing' ? 'rushing or receiving'
+            : 'receiving'} markets for this event`,
       event_id: String(eventId), event: board.event || null,
       source: { gateway: GATEWAY, url, provider: board.source, provider_last_update: board.provider_last_update }
     };
@@ -211,9 +231,9 @@ export async function playerMarkets(eventId, gsisId, kind = 'passing') {
   if (!hit) {
     return {
       available: false, state: MARKET_UNAVAILABLE,
-      reason: kind === 'receiving'
-        ? 'the current market does not price this receiver for this event'
-        : 'the current market does not price this quarterback for this event',
+      reason: kind === 'passing'
+        ? 'the current market does not price this quarterback for this event'
+        : 'the current market does not price this player for this event',
       event_id: m.event_id, event: m.event, source: m.source,
       priced_players: m.players.map(p => p.player_name)
     };

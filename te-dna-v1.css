@@ -1,0 +1,88 @@
+/* ============================================================================
+   PropBetEdge NFL — TE DNA
+   ----------------------------------------------------------------------------
+   The tight-end product's OWN layer. Everything structural — glass, tabs,
+   charts, picker, market cards, sample labels, the segmented metric switch,
+   the QB connection table — comes from player-dna-v1.css and wr-dna-v1.css,
+   which the two receiver products share. This file holds only RED ZONE DNA.
+   ========================================================================== */
+
+/* ---- RED ZONE DNA -------------------------------------------------------
+   The signature panel. Three windows across the top, then a funnel that keeps
+   the sample visible as it narrows: targets, then catches, then touchdowns.
+   Red-zone volume is genuinely small, so the design refuses to hide that. */
+.q2-rz .q2-rzgrid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px;
+  background: var(--pbe-line); border-block: 1px solid var(--pbe-line);
+}
+.q2-rzcol { background: var(--pbe-ink); padding: 18px 20px 16px; }
+.q2-rzcol.is-off { display: grid; align-content: center; gap: 6px; opacity: .62; }
+.q2-rzcol-k {
+  font: 700 var(--fs-micro)/1 var(--pbe-font-data); letter-spacing: .14em;
+  text-transform: uppercase; color: var(--pbe-faint-text);
+  display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+}
+.q2-rzcol-k em {
+  font-style: normal; letter-spacing: .06em; color: var(--pbe-subtle); font-size: 9px;
+}
+.q2-rzcol-hero {
+  margin: 12px 0 14px; font: 300 34px/1 var(--pbe-font-data);
+  color: var(--pbe-gold); font-variant-numeric: tabular-nums;
+}
+.q2-rzcol-hero small {
+  display: block; margin-top: 5px;
+  font: 600 var(--fs-micro)/1 var(--pbe-font-data); letter-spacing: .12em;
+  text-transform: uppercase; color: var(--pbe-faint-text);
+}
+/* a sample label counted in TARGETS, not games, has to say so */
+.q2-rzbasis {
+  display: block; margin-top: 6px;
+  font: 500 8px/1.3 var(--pbe-font-data); letter-spacing: .08em;
+  text-transform: uppercase; color: var(--pbe-subtle);
+}
+
+.q2-rzfunnel { padding: 18px 20px 20px; border-bottom: 1px solid var(--pbe-line); }
+.q2-rzf { display: grid; gap: 14px; margin-top: 12px; }
+.q2-rzf.is-off {
+  font: 500 var(--fs-small)/1.4 var(--pbe-font-body);
+  color: var(--pbe-subtle); font-style: italic; padding: 8px 0;
+}
+.q2-rzf-k {
+  font: 700 var(--fs-micro)/1 var(--pbe-font-data); letter-spacing: .14em;
+  text-transform: uppercase; color: var(--pbe-faint-text); margin-bottom: 7px;
+}
+.q2-rzf-track {
+  position: relative; display: flex; align-items: center;
+  height: 32px; border-radius: var(--r-sm);
+  background: rgba(255,245,220,.05);
+}
+.q2-rzf-track i {
+  display: block; height: 100%; border-radius: var(--r-sm);
+  background: linear-gradient(90deg, rgba(212,175,55,.55), rgba(212,175,55,.20));
+}
+.q2-rzf-track b {
+  position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+  font: 700 var(--fs-data)/1 var(--pbe-font-data); color: var(--pbe-paper);
+  font-variant-numeric: tabular-nums;
+}
+.q2-rzf-n {
+  margin-top: 6px; font: 500 var(--fs-micro)/1.3 var(--pbe-font-data);
+  color: var(--pbe-subtle); font-variant-numeric: tabular-nums;
+}
+.q2-rznote {
+  margin-top: 16px; padding-top: 13px; border-top: 1px solid var(--pbe-line);
+  font: 400 var(--fs-small)/1.55 var(--pbe-font-body); color: var(--pbe-faint-text);
+}
+.q2-rznote b { color: var(--pbe-paper); font-weight: 700; }
+
+/* the tight-end snapshot leads with the red zone, so that tile earns a mark */
+.q2-te .q2-bigs .q2-big:nth-child(7) .q2-big-v { color: var(--pbe-gold); }
+
+@media (max-width: 980px) {
+  .q2-rz .q2-rzgrid { grid-template-columns: 1fr; }
+}
+@media (max-width: 620px) {
+  .q2-rzcol { padding: 15px 16px 14px; }
+  .q2-rzcol-hero { font-size: 30px; }
+  .q2-rzfunnel { padding: 15px 16px 17px; }
+}

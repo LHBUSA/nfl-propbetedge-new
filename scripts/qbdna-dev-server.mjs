@@ -23,7 +23,13 @@ const API = {
   '/api/qb-dna/game-context': 'api/qb-dna/game-context.js',
   '/api/wr-dna': 'api/wr-dna.js',
   '/api/wr-dna/prop-lab': 'api/wr-dna/prop-lab.js',
-  '/api/wr-dna/compare': 'api/wr-dna/compare.js'
+  '/api/wr-dna/compare': 'api/wr-dna/compare.js',
+  '/api/rb-dna': 'api/rb-dna.js',
+  '/api/rb-dna/prop-lab': 'api/rb-dna/prop-lab.js',
+  '/api/rb-dna/compare': 'api/rb-dna/compare.js',
+  '/api/te-dna': 'api/te-dna.js',
+  '/api/te-dna/prop-lab': 'api/te-dna/prop-lab.js',
+  '/api/te-dna/compare': 'api/te-dna/compare.js'
 };
 
 createServer(async (req, res) => {

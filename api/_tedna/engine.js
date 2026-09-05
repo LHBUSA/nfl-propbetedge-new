@@ -1,11 +1,12 @@
-/* WR DNA engine — the shared receiver engine bound to the WR dataset.
+/* TE DNA engine — the shared receiver engine bound to the TE dataset.
  *
- * Wide receivers. Emphasis is usage, receiving efficiency and the QB
- * connection; the red-zone fields exist but the WR surface leads with volume.
+ * Tight ends. Same arithmetic as WR DNA, different emphasis: the TE surface
+ * leads with RED ZONE DNA, because that is where a tight end's value concentrates
+ * and where the touchdown markets live.
  */
 import { makeReceiverEngine } from '../_receiverdna/engine.js';
 
-const E = makeReceiverEngine('wr-dna-dataset.json');
+const E = makeReceiverEngine('te-dna-dataset.json');
 
 export const dataset = E.dataset;
 export const SAMPLE = E.SAMPLE;

@@ -732,11 +732,9 @@
 .q2-crest.is-broken { display: none; }
 
 /* ============================ PICKER ==================================== */
-.q2-picker {
-  position: fixed; inset: 0; z-index: 60; background: rgba(8,7,5,.72);
-  backdrop-filter: blur(3px); display: flex; align-items: flex-start;
-  justify-content: center; padding: clamp(16px, 6vh, 80px) var(--s-4);
-}
+/* The in-page .q2-picker is retired: it lived inside the product stacking
+   context and could not rise above the shell. Its inner styles below are
+   reused by the portalled .pdna-modal. */
 .q2-picker-panel {
   width: min(560px, 100%); max-height: 78vh; display: flex; flex-direction: column;
   background: linear-gradient(160deg, rgba(22,20,15,.96), rgba(12,11,8,.97)); border: 1px solid var(--pbe-line-strong);
@@ -984,4 +982,88 @@
   /* a phone needs the biggest, most obvious version of this control */
   .q2-change { width: 100%; justify-content: center; margin-top: var(--s-3); }
   .q2-change.sm { width: auto; }
+}
+
+/* ============================================================================
+   PLAYER DNA MODAL ROOT
+   ----------------------------------------------------------------------------
+   The picker is portalled to #pbe-player-dna-modal-root, a direct child of
+   BODY. That is the whole fix: a product's .q2 root is position:relative with
+   a z-index, which creates a stacking context, and no descendant can raise
+   itself above the sports shell from inside it. Leaving the subtree is the
+   only thing that works.
+
+   Measured ladder: shell 2500 · mobile overlay 2600 · drawer 2700 ·
+   prop board 4200 · player research 4700 · team research 4750 ·
+   event selector 4850 · command palette 4900 · stadium control 4950 ·
+   PAYWALL 5000 · pbecast 9500 · skip link 9999.
+
+   4980 puts the picker above every navigation layer and every peer modal,
+   and deliberately below the paywall — an auth surface must never be hidden.
+   ========================================================================== */
+#pbe-player-dna-modal-root { position: relative; z-index: 4980; }
+
+.pdna-modal {
+  position: fixed;
+  /* the visual viewport, so a soft keyboard cannot bury the search field */
+  top: var(--pdna-vtop, 0px); left: 0; right: 0;
+  height: var(--pdna-vh, 100vh);
+  z-index: 4980;
+  background: rgba(8,7,5,.74);
+  backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: clamp(14px, 5vh, 72px) var(--s-4);
+  font-family: var(--pbe-font-ui);
+}
+.pdna-modal-panel {
+  width: min(560px, 100%);
+  /* never taller than the space it is actually given */
+  max-height: calc(var(--pdna-vh, 100vh) - clamp(28px, 10vh, 144px));
+  display: flex; flex-direction: column;
+  background: linear-gradient(160deg, rgba(22,20,15,.97), rgba(12,11,8,.98));
+  border: 1px solid var(--pbe-line-strong); border-radius: var(--r-md);
+  box-shadow: 0 30px 90px rgba(0,0,0,.62); overflow: hidden;
+}
+/* the head never scrolls away: the search field and the close control stay
+   reachable however long the list is */
+.pdna-modal .q2-picker-head { flex: none; }
+.pdna-modal .q2-picker-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+
+/* stop the page behind the modal from scrolling */
+body.pdna-modal-open { overflow: hidden; }
+
+@media (max-width: 620px) {
+  .pdna-modal { padding: 8px 8px 0; align-items: flex-start; }
+  .pdna-modal-panel { max-height: calc(var(--pdna-vh, 100vh) - 16px); }
+  /* no destructive blur on a phone, same rule as the rest of the glass */
+  .pdna-modal { backdrop-filter: none; -webkit-backdrop-filter: none;
+                background: rgba(8,7,5,.86); }
+}
+
+/* ============================ FAMILY SWITCH ==============================
+   Restrained movement between the four Player DNA products. It complements
+   the shell navigation rather than replacing it, so it stays small and lives
+   in the hero's top rail. */
+.pdna-family {
+  display: inline-flex; border: 1px solid var(--pbe-line-strong);
+  border-radius: var(--r-pill); overflow: hidden; background: rgba(12,11,9,.6);
+}
+.pdna-family-btn {
+  appearance: none; background: none; border: 0; cursor: pointer;
+  padding: 7px 14px; min-height: 34px;
+  border-right: 1px solid var(--pbe-line);
+  font: 700 var(--fs-micro)/1 var(--pbe-font-data); letter-spacing: .14em;
+  color: var(--pbe-faint-text);
+  transition: color var(--t-fast), background var(--t-fast);
+}
+.pdna-family-btn:last-child { border-right: 0; }
+.pdna-family-btn:hover { color: var(--pbe-paper); }
+.pdna-family-btn.is-on { background: rgba(212,175,55,.14); color: var(--pbe-gold); }
+.pdna-family-btn:focus-visible { outline: 2px solid var(--pbe-gold); outline-offset: -3px; }
+
+/* the hero's top rail carries the product label and the family switch */
+.q2-hero-lead { display: flex; align-items: center; gap: var(--s-4); flex-wrap: wrap; }
+@media (max-width: 620px) {
+  .q2-hero-top { flex-direction: column; align-items: flex-start; gap: var(--s-3); }
+  .pdna-family-btn { padding: 7px 11px; }
 }

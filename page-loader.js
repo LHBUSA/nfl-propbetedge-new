@@ -104,12 +104,21 @@
        never conceal overflow or substitute for responsive component layout. */
     {css:'./scrollbar-clean-v1.css'},
 
-    /* QB DNA — v2 is the sole UI authority for the qbdna route. v1 is retired
-       and deliberately NOT loaded; stacking it would leave two renderers
-       fighting over the same view container. */
+    /* PLAYER DNA — four products, one design system.
+       player-dna-v1.css is the sole design authority for all four and
+       player-dna-shared.js the sole behaviour layer: the portalled player
+       switcher, the charts and the formatting grammar live there and nowhere
+       else. Each product then loads only what its own position needs.
+       QB DNA v2 is the sole UI authority for the qbdna route; v1 is retired
+       and deliberately NOT loaded, because stacking it would leave two
+       renderers fighting over the same view container. */
     {css:'./player-dna-v1.css'},
+    {js:'./player-dna-shared.js'},
     {js:'./qb-dna-v2.js'},
-    {css:'./wr-dna-v1.css',js:'./wr-dna-v1.js'}
+    {css:'./wr-dna-v1.css',js:'./wr-dna-v1.js'},
+    {css:'./rb-dna-v1.css',js:'./rb-dna-v1.js'},
+    /* TE reuses the receiver layer above it, then adds only the red zone. */
+    {css:'./te-dna-v1.css',js:'./te-dna-v1.js'}
   ];
 
   const PRO_MODULES=[

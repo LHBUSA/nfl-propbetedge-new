@@ -624,21 +624,28 @@ h1.pbe-v2-view-name{
 }
 
 /* ----------------------------------------------------------------------------
-   INTELLIGENCE now carries nine routes (QB DNA joined Market Watch, Model Lab,
-   PBE Picks, Track Record, Matchups, Usage, Injuries and News). At mid desktop
-   widths the primary row ran 39px long and clipped its last item behind an
-   overflow scroller with no affordance. Tightening the horizontal padding and
-   the inter-group gap between 1051px and 1400px recovers ~50px, which fits the
-   full row again without renaming, hiding or reordering anything.
+   The primary row carries TODAY (4), INTELLIGENCE (8) and PLAYER DNA (4). Laid
+   out at its natural size it wants 1519px, which fits no common desktop width,
+   and a nowrap flex row does not fail politely: it runs its last items past the
+   viewport edge, where they are unreachable with no affordance saying so. That
+   is exactly what happened when PLAYER DNA gained RB and TE -- measured at
+   1440, "RB" ended at 1468px and "TE" at 1507px.
+
+   Two rules fix it, and the second one is the one that matters.
+
+   1. Tighten the button padding and the inter-group gap. This recovers ~80px,
+      enough for the current row to sit on ONE line at 1440.
+   2. Allow the row to WRAP. This was previously capped at max-width:1400px,
+      which is why 1440 clipped instead of wrapping: above the cap the row had
+      no way to fail except off the edge. A width cap on a safety net is a bug,
+      because it is precisely the widths nobody tested that need it. flex-wrap
+      is self-limiting -- a row that fits stays on one line -- so there is no
+      cost to leaving it on at every desktop width, and any destination added
+      later drops to a second line instead of disappearing.
    -------------------------------------------------------------------------- */
-@media (min-width:1051px) and (max-width:1400px){
+@media (min-width:1051px){
   #pbe-sports-shell .pbes-nav-btn{padding:8px 7px}
-  #pbe-sports-shell .pbes-nav-group{gap:2px}
+  #pbe-sports-shell .pbes-nav-group{gap:2px;flex-wrap:wrap}
   #pbe-sports-shell .pbes-primary,#pbe-sports-shell .pbes-research{gap:14px}
-  /* INTELLIGENCE now carries ten routes. Tightening alone no longer fits them
-     at 1280, and the row is an overflow scroller with no affordance -- the
-     last item simply disappears. Wrapping shows every destination instead of
-     hiding one, which is the whole point of a navigation row. */
   #pbe-sports-shell .pbes-primary{flex-wrap:wrap;row-gap:2px}
-  #pbe-sports-shell .pbes-nav-group{flex-wrap:wrap}
 }

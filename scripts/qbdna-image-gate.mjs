@@ -26,11 +26,28 @@ const SHARE = process.env.PBE_SHARE || '';
 const CHROME = process.env.PBE_CHROME || 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const DP = 9900 + Math.floor(Math.random() * 90);
 const ROUTE = process.env.PBE_ROUTE || 'qbdna';
-const GLOBAL = ROUTE === 'wrdna' ? 'PBEWRDna' : 'PBEQBDna';
-/* Two receivers whose identity and history both resolve cleanly. */
-const IDS = ROUTE === 'wrdna'
-  ? { main: '00-0036322', other: '00-0036900', none: null }
-  : { main: '00-0033873', other: '00-0034857', none: '00-0039107' };
+
+/* Every Player DNA product, with the module global that drives it and two
+   players whose identity and history both resolve cleanly, plus one who is on
+   a 2026 roster with no NFL history at all.
+
+   This table is not a convenience. Before it existed the gate knew two routes
+   and fell back to the QB module and QB player ids for anything else, so
+   running it against /#rbdna navigated to the back product and then measured
+   the QUARTERBACK surface -- and reported a pass. A gate that cannot fail is
+   worse than no gate, so an unknown route now stops the run. */
+const PRODUCTS = {
+  qbdna: { global: 'PBEQBDna', main: '00-0033873', other: '00-0034857', none: '00-0039107' },
+  wrdna: { global: 'PBEWRDna', main: '00-0036322', other: '00-0036900', none: null },
+  rbdna: { global: 'PBERBDna', main: '00-0034844', other: '00-0032764', none: '00-0038409' },
+  tedna: { global: 'PBETEDna', main: '00-0037744', other: '00-0039338', none: '00-0037031' }
+};
+if (!PRODUCTS[ROUTE]) {
+  console.error(`unknown route "${ROUTE}" — expected one of ${Object.keys(PRODUCTS).join(', ')}`);
+  process.exit(2);
+}
+const GLOBAL = PRODUCTS[ROUTE].global;
+const IDS = PRODUCTS[ROUTE];
 
 /* Each surface: how to reach it, and what identity must be visible. */
 const SURFACES = [

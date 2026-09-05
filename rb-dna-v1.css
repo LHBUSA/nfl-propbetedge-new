@@ -1,0 +1,173 @@
+/* ============================================================================
+   PropBetEdge NFL — RB DNA
+   ----------------------------------------------------------------------------
+   The running-back product's OWN layer. Everything structural — glass, tabs,
+   charts, picker, market cards, sample labels, the segmented metric switch —
+   comes from player-dna-v1.css, which all four Player DNA products share.
+   This file holds only what a back surface needs and the others do not:
+   USAGE DNA, the touch-mix bar and the shares block.
+   ========================================================================== */
+
+/* ---- USAGE DNA ----------------------------------------------------------
+   The signature panel. A quarterback is read on what he did with the ball; a
+   back is read on how much of it he gets. Three windows sit side by side so
+   a changing role is visible rather than averaged away. */
+.q2-usage .q2-ugrid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px;
+  background: var(--pbe-line); border-block: 1px solid var(--pbe-line);
+}
+.q2-ucol { background: var(--pbe-ink); padding: 18px 20px 16px; }
+.q2-ucol.is-off { display: grid; align-content: center; gap: 6px; opacity: .62; }
+.q2-ucol-k {
+  font: 700 var(--fs-micro)/1 var(--pbe-font-data); letter-spacing: .14em;
+  text-transform: uppercase; color: var(--pbe-faint-text);
+  display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+}
+.q2-ucol-k em {
+  font-style: normal; letter-spacing: .06em; color: var(--pbe-subtle); font-size: 9px;
+}
+.q2-ucol-hero {
+  margin: 12px 0 14px; font: 300 34px/1 var(--pbe-font-data);
+  color: var(--pbe-paper); font-variant-numeric: tabular-nums;
+}
+.q2-ucol-hero small {
+  display: block; margin-top: 5px;
+  font: 600 var(--fs-micro)/1 var(--pbe-font-data); letter-spacing: .12em;
+  text-transform: uppercase; color: var(--pbe-faint-text);
+}
+.q2-ucol-list { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 7px; }
+.q2-ucol-list li {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+  font: 500 var(--fs-small)/1.2 var(--pbe-font-data); color: var(--pbe-faint-text);
+  padding-bottom: 6px; border-bottom: 1px solid var(--pbe-line);
+}
+.q2-ucol-list li:last-child { border-bottom: 0; padding-bottom: 0; }
+.q2-ucol-list b {
+  color: var(--pbe-paper); font-weight: 700; font-variant-numeric: tabular-nums;
+}
+
+.q2-usplit {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 1px;
+  background: var(--pbe-line); border-bottom: 1px solid var(--pbe-line);
+}
+.q2-usplit-c { background: var(--pbe-ink); padding: 18px 20px 20px; }
+
+/* ---- the touch mix ------------------------------------------------------
+   One bar, two segments, both counts printed. It answers "what kind of back
+   is this" faster than any table can, and it never shows a share without the
+   two numbers that made it. */
+.q2-mix { margin-top: 12px; }
+.q2-mix.is-off {
+  padding: 14px 0; font: 500 var(--fs-small)/1.4 var(--pbe-font-body);
+  color: var(--pbe-subtle); font-style: italic;
+}
+.q2-mix-bar {
+  display: flex; height: 46px; border-radius: var(--r-sm); overflow: hidden;
+  border: 1px solid var(--pbe-line-strong);
+}
+.q2-mix-run, .q2-mix-rec {
+  display: grid; place-items: center; min-width: 0;
+  transition: width var(--t-slow, .4s) ease;
+}
+.q2-mix-run { background: linear-gradient(180deg, rgba(212,175,55,.38), rgba(212,175,55,.16)); }
+.q2-mix-rec { background: linear-gradient(180deg, rgba(92,187,133,.30), rgba(92,187,133,.12)); }
+.q2-mix-run b, .q2-mix-rec b {
+  font: 700 var(--fs-data)/1 var(--pbe-font-data); color: var(--pbe-paper);
+  font-variant-numeric: tabular-nums;
+  overflow: hidden; text-overflow: clip; white-space: nowrap;
+}
+.q2-mix-key {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-top: 10px;
+  font: 500 var(--fs-micro)/1 var(--pbe-font-data); letter-spacing: .08em;
+  text-transform: uppercase; color: var(--pbe-faint-text);
+}
+.q2-mix-key span { display: inline-flex; align-items: center; gap: 6px; }
+.q2-mix-key b { color: var(--pbe-paper); font-weight: 700; }
+.q2-mix-key em { font-style: normal; color: var(--pbe-subtle); letter-spacing: .06em; }
+.q2-mix-key i { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
+.q2-mix-key i.k-run { background: rgba(212,175,55,.75); }
+.q2-mix-key i.k-rec { background: rgba(92,187,133,.7); }
+
+/* two backs' mixes side by side in Compare */
+.q2-mixvs {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 1px;
+  background: var(--pbe-line); border-block: 1px solid var(--pbe-line);
+}
+.q2-mixvs-c { background: var(--pbe-ink); padding: 18px 20px 20px; }
+
+/* ---- shares -------------------------------------------------------------
+   A share of the team, always printed over its own denominator. */
+.q2-shares { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 12px; }
+.q2-share-k {
+  font: 700 var(--fs-micro)/1 var(--pbe-font-data); letter-spacing: .14em;
+  text-transform: uppercase; color: var(--pbe-faint-text);
+}
+.q2-share-v {
+  margin: 8px 0 8px; font: 300 30px/1 var(--pbe-font-data);
+  color: var(--pbe-paper); font-variant-numeric: tabular-nums;
+}
+.q2-share-v small {
+  font-size: 14px; margin-left: 2px; color: var(--pbe-faint-text); font-weight: 400;
+}
+.q2-share.is-empty .q2-share-v {
+  font-size: var(--fs-small); color: var(--pbe-subtle); font-style: italic;
+}
+.q2-share-track {
+  height: 5px; border-radius: 3px; background: rgba(255,245,220,.07); overflow: hidden;
+}
+.q2-share-track i {
+  display: block; height: 100%; border-radius: 3px;
+  background: linear-gradient(90deg, rgba(212,175,55,.85), rgba(212,175,55,.45));
+}
+.q2-share-n {
+  margin-top: 7px; font: 500 var(--fs-micro)/1.3 var(--pbe-font-data);
+  color: var(--pbe-subtle); font-variant-numeric: tabular-nums;
+}
+
+/* ---- withheld -----------------------------------------------------------
+   Named in the product, not hidden in a footnote. Snap share is the number a
+   back product is expected to show, so its absence has to be explained where
+   a reader will look for it. */
+.q2-withheld { padding: 16px 20px 18px; }
+.q2-withheld-k {
+  font: 700 var(--fs-micro)/1 var(--pbe-font-data); letter-spacing: .14em;
+  text-transform: uppercase; color: var(--pbe-warn, #e0a24a);
+}
+.q2-withheld ul { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 8px; }
+.q2-withheld li {
+  font: 500 var(--fs-small)/1.5 var(--pbe-font-body); color: var(--pbe-faint-text);
+  padding-left: 13px; position: relative;
+}
+.q2-withheld li::before {
+  content: ''; position: absolute; left: 0; top: .62em;
+  width: 5px; height: 1px; background: var(--pbe-line-strong);
+}
+.q2-withheld li b {
+  color: var(--pbe-paper); font-weight: 700; margin-right: 7px;
+  text-transform: uppercase; letter-spacing: .06em; font-size: var(--fs-micro);
+  font-family: var(--pbe-font-data);
+}
+.q2-withheld p {
+  margin: 10px 0 0; font: 400 var(--fs-small)/1.55 var(--pbe-font-body);
+  color: var(--pbe-subtle);
+}
+
+/* the back condition matrix carries touches where the QB one carries W-L */
+.q2-rb .q2-crow-rec em {
+  display: block; margin-top: 3px; font-style: normal;
+  font: 500 8px/1 var(--pbe-font-data); letter-spacing: .1em;
+  text-transform: uppercase; color: var(--pbe-subtle);
+}
+
+@media (max-width: 980px) {
+  .q2-usage .q2-ugrid { grid-template-columns: 1fr; }
+  .q2-usplit, .q2-mixvs { grid-template-columns: 1fr; }
+}
+@media (max-width: 620px) {
+  .q2-ucol { padding: 15px 16px 14px; }
+  .q2-ucol-hero { font-size: 30px; }
+  .q2-usplit-c, .q2-mixvs-c { padding: 15px 16px 17px; }
+  .q2-shares { grid-template-columns: 1fr; gap: 16px; }
+  .q2-mix-bar { height: 40px; }
+  .q2-withheld { padding: 14px 16px 16px; }
+}

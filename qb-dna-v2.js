@@ -23,6 +23,8 @@
 (() => {
   'use strict';
 
+  const PD = window.PBEPlayerDNA;
+
   const esc = v => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;')
     .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
@@ -36,7 +38,6 @@
     comparePlayerId: '00-0034857',
     eventId: null,
     openMarket: 'passing_yards',
-    pickerOpen: false, pickerFor: 'playerId', pickerQuery: '',
     players: null, dna: null, lab: null, cmp: null, ctxCmp: null, ctx: null, slate: null,
     loading: false, error: null
   };
@@ -370,7 +371,10 @@
     const noHist = d.history_available === false;
     return `<header class="q2-hero">
       <div class="q2-hero-top">
-        <div class="q2-hero-eyebrow">QB DNA</div>
+        <div class="q2-hero-lead">
+          <div class="q2-hero-eyebrow">QB DNA</div>
+          ${PD.familySwitch('qbdna')}
+        </div>
         ${t ? `<div class="q2-hero-club">${crest(t, 30)}<span>${esc(t.name || t.abbreviation)}</span></div>` : ''}
       </div>
       <div class="q2-hero-body">
@@ -970,44 +974,6 @@
      PLAYER PICKER
      ====================================================================== */
 
-  function picker() {
-    if (!state.pickerOpen) return '';
-    const list = (state.players && state.players.players) || [];
-    const q = state.pickerQuery.trim().toLowerCase();
-    const match = p => !q || p.name.toLowerCase().includes(q)
-      || String(p.team_2026 || p.team || '').toLowerCase().includes(q);
-    const groups = [
-      ['Priced by the current market', list.filter(p => p.market_priced_2026 && match(p))],
-      ['On a 2026 roster', list.filter(p => !p.market_priced_2026 && p.active_2026 && match(p))],
-      ['Historical', list.filter(p => !p.active_2026 && match(p))]
-    ].filter(([, rows]) => rows.length);
-    const total = groups.reduce((a, [, r]) => a + r.length, 0);
-
-    return `<div class="q2-picker" role="dialog" aria-modal="true" aria-label="Choose a quarterback">
-      <div class="q2-picker-panel">
-        <div class="q2-picker-head">
-          <input type="search" id="q2-picker-q" class="q2-picker-input" placeholder="Search quarterbacks"
-            value="${esc(state.pickerQuery)}" autocomplete="off" aria-label="Search quarterbacks">
-          <button type="button" class="q2-picker-x" data-picker-close aria-label="Close">&times;</button>
-        </div>
-        <div class="q2-picker-body">
-          ${total ? groups.map(([label, rows]) => `<div class="q2-picker-group">
-            <div class="q2-picker-glabel">${esc(label)} <em>${rows.length}</em></div>
-            ${rows.map(p => `<button type="button" class="q2-picker-row" data-pick="${esc(p.gsis_id)}">
-              ${headshot(p, 40)}
-              <span class="q2-picker-copy">
-                <b>${esc(p.name)}</b>
-                <em>${esc(p.team_2026 || p.team || '')}${p.position ? ' · ' + esc(p.position) : ''}
-                  · ${p.history_available ? esc(p.games) + ' games' : 'no NFL history'}</em>
-              </span>
-              ${crest(p.team_media, 20)}
-            </button>`).join('')}
-          </div>`).join('')
-          : '<div class="q2-empty">No quarterback matches that search.</div>'}
-        </div>
-      </div>
-    </div>`;
-  }
 
   /* ======================================================================
      SOURCES & METHODOLOGY — everything technical lives here
@@ -1106,9 +1072,9 @@
         ${gameSelect()}
       </nav>
       <div class="q2-body">${body()}${sources()}</div>
-      ${picker()}
     </div>`;
     wire();
+    PD.wireFamily();
     paintCharts();
   }
 
@@ -1132,54 +1098,32 @@
       b.addEventListener('click', () => {
         state.openMarket = b.dataset.jump; state.tab = 'props'; load();
       }));
+    /* The picker is PORTALLED to a body-level modal root. A descendant of this
+       product's stacking context cannot rise above the sports shell, however
+       high its z-index, so it has to leave the subtree entirely. */
     document.querySelectorAll('[data-picker]').forEach(b =>
       b.addEventListener('click', () => {
-        state.pickerFor = b.dataset.picker; state.pickerOpen = true; state.pickerQuery = '';
-        render();
-        const i = document.getElementById('q2-picker-q'); if (i) i.focus();
+        const target = b.dataset.picker;
+        PD.openPicker({
+          players: (state.players && state.players.players) || [],
+          positionNoun: 'quarterback',
+          returnFocusTo: b,
+          onPick: id => {
+            if (target === 'comparePlayerId') { state.comparePlayerId = id; state.cmp = null; }
+            else {
+              state.playerId = id;
+              state.dna = null; state.lab = null; state.cmp = null;
+              state.ctxCmp = null; state.ctx = null; state.eventId = null;
+            }
+            load();
+          }
+        });
       }));
-    document.querySelectorAll('[data-picker-close]').forEach(b =>
-      b.addEventListener('click', closePicker));
-    const q = document.getElementById('q2-picker-q');
-    if (q) {
-      q.addEventListener('input', () => {
-        state.pickerQuery = q.value;
-        const body = document.querySelector('.q2-picker-body');
-        if (!body) return;
-        // re-render only the list, so the field keeps focus and the caret
-        const tmp = document.createElement('div');
-        tmp.innerHTML = picker();
-        body.innerHTML = tmp.querySelector('.q2-picker-body').innerHTML;
-        wirePickerRows();
-      });
-    }
-    wirePickerRows();
-    const overlay = document.querySelector('.q2-picker');
-    if (overlay) overlay.addEventListener('click', e => { if (e.target === overlay) closePicker(); });
-    document.addEventListener('keydown', escClose);
+
+
   }
 
-  function wirePickerRows() {
-    document.querySelectorAll('[data-pick]').forEach(b =>
-      b.addEventListener('click', () => {
-        const id = b.dataset.pick;
-        if (state.pickerFor === 'comparePlayerId') { state.comparePlayerId = id; state.cmp = null; }
-        else {
-          state.playerId = id;
-          state.dna = null; state.lab = null; state.cmp = null;
-          state.ctxCmp = null; state.ctx = null; state.eventId = null;
-        }
-        state.pickerOpen = false;
-        load();
-      }));
-  }
 
-  function escClose(e) { if (e.key === 'Escape' && state.pickerOpen) closePicker(); }
-  function closePicker() {
-    state.pickerOpen = false;
-    document.removeEventListener('keydown', escClose);
-    render();
-  }
 
   /* ---- data -------------------------------------------------------------- */
 

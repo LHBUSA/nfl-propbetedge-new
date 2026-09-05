@@ -51,14 +51,14 @@ async function pool(items, fn) {
 
 /* Position is a parameter: the same gate serves every Player DNA product. */
 const POS = (process.argv[3] || 'QB').toUpperCase();
-const SRC = POS === 'WR' ? 'data/dist/active-wrs-2026.json' : 'data/dist/active-qbs-2026.json';
+const SRC = 'data/dist/active-' + POS.toLowerCase() + 's-2026.json';
 const audit = JSON.parse(readFileSync(SRC, 'utf8'));
 const venues = JSON.parse(readFileSync('data/dist/nfl-venues.json', 'utf8'));
 
 /* ---- quarterbacks ------------------------------------------------------- */
 // one row per identity; a QB on two roster buckets is audited once
 const seen = new Map();
-for (const q of (audit.quarterbacks || audit.receivers)) {
+for (const q of (audit.quarterbacks || audit.players || audit.receivers)) {
   const key = q.gsis_id || `name:${q.name}`;
   if (!seen.has(key)) seen.set(key, q);
   else if (q.market_priced) seen.set(key, { ...seen.get(key), market_priced: true });

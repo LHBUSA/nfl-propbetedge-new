@@ -1,6 +1,9 @@
 /* Local invoker: runs a Vercel-style handler without a server.
  * node research/qbdna/call.mjs <route> "k=v&k=v"
- *   routes: qb-dna | prop-history | compare
+ *   routes: qb-dna | prop-history | compare | prop-lab | game-context
+ *           wr-dna | wr-prop-lab | wr-compare
+ *           rb-dna | rb-prop-lab | rb-compare
+ *           te-dna | te-prop-lab | te-compare
  */
 import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
@@ -13,7 +16,13 @@ const ROUTES = {
   'game-context': 'api/qb-dna/game-context.js',
   'wr-dna': 'api/wr-dna.js',
   'wr-prop-lab': 'api/wr-dna/prop-lab.js',
-  'wr-compare': 'api/wr-dna/compare.js'
+  'wr-compare': 'api/wr-dna/compare.js',
+  'rb-dna': 'api/rb-dna.js',
+  'rb-prop-lab': 'api/rb-dna/prop-lab.js',
+  'rb-compare': 'api/rb-dna/compare.js',
+  'te-dna': 'api/te-dna.js',
+  'te-prop-lab': 'api/te-dna/prop-lab.js',
+  'te-compare': 'api/te-dna/compare.js'
 };
 
 export async function call(route, qs = '') {

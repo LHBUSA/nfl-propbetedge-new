@@ -67,12 +67,17 @@
       ]],
       ['INTELLIGENCE',[
         ['marketwatch','Market Watch',''],['picks','Model Lab',''],
-        // QB DNA sits with the other per-player analysis surfaces: straight
-        // after Model Lab, before the ledger and feed routes.
-        ['qbdna','QB DNA',''],['wrdna','WR DNA',''],
         ['pbepicks','PBE Picks',''],['trackrecord','Track Record',''],
         ['matchups','Matchups',''],['usage','Usage',''],
         ['injuries','Injuries',''],['newsintel','News','']
+      ]],
+      /* Player DNA is a product family, not four more entries in a general
+         intelligence list. Four positions crammed into INTELLIGENCE pushed
+         that row past the viewport at 1280; grouped, they read as one thing
+         and the row fits. Short labels because the group name carries the
+         context. */
+      ['PLAYER DNA',[
+        ['qbdna','QB',''],['wrdna','WR',''],['rbdna','RB',''],['tedna','TE','']
       ]]
     ],
     [

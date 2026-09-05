@@ -1,7 +1,7 @@
-"""Audit every active 2026 wide receiver against our identity spine, our
-receiver warehouse, and the current market.
+"""Audit every active 2026 player at one position against our identity spine,
+its warehouse, and the current market.
 
-    python research/ingest/active_wrs.py
+    python research/ingest/active_wrs.py [WR|TE|RB]
 
 Same discipline as the quarterback audit: resolution is by STABLE ESPN ID
 only, a name never forces a match, and a receiver with no NFL history is
@@ -20,9 +20,19 @@ ESPN_CORE = ('https://sports.core.api.espn.com/v2/sports/football/leagues/nfl'
              '/seasons/{season}/teams/{team}/athletes?limit=200')
 SEASON = 2026
 GATEWAY = os.environ.get('NFL_GATEWAY', 'https://nfl-api.propbetedge.ai')
-MARKETS = ['player_reception_yds', 'player_receptions', 'player_anytime_td']
+import sys
+POS = (sys.argv[1] if len(sys.argv) > 1 else 'WR').upper()
+# each position is priced in its own market family
+MARKETS = (['player_rush_yds', 'player_rush_attempts', 'player_reception_yds',
+            'player_receptions', 'player_anytime_td'] if POS == 'RB'
+           else ['player_reception_yds', 'player_receptions', 'player_anytime_td'])
+WAREHOUSE = ('data/warehouse/nfl_running_back_games.parquet' if POS == 'RB'
+             else 'data/warehouse/nfl_receiver_games.parquet')
+ID_COL = 'player_id' if POS == 'RB' else 'receiver_player_id'
+YARD_COL = 'scrimmage_yards' if POS == 'RB' else 'rec_yards'
+TOUCH_COL = 'touches' if POS == 'RB' else 'targets'
 UA = {'User-Agent': 'PropBetEdge-NFL-warehouse/1.0', 'accept': 'application/json'}
-OUT = 'data/dist/active-wrs-2026.json'
+OUT = f'data/dist/active-{POS.lower()}s-2026.json'
 
 
 def get(url, timeout=30, attempts=4):
@@ -44,12 +54,12 @@ def espn_teams():
             for t in j['sports'][0]['leagues'][0]['teams']]
 
 
-def roster_wrs(team):
+def roster_wrs(team):  # noqa: N802 - position is a parameter
     j = get(ESPN_ROSTER.format(team['espn_team_id']))
     out = []
     for group in j.get('athletes', []):
         for a in group.get('items', []):
-            if ((a.get('position') or {}).get('abbreviation') or '') != 'WR':
+            if ((a.get('position') or {}).get('abbreviation') or '') != POS:
                 continue
             out.append({'espn_id': str(a.get('id')), 'name': a.get('displayName'),
                         'jersey': a.get('jersey'),
@@ -70,7 +80,7 @@ def roster_wrs_core(team):
             a = get(ref, timeout=20, attempts=2)
         except Exception:                                           # noqa: BLE001
             continue
-        if ((a.get('position') or {}).get('abbreviation') or '') != 'WR':
+        if ((a.get('position') or {}).get('abbreviation') or '') != POS:
             continue
         out.append({'espn_id': str(a.get('id')), 'name': a.get('displayName'),
                     'jersey': a.get('jersey'),
@@ -123,10 +133,10 @@ def main():
             dupe.add(k)
         by_espn[k] = p
 
-    R = pd.read_parquet('data/warehouse/nfl_receiver_games.parquet')
-    hist = R.groupby('receiver_player_id').agg(
-        games=('game_id', 'nunique'), targets=('targets', 'sum'),
-        rec_yards=('rec_yards', 'sum'), last_game=('game_date', 'max'),
+    R = pd.read_parquet(WAREHOUSE)
+    hist = R.groupby(ID_COL).agg(
+        games=('game_id', 'nunique'), touches=(TOUCH_COL, 'sum'),
+        yards=(YARD_COL, 'sum'), last_game=('game_date', 'max'),
         last_season=('season', 'max')).to_dict('index')
 
     teams = espn_teams()
@@ -164,8 +174,8 @@ def main():
             'resolution': 'resolved' if gsis else 'no_stable_id_match',
             'position_source': 'espn_roster',
             'nfl_games': int(h['games']) if h else 0,
-            'career_targets': int(h['targets']) if h else 0,
-            'career_rec_yards': int(h['rec_yards']) if h else 0,
+            'career_touches': int(h['touches']) if h else 0,
+            'career_yards': int(h['yards']) if h else 0,
             'last_game': str(h['last_game'])[:10] if h else None,
             'last_season': int(h['last_season']) if h else None,
             'market_priced': bool(m), 'markets': m['markets'] if m else []
@@ -180,29 +190,31 @@ def main():
 
     summary = {
         'generated_at': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
-        'position_scope': 'WR only — TE and RB are deliberately excluded',
+        'position': POS,
+        'position_scope': f'{POS} only. Other positions are deliberately excluded, '
+                          'because mixing them changes what every share metric means.',
         'teams_read': len(teams),
-        'roster_wrs_total': len(pool),
-        'active_wrs': len(active),
-        'practice_squad_wrs': len([r for r in rows if r['roster_bucket'] == 'practiceSquad']),
+        'roster_total': len(pool),
+        'active_players': len(active),
+        'practice_squad': len([r for r in rows if r['roster_bucket'] == 'practiceSquad']),
         'resolved_to_gsis': len([r for r in rows if r['gsis_id']]),
         'unresolved': len([r for r in rows if not r['gsis_id']]),
         'with_nfl_history': len([r for r in rows if r['nfl_games'] > 0]),
         'zero_nfl_history': len([r for r in rows if r['gsis_id'] and r['nfl_games'] == 0]),
-        'market_priced_wrs': len([r for r in rows if r['market_priced']]),
-        'market_names_not_matched_to_a_wr': len(unmatched_market),
+        'market_priced': len([r for r in rows if r['market_priced']]),
+        'market_names_not_matched': len(unmatched_market),
         'market_names_not_matched_sample': sorted(unmatched_market)[:12],
         'failed_rosters': failed,
         'slate_events': len(slate),
         'notes': [
             'Resolution is by stable ESPN id only. No fuzzy name match is used.',
-            'A priced name that does not match a WR on any roster we read is most '
-            'often a tight end or running back, which this product excludes.'
+            f'A priced name that does not match a {POS} on any roster we read is '
+            'most often another position, which this product excludes.'
         ]
     }
     os.makedirs('data/dist', exist_ok=True)
     with open(OUT, 'w', encoding='utf-8') as fh:
-        json.dump({'summary': summary, 'receivers': rows}, fh, indent=1)
+        json.dump({'summary': summary, 'players': rows, 'receivers': rows}, fh, indent=1)
     print(f'\nwrote {OUT}')
     for k, v in summary.items():
         if k not in ('notes', 'failed_rosters', 'market_names_not_matched_sample'):
