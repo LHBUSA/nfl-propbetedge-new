@@ -13,6 +13,7 @@
 import { resolvePlayer, gamesFor, propThreshold, splitRows, provenance, dataWindow,
          MARKETS, CONDITIONS, SAMPLE } from '../_qbdna/engine.js';
 import { playerMarkets, MARKET_UNAVAILABLE } from '../_qbdna/markets.js';
+import { playerMedia, teamBlock } from '../_qbdna/media.js';
 
 function send(res, status, body, ttl = 0) {
   res.statusCode = status;
@@ -49,7 +50,8 @@ export default async function handler(req, res) {
       ok: true, history_available: false, sample_state: 'NFL SAMPLE UNAVAILABLE',
       reason: 'no completed NFL game for this quarterback inside our data window',
       player: { gsis_id: p.gsis_id, espn_id: p.espn_id ?? null, name: p.display_name,
-                active_2026: Boolean(p.active_2026), matched_by: found.matched_by },
+                active_2026: Boolean(p.active_2026), matched_by: found.matched_by,
+                media: playerMedia(p.espn_id), team: teamBlock(p.team_2026) },
       market, market_label: MARKETS[market].label,
       full_history: { available: false, reason: 'no games' },
       data_window: dataWindow(), provenance: provenance()
@@ -85,7 +87,8 @@ export default async function handler(req, res) {
           ? 'the current market is not offering this market for this quarterback in this event'
           : marketBlock.reason,
         player: { gsis_id: p.gsis_id, espn_id: p.espn_id ?? null, name: p.display_name,
-                  matched_by: found.matched_by },
+                  matched_by: found.matched_by,
+                  media: playerMedia(p.espn_id), team: teamBlock(p.team_2026) },
         current_market: marketBlock,
         note: 'No default line is inserted. Without a real number there is nothing to count against.',
         data_window: dataWindow(), provenance: provenance()
@@ -126,7 +129,9 @@ export default async function handler(req, res) {
   send(res, 200, {
     ok: true,
     player: { gsis_id: p.gsis_id, espn_id: p.espn_id ?? null, name: p.display_name,
-              matched_by: found.matched_by },
+              matched_by: found.matched_by,
+              media: playerMedia(p.espn_id),
+              team: teamBlock(p.team_2026 || rows[rows.length - 1].t) },
     market, market_label: MARKETS[market].label, line,
     line_source: lineSource,
     current_market: marketBlock,

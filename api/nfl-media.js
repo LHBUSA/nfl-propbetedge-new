@@ -1,3 +1,5 @@
+import { headshotUrl, teamLogoUrl } from './_qbdna/media.js';
+
 export default async function handler(req, res) {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Cache-Control', 'public, s-maxage=86400, stale-while-revalidate=604800');
@@ -9,6 +11,31 @@ export default async function handler(req, res) {
 
   const kind = String(req.query?.kind || 'player').toLowerCase();
   const name = String(req.query?.name || '').trim();
+  const espnId = String(req.query?.espn_id || '').replace(/[^0-9]/g, '');
+  const abbr = String(req.query?.abbr || '').replace(/[^A-Za-z]/g, '');
+
+  /* IDENTITY-SAFE PATH (additive).
+     When a caller already holds a stable ESPN id there is nothing to search
+     for, and searching would only introduce the risk of returning a different
+     person's face. The same is true of a team abbreviation. These branches
+     short-circuit before any name matching happens. */
+  if (kind === 'player' && espnId) {
+    const image = headshotUrl(espnId);
+    if (!image) return res.status(404).json({ error: 'No NFL image found.' });
+    return res.status(200).json({
+      kind: 'player', name: name || null, id: espnId, image,
+      source: 'ESPN', resolved_by: 'espn_athlete_id'
+    });
+  }
+  if (kind === 'team' && abbr) {
+    const image = teamLogoUrl(abbr);
+    if (!image) return res.status(404).json({ error: 'No NFL image found.' });
+    return res.status(200).json({
+      kind: 'team', name: name || null, abbreviation: abbr.toUpperCase(), image,
+      source: 'ESPN', resolved_by: 'team_abbreviation'
+    });
+  }
+
   if (!['player', 'team'].includes(kind) || !name || name.length > 100) {
     return res.status(400).json({ error: 'Invalid kind or name.' });
   }
@@ -57,7 +84,7 @@ async function resolvePlayer(query) {
   if (!candidate) return null;
 
   const id = extractId(candidate);
-  const image = firstImage(candidate) || (id ? `https://a.espncdn.com/i/headshots/nfl/players/full/${id}.png` : null);
+  const image = firstImage(candidate) || headshotUrl(id);
   if (!image) return null;
 
   return {
@@ -69,9 +96,9 @@ async function resolvePlayer(query) {
   };
 }
 
+// one builder, shared with the QB DNA routes - see api/_qbdna/media.js
 function logoFromAbbreviation(abbreviation) {
-  const clean = String(abbreviation || '').replace(/[^A-Za-z]/g, '').toLowerCase();
-  return clean ? `https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/${clean}.png` : null;
+  return teamLogoUrl(abbreviation);
 }
 
 function pickPlayerCandidate(objects, query) {

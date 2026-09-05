@@ -11,6 +11,7 @@
 import { resolvePlayer, gamesFor, baseline, conditionProfile, provenance, dataWindow,
          MARKETS, SAMPLE, dataset } from './_qbdna/engine.js';
 import { gateReport, SERVED_FIELDS } from './_qbdna/gating.js';
+import { playerMedia, teamBlock } from './_qbdna/media.js';
 
 function send(res, status, body, ttl = 0) {
   res.statusCode = status;
@@ -73,7 +74,10 @@ export default function handler(req, res) {
         team_2026: p.team_2026 ?? null,
         market_priced_2026: Boolean(p.market_priced_2026),
         experience_years: p.experience_years ?? null,
-        history_available: g.length > 0
+        history_available: g.length > 0,
+        // identity media, built from the STABLE ESPN athlete id only
+        media: playerMedia(p.espn_id),
+        team_media: teamBlock(p.team_2026 || (g.length ? g[g.length - 1].t : null))
       };
     }).sort((a, b) =>
       Number(b.market_priced_2026) - Number(a.market_priced_2026) ||
@@ -125,7 +129,9 @@ export default function handler(req, res) {
         active_2026: Boolean(p.active_2026),
         market_priced_2026: Boolean(p.market_priced_2026),
         experience_years: p.experience_years ?? null,
-        matched_by: found.matched_by
+        matched_by: found.matched_by,
+        media: playerMedia(p.espn_id),
+        team: teamBlock(p.team_2026)
       },
       nfl_games: 0,
       baseline: null, current_season: null, recent: null,
@@ -154,7 +160,11 @@ export default function handler(req, res) {
       gsis_id: p.gsis_id, espn_id: p.espn_id ?? null, pfr_id: p.pfr_id ?? null,
       name: p.display_name, position: p.position ?? null,
       current_team: rows[rows.length - 1].t ?? null,
-      matched_by: found.matched_by
+      active_2026: Boolean(p.active_2026),
+      matched_by: found.matched_by,
+      // additive identity media; never a fallback mark, null when unresolved
+      media: playerMedia(p.espn_id),
+      team: teamBlock(p.team_2026 || rows[rows.length - 1].t)
     },
     metric, metric_label: MARKETS[metric].label,
     window: { seasons, games: rows.length, date_range: [rows[0].d, rows[rows.length - 1].d] },

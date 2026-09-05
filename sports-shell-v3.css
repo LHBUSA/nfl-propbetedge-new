@@ -622,3 +622,17 @@ h1.pbe-v2-view-name{
   #pbe-sports-shell .pbes-brand-logo{height:34px!important}
   #pbe-sports-shell .pbes-brand-copy{display:none!important}
 }
+
+/* ----------------------------------------------------------------------------
+   INTELLIGENCE now carries nine routes (QB DNA joined Market Watch, Model Lab,
+   PBE Picks, Track Record, Matchups, Usage, Injuries and News). At mid desktop
+   widths the primary row ran 39px long and clipped its last item behind an
+   overflow scroller with no affordance. Tightening the horizontal padding and
+   the inter-group gap between 1051px and 1400px recovers ~50px, which fits the
+   full row again without renaming, hiding or reordering anything.
+   -------------------------------------------------------------------------- */
+@media (min-width:1051px) and (max-width:1400px){
+  #pbe-sports-shell .pbes-nav-btn{padding:8px 7px}
+  #pbe-sports-shell .pbes-nav-group{gap:2px}
+  #pbe-sports-shell .pbes-primary,#pbe-sports-shell .pbes-research{gap:14px}
+}

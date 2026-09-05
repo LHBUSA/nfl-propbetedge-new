@@ -14,6 +14,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { eventMarkets, events as marketEvents, MARKET_UNAVAILABLE } from '../_qbdna/markets.js';
 import { dataWindow, provenance } from '../_qbdna/engine.js';
+import { teamBlock } from '../_qbdna/media.js';
 
 const SCOREBOARD = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard';
 const FORECAST = 'https://api.open-meteo.com/v1/forecast';
@@ -102,6 +103,9 @@ function shapeEvent(ev) {
     roof_source: v ? 'pbe_venue_table' : 'espn_only',
     surface: v ? (v.grass ? 'grass' : 'artificial') : null,
     surface_source: v ? 'pbe_venue_table (ESPN teams API grass flag)' : null,
+    // real team identities for the matchup line - never letter badges
+    home: teamBlock(homeAbbr, home.team.displayName),
+    away: teamBlock(awayAbbr, away.team.displayName),
     neutral_site: Boolean(c.neutralSite)
   };
 }

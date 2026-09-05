@@ -16,7 +16,8 @@
      · a threshold is only ever calculated against a real line — the current
        market's, or one explicitly typed. No default is invented.
 
-   This route is NOT in the main navigation. It is reached by hash only.
+   Reached from INTELLIGENCE in the shell nav, from the mobile drawer, or by
+   the /#qbdna hash directly.
    ========================================================================== */
 (() => {
   'use strict';
@@ -61,6 +62,65 @@
   const TRACK = 200;   // must match --qbd-track in qb-dna-v1.css
   const pct1 = v => (v >= 0 ? '+' : '') + Number(v).toFixed(1) + '%';
   const num1 = v => (typeof v === 'number' ? v.toFixed(1) : v);
+
+  /* ---- IDENTITY MEDIA ------------------------------------------------------
+     A picture attached to a player must BE that player. The URLs come from the
+     API media blocks, which are built from the stable ESPN athlete id.
+
+     There is deliberately no fallback mark: no PBE logo, no initials avatar, no
+     generic helmet. If a photo will not load we show an explicit "photo
+     unavailable" state, because a placeholder standing in for a face is a quiet
+     lie about identity. */
+
+  const IMG_FAIL = "this.classList.add('is-broken');this.removeAttribute('src')";
+
+  function headshot(player, size) {
+    const url = player && player.media && player.media.headshot_url;
+    const name = (player && player.name) || 'Quarterback';
+    if (!url) {
+      const why = (player && player.media && player.media.unavailable_reason)
+        || 'no photograph available';
+      return `<span class="qbd-face qbd-face-none" style="--face:${size}px"
+        role="img" aria-label="No photograph available for ${esc(name)}"
+        title="${esc(why)}">Photo<br>unavailable</span>`;
+    }
+    return `<img class="qbd-face" style="--face:${size}px" src="${esc(url)}"
+      alt="${esc(name)}" width="${size}" height="${size}"
+      loading="lazy" decoding="async" onerror="${IMG_FAIL}">`;
+  }
+
+  function crest(team, size) {
+    const url = team && team.media && team.media.logo_url;
+    if (!url) return '';
+    return `<img class="qbd-crest" style="--crest:${size}px" src="${esc(url)}"
+      alt="${esc(team.name || team.abbreviation || '')}" width="${size}" height="${size}"
+      loading="lazy" decoding="async" onerror="${IMG_FAIL}">`;
+  }
+
+  /** Headshot + name + team crest + team name. One treatment per section. */
+  function identity(player, size, extraClass) {
+    const t = player && (player.team || player.team_identity);
+    const teamName = (t && (t.name || t.abbreviation))
+      || player.current_team || player.team || '';
+    return `<div class="qbd-id ${extraClass || ''}">
+      ${headshot(player, size)}
+      <div class="qbd-id-copy">
+        <div class="qbd-id-name">${esc(player.name)}</div>
+        <div class="qbd-id-team">
+          ${crest(t, Math.round(size * 0.3))}
+          <span>${esc(teamName)}${player.position ? ' \u00b7 ' + esc(player.position) : ''}</span>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  /** A real matchup line: [logo] AWAY @ [logo] HOME. Never letter badges. */
+  function matchup(game, size) {
+    if (!game) return '';
+    if (!game.away || !game.home) return `<span class="qbd-match-txt">${esc(game.label)}</span>`;
+    const side = t => `${crest(t, size)}<b>${esc(t.abbreviation)}</b>`;
+    return `<span class="qbd-match">${side(game.away)}<em>@</em>${side(game.home)}</span>`;
+  }
 
   /** A number with its unit, or an explicit unavailable state. Never a bare dash. */
   function stat(key, value, unitOrNull, nLine) {
@@ -131,6 +191,16 @@
     </div>`;
   }
 
+  /** The one market number worth carrying in the masthead. */
+  function marketHeadline() {
+    const c = state.ctx;
+    if (!c || !c.markets || !c.markets.available) return '';
+    const mine = c.markets.players.find(p => p.gsis_id === state.playerId);
+    const m = mine && mine.markets.passing_yards;
+    if (!m) return '';
+    return `<span class="qbd-mast-line"><span>Passing yards</span><b>${esc(m.line)}</b></span>`;
+  }
+
   /* ---- NO HISTORY -------------------------------------------------------- */
 
   function noHistory() {
@@ -139,9 +209,10 @@
     return `<section class="qbd-panel qbd-unavail">
       <div class="qbd-panel-head">
         <h3>${esc(SAMPLE_UNAVAILABLE)}</h3>
-        <span>${esc(p.name)}${p.current_team ? ' · ' + esc(p.current_team) : ''}</span>
+        <span>identity resolved · history not</span>
       </div>
       <div class="qbd-panel-body">
+        ${identity(p, 72, 'qbd-id-lead')}
         <p class="qbd-unavail-lead">${esc(d.reason)}</p>
         <div class="qbd-rail">
           ${stat('NFL games', null, null, 'nothing to count')}
@@ -360,7 +431,7 @@
       </div>
       <div class="qbd-today">
         <div class="qbd-today-id">
-          <div class="qbd-today-match">${esc(g.label)}</div>
+          <div class="qbd-today-match">${matchup(g, 26) || esc(g.label)}</div>
           <div class="qbd-today-when">${esc(new Date(g.kickoff_utc).toUTCString())}</div>
           <div class="qbd-today-env">${env}</div>
           <div class="qbd-today-sub">Current QB props</div>
@@ -473,8 +544,9 @@
         ? Object.keys(p.current_market.markets) : [];
       return `<section class="qbd-panel qbd-unavail">
         <div class="qbd-panel-head"><h3>${esc(MARKET_UNAVAILABLE)}</h3>
-          <span>${esc(p.market_label)} · ${esc(p.player.name)}</span></div>
+          <span>${esc(p.market_label)}</span></div>
         <div class="qbd-panel-body">
+          ${identity(p.player, 56, 'qbd-id-lead')}
           <p class="qbd-unavail-lead">${esc(p.reason)}</p>
           <p class="qbd-caveat">${esc(p.note)}</p>
           ${offered.length ? `<div class="qbd-key"><i>Offered for this quarterback in this game:
@@ -538,6 +610,7 @@
 
     return `
     <section class="qbd-panel">
+      <div class="qbd-panel-body qbd-prop-id">${identity(p.player, 56)}</div>
       <div class="qbd-panel-head">
         <h3>${esc(p.market_label)} &middot; at ${esc(p.line)}</h3>
         <span>${lineBadge}${isMarket && ls.books
@@ -597,16 +670,19 @@
     const nOf = r => (r && r.denominator ? `${r.numerator}/${r.denominator}` : 'no denominator');
     const gOf = x => `N=${x.games}`;
 
-    const head = `<div class="qbd-vs">
-      <div class="qbd-vs-side">
-        <div class="qbd-vs-name">${esc(c.player_a.name)}</div>
-        <div class="qbd-vs-meta">${esc(c.player_a.team || '')} &middot; N=${esc(A.games)} games</div>
-      </div>
+    /* The reader must know WHO is being compared before reading a number. */
+    const face = (pl, games) => `<div class="qbd-vs-face">
+      ${headshot(pl, 64)}
+      ${crest(pl.team_identity, 26)}
+      <div class="qbd-vs-name">${esc(pl.name)}</div>
+      <div class="qbd-vs-meta">${esc((pl.team_identity
+        && (pl.team_identity.name || pl.team_identity.abbreviation)) || pl.team || '')}
+        &middot; N=${esc(games)} games</div>
+    </div>`;
+    const head = `<div class="qbd-vs qbd-vs-hero">
+      <div class="qbd-vs-side">${face(c.player_a, A.games)}</div>
       <div class="qbd-vs-mid">VS</div>
-      <div class="qbd-vs-side b">
-        <div class="qbd-vs-name">${esc(c.player_b.name)}</div>
-        <div class="qbd-vs-meta">${esc(c.player_b.team || '')} &middot; N=${esc(B.games)} games</div>
-      </div>
+      <div class="qbd-vs-side b">${face(c.player_b, B.games)}</div>
     </div>`;
 
     const rows = [
@@ -788,7 +864,22 @@
       <header class="qbd-mast">
         <div>
           <div class="qbd-eyebrow">QB DNA · prototype · public-source warehouse</div>
-          <h1 class="qbd-title">${d ? esc(d.player.name) : 'Quarterback'} <em>intelligence</em></h1>
+          ${d ? `<div class="qbd-mast-id">
+              ${headshot(d.player, 88)}
+              <div class="qbd-mast-copy">
+                <h1 class="qbd-title">${esc(d.player.name)}</h1>
+                <div class="qbd-mast-team">
+                  ${crest(d.player.team, 22)}
+                  <span>${esc((d.player.team && (d.player.team.name || d.player.team.abbreviation))
+                    || d.player.current_team || '')}${d.player.position
+                      ? ' \u00b7 ' + esc(d.player.position) : ''}</span>
+                </div>
+                ${state.ctx ? `<div class="qbd-mast-next">
+                  <span>Next</span>${matchup(state.ctx.game, 18)}${marketHeadline()}
+                </div>` : ''}
+              </div>
+            </div>`
+            : '<h1 class="qbd-title">Quarterback <em>intelligence</em></h1>'}
           <p class="qbd-sub">Counted history for one quarterback: his baseline, how he has actually
             performed in each condition relative to that baseline, how often the current market's
             number has been cleared, and how he compares with another quarterback in games they
@@ -804,7 +895,7 @@
       </header>
       ${windowStrip()}
       <div class="qbd-proto">
-        <strong>Prototype · not in navigation</strong>
+        <strong>Prototype</strong>
         Historical figures are counted from completed games in our own public-source warehouse.
         Current schedule, venue and forecast are fetched live; current lines come from the
         existing PropBetEdge market source. Nothing here is a projection, a probability or

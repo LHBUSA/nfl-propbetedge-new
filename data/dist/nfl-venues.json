@@ -3,6 +3,8 @@
  "source": "ESPN public teams API + Open-Meteo geocoding of the venue city",
  "teams": {
   "ARI": {
+   "team_name": "Arizona Cardinals",
+   "espn_team_id": "22",
    "venue": "State Farm Stadium",
    "city": "Glendale",
    "state": "AZ",
@@ -10,10 +12,11 @@
    "lon": -112.18599,
    "tz": "America/Phoenix",
    "indoor": true,
-   "grass": true,
-   "espn_venue_id": "3970"
+   "grass": true
   },
   "ATL": {
+   "team_name": "Atlanta Falcons",
+   "espn_team_id": "1",
    "venue": "Mercedes-Benz Stadium",
    "city": "Atlanta",
    "state": "GA",
@@ -21,10 +24,11 @@
    "lon": -84.38798,
    "tz": "America/New_York",
    "indoor": true,
-   "grass": false,
-   "espn_venue_id": "5348"
+   "grass": false
   },
   "BAL": {
+   "team_name": "Baltimore Ravens",
+   "espn_team_id": "33",
    "venue": "M&T Bank Stadium",
    "city": "Baltimore",
    "state": "MD",
@@ -32,10 +36,11 @@
    "lon": -76.61219,
    "tz": "America/New_York",
    "indoor": false,
-   "grass": true,
-   "espn_venue_id": "3814"
+   "grass": true
   },
   "BUF": {
+   "team_name": "Buffalo Bills",
+   "espn_team_id": "2",
    "venue": "Highmark Stadium",
    "city": "Orchard Park",
    "state": "NY",
@@ -43,10 +48,11 @@
    "lon": -78.74392,
    "tz": "America/New_York",
    "indoor": false,
-   "grass": true,
-   "espn_venue_id": "11938"
+   "grass": true
   },
   "CAR": {
+   "team_name": "Carolina Panthers",
+   "espn_team_id": "29",
    "venue": "Bank of America Stadium",
    "city": "Charlotte",
    "state": "NC",
@@ -54,10 +60,11 @@
    "lon": -80.84313,
    "tz": "America/New_York",
    "indoor": false,
-   "grass": false,
-   "espn_venue_id": "3628"
+   "grass": false
   },
   "CHI": {
+   "team_name": "Chicago Bears",
+   "espn_team_id": "3",
    "venue": "Soldier Field",
    "city": "Chicago",
    "state": "IL",
@@ -65,10 +72,11 @@
    "lon": -87.65005,
    "tz": "America/Chicago",
    "indoor": false,
-   "grass": true,
-   "espn_venue_id": "3933"
+   "grass": true
   },
   "CIN": {
+   "team_name": "Cincinnati Bengals",
+   "espn_team_id": "4",
    "venue": "Paycor Stadium",
    "city": "Cincinnati",
    "state": "OH",
@@ -76,10 +84,11 @@
    "lon": -84.51439,
    "tz": "America/New_York",
    "indoor": false,
-   "grass": false,
-   "espn_venue_id": "3874"
+   "grass": false
   },
   "CLE": {
+   "team_name": "Cleveland Browns",
+   "espn_team_id": "5",
    "venue": "Huntington Bank Field",
    "city": "Cleveland",
    "state": "OH",
@@ -87,10 +96,11 @@
    "lon": -81.69541,
    "tz": "America/New_York",
    "indoor": false,
-   "grass": true,
-   "espn_venue_id": "3679"
+   "grass": true
   },
   "DAL": {
+   "team_name": "Dallas Cowboys",
+   "espn_team_id": "6",
    "venue": "AT&T Stadium",
    "city": "Arlington",
    "state": "TX",
@@ -98,10 +108,11 @@
    "lon": -97.10807,
    "tz": "America/Chicago",
    "indoor": true,
-   "grass": false,
-   "espn_venue_id": "3687"
+   "grass": false
   },
   "DEN": {
+   "team_name": "Denver Broncos",
+   "espn_team_id": "7",
    "venue": "Empower Field at Mile High",
    "city": "Denver",
    "state": "CO",
@@ -109,10 +120,11 @@
    "lon": -104.9847,
    "tz": "America/Denver",
    "indoor": false,
-   "grass": true,
-   "espn_venue_id": "3937"
+   "grass": true
   },
   "DET": {
+   "team_name": "Detroit Lions",
+   "espn_team_id": "8",
    "venue": "Ford Field",
    "city": "Detroit",
    "state": "MI",
@@ -120,10 +132,11 @@
    "lon": -83.04575,
    "tz": "America/Detroit",
    "indoor": true,
-   "grass": false,
-   "espn_venue_id": "3727"
+   "grass": false
   },
   "GB": {
+   "team_name": "Green Bay Packers",
+   "espn_team_id": "9",
    "venue": "Lambeau Field",
    "city": "Green Bay",
    "state": "WI",
@@ -131,10 +144,11 @@
    "lon": -88.01983,
    "tz": "America/Chicago",
    "indoor": false,
-   "grass": true,
-   "espn_venue_id": "3798"
+   "grass": true
   },
   "HOU": {
+   "team_name": "Houston Texans",
+   "espn_team_id": "34",
    "venue": "Reliant Stadium",
    "city": "Houston",
    "state": "TX",
@@ -142,10 +156,11 @@
    "lon": -95.36327,
    "tz": "America/Chicago",
    "indoor": true,
-   "grass": false,
-   "espn_venue_id": "3891"
+   "grass": false
   },
   "IND": {
+   "team_name": "Indianapolis Colts",
+   "espn_team_id": "11",
    "venue": "Lucas Oil Stadium",
    "city": "Indianapolis",
    "state": "IN",
@@ -153,10 +168,11 @@
    "lon": -86.15804,
    "tz": "America/Indiana/Indianapolis",
    "indoor": true,
-   "grass": false,
-   "espn_venue_id": "3812"
+   "grass": false
   },
   "JAX": {
+   "team_name": "Jacksonville Jaguars",
+   "espn_team_id": "30",
    "venue": "EverBank Stadium",
    "city": "Jacksonville",
    "state": "FL",
@@ -164,10 +180,11 @@
    "lon": -81.65565,
    "tz": "America/New_York",
    "indoor": false,
-   "grass": true,
-   "espn_venue_id": "3712"
+   "grass": true
   },
   "KC": {
+   "team_name": "Kansas City Chiefs",
+   "espn_team_id": "12",
    "venue": "Arrowhead Stadium",
    "city": "Kansas City",
    "state": "MO",
@@ -175,10 +192,11 @@
    "lon": -94.57857,
    "tz": "America/Chicago",
    "indoor": false,
-   "grass": true,
-   "espn_venue_id": "3622"
+   "grass": true
   },
   "LV": {
+   "team_name": "Las Vegas Raiders",
+   "espn_team_id": "13",
    "venue": "Allegiant Stadium",
    "city": "Las Vegas",
    "state": "NV",
@@ -186,10 +204,11 @@
    "lon": -115.13722,
    "tz": "America/Los_Angeles",
    "indoor": true,
-   "grass": true,
-   "espn_venue_id": "6501"
+   "grass": true
   },
   "LAC": {
+   "team_name": "Los Angeles Chargers",
+   "espn_team_id": "24",
    "venue": "Dignity Health Sports Park",
    "city": "Carson",
    "state": "CA",
@@ -197,10 +216,11 @@
    "lon": -118.28202,
    "tz": "America/Los_Angeles",
    "indoor": false,
-   "grass": true,
-   "espn_venue_id": "538"
+   "grass": true
   },
   "LAR": {
+   "team_name": "Los Angeles Rams",
+   "espn_team_id": "14",
    "venue": "Los Angeles Memorial Coliseum",
    "city": "Los Angeles",
    "state": "CA",
@@ -208,10 +228,11 @@
    "lon": -118.24368,
    "tz": "America/Los_Angeles",
    "indoor": false,
-   "grass": true,
-   "espn_venue_id": "477"
+   "grass": true
   },
   "MIA": {
+   "team_name": "Miami Dolphins",
+   "espn_team_id": "15",
    "venue": "Hard Rock Stadium",
    "city": "Miami Gardens",
    "state": "FL",
@@ -219,10 +240,11 @@
    "lon": -80.2456,
    "tz": "America/New_York",
    "indoor": false,
-   "grass": true,
-   "espn_venue_id": "3948"
+   "grass": true
   },
   "MIN": {
+   "team_name": "Minnesota Vikings",
+   "espn_team_id": "16",
    "venue": "U.S. Bank Stadium",
    "city": "Minneapolis",
    "state": "MN",
@@ -230,10 +252,11 @@
    "lon": -93.26384,
    "tz": "America/Chicago",
    "indoor": true,
-   "grass": false,
-   "espn_venue_id": "5239"
+   "grass": false
   },
   "NE": {
+   "team_name": "New England Patriots",
+   "espn_team_id": "17",
    "venue": "Gillette Stadium",
    "city": "Foxborough",
    "state": "MA",
@@ -241,10 +264,11 @@
    "lon": -71.24783,
    "tz": "America/New_York",
    "indoor": false,
-   "grass": false,
-   "espn_venue_id": "3738"
+   "grass": false
   },
   "NO": {
+   "team_name": "New Orleans Saints",
+   "espn_team_id": "18",
    "venue": "Caesars Superdome",
    "city": "New Orleans",
    "state": "LA",
@@ -252,10 +276,11 @@
    "lon": -90.07507,
    "tz": "America/Chicago",
    "indoor": true,
-   "grass": false,
-   "espn_venue_id": "3493"
+   "grass": false
   },
   "NYG": {
+   "team_name": "New York Giants",
+   "espn_team_id": "19",
    "venue": "MetLife Stadium",
    "city": "East Rutherford",
    "state": "NJ",
@@ -263,10 +288,11 @@
    "lon": -74.09709,
    "tz": "America/New_York",
    "indoor": false,
-   "grass": false,
-   "espn_venue_id": "3839"
+   "grass": false
   },
   "NYJ": {
+   "team_name": "New York Jets",
+   "espn_team_id": "20",
    "venue": "MetLife Stadium",
    "city": "East Rutherford",
    "state": "NJ",
@@ -274,10 +300,11 @@
    "lon": -74.09709,
    "tz": "America/New_York",
    "indoor": false,
-   "grass": false,
-   "espn_venue_id": "3839"
+   "grass": false
   },
   "PHI": {
+   "team_name": "Philadelphia Eagles",
+   "espn_team_id": "21",
    "venue": "Lincoln Financial Field",
    "city": "Philadelphia",
    "state": "PA",
@@ -285,10 +312,11 @@
    "lon": -75.16362,
    "tz": "America/New_York",
    "indoor": false,
-   "grass": true,
-   "espn_venue_id": "3806"
+   "grass": true
   },
   "PIT": {
+   "team_name": "Pittsburgh Steelers",
+   "espn_team_id": "23",
    "venue": "Acrisure Stadium",
    "city": "Pittsburgh",
    "state": "PA",
@@ -296,10 +324,11 @@
    "lon": -79.99589,
    "tz": "America/New_York",
    "indoor": false,
-   "grass": true,
-   "espn_venue_id": "3752"
+   "grass": true
   },
   "SF": {
+   "team_name": "San Francisco 49ers",
+   "espn_team_id": "25",
    "venue": "Levi's Stadium",
    "city": "Santa Clara",
    "state": "CA",
@@ -307,10 +336,11 @@
    "lon": -121.95524,
    "tz": "America/Los_Angeles",
    "indoor": false,
-   "grass": true,
-   "espn_venue_id": "4738"
+   "grass": true
   },
   "SEA": {
+   "team_name": "Seattle Seahawks",
+   "espn_team_id": "26",
    "venue": "Lumen Field",
    "city": "Seattle",
    "state": "WA",
@@ -318,10 +348,11 @@
    "lon": -122.33207,
    "tz": "America/Los_Angeles",
    "indoor": false,
-   "grass": false,
-   "espn_venue_id": "3673"
+   "grass": false
   },
   "TB": {
+   "team_name": "Tampa Bay Buccaneers",
+   "espn_team_id": "27",
    "venue": "Raymond James Stadium",
    "city": "Tampa",
    "state": "FL",
@@ -329,10 +360,11 @@
    "lon": -82.45843,
    "tz": "America/New_York",
    "indoor": false,
-   "grass": true,
-   "espn_venue_id": "3886"
+   "grass": true
   },
   "TEN": {
+   "team_name": "Tennessee Titans",
+   "espn_team_id": "10",
    "venue": "Nissan Stadium",
    "city": "Nashville",
    "state": "TN",
@@ -340,10 +372,11 @@
    "lon": -86.78444,
    "tz": "America/Chicago",
    "indoor": false,
-   "grass": false,
-   "espn_venue_id": "3810"
+   "grass": false
   },
   "WSH": {
+   "team_name": "Washington Commanders",
+   "espn_team_id": "28",
    "venue": "Northwest Stadium",
    "city": "Landover",
    "state": "MD",
@@ -351,8 +384,7 @@
    "lon": -76.89664,
    "tz": "America/New_York",
    "indoor": false,
-   "grass": true,
-   "espn_venue_id": "3719"
+   "grass": true
   }
  }
 }

@@ -560,3 +560,117 @@
   font: 400 var(--fs-micro)/1.6 var(--pbe-font-ui); color: var(--pbe-unavailable);
   font-style: italic;
 }
+
+/* ============================================================================
+   IDENTITY MEDIA
+   ----------------------------------------------------------------------------
+   Real photographs and real team marks, always. There is no placeholder mark
+   in this file on purpose: no PBE logo, no initials disc, no generic helmet.
+   An identity with no resolvable photo gets .qbd-face-none, which reads as an
+   explicit absence rather than as a picture of somebody.
+
+   The photo supports the identity; it never becomes the interface. Sizes are
+   capped so the intelligence below stays the largest thing on the page.
+   ========================================================================== */
+
+.qbd-face {
+  width: var(--face); height: var(--face); flex: none;
+  border-radius: 50%; object-fit: cover; object-position: center top;
+  background: var(--pbe-ink-4);
+  border: 1px solid var(--pbe-line-strong);
+  /* ESPN headshots are transparent PNGs on a light-neutral subject; a faint
+     inner ground keeps them from floating on the dark panel */
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.35);
+}
+.qbd-face.is-broken { display: none; }
+
+/* an absence, stated */
+.qbd-face-none {
+  width: var(--face); height: var(--face); flex: none;
+  border-radius: 50%; border: 1px dashed var(--pbe-line-strong);
+  background: var(--pbe-ink-4); color: var(--pbe-unavailable);
+  display: flex; align-items: center; justify-content: center; text-align: center;
+  font: 500 9px/1.25 var(--pbe-font-data); letter-spacing: .06em;
+  text-transform: uppercase; padding: 4px;
+}
+
+.qbd-crest {
+  width: var(--crest); height: var(--crest); flex: none;
+  object-fit: contain; vertical-align: middle;
+}
+.qbd-crest.is-broken { display: none; }
+
+/* ---- generic identity block -------------------------------------------- */
+.qbd-id { display: flex; align-items: center; gap: var(--s-3); min-width: 0; }
+.qbd-id-copy { min-width: 0; }
+.qbd-id-name {
+  font: 700 var(--fs-h3)/1.2 var(--pbe-font-ui); color: var(--pbe-paper);
+  letter-spacing: var(--ls-tight);
+}
+.qbd-id-team {
+  margin-top: 5px; display: flex; align-items: center; gap: 7px;
+  font: 500 var(--fs-micro)/1 var(--pbe-font-data); letter-spacing: .08em;
+  text-transform: uppercase; color: var(--pbe-faint-text);
+}
+.qbd-id-lead { margin-bottom: var(--s-4); }
+
+/* ---- masthead identity -------------------------------------------------- */
+.qbd-mast-id { display: flex; align-items: center; gap: var(--s-4); }
+.qbd-mast-copy { min-width: 0; }
+.qbd-mast-id .qbd-title { margin: 0; }
+.qbd-mast-team {
+  margin-top: 7px; display: flex; align-items: center; gap: 8px;
+  font: 600 var(--fs-sm)/1 var(--pbe-font-ui); color: var(--pbe-dim);
+}
+.qbd-mast-next {
+  margin-top: 11px; display: flex; align-items: center; gap: var(--s-3); flex-wrap: wrap;
+  font: 500 var(--fs-micro)/1 var(--pbe-font-data); letter-spacing: .08em;
+  text-transform: uppercase; color: var(--pbe-faint-text);
+}
+.qbd-mast-line {
+  display: inline-flex; align-items: baseline; gap: 7px;
+  padding-left: var(--s-3); border-left: 1px solid var(--pbe-line-strong);
+}
+.qbd-mast-line b {
+  font: 600 var(--fs-data)/1 var(--pbe-font-data); color: var(--pbe-gold);
+  font-variant-numeric: tabular-nums; letter-spacing: 0;
+}
+
+/* ---- matchup line ------------------------------------------------------- */
+.qbd-match { display: inline-flex; align-items: center; gap: 8px; }
+.qbd-match b {
+  font: 700 var(--fs-h3)/1 var(--pbe-font-data); color: var(--pbe-paper);
+  letter-spacing: -.01em;
+}
+.qbd-match em {
+  font-style: normal; color: var(--pbe-faint-text);
+  font: 500 var(--fs-sm)/1 var(--pbe-font-data); margin: 0 2px;
+}
+.qbd-mast-next .qbd-match b { font-size: var(--fs-sm); }
+.qbd-match-txt { font: 700 var(--fs-h2)/1 var(--pbe-font-data); }
+
+/* ---- compare hero ------------------------------------------------------- */
+.qbd-vs-hero { border-bottom: 1px solid var(--pbe-line); }
+.qbd-vs-face {
+  display: flex; flex-direction: column; align-items: center; gap: 9px;
+  padding: var(--s-4) var(--s-3); text-align: center;
+}
+.qbd-vs-face .qbd-crest { margin-top: -20px; }
+.qbd-vs-hero .qbd-vs-name { font: 700 var(--fs-h3)/1.2 var(--pbe-font-ui); }
+.qbd-vs-hero .qbd-vs-meta { text-transform: none; letter-spacing: .04em; }
+/* the hero is symmetric, so the right side is not right-aligned */
+.qbd-vs-hero .qbd-vs-side.b { text-align: center; }
+
+/* ---- prop identity ------------------------------------------------------ */
+.qbd-prop-id { padding-bottom: 0; }
+
+@media (max-width: 620px) {
+  .qbd-mast-id { gap: var(--s-3); }
+  /* primary identity stays 56-72px on a phone; the numbers keep the weight */
+  .qbd-mast-id > .qbd-face, .qbd-mast-id > .qbd-face-none { --face: 60px !important; }
+  .qbd-vs-face { padding: var(--s-3) 6px; }
+  .qbd-vs-face > .qbd-face, .qbd-vs-face > .qbd-face-none { --face: 48px !important; }
+  .qbd-vs-hero .qbd-vs-name { font-size: var(--fs-sm); }
+  .qbd-mast-next { gap: var(--s-2); }
+  .qbd-mast-line { padding-left: var(--s-2); }
+}
