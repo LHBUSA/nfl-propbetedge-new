@@ -109,6 +109,15 @@
         <div class="pbes-center"><div id="pbes-live-pill" class="pbes-live-pill">Connecting to NFL slate…</div></div>
         <div class="pbes-right"><div class="pbes-date"><strong>${d.day}</strong><span>${d.date} · ET</span></div><button class="pbes-head-btn" type="button" id="pbes-search">⌘ K · Search</button><button class="pbes-head-btn pro" type="button" id="pbes-account">NFL Pro</button></div>
       </div>
+      <!-- PBE BREAKING. The shell owns the MOUNT POINT and nothing else: the
+           breaking module owns qualification, priority, dedupe, the queue,
+           lifecycle and rendering, so this file does not become a second data
+           engine. The slot is structurally reserved but starts [hidden], so it
+           contributes ZERO height until an event actually qualifies -- no
+           permanent chrome for a feature that is usually silent, and because
+           it is a docked band rather than a floating layer it cannot overlay
+           the navigation, the scoreboard or any page surface. -->
+      <div id="pbe-breaking-slot" class="pbes-breaking-slot" hidden></div>
       <div class="pbes-scorebar">
         <div class="pbes-score-label" id="pbes-score-label">NFL</div>
         <div class="pbes-score-window">

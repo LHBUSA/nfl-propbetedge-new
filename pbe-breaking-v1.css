@@ -1,0 +1,336 @@
+/* ============================================================================
+   PropBetEdge NFL — PBE BREAKING
+   ----------------------------------------------------------------------------
+   A television newsroom strip inside a premium sports terminal. Not a browser
+   toast, not a casino banner, not a crypto ticker, not a breaking-news parody.
+
+   STRUCTURAL, NOT FLOATING
+   The rail is a docked band in the shell's normal flow. It has no position:
+   fixed, no transform and no z-index of its own, which is what guarantees it
+   can never cover the navigation, the scoreboard, the stadium selector or the
+   Player DNA switcher: it is not in a layer, it is in the document. When there
+   is nothing to say the slot is [hidden] and contributes zero height — no
+   reserved band, no permanent chrome.
+
+   COLOUR CARRIES MEANING
+   Crimson is spent only on league news and official warnings. Making
+   everything red would make nothing urgent.
+   ========================================================================== */
+
+.pbes-breaking-slot { display: block; }
+.pbes-breaking-slot[hidden] { display: none !important; }
+
+.pbeb {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: stretch;
+  min-height: 54px;
+  border-bottom: 1px solid var(--pbe-line, rgba(235,219,178,.09));
+  background: linear-gradient(90deg, rgba(12,11,8,.99), rgba(16,14,10,.99));
+  overflow: hidden;
+}
+
+/* the 3px key down the left edge is the whole semantic signal */
+.pbeb::before {
+  content: ''; position: absolute; inset: 0 auto 0 0; width: 3px;
+  background: var(--pbeb-accent);
+}
+
+.pbeb[data-tone="news"]  { --pbeb-accent: #c8102e; --pbeb-ink: #ff6b7d; --pbeb-wash: rgba(200,16,46,.10); }
+.pbeb[data-tone="game"]  { --pbeb-accent: #e9c75a; --pbeb-ink: #e9c75a; --pbeb-wash: rgba(233,199,90,.10); }
+.pbeb[data-tone="final"] { --pbeb-accent: #8a8378; --pbeb-ink: #cfc7b8; --pbeb-wash: rgba(255,245,220,.05); }
+.pbeb[data-tone="nws"]   { --pbeb-accent: #d8232a; --pbeb-ink: #ff8a8a; --pbeb-wash: rgba(216,35,42,.11); }
+.pbeb[data-tone="shift"] { --pbeb-accent: #e9c75a; --pbeb-ink: #f0d67f; --pbeb-wash: rgba(233,199,90,.09); }
+.pbeb[data-tone="watch"] { --pbeb-accent: #7fb6d9; --pbeb-ink: #a8d2ee; --pbeb-wash: rgba(127,182,217,.10); }
+
+.pbeb-inner {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center; gap: 16px;
+  padding: 9px 14px 9px 17px; min-width: 0;
+  cursor: pointer; background: none; border: 0; text-align: left;
+}
+.pbeb-inner:focus-visible { outline: 2px solid var(--pbe-gold, #d4af37); outline-offset: -3px; }
+.pbeb-inner:hover { background: var(--pbeb-wash); }
+
+/* ---- the label key ------------------------------------------------------ */
+.pbeb-key {
+  display: inline-flex; align-items: center; gap: 7px; white-space: nowrap;
+  padding: 5px 9px; border-radius: 3px;
+  background: var(--pbeb-wash);
+  border: 1px solid color-mix(in srgb, var(--pbeb-accent) 40%, transparent);
+  font: 800 10px/1 var(--pbe-font-data, ui-monospace, monospace);
+  letter-spacing: .16em; text-transform: uppercase; color: var(--pbeb-ink);
+}
+.pbeb-key svg { width: 13px; height: 13px; flex: none; }
+.pbeb-key span {
+  padding: 2px 5px; border-radius: 2px; letter-spacing: .12em; font-size: 8px;
+  background: color-mix(in srgb, var(--pbeb-accent) 22%, transparent);
+  color: var(--pbeb-ink);
+}
+.pbeb-dot {
+  width: 7px; height: 7px; border-radius: 50%; background: #5cbb85; flex: none;
+  box-shadow: 0 0 0 0 rgba(92,187,133,.6); animation: pbeb-pulse 2.4s ease-out infinite;
+}
+@keyframes pbeb-pulse {
+  70% { box-shadow: 0 0 0 7px rgba(92,187,133,0); }
+  100% { box-shadow: 0 0 0 0 rgba(92,187,133,0); }
+}
+
+/* ---- the middle ---------------------------------------------------------- */
+.pbeb-main { min-width: 0; display: grid; gap: 4px; }
+
+.pbeb-headline {
+  font: 600 15px/1.25 var(--pbe-font-body, system-ui, sans-serif);
+  color: var(--pbe-paper, #f4efe4);
+  display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.pbeb-meta {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 9px; min-width: 0;
+  font: 500 10px/1 var(--pbe-font-data, ui-monospace, monospace);
+  letter-spacing: .08em; text-transform: uppercase;
+  color: var(--pbe-faint-text, #a5a096);
+}
+.pbeb-src { color: var(--pbe-paper-2, #d8d1c4); font-weight: 700; }
+.pbeb-time { color: var(--pbe-subtle, #6b665e); }
+.pbeb-who {
+  padding: 2px 6px; border-radius: 2px; letter-spacing: .06em;
+  border: 1px solid var(--pbe-line, rgba(235,219,178,.12));
+  color: var(--pbe-paper-2, #d8d1c4);
+}
+
+/* ---- score line ---------------------------------------------------------- */
+.pbeb-score { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; }
+.pbeb-side { display: inline-flex; align-items: center; gap: 6px; }
+.pbeb-side b {
+  font: 700 12px/1 var(--pbe-font-data, ui-monospace, monospace);
+  letter-spacing: .08em; color: var(--pbe-paper-2, #d8d1c4);
+}
+.pbeb-side em {
+  font-style: normal; font: 300 20px/1 var(--pbe-font-data, ui-monospace, monospace);
+  color: var(--pbe-paper, #f4efe4); font-variant-numeric: tabular-nums;
+}
+.pbeb-clock, .pbeb-tag {
+  font: 700 10px/1 var(--pbe-font-data, ui-monospace, monospace);
+  letter-spacing: .12em; text-transform: uppercase;
+}
+.pbeb-clock { color: var(--pbe-faint-text, #a5a096); }
+.pbeb-tag { color: var(--pbeb-ink); }
+.pbeb-play {
+  display: flex; align-items: center; gap: 9px; min-width: 0;
+  font: 400 13px/1.35 var(--pbe-font-body, system-ui, sans-serif);
+  color: var(--pbe-paper-2, #d8d1c4);
+}
+.pbeb-play span {
+  display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden;
+}
+
+/* ---- weather ------------------------------------------------------------- */
+.pbeb-wxtop { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; min-width: 0; }
+.pbeb-wxtop b {
+  font: 700 12px/1 var(--pbe-font-data, ui-monospace, monospace);
+  letter-spacing: .08em; color: var(--pbe-paper-2, #d8d1c4);
+}
+.pbeb-shift {
+  display: inline-flex; align-items: baseline; gap: 6px;
+  font: 700 13px/1 var(--pbe-font-data, ui-monospace, monospace);
+  color: var(--pbe-paper, #f4efe4); font-variant-numeric: tabular-nums;
+}
+.pbeb-shift i { font-style: normal; color: var(--pbeb-ink); }
+.pbeb-shift u { text-decoration: none; font-size: 9px; color: var(--pbe-subtle, #6b665e); }
+.pbeb-facts { display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.pbeb-facts i { font-style: normal; color: var(--pbe-paper-2, #d8d1c4); }
+.pbeb-nws {
+  font: 400 12px/1.4 var(--pbe-font-body, system-ui, sans-serif);
+  color: var(--pbe-faint-text, #a5a096);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+
+/* ---- identity media: real, or absent ------------------------------------ */
+.pbeb-crest { width: var(--c, 22px); height: var(--c, 22px); object-fit: contain; flex: none; }
+.pbeb-face {
+  width: 34px; height: 34px; border-radius: 50%; object-fit: cover; flex: none;
+  background: rgba(255,245,220,.05);
+}
+/* A broken image is REMOVED, never replaced by a mark that implies identity. */
+.pbeb-crest.is-broken, .pbeb-face.is-broken { display: none; }
+
+/* ---- actions ------------------------------------------------------------- */
+.pbeb-ctas { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+.pbeb-cta {
+  appearance: none; cursor: pointer; text-decoration: none;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 11px; min-height: 32px; border-radius: 3px;
+  border: 1px solid var(--pbe-line-strong, rgba(235,219,178,.2));
+  background: transparent; color: var(--pbe-paper-2, #d8d1c4);
+  font: 700 10px/1 var(--pbe-font-data, ui-monospace, monospace);
+  letter-spacing: .12em; text-transform: uppercase;
+  transition: background .15s ease, color .15s ease, border-color .15s ease;
+}
+.pbeb-cta em { font-style: normal; }
+.pbeb-cta:hover { background: var(--pbeb-wash); color: var(--pbe-paper, #f4efe4); }
+.pbeb-cta.is-primary {
+  border-color: color-mix(in srgb, var(--pbeb-accent) 55%, transparent);
+  color: var(--pbeb-ink);
+}
+.pbeb-cta:focus-visible { outline: 2px solid var(--pbe-gold, #d4af37); outline-offset: 2px; }
+
+.pbeb-x {
+  appearance: none; cursor: pointer; border: 0; background: none;
+  width: 40px; display: grid; place-items: center;
+  color: var(--pbe-subtle, #6b665e);
+  border-left: 1px solid var(--pbe-line, rgba(235,219,178,.07));
+}
+.pbeb-x svg { width: 14px; height: 14px; }
+.pbeb-x:hover { color: var(--pbe-paper, #f4efe4); background: var(--pbeb-wash); }
+.pbeb-x:focus-visible { outline: 2px solid var(--pbe-gold, #d4af37); outline-offset: -3px; }
+
+.pbeb-more {
+  position: absolute; right: 44px; top: 6px;
+  padding: 2px 6px; border-radius: 2px;
+  background: var(--pbeb-wash); color: var(--pbeb-ink);
+  font: 700 9px/1 var(--pbe-font-data, ui-monospace, monospace); letter-spacing: .1em;
+}
+
+/* ---------------------------------------------------------------------------
+   WEATHER DETAIL DRAWER
+   Rendered into the SAME body-level modal root as the Player DNA switcher, so
+   exactly one element in the document owns "above everything" and the two
+   surfaces can never end up fighting over it.
+   ------------------------------------------------------------------------ */
+.pbeb-panel { max-width: 560px; width: min(560px, calc(100vw - 32px)); }
+.pbeb-dhead {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 16px 18px 12px; border-bottom: 1px solid var(--pbe-line, rgba(235,219,178,.09));
+}
+.pbeb-dmatch { display: inline-flex; align-items: center; gap: 10px; }
+.pbeb-dmatch b {
+  font: 700 15px/1 var(--pbe-font-data, ui-monospace, monospace); letter-spacing: .06em;
+  color: var(--pbe-paper, #f4efe4);
+}
+.pbeb-dx {
+  appearance: none; border: 0; background: none; cursor: pointer;
+  color: var(--pbe-faint-text, #a5a096); font-size: 15px; padding: 6px 8px;
+}
+.pbeb-dx:hover { color: var(--pbe-paper, #f4efe4); }
+.pbeb-dsub {
+  display: flex; flex-wrap: wrap; gap: 10px; padding: 10px 18px;
+  font: 500 10px/1.4 var(--pbe-font-data, ui-monospace, monospace);
+  letter-spacing: .08em; text-transform: uppercase; color: var(--pbe-faint-text, #a5a096);
+}
+.pbeb-roof { padding: 2px 7px; border-radius: 2px; border: 1px solid var(--pbe-line-strong, rgba(235,219,178,.2)); }
+.pbeb-roof[data-state="ROOF_STATUS_UNKNOWN"] { color: #e0a24a; border-color: rgba(224,162,74,.4); }
+.pbeb-roof[data-state="INDOOR"] { color: #a8d2ee; border-color: rgba(168,210,238,.35); }
+.pbeb-roof[data-state="UNRESOLVED"] { color: var(--pbe-subtle, #6b665e); }
+
+.pbeb-dsec { padding: 14px 18px; border-top: 1px solid var(--pbe-line, rgba(235,219,178,.07)); }
+.pbeb-dsec h4 {
+  margin: 0 0 10px; font: 700 10px/1 var(--pbe-font-data, ui-monospace, monospace);
+  letter-spacing: .16em; text-transform: uppercase; color: var(--pbe-faint-text, #a5a096);
+}
+.pbeb-dgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.pbeb-dk {
+  font: 600 9px/1 var(--pbe-font-data, ui-monospace, monospace);
+  letter-spacing: .12em; text-transform: uppercase; color: var(--pbe-subtle, #6b665e);
+}
+.pbeb-dv {
+  margin-top: 5px; font: 300 20px/1 var(--pbe-font-data, ui-monospace, monospace);
+  color: var(--pbe-paper, #f4efe4); font-variant-numeric: tabular-nums;
+}
+.pbeb-drow.is-empty .pbeb-dv { font-size: 12px; font-style: italic; color: var(--pbe-subtle, #6b665e); }
+.pbeb-ds {
+  margin-top: 4px; font: 500 9px/1.3 var(--pbe-font-data, ui-monospace, monospace);
+  color: var(--pbe-subtle, #6b665e);
+}
+.pbeb-dnote {
+  margin: 10px 0 0; font: 400 12px/1.55 var(--pbe-font-body, system-ui, sans-serif);
+  color: var(--pbe-faint-text, #a5a096);
+}
+.pbeb-dtrend { display: grid; gap: 8px; }
+.pbeb-dtrow {
+  display: flex; align-items: baseline; gap: 8px;
+  font: 500 12px/1 var(--pbe-font-data, ui-monospace, monospace);
+  color: var(--pbe-faint-text, #a5a096);
+}
+.pbeb-dtrow b { color: var(--pbe-paper, #f4efe4); font-size: 15px; font-weight: 400; }
+.pbeb-dtrow i { font-style: normal; color: var(--pbe-gold, #d4af37); }
+.pbeb-dtrow u { text-decoration: none; font-size: 9px; color: var(--pbe-subtle, #6b665e); }
+.pbeb-dalert { display: grid; gap: 6px; }
+.pbeb-dalert-k {
+  font: 800 12px/1 var(--pbe-font-data, ui-monospace, monospace);
+  letter-spacing: .1em; text-transform: uppercase; color: #ff8a8a;
+}
+.pbeb-dalert-h { font: 400 13px/1.5 var(--pbe-font-body, system-ui, sans-serif); color: var(--pbe-paper-2, #d8d1c4); }
+.pbeb-dalert-s { font: 500 9px/1 var(--pbe-font-data, ui-monospace, monospace); letter-spacing: .1em; text-transform: uppercase; color: var(--pbe-subtle, #6b665e); }
+.pbeb-dlinks { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.pbeb-dfoot {
+  display: grid; gap: 5px; padding: 13px 18px 16px;
+  border-top: 1px solid var(--pbe-line, rgba(235,219,178,.07));
+  font: 400 10px/1.45 var(--pbe-font-data, ui-monospace, monospace);
+  color: var(--pbe-subtle, #6b665e);
+}
+
+/* ---------------------------------------------------------------------------
+   MOBILE — first class, not a squeeze
+   Two compact lines, the actions dropping under the content, the whole rail
+   remaining a single tap target. The height is controlled so the rail cannot
+   push the page into absurd vertical depth.
+   ------------------------------------------------------------------------ */
+@media (max-width: 760px) {
+  .pbeb { min-height: 0; }
+  /* Stacking the key, the content and the action as three full-width rows
+     measured 142px at 390 and 145px at 430 — well past the ~100px the rail is
+     allowed, and enough to push the page into the vertical depth this feature
+     is supposed to avoid. The key and the action are both small, so they share
+     the top row and the content gets the space it actually needs. */
+  .pbeb-inner {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas: "key  cta"
+                         "main main";
+    align-items: center;
+    gap: 5px 10px; padding: 7px 12px 8px 15px;
+  }
+  .pbeb-key { grid-area: key; align-self: center; font-size: 9px; padding: 4px 7px; }
+  .pbeb-main { grid-area: main; gap: 3px; }
+  .pbeb-ctas { grid-area: cta; justify-self: end; }
+  .pbeb-headline {
+    font-size: 13.5px; line-height: 1.26;
+    -webkit-line-clamp: 2;                 /* clipped to two lines, never more */
+  }
+  /* the metadata row must stay ONE line high: a 18px crest inside a 10px text
+     row was silently setting the row height and costing the rail 8px */
+  .pbeb-meta { gap: 7px; font-size: 9px; row-gap: 3px; flex-wrap: nowrap; overflow: hidden; }
+  .pbeb-meta .pbeb-crest { width: 13px; height: 13px; }
+  /* one line of metadata on a phone; the rest is in the drawer */
+  .pbeb-meta .pbeb-who { display: none; }
+  .pbeb-play { font-size: 12px; }
+  .pbeb-play span { -webkit-line-clamp: 2; }
+  .pbeb-side em { font-size: 17px; }
+  .pbeb-score { gap: 10px; }
+  .pbeb-ctas { flex-wrap: wrap; gap: 6px; }
+  .pbeb-cta { padding: 5px 8px; min-height: 26px; font-size: 9px; }
+  /* only the primary action survives on a phone; the rail itself is the tap
+     target for everything else */
+  .pbeb-ctas .pbeb-cta:not(.is-primary) { display: none; }
+  .pbeb-x { width: 34px; align-self: stretch; }
+  .pbeb-more { right: 38px; top: 4px; }
+  .pbeb-nws { -webkit-line-clamp: 2; }
+  .pbeb-dgrid { grid-template-columns: repeat(2, 1fr); }
+  .pbeb-panel { width: 100vw; max-width: none; }
+}
+
+@media (max-width: 420px) {
+  .pbeb-inner { padding: 8px 10px 9px 13px; }
+  .pbeb-headline { font-size: 13.5px; }
+  .pbeb-facts { gap: 8px; }
+  .pbeb-dgrid { grid-template-columns: 1fr 1fr; gap: 10px; }
+}
+
+/* One transition when the event changes, and none at all when the reader has
+   asked for less motion. The live dot stops pulsing too — a pulsing dot is
+   motion whatever its size. */
+@media (prefers-reduced-motion: reduce) {
+  .pbeb-dot { animation: none; }
+  .pbeb-cta { transition: none; }
+}

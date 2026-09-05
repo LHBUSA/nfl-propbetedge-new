@@ -29,7 +29,10 @@ const API = {
   '/api/rb-dna/compare': 'api/rb-dna/compare.js',
   '/api/te-dna': 'api/te-dna.js',
   '/api/te-dna/prop-lab': 'api/te-dna/prop-lab.js',
-  '/api/te-dna/compare': 'api/te-dna/compare.js'
+  '/api/te-dna/compare': 'api/te-dna/compare.js',
+  '/api/weather-watch': 'api/weather-watch.js',
+  '/api/news-feed': 'api/news-feed.js',
+  '/api/nfl-live': 'api/nfl-live.js'
 };
 
 createServer(async (req, res) => {

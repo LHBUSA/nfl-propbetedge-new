@@ -112,6 +112,11 @@
        QB DNA v2 is the sole UI authority for the qbdna route; v1 is retired
        and deliberately NOT loaded, because stacking it would leave two
        renderers fighting over the same view container. */
+    /* PBE BREAKING — the one global alert rail. Loaded before the Player DNA
+       products because its weather drawer reuses their body-level modal root,
+       and after the news trust guard, which it depends on absolutely. */
+    {css:'./pbe-breaking-v1.css',js:'./pbe-breaking-v1.js'},
+
     {css:'./player-dna-v1.css'},
     {js:'./player-dna-shared.js'},
     {js:'./qb-dna-v2.js'},
