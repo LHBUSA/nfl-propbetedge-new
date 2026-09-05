@@ -1,0 +1,145 @@
+/* PropBetEdge NFL — PBEcast Arcade Replay mode (PROTOTYPE BRANCH ONLY)
+   ---------------------------------------------------------------------------
+   Additive. Every selector is scoped to the arcade container or to the
+   .cast-arc-on state class, so PBEcast in FIELD mode is byte-for-byte the
+   surface it was. The one rule that touches an existing element hides
+   .cast6-field while ARCADE is active; it is never restyled or removed.
+   =========================================================================== */
+
+.cast-arc{margin:0 0 10px}
+
+/* ---- mode bar ---------------------------------------------------------- */
+.cast-arc-bar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  flex-wrap:wrap;
+  padding-bottom:9px;
+  border-bottom:1px solid var(--pbe-line);
+}
+.cast-arc-modes{display:inline-flex;gap:2px;padding:2px;border:1px solid var(--pbe-line-strong);border-radius:var(--r-pill)}
+.cast-arc-modes button{
+  min-height:26px;
+  padding:0 13px;
+  border:0;
+  border-radius:var(--r-pill);
+  background:transparent;
+  color:var(--pbe-faint);
+  font-family:var(--pbe-font-data);
+  font-size:var(--fs-label);
+  font-weight:700;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  cursor:pointer;
+  transition:color .14s ease,background .14s ease;
+}
+.cast-arc-modes button:hover{color:var(--pbe-paper)}
+.cast-arc-modes button.active{background:var(--pbe-gold);color:var(--pbe-ink)}
+/* The single, quiet disclosure the consumer view carries. The full
+   SOURCE_FACT / TEXT_DERIVED / RECONSTRUCTED breakdown stays in the debug
+   harness at prototype/arcade. */
+.cast-arc-note{
+  font-family:var(--pbe-font-data);
+  font-size:var(--fs-micro);
+  letter-spacing:var(--ls-micro);
+  text-transform:uppercase;
+  color:var(--pbe-faint);
+}
+
+/* ---- stage ------------------------------------------------------------- */
+.cast-arc-stage{position:relative;margin-top:10px}
+.cast-arc-canvas{
+  display:block;
+  width:100%;
+  height:auto;
+  border:1px solid var(--pbe-line);
+  border-radius:var(--r-sm);
+  background:#0d0b09;
+  image-rendering:pixelated;
+  image-rendering:crisp-edges;
+}
+.cast-arc-replaybar{
+  position:absolute;
+  left:0;right:0;top:0;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:6px 10px;
+  border-radius:var(--r-sm) var(--r-sm) 0 0;
+  background:rgba(230,57,70,.94);
+  color:#fff;
+  font-family:var(--pbe-font-data);
+  font-size:var(--fs-micro);
+  font-weight:700;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+}
+.cast-arc-replaybar button{
+  min-height:24px;
+  padding:0 9px;
+  border:1px solid rgba(255,255,255,.55);
+  border-radius:var(--r-xs);
+  background:transparent;
+  color:#fff;
+  font-family:var(--pbe-font-data);
+  font-size:var(--fs-micro);
+  font-weight:700;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  cursor:pointer;
+}
+
+.cast-arc-foot{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+  margin-top:8px;
+}
+.cast-arc-caption{
+  min-width:0;
+  font-family:var(--pbe-font-data);
+  font-size:var(--fs-label);
+  font-weight:700;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+  color:var(--pbe-paper-2);
+}
+.cast-arc-controls{display:inline-flex;gap:6px;flex:0 0 auto}
+.cast-arc-controls button{
+  min-height:30px;
+  padding:0 11px;
+  border:1px solid var(--pbe-line-strong);
+  border-radius:var(--r-sm);
+  background:transparent;
+  color:var(--pbe-paper);
+  font-family:var(--pbe-font-data);
+  font-size:var(--fs-micro);
+  font-weight:700;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  cursor:pointer;
+}
+.cast-arc-controls button:hover{border-color:var(--pbe-gold)}
+
+/* A game-log row is only offered as a replay while ARCADE is on. */
+.pbecast6.cast-arc-on .cast6-play[data-play-id]{cursor:pointer}
+.pbecast6.cast-arc-on .cast6-play[data-play-id]:hover{box-shadow:inset 2px 0 0 var(--pbe-gold)}
+
+@media(max-width:640px){
+  /* No 22 labelled players and no shrunken desktop chrome: the bar stacks, the
+     caption gets its own line, and the two controls stay full-size targets. */
+  .cast-arc-bar{align-items:flex-start;flex-direction:column;gap:7px}
+  .cast-arc-foot{align-items:stretch;flex-direction:column;gap:8px}
+  .cast-arc-caption{font-size:var(--fs-micro)}
+  .cast-arc-controls button{flex:1 1 0;min-height:34px}
+  .cast-arc-replaybar{font-size:9px;padding:5px 8px}
+}
+
+@media(prefers-reduced-motion:reduce){
+  /* the renderer already jumps start -> result; nothing here may animate */
+  .cast-arc-canvas{transition:none!important}
+}

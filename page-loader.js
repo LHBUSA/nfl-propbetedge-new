@@ -72,6 +72,10 @@
     {css:'./paywall-funnel-v2.css',js:'./paywall-funnel-v2.js'},
     {css:'./pbecast-v6.css',js:'./pbecast-v6.js'},
     {css:'./pbecast-v7-enhance.css',js:'./pbecast-v7-enhance.js'},
+    /* PROTOTYPE BRANCH ONLY -- PBEcast Arcade Replay mode. Additive: it mounts a
+       second field mode beside the trusted field-state view, defaults to FIELD,
+       and changes nothing when that mode is selected. Not on main. */
+    {css:'./pbecast-arcade-v1.css',js:'./pbecast-arcade-v1.js'},
     {css:'./stadium-selector-v1.css',js:'./stadium-selector-v1.js'},
     {css:'./production-polish-v2.css',js:'./production-polish-v2.js'},
 
