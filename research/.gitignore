@@ -1,0 +1,4 @@
+# source snapshots and copies of other repos are not committed here
+sources/
+__pycache__/
+out/*.json
