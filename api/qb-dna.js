@@ -8,8 +8,8 @@
  * Returns player, baseline, current_season, career, conditions, sample metadata
  * and provenance. Every rate carries numerator, denominator and N.
  */
-import { resolvePlayer, gamesFor, baseline, conditionProfile, provenance, MARKETS, SAMPLE, dataset }
-  from './_qbdna/engine.js';
+import { resolvePlayer, gamesFor, baseline, conditionProfile, provenance, dataWindow,
+         MARKETS, SAMPLE, dataset } from './_qbdna/engine.js';
 import { gateReport, SERVED_FIELDS } from './_qbdna/gating.js';
 
 function send(res, status, body, ttl = 0) {
@@ -20,6 +20,36 @@ function send(res, status, body, ttl = 0) {
   res.setHeader('cache-control', status === 200 && ttl > 0
     ? `public, s-maxage=${ttl}, stale-while-revalidate=${ttl * 2}` : 'no-store');
   res.end(JSON.stringify(body));
+}
+
+/* LAST 5 / LAST 10 / CURRENT SEASON / CAREER, each with its own N.
+   When a window cannot be filled, it says exactly how many games exist rather
+   than silently returning a shorter window as if it were the full one. */
+function windowOf(rows, want, label) {
+  const take = want === null ? rows : rows.slice(-want);
+  const b = baseline(take);
+  if (!b) return { label, requested: want, games: 0, available: false,
+                   reason: 'no games in this window' };
+  return {
+    label, requested: want, games: b.games,
+    available: true,
+    complete: want === null || b.games >= want,
+    shortfall_note: (want !== null && b.games < want)
+      ? `only ${b.games} game${b.games === 1 ? '' : 's'} exist, not ${want}` : null,
+    ...b
+  };
+}
+
+function recency(rows) {
+  const seasons = [...new Set(rows.map(r => r.s))].sort();
+  const latest = seasons[seasons.length - 1];
+  const seasonRows = rows.filter(r => r.s === latest);
+  return {
+    last_5:  windowOf(rows, 5, 'Last 5'),
+    last_10: windowOf(rows, 10, 'Last 10'),
+    current_season: { ...windowOf(seasonRows, null, `${latest} season`), season: latest },
+    career: windowOf(rows, null, 'Career in window')
+  };
 }
 
 export default function handler(req, res) {
@@ -36,13 +66,26 @@ export default function handler(req, res) {
         team: g.length ? g[g.length - 1].t : null,
         games: g.length,
         seasons: [...new Set(g.map(r => r.s))].sort(),
-        last_game: g.length ? g[g.length - 1].d : null
+        last_game: g.length ? g[g.length - 1].d : null,
+        // 2026 status, so the UI can offer current starters first and can flag
+        // a quarterback who has no NFL history at all
+        active_2026: Boolean(p.active_2026),
+        team_2026: p.team_2026 ?? null,
+        market_priced_2026: Boolean(p.market_priced_2026),
+        experience_years: p.experience_years ?? null,
+        history_available: g.length > 0
       };
-    }).sort((a, b) => b.games - a.games || a.name.localeCompare(b.name));
+    }).sort((a, b) =>
+      Number(b.market_priced_2026) - Number(a.market_priced_2026) ||
+      Number(b.active_2026) - Number(a.active_2026) ||
+      b.games - a.games || a.name.localeCompare(b.name));
     return send(res, 200, {
       ok: true, count: rows.length, players: rows,
-      inclusion_rule: 'a quarterback appears here only with 8 or more games as the '
-                    + 'primary passer inside the dataset window',
+      active_2026: rows.filter(r => r.active_2026).length,
+      market_priced_2026: rows.filter(r => r.market_priced_2026).length,
+      zero_history: rows.filter(r => !r.history_available).length,
+      inclusion_rule: D.meta.inclusion_rule,
+      data_window: dataWindow(),
       provenance: provenance()
     }, 600);
   }
@@ -62,7 +105,36 @@ export default function handler(req, res) {
   }
   const p = found.player;
   let rows = gamesFor(p.gsis_id);
-  if (!rows.length) return send(res, 404, { ok: false, error: 'no_games_for_player' });
+
+  /* A quarterback on a 2026 roster with no NFL history is a REAL, expected
+     state — a rookie or a first-time starter. It is a 200 that says so, not an
+     error, and emphatically not a zero. No college statistics are substituted. */
+  if (!rows.length) {
+    return send(res, 200, {
+      ok: true,
+      history_available: false,
+      sample_state: 'NFL SAMPLE UNAVAILABLE',
+      reason: p.active_2026
+        ? 'This quarterback is on a 2026 roster but has no completed NFL regular-season '
+          + 'or postseason game inside our data window.'
+        : 'No completed NFL game for this player inside our data window.',
+      player: {
+        gsis_id: p.gsis_id, espn_id: p.espn_id ?? null, pfr_id: p.pfr_id ?? null,
+        name: p.display_name, position: p.position ?? null,
+        current_team: p.team_2026 ?? null,
+        active_2026: Boolean(p.active_2026),
+        market_priced_2026: Boolean(p.market_priced_2026),
+        experience_years: p.experience_years ?? null,
+        matched_by: found.matched_by
+      },
+      nfl_games: 0,
+      baseline: null, current_season: null, recent: null,
+      conditions: null, game_log: [],
+      disclosure: 'College and preseason statistics are not substituted for NFL history.',
+      data_window: dataWindow(),
+      provenance: provenance()
+    }, 300);
+  }
 
   if (q.season) {
     const s = Number(q.season);
@@ -89,7 +161,7 @@ export default function handler(req, res) {
     baseline: baseline(rows),
     career: baseline(rows),
     current_season: { season: latest, ...(baseline(seasonRows) || {}) },
-    recent: { last_5: baseline(rows.slice(-5)), last_10: baseline(rows.slice(-10)) },
+    recent: recency(rows),
     game_log: rows.slice(-12).map(r => ({
       game_id: r.g, date: r.d, season: r.s, week: r.w, team: r.t,
       opponent: r.ha === 1 ? r.a : r.h, home: r.ha === 1,
@@ -100,6 +172,7 @@ export default function handler(req, res) {
       environment_status: r.ws ?? 'not_resolved'
     })).reverse(),
     conditions: profile.conditions,
+    history_available: true,
     sample: {
       baseline_games: profile.baseline_n,
       baseline_mean: profile.baseline_mean,
@@ -107,6 +180,8 @@ export default function handler(req, res) {
       scale: { 'STRONG SAMPLE': 'N>=20', 'MODERATE SAMPLE': 'N 10-19',
                'SMALL SAMPLE': 'N 5-9', 'VERY SMALL SAMPLE': 'N<5' }
     },
+    // the window this answer covers, so nothing can imply a stale season is current
+    data_window: dataWindow(),
     // what is being served, and what is being withheld and why
     served_fields: SERVED_FIELDS,
     advanced_availability: gateReport(seasons),

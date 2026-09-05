@@ -1,0 +1,410 @@
+{
+  "ok": true,
+  "game": {
+    "espn_event_id": "401872660",
+    "label": "BUF @ HOU",
+    "kickoff_utc": "2026-09-13T17:00Z",
+    "status": "STATUS_SCHEDULED",
+    "home_team": "HOU",
+    "away_team": "BUF",
+    "home_team_espn_id": "34",
+    "away_team_espn_id": "2",
+    "espn_venue": "Reliant Stadium",
+    "espn_venue_indoor": true,
+    "venue": {
+      "venue": "Reliant Stadium",
+      "city": "Houston",
+      "state": "TX",
+      "lat": 29.76328,
+      "lon": -95.36327,
+      "tz": "America/Chicago",
+      "indoor": true,
+      "grass": false,
+      "espn_venue_id": "3891"
+    },
+    "roof_source": "pbe_venue_table",
+    "surface": "artificial",
+    "surface_source": "pbe_venue_table (ESPN teams API grass flag)",
+    "neutral_site": false
+  },
+  "context": {
+    "roof": "closed",
+    "indoor": true,
+    "kickoff_local_date": "2026-09-13",
+    "kickoff_local_hour": 12,
+    "primetime": false,
+    "home_team": "HOU",
+    "away_team": "BUF"
+  },
+  "forecast": null,
+  "markets": {
+    "available": true,
+    "event_id": "7e09efed7e12c659b82740b67ce2f9a1",
+    "event": {
+      "id": "7e09efed7e12c659b82740b67ce2f9a1",
+      "commence_time": "2026-09-13T17:00:00Z",
+      "away_team": "Buffalo Bills",
+      "home_team": "Houston Texans"
+    },
+    "players": [
+      {
+        "player_name": "C.J. Stroud",
+        "gsis_id": "00-0039163",
+        "matched_by": "exact_name",
+        "resolution_note": null,
+        "markets": {
+          "passing_attempts": {
+            "market": "passing_attempts",
+            "gateway_market": "player_pass_attempts",
+            "line": 30.5,
+            "line_low": 30.5,
+            "line_high": 30.5,
+            "book_count": 2,
+            "books": [
+              "DraftKings",
+              "BetOnline.ag"
+            ]
+          },
+          "completions": {
+            "market": "completions",
+            "gateway_market": "player_pass_completions",
+            "line": 19.5,
+            "line_low": 19.5,
+            "line_high": 19.5,
+            "book_count": 3,
+            "books": [
+              "DraftKings",
+              "BetRivers",
+              "BetOnline.ag"
+            ]
+          },
+          "interceptions": {
+            "market": "interceptions",
+            "gateway_market": "player_pass_interceptions",
+            "line": 0.5,
+            "line_low": 0.5,
+            "line_high": 0.5,
+            "book_count": 1,
+            "books": [
+              "BetRivers"
+            ]
+          },
+          "passing_touchdowns": {
+            "market": "passing_touchdowns",
+            "gateway_market": "player_pass_tds",
+            "line": 1.5,
+            "line_low": 1.5,
+            "line_high": 1.5,
+            "book_count": 5,
+            "books": [
+              "DraftKings",
+              "BetRivers",
+              "BetOnline.ag",
+              "FanDuel",
+              "Bovada"
+            ]
+          },
+          "passing_yards": {
+            "market": "passing_yards",
+            "gateway_market": "player_pass_yds",
+            "line": 218.5,
+            "line_low": 214.5,
+            "line_high": 219.5,
+            "book_count": 5,
+            "books": [
+              "DraftKings",
+              "BetRivers",
+              "BetOnline.ag",
+              "FanDuel",
+              "Bovada"
+            ]
+          }
+        },
+        "unavailable_markets": []
+      },
+      {
+        "player_name": "Josh Allen",
+        "gsis_id": "00-0034857",
+        "matched_by": "exact_name",
+        "resolution_note": null,
+        "markets": {
+          "passing_attempts": {
+            "market": "passing_attempts",
+            "gateway_market": "player_pass_attempts",
+            "line": 29.5,
+            "line_low": 29.5,
+            "line_high": 29.5,
+            "book_count": 3,
+            "books": [
+              "DraftKings",
+              "Fanatics",
+              "BetOnline.ag"
+            ]
+          },
+          "completions": {
+            "market": "completions",
+            "gateway_market": "player_pass_completions",
+            "line": 19.5,
+            "line_low": 19.5,
+            "line_high": 19.5,
+            "book_count": 4,
+            "books": [
+              "DraftKings",
+              "Fanatics",
+              "BetRivers",
+              "BetOnline.ag"
+            ]
+          },
+          "interceptions": {
+            "market": "interceptions",
+            "gateway_market": "player_pass_interceptions",
+            "line": 0.5,
+            "line_low": 0.5,
+            "line_high": 0.5,
+            "book_count": 1,
+            "books": [
+              "BetRivers"
+            ]
+          },
+          "passing_touchdowns": {
+            "market": "passing_touchdowns",
+            "gateway_market": "player_pass_tds",
+            "line": 1.5,
+            "line_low": 1.5,
+            "line_high": 1.5,
+            "book_count": 6,
+            "books": [
+              "DraftKings",
+              "Fanatics",
+              "BetRivers",
+              "BetOnline.ag",
+              "FanDuel",
+              "Bovada"
+            ]
+          },
+          "passing_yards": {
+            "market": "passing_yards",
+            "gateway_market": "player_pass_yds",
+            "line": 221.5,
+            "line_low": 219.5,
+            "line_high": 223.5,
+            "book_count": 6,
+            "books": [
+              "DraftKings",
+              "Fanatics",
+              "BetRivers",
+              "BetOnline.ag",
+              "FanDuel",
+              "Bovada"
+            ]
+          }
+        },
+        "unavailable_markets": []
+      }
+    ],
+    "markets_offered": [
+      "passing_attempts",
+      "completions",
+      "interceptions",
+      "passing_touchdowns",
+      "passing_yards"
+    ],
+    "quote_count": 70,
+    "source": {
+      "gateway": "https://nfl-api.propbetedge.ai",
+      "url": "https://nfl-api.propbetedge.ai/api/odds/board?event_id=7e09efed7e12c659b82740b67ce2f9a1&markets=player_pass_yds,player_pass_attempts,player_pass_completions,player_pass_tds,player_pass_interceptions",
+      "provider": {
+        "provider": "the_odds_api",
+        "semantics": "LIVE",
+        "normalization": "PropBetEdge market normalization v1",
+        "implied_probability": "raw bookmaker implied probability; not vig-free"
+      },
+      "provider_last_update": "2026-09-05T16:49:42Z",
+      "note": "Current markets come from the existing PropBetEdge market source. QB DNA does not operate a second odds source."
+    }
+  },
+  "market_event_id": "7e09efed7e12c659b82740b67ce2f9a1",
+  "unresolved": [
+    {
+      "field": "weather",
+      "reason": "roofed venue - no forecast is fetched and no conditions are inferred"
+    }
+  ],
+  "data_window": {
+    "seasons": [
+      2019,
+      2020,
+      2021,
+      2022,
+      2023,
+      2024,
+      2025
+    ],
+    "data_through": "2026-02-08",
+    "latest_season": 2025,
+    "latest_completed_game": {
+      "game_id": "2025_22_SEA_NE",
+      "date": "2026-02-08",
+      "season": 2025,
+      "week": 22,
+      "season_type": "POST",
+      "matchup": "SEA @ NE"
+    },
+    "seasons_without_play_by_play": [
+      2026
+    ],
+    "note": "No play-by-play exists yet for 2026 because no game in that season has been completed. Nothing is projected for it."
+  },
+  "compare_query": {
+    "home_template": "player_id=PLAYER_ID&roof=closed&home=true&opponent=BUF&primetime=false",
+    "away_template": "player_id=PLAYER_ID&roof=closed&home=false&opponent=HOU&primetime=false"
+  },
+  "build_hint": "replace PLAYER_ID with a GSIS id and GET /api/qb-dna/compare?<query>",
+  "sources": {
+    "schedule": "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard",
+    "venue": "PropBetEdge venue table (ESPN teams API + Open-Meteo geocoding)",
+    "weather": null,
+    "markets": "existing PropBetEdge market source"
+  },
+  "provenance": {
+    "dataset_generated_at": "2026-09-05T16:32:22Z",
+    "seasons": [
+      2019,
+      2020,
+      2021,
+      2022,
+      2023,
+      2024,
+      2025
+    ],
+    "data_through": "2026-02-08",
+    "latest_completed_game": {
+      "game_id": "2025_22_SEA_NE",
+      "date": "2026-02-08",
+      "season": 2025,
+      "week": 22,
+      "season_type": "POST",
+      "matchup": "SEA @ NE"
+    },
+    "qb_games_in_dataset": 4282,
+    "sources": [
+      {
+        "name": "nflverse play-by-play, schedules and players",
+        "url": "https://github.com/nflverse/nflverse-data",
+        "licence": "CC-BY-4.0",
+        "attribution": "Data by nflverse, licensed CC BY 4.0"
+      },
+      {
+        "name": "Open-Meteo historical weather archive",
+        "url": "https://archive-api.open-meteo.com/",
+        "licence": "CC-BY-4.0",
+        "attribution": "Weather data by Open-Meteo.com, licensed CC BY 4.0"
+      },
+      {
+        "name": "ESPN public team, venue and schedule endpoints",
+        "url": "https://site.api.espn.com/apis/site/v2/sports/football/nfl/",
+        "licence": "public endpoint",
+        "attribution": "Schedule and venue context from ESPN public endpoints"
+      }
+    ],
+    "field_availability_by_season": {
+      "2019": {
+        "offense_formation": 73.1,
+        "offense_personnel": 76.1,
+        "defense_personnel": 76.1,
+        "defenders_in_box": 74.2,
+        "number_of_pass_rushers": 43.3,
+        "ngs_air_yards": 37.1,
+        "time_to_throw": 38.5,
+        "was_pressure": 38.5,
+        "route": 37,
+        "defense_man_zone_type": 38.5,
+        "defense_coverage_type": 38.5
+      },
+      "2020": {
+        "offense_formation": 73.1,
+        "offense_personnel": 76.1,
+        "defense_personnel": 76.1,
+        "defenders_in_box": 74.4,
+        "number_of_pass_rushers": 43.5,
+        "ngs_air_yards": 37.6,
+        "time_to_throw": 39,
+        "was_pressure": 39,
+        "route": 37.5,
+        "defense_man_zone_type": 39,
+        "defense_coverage_type": 39
+      },
+      "2021": {
+        "offense_formation": 73,
+        "offense_personnel": 76.3,
+        "defense_personnel": 76.3,
+        "defenders_in_box": 74.4,
+        "number_of_pass_rushers": 43.3,
+        "ngs_air_yards": 37.4,
+        "time_to_throw": 38.6,
+        "was_pressure": 38.6,
+        "route": 37.3,
+        "defense_man_zone_type": 38.7,
+        "defense_coverage_type": 38.7
+      },
+      "2022": {
+        "offense_formation": 73.4,
+        "offense_personnel": 76.2,
+        "defense_personnel": 76.2,
+        "defenders_in_box": 74.4,
+        "number_of_pass_rushers": 42.7,
+        "ngs_air_yards": 36.3,
+        "time_to_throw": 37.8,
+        "was_pressure": 37.8,
+        "route": 36.2,
+        "defense_man_zone_type": 37.8,
+        "defense_coverage_type": 37.8
+      },
+      "2023": {
+        "offense_formation": 80.1,
+        "offense_personnel": 100,
+        "defense_personnel": 100,
+        "defenders_in_box": 100,
+        "number_of_pass_rushers": 97.2,
+        "ngs_air_yards": 0,
+        "time_to_throw": 44,
+        "was_pressure": 100,
+        "route": 100,
+        "defense_man_zone_type": 100,
+        "defense_coverage_type": 49.6
+      },
+      "2024": {
+        "offense_formation": null,
+        "offense_personnel": null,
+        "defense_personnel": null,
+        "defenders_in_box": null,
+        "number_of_pass_rushers": null,
+        "ngs_air_yards": null,
+        "time_to_throw": null,
+        "was_pressure": null,
+        "route": null,
+        "defense_man_zone_type": null,
+        "defense_coverage_type": null
+      },
+      "2025": {
+        "offense_formation": null,
+        "offense_personnel": null,
+        "defense_personnel": null,
+        "defenders_in_box": null,
+        "number_of_pass_rushers": null,
+        "ngs_air_yards": null,
+        "time_to_throw": null,
+        "was_pressure": null,
+        "route": null,
+        "defense_man_zone_type": null,
+        "defense_coverage_type": null
+      }
+    },
+    "notes": [
+      "Sample labels describe SIZE ONLY. They are not claims of statistical significance.",
+      "Roofed and closed-roof games are excluded from outdoor weather splits by construction.",
+      "A split whose inputs are missing reports available:false. It never reports zero.",
+      "A quarterback with no NFL history reports zero games. College statistics are never substituted."
+    ]
+  }
+}

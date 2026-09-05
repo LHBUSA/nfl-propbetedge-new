@@ -12,6 +12,8 @@
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { eventMarkets, events as marketEvents, MARKET_UNAVAILABLE } from '../_qbdna/markets.js';
+import { dataWindow, provenance } from '../_qbdna/engine.js';
 
 const SCOREBOARD = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard';
 const FORECAST = 'https://api.open-meteo.com/v1/forecast';
@@ -54,6 +56,30 @@ function localParts(iso, tz) {
   return { date: `${p.year}-${p.month}-${p.day}`, hour: Number(hour), minute: Number(p.minute) };
 }
 
+/* ESPN gives abbreviations; the market source gives full display names. Matched
+   on the last word of the display name plus a small explicit alias table, never
+   by fuzzy similarity. */
+const TEAM_ALIAS = {
+  'washington commanders': 'WSH', 'las vegas raiders': 'LV',
+  'los angeles rams': 'LAR', 'los angeles chargers': 'LAC',
+  'new york giants': 'NYG', 'new york jets': 'NYJ',
+  'new england patriots': 'NE', 'new orleans saints': 'NO',
+  'green bay packers': 'GB', 'kansas city chiefs': 'KC',
+  'san francisco 49ers': 'SF', 'tampa bay buccaneers': 'TB',
+  'jacksonville jaguars': 'JAX', 'arizona cardinals': 'ARI',
+  'baltimore ravens': 'BAL', 'buffalo bills': 'BUF', 'carolina panthers': 'CAR',
+  'chicago bears': 'CHI', 'cincinnati bengals': 'CIN', 'cleveland browns': 'CLE',
+  'dallas cowboys': 'DAL', 'denver broncos': 'DEN', 'detroit lions': 'DET',
+  'houston texans': 'HOU', 'indianapolis colts': 'IND', 'miami dolphins': 'MIA',
+  'minnesota vikings': 'MIN', 'philadelphia eagles': 'PHI',
+  'pittsburgh steelers': 'PIT', 'seattle seahawks': 'SEA', 'tennessee titans': 'TEN',
+  'atlanta falcons': 'ATL'
+};
+function teamMatches(fullName, abbr) {
+  const k = String(fullName || '').toLowerCase().trim();
+  return TEAM_ALIAS[k] === String(abbr || '').toUpperCase();
+}
+
 function shapeEvent(ev) {
   const c = ev.competitions && ev.competitions[0];
   if (!c) return null;
@@ -74,6 +100,8 @@ function shapeEvent(ev) {
     venue: v,
     // our own table is authoritative; ESPN's flag is kept for comparison
     roof_source: v ? 'pbe_venue_table' : 'espn_only',
+    surface: v ? (v.grass ? 'grass' : 'artificial') : null,
+    surface_source: v ? 'pbe_venue_table (ESPN teams API grass flag)' : null,
     neutral_site: Boolean(c.neutralSite)
   };
 }
@@ -89,11 +117,25 @@ export default async function handler(req, res) {
   const events = (board.events || []).map(shapeEvent).filter(Boolean);
 
   if (!q.event_id) {
+    /* Pair each ESPN event with the market source's own event id, matched on
+       kickoff + team names. A pairing that does not resolve is left null rather
+       than guessed, so a game can never be given another game's odds. */
+    let mkt = [];
+    try { mkt = await marketEvents(); } catch { mkt = []; }
+    const pair = g => {
+      const day = String(g.kickoff_utc).slice(0, 10);
+      const hit = mkt.find(m => String(m.commence_time).slice(0, 10) === day
+        && teamMatches(m.home_team, g.home_team) && teamMatches(m.away_team, g.away_team));
+      return hit ? hit.event_id : null;
+    };
     return send(res, 200, {
       ok: true,
       season: board.season, week: board.week,
-      games: events,
-      source: { scoreboard: SCOREBOARD, fetched_at: new Date().toISOString() }
+      games: events.map(g => ({ ...g, market_event_id: pair(g) })),
+      market_events_seen: mkt.length,
+      data_window: dataWindow(),
+      source: { scoreboard: SCOREBOARD, fetched_at: new Date().toISOString(),
+                markets: 'existing PropBetEdge market source' }
     }, 120);
   }
 
@@ -177,12 +219,34 @@ export default async function handler(req, res) {
     return p.join('&');
   };
 
+  /* Current QB prop markets for this game, from the existing market source. */
+  let markets = { available: false, state: MARKET_UNAVAILABLE,
+                  reason: 'no market event matched this game' };
+  let marketEventId = q.market_event_id ? String(q.market_event_id) : null;
+  try {
+    if (!marketEventId) {
+      const mkt = await marketEvents();
+      const day = String(g.kickoff_utc).slice(0, 10);
+      const hit = mkt.find(m => String(m.commence_time).slice(0, 10) === day
+        && teamMatches(m.home_team, g.home_team) && teamMatches(m.away_team, g.away_team));
+      marketEventId = hit ? hit.event_id : null;
+    }
+    if (marketEventId) markets = await eventMarkets(marketEventId);
+  } catch (e) {
+    markets = { available: false, state: MARKET_UNAVAILABLE,
+                reason: `market source unreachable: ${e.message}` };
+  }
+  if (!markets.available) unresolved.push({ field: 'current_markets', reason: markets.reason });
+
   send(res, 200, {
     ok: true,
     game: g,
     context: ctx,
     forecast,
+    markets,
+    market_event_id: marketEventId,
     unresolved,
+    data_window: dataWindow(),
     // divisional is NOT supplied - it is a property of the two franchises and
     // this endpoint does not carry a division table, so it is left unevaluated
     // rather than guessed
@@ -191,7 +255,9 @@ export default async function handler(req, res) {
     sources: {
       schedule: SCOREBOARD,
       venue: 'PropBetEdge venue table (ESPN teams API + Open-Meteo geocoding)',
-      weather: indoor ? null : 'Open-Meteo forecast API'
-    }
-  }, 300);
+      weather: indoor ? null : 'Open-Meteo forecast API',
+      markets: 'existing PropBetEdge market source'
+    },
+    provenance: provenance()
+  }, 120);
 }

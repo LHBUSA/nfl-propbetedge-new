@@ -38,8 +38,20 @@ def kickoff_hour(row):
     except Exception:
         return d,None
 
-rows=[]; fetched=0
+# RESUME: a game already settled is never re-queried. Weather for a completed
+# game does not change, so re-fetching it is pure waste and needless load on a
+# free service. Pass --refetch to force a full rebuild.
+PRIOR={}
+if '--refetch' not in sys.argv and os.path.exists('data/warehouse/nfl_game_environment.parquet'):
+    P=pd.read_parquet('data/warehouse/nfl_game_environment.parquet')
+    settled=P[P['om_status'].isin(['ok','skipped_indoor','skipped_no_venue','skipped_no_kickoff'])]
+    PRIOR={r['game_id']:r.to_dict() for _,r in settled.iterrows()}
+    print(f'resume: {len(PRIOR)} settled, {len(G)-len(PRIOR)} to attempt')
+
+rows=[]; fetched=0; reused=0
 for _,g in G.iterrows():
+    if g['game_id'] in PRIOR:
+        rows.append(PRIOR[g['game_id']]); reused+=1; continue
     home=g['home_team']; v=vmap.get(home)
     roof=str(g.get('roof') or '')
     closed = roof in ('dome','closed')
@@ -82,7 +94,7 @@ for _,g in G.iterrows():
 
 E=pd.DataFrame(rows)
 E.to_parquet('data/warehouse/nfl_game_environment.parquet',index=False)
-print(f'games: {len(E)}   fetched: {fetched}')
+print(f'games: {len(E)}   fetched: {fetched}   reused: {reused}')
 print(E['om_status'].value_counts(dropna=False).to_dict())
 ok=E[E['om_status']=='ok']
 if len(ok):

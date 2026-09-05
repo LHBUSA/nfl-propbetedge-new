@@ -15,40 +15,40 @@
     "home": false,
     "opponent": "HOU",
     "primetime": false,
-    "divisional": false
+    "divisional": null
   },
   "baseline": {
-    "games": 111,
-    "wins": 78,
-    "losses": 33,
-    "passing_yards_avg": 249.7,
+    "games": 129,
+    "wins": 90,
+    "losses": 39,
+    "passing_yards_avg": 247.6,
     "passing_yards_median": 253,
-    "attempts_avg": 35.8,
+    "attempts_avg": 35.3,
     "completion_pct": {
-      "numerator": 2429,
-      "denominator": 3973,
-      "pct": 61.1
+      "numerator": 2801,
+      "denominator": 4558,
+      "pct": 61.5
     },
     "ypa": {
-      "numerator": 27719,
-      "denominator": 3973,
-      "value": 6.98,
+      "numerator": 31943,
+      "denominator": 4558,
+      "value": 7.01,
       "unit": "yards per attempt"
     },
     "td_rate": {
-      "numerator": 210,
-      "denominator": 3973,
-      "pct": 5.3
+      "numerator": 239,
+      "denominator": 4558,
+      "pct": 5.2
     },
     "int_rate": {
-      "numerator": 76,
-      "denominator": 3973,
+      "numerator": 88,
+      "denominator": 4558,
       "pct": 1.9
     },
     "sack_rate": {
-      "numerator": 189,
-      "denominator": 3964,
-      "pct": 4.8
+      "numerator": 233,
+      "denominator": 4548,
+      "pct": 5.1
     },
     "tds_avg": 1.9,
     "ints_avg": 0.7,
@@ -62,146 +62,162 @@
     {
       "condition": "weather",
       "reason": "roofed game - weather windows do not apply"
+    },
+    {
+      "condition": "divisional",
+      "reason": "not supplied"
     }
   ],
   "windows": {
     "road": {
       "available": true,
       "label": "Road",
-      "games": 52,
-      "wins": 32,
-      "losses": 20,
-      "passing_yards_avg": 270.8,
-      "passing_yards_median": 264,
-      "attempts_avg": 38.4,
+      "games": 62,
+      "wins": 38,
+      "losses": 24,
+      "passing_yards_avg": 260.2,
+      "passing_yards_median": 261.5,
+      "attempts_avg": 37.3,
       "completion_pct": {
-        "numerator": 1226,
-        "denominator": 1997,
-        "pct": 61.4
+        "numerator": 1418,
+        "denominator": 2312,
+        "pct": 61.3
       },
       "ypa": {
-        "numerator": 14082,
-        "denominator": 1997,
-        "value": 7.05,
+        "numerator": 16134,
+        "denominator": 2312,
+        "value": 6.98,
         "unit": "yards per attempt"
       },
       "td_rate": {
-        "numerator": 95,
-        "denominator": 1997,
-        "pct": 4.8
+        "numerator": 108,
+        "denominator": 2312,
+        "pct": 4.7
       },
       "int_rate": {
-        "numerator": 39,
-        "denominator": 1997,
+        "numerator": 47,
+        "denominator": 2312,
         "pct": 2
       },
       "sack_rate": {
-        "numerator": 94,
-        "denominator": 1992,
-        "pct": 4.7
+        "numerator": 120,
+        "denominator": 2307,
+        "pct": 5.2
       },
-      "tds_avg": 1.8,
+      "tds_avg": 1.7,
       "ints_avg": 0.8,
       "sample_label": "STRONG SAMPLE",
       "vs_baseline": {
-        "window_avg": 270.8,
-        "baseline_avg": 249.7,
-        "diff": 21.1,
-        "pct": 8.5,
-        "n_window": 52,
-        "n_baseline": 111
+        "window_avg": 260.2,
+        "baseline_avg": 247.6,
+        "diff": 12.6,
+        "pct": 5.1,
+        "n_window": 62,
+        "n_baseline": 129
       },
-      "statement": "270.8 avg vs 249.7 baseline · +8.5% · N=52 · STRONG SAMPLE"
+      "statement": "260.2 avg vs 247.6 baseline · +5.1% · N=62 · STRONG SAMPLE"
     },
     "dome": {
       "available": true,
       "label": "Dome / closed roof",
-      "games": 14,
+      "games": 16,
       "wins": 10,
-      "losses": 4,
-      "passing_yards_avg": 271.5,
-      "passing_yards_median": 272,
+      "losses": 6,
+      "passing_yards_avg": 264.6,
+      "passing_yards_median": 262,
       "attempts_avg": 35.9,
       "completion_pct": {
-        "numerator": 313,
-        "denominator": 502,
-        "pct": 62.4
+        "numerator": 352,
+        "denominator": 574,
+        "pct": 61.3
       },
       "ypa": {
-        "numerator": 3801,
-        "denominator": 502,
-        "value": 7.57,
+        "numerator": 4234,
+        "denominator": 574,
+        "value": 7.38,
         "unit": "yards per attempt"
       },
       "td_rate": {
-        "numerator": 26,
-        "denominator": 502,
-        "pct": 5.2
+        "numerator": 28,
+        "denominator": 574,
+        "pct": 4.9
       },
       "int_rate": {
-        "numerator": 10,
-        "denominator": 502,
-        "pct": 2
+        "numerator": 14,
+        "denominator": 574,
+        "pct": 2.4
       },
       "sack_rate": {
-        "numerator": 22,
-        "denominator": 501,
-        "pct": 4.4
+        "numerator": 34,
+        "denominator": 573,
+        "pct": 5.9
       },
-      "tds_avg": 1.9,
-      "ints_avg": 0.7,
+      "tds_avg": 1.8,
+      "ints_avg": 0.9,
       "sample_label": "MODERATE SAMPLE",
       "vs_baseline": {
-        "window_avg": 271.5,
-        "baseline_avg": 249.7,
-        "diff": 21.8,
-        "pct": 8.7,
-        "n_window": 14,
-        "n_baseline": 111
+        "window_avg": 264.6,
+        "baseline_avg": 247.6,
+        "diff": 17,
+        "pct": 6.9,
+        "n_window": 16,
+        "n_baseline": 129
       },
-      "statement": "271.5 avg vs 249.7 baseline · +8.7% · N=14 · MODERATE SAMPLE"
+      "statement": "264.6 avg vs 247.6 baseline · +6.9% · N=16 · MODERATE SAMPLE"
     }
   },
   "vs_opponent": {
     "available": true,
     "opponent": "HOU",
-    "games": 3,
+    "games": 4,
     "wins": 1,
-    "losses": 2,
-    "passing_yards_avg": 214.3,
-    "passing_yards_median": 248,
-    "attempts_avg": 37,
+    "losses": 3,
+    "passing_yards_avg": 224,
+    "passing_yards_median": 250.5,
+    "attempts_avg": 38.3,
     "completion_pct": {
-      "numerator": 53,
-      "denominator": 111,
-      "pct": 47.7
+      "numerator": 77,
+      "denominator": 153,
+      "pct": 50.3
     },
     "ypa": {
-      "numerator": 643,
-      "denominator": 111,
-      "value": 5.79,
+      "numerator": 896,
+      "denominator": 153,
+      "value": 5.86,
       "unit": "yards per attempt"
     },
     "td_rate": {
       "numerator": 3,
-      "denominator": 111,
-      "pct": 2.7
+      "denominator": 153,
+      "pct": 2
     },
     "int_rate": {
-      "numerator": 1,
-      "denominator": 111,
-      "pct": 0.9
+      "numerator": 3,
+      "denominator": 153,
+      "pct": 2
     },
     "sack_rate": {
-      "numerator": 5,
-      "denominator": 110,
-      "pct": 4.5
+      "numerator": 13,
+      "denominator": 152,
+      "pct": 8.6
     },
-    "tds_avg": 1,
-    "ints_avg": 0.3,
+    "tds_avg": 0.8,
+    "ints_avg": 0.8,
     "sample_label": "VERY SMALL SAMPLE",
-    "vs_baseline_pct": -14.2,
+    "vs_baseline_pct": -9.5,
     "game_log": [
+      {
+        "game_id": "2025_12_BUF_HOU",
+        "date": "2025-11-20",
+        "season": 2025,
+        "week": 12,
+        "home": false,
+        "passing_yards": 253,
+        "attempts": 42,
+        "td": 0,
+        "int": 2,
+        "result": "L"
+      },
       {
         "game_id": "2024_05_BUF_HOU",
         "date": "2024-10-06",
@@ -241,32 +257,44 @@
     ]
   },
   "provenance": {
-    "dataset_generated_at": "2026-09-05T15:03:12Z",
+    "dataset_generated_at": "2026-09-05T16:32:22Z",
     "seasons": [
       2019,
       2020,
       2021,
       2022,
       2023,
-      2024
+      2024,
+      2025
     ],
-    "qb_games_in_dataset": 3522,
+    "data_through": "2026-02-08",
+    "latest_completed_game": {
+      "game_id": "2025_22_SEA_NE",
+      "date": "2026-02-08",
+      "season": 2025,
+      "week": 22,
+      "season_type": "POST",
+      "matchup": "SEA @ NE"
+    },
+    "qb_games_in_dataset": 4282,
     "sources": [
       {
-        "name": "nflverse play_by_play + participation + players",
+        "name": "nflverse play-by-play, schedules and players",
         "url": "https://github.com/nflverse/nflverse-data",
         "licence": "CC-BY-4.0",
-        "attribution": "Data by nflverse, CC BY 4.0"
+        "attribution": "Data by nflverse, licensed CC BY 4.0"
       },
       {
-        "name": "ESPN public team/venue endpoints",
-        "url": "https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams"
-      },
-      {
-        "name": "Open-Meteo historical archive",
-        "url": "https://archive-api.open-meteo.com/v1/archive",
+        "name": "Open-Meteo historical weather archive",
+        "url": "https://archive-api.open-meteo.com/",
         "licence": "CC-BY-4.0",
-        "attribution": "Weather data by Open-Meteo.com, CC BY 4.0"
+        "attribution": "Weather data by Open-Meteo.com, licensed CC BY 4.0"
+      },
+      {
+        "name": "ESPN public team, venue and schedule endpoints",
+        "url": "https://site.api.espn.com/apis/site/v2/sports/football/nfl/",
+        "licence": "public endpoint",
+        "attribution": "Schedule and venue context from ESPN public endpoints"
       }
     ],
     "field_availability_by_season": {
@@ -298,8 +326,8 @@
       },
       "2021": {
         "offense_formation": 73,
-        "offense_personnel": 76.2,
-        "defense_personnel": 76.2,
+        "offense_personnel": 76.3,
+        "defense_personnel": 76.3,
         "defenders_in_box": 74.4,
         "number_of_pass_rushers": 43.3,
         "ngs_air_yards": 37.4,
@@ -331,11 +359,24 @@
         "ngs_air_yards": 0,
         "time_to_throw": 44,
         "was_pressure": 100,
-        "route": 42.5,
-        "defense_man_zone_type": 49.6,
+        "route": 100,
+        "defense_man_zone_type": 100,
         "defense_coverage_type": 49.6
       },
       "2024": {
+        "offense_formation": null,
+        "offense_personnel": null,
+        "defense_personnel": null,
+        "defenders_in_box": null,
+        "number_of_pass_rushers": null,
+        "ngs_air_yards": null,
+        "time_to_throw": null,
+        "was_pressure": null,
+        "route": null,
+        "defense_man_zone_type": null,
+        "defense_coverage_type": null
+      },
+      "2025": {
         "offense_formation": null,
         "offense_personnel": null,
         "defense_personnel": null,
@@ -352,7 +393,8 @@
     "notes": [
       "Sample labels describe SIZE ONLY. They are not claims of statistical significance.",
       "Roofed and closed-roof games are excluded from outdoor weather splits by construction.",
-      "A split whose inputs are missing reports available:false. It never reports zero."
+      "A split whose inputs are missing reports available:false. It never reports zero.",
+      "A quarterback with no NFL history reports zero games. College statistics are never substituted."
     ]
   }
 }

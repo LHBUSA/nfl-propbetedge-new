@@ -419,3 +419,135 @@
   .qbd-vs, .qbd-cmprow { grid-template-columns: 1fr 84px 1fr; }
   .qbd-stat-v { font-size: var(--fs-data-lg); }
 }
+
+/* ---- data window strip --------------------------------------------------
+   Always on screen. This is the single control that stops a completed season
+   being read as current form, so it sits directly under the masthead and is
+   never collapsed away. */
+.qbd-window {
+  display: flex; align-items: center; gap: var(--s-3); flex-wrap: wrap;
+  padding: 10px var(--qbd-gut);
+  background: var(--pbe-ink-4);
+  border-bottom: 1px solid var(--pbe-line);
+  font: 500 var(--fs-micro)/1.5 var(--pbe-font-data); letter-spacing: .06em;
+}
+.qbd-window-k { color: var(--pbe-faint-text); text-transform: uppercase; }
+.qbd-window b { color: var(--pbe-paper); font-weight: 600; font-variant-numeric: tabular-nums; }
+.qbd-window-m { color: var(--pbe-dim); }
+.qbd-window-sep { width: 1px; height: 12px; background: var(--pbe-line-strong); }
+.qbd-window-note {
+  flex: 1 1 100%; color: var(--pbe-faint-text); font-family: var(--pbe-font-ui);
+  letter-spacing: 0; font-size: var(--fs-micro); font-style: italic;
+}
+
+/* ---- unavailable states -------------------------------------------------
+   A withheld answer gets the same structural weight as a real one. It is a
+   stated result, not an error and not an empty shell. */
+.qbd-unavail { border-left: 2px solid var(--pbe-unavailable); }
+.qbd-unavail .qbd-panel-head h3 { color: var(--pbe-crimson-text); }
+.qbd-unavail-lead {
+  margin: 0 0 var(--s-4); max-width: 74ch;
+  font: 500 var(--fs-body)/1.6 var(--pbe-font-ui); color: var(--pbe-paper-2);
+}
+.qbd-unavail-inline {
+  padding: var(--s-5) var(--s-4); text-align: center;
+  font: 500 var(--fs-sm)/1.6 var(--pbe-font-ui); color: var(--pbe-dim);
+  border-left: 2px solid var(--pbe-unavailable); margin: var(--s-4);
+  background: var(--pbe-ink-4);
+}
+.qbd-mastflag {
+  margin-top: 8px; color: var(--pbe-crimson-text);
+  font: 700 var(--fs-micro)/1 var(--pbe-font-data); letter-spacing: .1em;
+}
+
+/* ---- current market ---------------------------------------------------- */
+.qbd-today-sub {
+  margin-top: var(--s-5); padding-top: var(--s-3);
+  border-top: 1px solid var(--pbe-line-faint);
+  font: 700 var(--fs-micro)/1 var(--pbe-font-data); letter-spacing: var(--ls-micro);
+  text-transform: uppercase; color: var(--pbe-faint-text); margin-bottom: var(--s-3);
+}
+.qbd-mkt { display: grid; gap: 7px; }
+.qbd-mkt-row {
+  display: grid; grid-template-columns: 1fr auto; gap: var(--s-3); align-items: baseline;
+}
+.qbd-mkt-row span {
+  font: 500 var(--fs-micro)/1.3 var(--pbe-font-data); letter-spacing: .06em;
+  text-transform: uppercase; color: var(--pbe-faint-text);
+}
+.qbd-mkt-row b {
+  font: 600 var(--fs-data)/1 var(--pbe-font-data); color: var(--pbe-paper);
+  font-variant-numeric: tabular-nums; text-align: right;
+}
+/* a market nobody is offering is colourless and says so in full */
+.qbd-mkt-row b.na {
+  font: 500 var(--fs-micro)/1.3 var(--pbe-font-data); color: var(--pbe-unavailable);
+  letter-spacing: .08em;
+}
+.qbd-mkt-row em {
+  display: block; font-style: normal; margin-top: 3px;
+  font: 500 var(--fs-micro)/1 var(--pbe-font-data); color: var(--pbe-faint-text);
+  text-align: right; letter-spacing: .04em;
+}
+.qbd-mkt-none {
+  padding: var(--s-3); border-left: 2px solid var(--pbe-unavailable);
+  background: rgba(245,241,235,.02);
+  font: 400 var(--fs-micro)/1.6 var(--pbe-font-ui); color: var(--pbe-faint-text);
+}
+.qbd-mkt-src {
+  margin-top: var(--s-3); font: 400 var(--fs-micro)/1.5 var(--pbe-font-ui);
+  color: var(--pbe-faint-text);
+}
+.qbd-linebadge {
+  display: inline-block; padding: 3px 7px; border: 1px solid var(--pbe-line-strong);
+  border-radius: var(--r-xs); color: var(--pbe-faint-text);
+  font: 700 var(--fs-micro)/1 var(--pbe-font-data); letter-spacing: .1em;
+  text-transform: uppercase;
+}
+/* the market line is the product's primary reference number, so it carries the
+   one gold outline on the panel */
+.qbd-linebadge.is-market { border-color: var(--pbe-gold); color: var(--pbe-gold); }
+.qbd-hint {
+  font: 400 var(--fs-micro)/1 var(--pbe-font-ui); color: var(--pbe-faint-text);
+  white-space: nowrap;
+}
+
+/* ---- sources (discoverable, not plastered) ----------------------------- */
+.qbd-sources {
+  border: 1px solid var(--pbe-line); background: var(--pbe-ink-2);
+  margin-bottom: var(--s-5);
+}
+.qbd-sources > summary {
+  padding: var(--s-3) var(--s-4); cursor: pointer; list-style: none;
+  font: 700 var(--fs-label)/1 var(--pbe-font-data); letter-spacing: var(--ls-label);
+  text-transform: uppercase; color: var(--pbe-faint-text);
+  display: flex; align-items: center; gap: var(--s-2);
+}
+.qbd-sources > summary::-webkit-details-marker { display: none; }
+.qbd-sources > summary::before {
+  content: '+'; font-size: var(--fs-sm); color: var(--pbe-gold); line-height: 1;
+}
+.qbd-sources[open] > summary::before { content: '−'; }
+.qbd-sources > summary:hover { color: var(--pbe-paper); }
+.qbd-sources-body { padding: 0 var(--s-4) var(--s-4); border-top: 1px solid var(--pbe-line); padding-top: var(--s-4); }
+.qbd-src-stamp {
+  margin-top: var(--s-4); padding-top: var(--s-3);
+  border-top: 1px solid var(--pbe-line-faint);
+  font: 500 var(--fs-micro)/1.5 var(--pbe-font-data); color: var(--pbe-faint-text);
+}
+
+@media (max-width: 620px) {
+  .qbd-window { gap: var(--s-2); }
+  .qbd-window-sep { display: none; }
+  .qbd-window-k { flex: 1 1 100%; margin-top: 4px; }
+}
+
+/* A <select> takes its intrinsic width from its widest option, and the
+   quarterback list carries long names plus team and game counts. Without this
+   it forces the control bar wider than a phone viewport. */
+.qbd-field { min-width: 0; max-width: 100%; }
+.qbd-select { min-width: 0; max-width: 100%; text-overflow: ellipsis; }
+@media (max-width: 620px) {
+  .qbd-field { flex: 1 1 100%; }
+  .qbd-field > .qbd-select { flex: 1 1 auto; width: 100%; }
+}

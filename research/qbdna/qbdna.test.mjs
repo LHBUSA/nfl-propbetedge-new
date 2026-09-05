@@ -13,6 +13,10 @@ import { dataset, resolvePlayer, gamesFor, rate, ratio, baseline, splitRows,
          propThreshold, SAMPLE, CONDITIONS } from '../../api/_qbdna/engine.js';
 import { gate, gateReport, STATUS, THRESHOLDS } from '../../api/_qbdna/gating.js';
 
+/** Players who actually have games. Zero-history 2026 rookies are in the
+ *  dataset deliberately, and most split assertions do not apply to them. */
+const withHistory = () => dataset().players.filter(p => gamesFor(p.gsis_id).length);
+
 const MAHOMES = '00-0033873', ALLEN = '00-0034857';
 const MAHOMES_ESPN = '3139477', ALLEN_ESPN = '3918298';
 
@@ -87,7 +91,7 @@ test('an ambiguous name resolves to nothing and names its candidates', () => {
 
 test('the live to historical join holds for the ESPN ids in the dataset', async () => {
   const D = dataset();
-  const withEspn = D.players.filter(p => p.espn_id);
+  const withEspn = withHistory().filter(p => p.espn_id);
   let checked = 0;
   for (const p of withEspn) {
     const viaEspn = await call('qb-dna', `espn_id=${p.espn_id}`);
@@ -131,7 +135,7 @@ test('sample labels are exactly the documented size bands', () => {
 test('a roofed game can never enter an outdoor weather split', () => {
   const D = dataset();
   const weatherKeys = Object.keys(CONDITIONS).filter(k => CONDITIONS[k].weather);
-  for (const p of D.players.slice(0, 20)) {
+  for (const p of withHistory().slice(0, 20)) {
     const rows = gamesFor(p.gsis_id);
     for (const k of weatherKeys) {
       for (const r of splitRows(rows, k).rows) {
@@ -154,7 +158,7 @@ test('an unresolved environment is excluded, and the exclusion is disclosed', ()
 test('a split with no games reports unavailable, not zero', async () => {
   // a quarterback with no snow games at all
   const D = dataset();
-  const target = D.players.find(p => splitRows(gamesFor(p.gsis_id), 'snow').rows.length === 0);
+  const target = withHistory().find(p => splitRows(gamesFor(p.gsis_id), 'snow').rows.length === 0);
   assert.ok(target, 'expected at least one QB with no snow game');
   const r = await call('qb-dna', `player_id=${target.gsis_id}`);
   const snow = r.body.conditions.snow;
@@ -253,15 +257,15 @@ test('an integer line produces real pushes and they are not counted as overs', a
   for (const g of log) assert.equal(g.outcome, 'PUSH');
 });
 
-test('a line is required', async () => {
+test('a line or an event is required - there is no default line', async () => {
   const r = await call('prop-history', `player_id=${MAHOMES}&market=passing_yards`);
   assert.equal(r.status, 400);
-  assert.equal(r.body.error, 'line_required');
+  assert.equal(r.body.error, 'line_or_event_required');
 });
 
 test('a condition window with no games is unavailable, not 0%', async () => {
   const D = dataset();
-  const target = D.players.find(p => splitRows(gamesFor(p.gsis_id), 'snow').rows.length === 0);
+  const target = withHistory().find(p => splitRows(gamesFor(p.gsis_id), 'snow').rows.length === 0);
   const r = await call('prop-history',
     `player_id=${target.gsis_id}&market=passing_yards&line=250&condition=snow`);
   assert.equal(r.body.windowed.available, false);
@@ -305,9 +309,10 @@ test('two quarterbacks who never met report unavailable, not 0-0', async () => {
   const D = dataset();
   // find a genuine non-overlapping pair
   let pair = null;
-  outer: for (const a of D.players.slice(0, 40)) {
+  const pool = withHistory().slice(0, 40);
+  outer: for (const a of pool) {
     const ids = new Set(gamesFor(a.gsis_id).map(g => g.g));
-    for (const b of D.players.slice(0, 40)) {
+    for (const b of pool) {
       if (a.gsis_id === b.gsis_id) continue;
       if (!gamesFor(b.gsis_id).some(g => ids.has(g.g))) { pair = [a, b]; break outer; }
     }

@@ -1,0 +1,403 @@
+{
+  "ok": true,
+  "game": {
+    "espn_event_id": "401872931",
+    "label": "DEN @ KC",
+    "kickoff_utc": "2026-09-15T00:15Z",
+    "status": "STATUS_SCHEDULED",
+    "home_team": "KC",
+    "away_team": "DEN",
+    "home_team_espn_id": "12",
+    "away_team_espn_id": "7",
+    "espn_venue": "Arrowhead Stadium",
+    "espn_venue_indoor": false,
+    "venue": {
+      "venue": "Arrowhead Stadium",
+      "city": "Kansas City",
+      "state": "MO",
+      "lat": 39.09973,
+      "lon": -94.57857,
+      "tz": "America/Chicago",
+      "indoor": false,
+      "grass": true,
+      "espn_venue_id": "3622"
+    },
+    "roof_source": "pbe_venue_table",
+    "surface": "grass",
+    "surface_source": "pbe_venue_table (ESPN teams API grass flag)",
+    "neutral_site": false
+  },
+  "context": {
+    "roof": "outdoors",
+    "indoor": false,
+    "kickoff_local_date": "2026-09-14",
+    "kickoff_local_hour": 19,
+    "primetime": true,
+    "home_team": "KC",
+    "away_team": "DEN",
+    "temp_f": 81,
+    "wind_mph": 13.6,
+    "precip": "none"
+  },
+  "forecast": {
+    "hour_local": "2026-09-14T19:00",
+    "temp_f": 81,
+    "wind_mph": 13.6,
+    "precip_in": 0.004,
+    "rain_in": 0,
+    "snow_in": 0,
+    "wmo_code": 51,
+    "source": "open_meteo_forecast",
+    "source_url": "https://api.open-meteo.com/v1/forecast?latitude=39.09973&longitude=-94.57857&hourly=temperature_2m,wind_speed_10m,precipitation,rain,snowfall,weather_code&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=America%2FChicago&start_date=2026-09-14&end_date=2026-09-14"
+  },
+  "markets": {
+    "available": true,
+    "event_id": "5ad8135dc2b5f27de0b777acd317855a",
+    "event": {
+      "id": "5ad8135dc2b5f27de0b777acd317855a",
+      "commence_time": "2026-09-15T00:15:00Z",
+      "away_team": "Denver Broncos",
+      "home_team": "Kansas City Chiefs"
+    },
+    "players": [
+      {
+        "player_name": "Bo Nix",
+        "gsis_id": "00-0039732",
+        "matched_by": "exact_name",
+        "resolution_note": null,
+        "markets": {
+          "passing_attempts": {
+            "market": "passing_attempts",
+            "gateway_market": "player_pass_attempts",
+            "line": 34.5,
+            "line_low": 34.5,
+            "line_high": 34.5,
+            "book_count": 3,
+            "books": [
+              "DraftKings",
+              "Fanatics",
+              "BetOnline.ag"
+            ]
+          },
+          "completions": {
+            "market": "completions",
+            "gateway_market": "player_pass_completions",
+            "line": 20.5,
+            "line_low": 20.5,
+            "line_high": 22.5,
+            "book_count": 4,
+            "books": [
+              "DraftKings",
+              "Fanatics",
+              "BetOnline.ag",
+              "BetRivers"
+            ]
+          },
+          "passing_touchdowns": {
+            "market": "passing_touchdowns",
+            "gateway_market": "player_pass_tds",
+            "line": 1.5,
+            "line_low": 1.5,
+            "line_high": 1.5,
+            "book_count": 5,
+            "books": [
+              "DraftKings",
+              "Fanatics",
+              "FanDuel",
+              "BetOnline.ag",
+              "BetRivers"
+            ]
+          },
+          "passing_yards": {
+            "market": "passing_yards",
+            "gateway_market": "player_pass_yds",
+            "line": 225.5,
+            "line_low": 220.5,
+            "line_high": 227.5,
+            "book_count": 5,
+            "books": [
+              "DraftKings",
+              "Fanatics",
+              "FanDuel",
+              "BetOnline.ag",
+              "BetRivers"
+            ]
+          }
+        },
+        "unavailable_markets": [
+          {
+            "market": "interceptions",
+            "state": "CURRENT MARKET UNAVAILABLE",
+            "reason": "no book in the current market is offering this market for this player"
+          }
+        ]
+      },
+      {
+        "player_name": "Patrick Mahomes",
+        "gsis_id": "00-0033873",
+        "matched_by": "exact_name",
+        "resolution_note": null,
+        "markets": {
+          "passing_attempts": {
+            "market": "passing_attempts",
+            "gateway_market": "player_pass_attempts",
+            "line": 31.5,
+            "line_low": 31.5,
+            "line_high": 31.5,
+            "book_count": 2,
+            "books": [
+              "DraftKings",
+              "BetOnline.ag"
+            ]
+          },
+          "completions": {
+            "market": "completions",
+            "gateway_market": "player_pass_completions",
+            "line": 21.5,
+            "line_low": 20.5,
+            "line_high": 21.5,
+            "book_count": 3,
+            "books": [
+              "DraftKings",
+              "BetOnline.ag",
+              "BetRivers"
+            ]
+          },
+          "passing_touchdowns": {
+            "market": "passing_touchdowns",
+            "gateway_market": "player_pass_tds",
+            "line": 1.5,
+            "line_low": 1.5,
+            "line_high": 1.5,
+            "book_count": 4,
+            "books": [
+              "DraftKings",
+              "FanDuel",
+              "BetOnline.ag",
+              "BetRivers"
+            ]
+          },
+          "passing_yards": {
+            "market": "passing_yards",
+            "gateway_market": "player_pass_yds",
+            "line": 226,
+            "line_low": 225.5,
+            "line_high": 227.5,
+            "book_count": 4,
+            "books": [
+              "DraftKings",
+              "FanDuel",
+              "BetOnline.ag",
+              "BetRivers"
+            ]
+          }
+        },
+        "unavailable_markets": [
+          {
+            "market": "interceptions",
+            "state": "CURRENT MARKET UNAVAILABLE",
+            "reason": "no book in the current market is offering this market for this player"
+          }
+        ]
+      }
+    ],
+    "markets_offered": [
+      "passing_attempts",
+      "completions",
+      "passing_touchdowns",
+      "passing_yards"
+    ],
+    "quote_count": 58,
+    "source": {
+      "gateway": "https://nfl-api.propbetedge.ai",
+      "url": "https://nfl-api.propbetedge.ai/api/odds/board?event_id=5ad8135dc2b5f27de0b777acd317855a&markets=player_pass_yds,player_pass_attempts,player_pass_completions,player_pass_tds,player_pass_interceptions",
+      "provider": {
+        "provider": "the_odds_api",
+        "semantics": "LIVE",
+        "normalization": "PropBetEdge market normalization v1",
+        "implied_probability": "raw bookmaker implied probability; not vig-free"
+      },
+      "provider_last_update": "2026-09-05T16:49:34Z",
+      "note": "Current markets come from the existing PropBetEdge market source. QB DNA does not operate a second odds source."
+    }
+  },
+  "market_event_id": "5ad8135dc2b5f27de0b777acd317855a",
+  "unresolved": [],
+  "data_window": {
+    "seasons": [
+      2019,
+      2020,
+      2021,
+      2022,
+      2023,
+      2024,
+      2025
+    ],
+    "data_through": "2026-02-08",
+    "latest_season": 2025,
+    "latest_completed_game": {
+      "game_id": "2025_22_SEA_NE",
+      "date": "2026-02-08",
+      "season": 2025,
+      "week": 22,
+      "season_type": "POST",
+      "matchup": "SEA @ NE"
+    },
+    "seasons_without_play_by_play": [
+      2026
+    ],
+    "note": "No play-by-play exists yet for 2026 because no game in that season has been completed. Nothing is projected for it."
+  },
+  "compare_query": {
+    "home_template": "player_id=PLAYER_ID&roof=outdoors&home=true&opponent=DEN&primetime=true&temp_f=81&wind_mph=13.6&precip=none",
+    "away_template": "player_id=PLAYER_ID&roof=outdoors&home=false&opponent=KC&primetime=true&temp_f=81&wind_mph=13.6&precip=none"
+  },
+  "build_hint": "replace PLAYER_ID with a GSIS id and GET /api/qb-dna/compare?<query>",
+  "sources": {
+    "schedule": "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard",
+    "venue": "PropBetEdge venue table (ESPN teams API + Open-Meteo geocoding)",
+    "weather": "Open-Meteo forecast API",
+    "markets": "existing PropBetEdge market source"
+  },
+  "provenance": {
+    "dataset_generated_at": "2026-09-05T16:32:22Z",
+    "seasons": [
+      2019,
+      2020,
+      2021,
+      2022,
+      2023,
+      2024,
+      2025
+    ],
+    "data_through": "2026-02-08",
+    "latest_completed_game": {
+      "game_id": "2025_22_SEA_NE",
+      "date": "2026-02-08",
+      "season": 2025,
+      "week": 22,
+      "season_type": "POST",
+      "matchup": "SEA @ NE"
+    },
+    "qb_games_in_dataset": 4282,
+    "sources": [
+      {
+        "name": "nflverse play-by-play, schedules and players",
+        "url": "https://github.com/nflverse/nflverse-data",
+        "licence": "CC-BY-4.0",
+        "attribution": "Data by nflverse, licensed CC BY 4.0"
+      },
+      {
+        "name": "Open-Meteo historical weather archive",
+        "url": "https://archive-api.open-meteo.com/",
+        "licence": "CC-BY-4.0",
+        "attribution": "Weather data by Open-Meteo.com, licensed CC BY 4.0"
+      },
+      {
+        "name": "ESPN public team, venue and schedule endpoints",
+        "url": "https://site.api.espn.com/apis/site/v2/sports/football/nfl/",
+        "licence": "public endpoint",
+        "attribution": "Schedule and venue context from ESPN public endpoints"
+      }
+    ],
+    "field_availability_by_season": {
+      "2019": {
+        "offense_formation": 73.1,
+        "offense_personnel": 76.1,
+        "defense_personnel": 76.1,
+        "defenders_in_box": 74.2,
+        "number_of_pass_rushers": 43.3,
+        "ngs_air_yards": 37.1,
+        "time_to_throw": 38.5,
+        "was_pressure": 38.5,
+        "route": 37,
+        "defense_man_zone_type": 38.5,
+        "defense_coverage_type": 38.5
+      },
+      "2020": {
+        "offense_formation": 73.1,
+        "offense_personnel": 76.1,
+        "defense_personnel": 76.1,
+        "defenders_in_box": 74.4,
+        "number_of_pass_rushers": 43.5,
+        "ngs_air_yards": 37.6,
+        "time_to_throw": 39,
+        "was_pressure": 39,
+        "route": 37.5,
+        "defense_man_zone_type": 39,
+        "defense_coverage_type": 39
+      },
+      "2021": {
+        "offense_formation": 73,
+        "offense_personnel": 76.3,
+        "defense_personnel": 76.3,
+        "defenders_in_box": 74.4,
+        "number_of_pass_rushers": 43.3,
+        "ngs_air_yards": 37.4,
+        "time_to_throw": 38.6,
+        "was_pressure": 38.6,
+        "route": 37.3,
+        "defense_man_zone_type": 38.7,
+        "defense_coverage_type": 38.7
+      },
+      "2022": {
+        "offense_formation": 73.4,
+        "offense_personnel": 76.2,
+        "defense_personnel": 76.2,
+        "defenders_in_box": 74.4,
+        "number_of_pass_rushers": 42.7,
+        "ngs_air_yards": 36.3,
+        "time_to_throw": 37.8,
+        "was_pressure": 37.8,
+        "route": 36.2,
+        "defense_man_zone_type": 37.8,
+        "defense_coverage_type": 37.8
+      },
+      "2023": {
+        "offense_formation": 80.1,
+        "offense_personnel": 100,
+        "defense_personnel": 100,
+        "defenders_in_box": 100,
+        "number_of_pass_rushers": 97.2,
+        "ngs_air_yards": 0,
+        "time_to_throw": 44,
+        "was_pressure": 100,
+        "route": 100,
+        "defense_man_zone_type": 100,
+        "defense_coverage_type": 49.6
+      },
+      "2024": {
+        "offense_formation": null,
+        "offense_personnel": null,
+        "defense_personnel": null,
+        "defenders_in_box": null,
+        "number_of_pass_rushers": null,
+        "ngs_air_yards": null,
+        "time_to_throw": null,
+        "was_pressure": null,
+        "route": null,
+        "defense_man_zone_type": null,
+        "defense_coverage_type": null
+      },
+      "2025": {
+        "offense_formation": null,
+        "offense_personnel": null,
+        "defense_personnel": null,
+        "defenders_in_box": null,
+        "number_of_pass_rushers": null,
+        "ngs_air_yards": null,
+        "time_to_throw": null,
+        "was_pressure": null,
+        "route": null,
+        "defense_man_zone_type": null,
+        "defense_coverage_type": null
+      }
+    },
+    "notes": [
+      "Sample labels describe SIZE ONLY. They are not claims of statistical significance.",
+      "Roofed and closed-roof games are excluded from outdoor weather splits by construction.",
+      "A split whose inputs are missing reports available:false. It never reports zero.",
+      "A quarterback with no NFL history reports zero games. College statistics are never substituted."
+    ]
+  }
+}

@@ -247,18 +247,39 @@ export function gamesFor(gsis) {
   return dataset()._byPlayer.get(gsis) || [];
 }
 
+/** The window the dataset actually covers. Emitted on EVERY response so no
+ *  surface can present a stale season as current form. */
+export function dataWindow() {
+  const m = dataset().meta;
+  return {
+    seasons: m.seasons,
+    data_through: m.data_through,
+    latest_season: m.latest_season,
+    latest_completed_game: m.latest_completed_game,
+    seasons_without_play_by_play: m.seasons_without_play_by_play || [],
+    note: (m.seasons_without_play_by_play || []).length
+      ? `No play-by-play exists yet for ${(m.seasons_without_play_by_play || []).join(', ')} `
+        + 'because no game in that season has been completed. Nothing is projected for it.'
+      : null
+  };
+}
+
 export function provenance(extra = {}) {
   const D = dataset();
   return {
     dataset_generated_at: D.meta.generated_at,
     seasons: D.meta.seasons,
+    data_through: D.meta.data_through,
+    latest_completed_game: D.meta.latest_completed_game,
     qb_games_in_dataset: D.meta.qb_games,
     sources: D.meta.sources,
     field_availability_by_season: D.meta.field_availability_by_season,
     notes: [
       'Sample labels describe SIZE ONLY. They are not claims of statistical significance.',
       'Roofed and closed-roof games are excluded from outdoor weather splits by construction.',
-      'A split whose inputs are missing reports available:false. It never reports zero.'
+      'A split whose inputs are missing reports available:false. It never reports zero.',
+      'A quarterback with no NFL history reports zero games. College statistics are '
+      + 'never substituted.'
     ],
     ...extra
   };
