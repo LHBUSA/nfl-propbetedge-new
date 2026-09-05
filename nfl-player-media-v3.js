@@ -18,7 +18,7 @@
     '.pbe23-market-row .pbe23-player',
     '.pbe23-leg .pbe23-leg-player',
     '.pbe4-mobile-card > header > div > span:first-child',
-    '.pbe27-tag.player',
+    '.pbe27-chip.player',   /* News Intelligence: corroborated player chip */
     '.pbe13-tag.accent',
     '[data-pbe-player-media="1"]'
   ];

@@ -422,14 +422,6 @@ body::after{
   text-transform:none;
 }
 
-/* A story whose dek the trust guard could not corroborate shows nothing rather
-   than an unverified sentence. Keep the gap honest, not empty-looking. */
-.pbe27-nodek{
-  font-style:italic;
-  color:var(--pbe-faint);
-  font-size:var(--fs-sm);
-}
-
 /* Single entry point back to the engine story, which now lives on PBE Picks. */
 .pbe7-engine-link{
   display:block;
@@ -780,3 +772,13 @@ body::after{
   background:none!important;
   backdrop-filter:none!important;
 }
+
+/* Two older mobile rules hide story deks to save vertical space
+   (.pbe7-news-copy p at 760, .pbe7-lead-copy p at 460). The market-impact
+   block is a <p> inside that same copy element, so on a phone the label
+   "MARKET IMPACT - CONTEXT - 4" survived with its sentence removed and read
+   as a rendering fault. The impact paragraph is the point of the block; it is
+   exempted, and when there is no paragraph the block is not rendered at all
+   (see decorateStory in dashboard-v8-enhance.js). */
+.pbe7-news-copy .pbe8-impact p,
+.pbe7-lead-copy .pbe8-impact p{display:block!important}

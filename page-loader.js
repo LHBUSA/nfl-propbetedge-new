@@ -180,7 +180,12 @@
         await addScript(item.js);
         /* v7 is authoritative, but its legacy install check did not include the
            transient .pbehome6 DOM. Force the handoff immediately on initial home. */
-        if(item.js==='./dashboard-v7.js'&&window.App?.current==='home'&&typeof window.PBEDashboardV7?.load==='function'){
+        /* App.current is still its 'home' default here on every route, because
+           App.boot() does not run until pbe:upgrades-ready. Keying the handoff
+           to the hash stops a deep link to another route from spending three
+           API calls loading a dashboard nobody asked for. */
+        const bootRoute=window.App?.normalize?window.App.normalize(String(location.hash||'').replace(/^#/,'')):'home';
+        if(item.js==='./dashboard-v7.js'&&bootRoute==='home'&&typeof window.PBEDashboardV7?.load==='function'){
           await window.PBEDashboardV7.load();
         }
         replayPendingRoute();

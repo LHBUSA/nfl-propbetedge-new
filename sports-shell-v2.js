@@ -152,11 +152,26 @@
      Dashboard. Once the grouped nav gained an explicit Dashboard button, both
      matched on the home route and two items rendered active at once. The brand
      is a logo, not a nav item, so it is excluded from the active state. */
+  /* state.route only ever moved when App.nav was called, so a direct load of
+     /#newsintel -- or any boot that renders the route without going through
+     nav -- left the shell showing DASHBOARD as the active item on a different
+     page. App.current is the router's own answer, so ask it first, and
+     normalize both sides so an alias never fails to match. */
+  function activeRoute(){
+    const raw=window.App?.current||state.route||'home';
+    return typeof window.App?.normalize==='function'?window.App.normalize(raw):String(raw).toLowerCase();
+  }
   function syncActive(){
+    const route=activeRoute();
     document.querySelectorAll('#pbe-sports-shell [data-route]:not(.pbes-brand)')
-      .forEach(el=>el.classList.toggle('active',el.dataset.route===state.route));
+      .forEach(el=>{
+        const own=typeof window.App?.normalize==='function'?window.App.normalize(el.dataset.route):el.dataset.route;
+        el.classList.toggle('active',own===route);
+      });
     document.querySelector('#pbe-sports-shell .pbes-brand')?.classList.remove('active');
   }
+  window.addEventListener('hashchange',syncActive);
+  window.addEventListener('pbe:upgrades-ready',syncActive);
 
   function attachLogoFallbacks(host){
     host?.querySelectorAll('img.pbes-team-logo').forEach(img=>{
@@ -254,7 +269,16 @@
     if(!window.App?.nav||window.__pbesRouterPatchedV2)return;
     window.__pbesRouterPatchedV2=true;
     const native=App.nav.bind(App);
-    App.nav=function(route,...rest){state.route=route;syncActive();return native(route,...rest)};
+    /* syncActive now asks the router which route is current, so it has to run
+       after native() has switched it -- calling it first painted the previous
+       route as active. state.route is still set up front as the fallback for
+       the case where App.normalize is unavailable. */
+    App.nav=function(route,...rest){
+      state.route=route;
+      const result=native(route,...rest);
+      syncActive();
+      return result;
+    };
   }
   function boot(){ensure();patchRouter();load();setTimeout(patchRouter,500);setTimeout(patchRouter,1800)}
 

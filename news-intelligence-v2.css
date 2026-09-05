@@ -1,9 +1,581 @@
-/* PropBetEdge NFL — News Intelligence v2 */
-.pbe27-news{padding:6px 0 60px}.pbe27-news *{box-sizing:border-box}.pbe27-hero{position:relative;overflow:hidden;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px;align-items:end;padding:28px;border:1px solid rgba(241,107,120,.10);border-radius:16px;background:radial-gradient(circle at 86% 0,rgba(241,107,120,.11),transparent 25rem),linear-gradient(135deg,var(--pbe-ink),var(--pbe-ink) 62%,var(--pbe-ink));box-shadow:0 24px 70px rgba(0,0,0,.26)}.pbe27-hero:after{content:'NEWS';position:absolute;right:-10px;bottom:-64px;color:rgba(241,107,120,.018);font:900 195px/.8 'Inter',sans-serif}.pbe27-kicker{color:var(--pbe-crimson-text);font:800 11px/1 'JetBrains Mono',monospace;letter-spacing:.16em;text-transform:uppercase}.pbe27-title{margin:10px 0 0;color:#fff;font:900 clamp(30px,3.4vw,46px)/.82 'Inter',sans-serif;letter-spacing:-.045em;text-transform:uppercase}.pbe27-title em{color:var(--pbe-gold);font-style:normal}.pbe27-copy{max-width:800px;margin-top:13px;color:var(--pbe-dim);font-size:13px;line-height:1.68}.pbe27-status{min-width:270px;padding:15px;border:1px solid rgba(241,107,120,.14);border-radius:11px;background:rgba(4,9,13,.48)}.pbe27-status b{display:block;color:var(--pbe-crimson-bright);font:900 25px/1 'Inter',sans-serif;text-transform:uppercase}.pbe27-status span{display:block;margin-top:6px;color:var(--pbe-dim);font:700 10px/1.45 'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.06em}
-.pbe27-summary{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-top:9px}.pbe27-stat{padding:12px;border:1px solid rgba(255,255,255,.06);border-radius:9px;background:linear-gradient(145deg,rgba(16,26,39,.88),rgba(9,15,23,.86))}.pbe27-stat b{display:block;color:#fff;font:900 27px/1 'Inter',sans-serif}.pbe27-stat b.red{color:var(--pbe-crimson-bright)}.pbe27-stat b.green{color:var(--pbe-pos)}.pbe27-stat span{display:block;margin-top:4px;color:var(--pbe-dim);font:800 11px/1.3 'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.07em}.pbe27-controls{margin-top:9px;display:grid;grid-template-columns:minmax(220px,1fr) auto auto auto;gap:7px;padding:9px;border:1px solid rgba(255,255,255,.065);border-radius:10px;background:var(--pbe-ink)}.pbe27-input,.pbe27-select{height:34px;border:1px solid rgba(255,255,255,.075);border-radius:7px;background:rgba(0,0,0,.2);color:var(--pbe-paper);padding:0 10px;outline:none;font-size:12px}.pbe27-input:focus,.pbe27-select:focus{border-color:rgba(241,107,120,.27)}
-.pbe27-lead-grid{display:grid;grid-template-columns:1.2fr .8fr;gap:9px;margin-top:9px}.pbe27-lead{position:relative;min-height:420px;border:1px solid rgba(241,107,120,.13);border-radius:11px;background:radial-gradient(circle at 92% 0,rgba(241,107,120,.07),transparent 17rem),rgba(12,19,29,.80);overflow:hidden}.pbe27-lead-media{position:absolute;inset:0;overflow:hidden}.pbe27-lead-media img{width:100%;height:100%;object-fit:cover;transition:transform .45s ease}.pbe27-lead:hover .pbe27-lead-media img{transform:scale(1.02)}.pbe27-lead-shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.04) 8%,rgba(0,0,0,.20) 36%,rgba(7,7,7,.80) 72%,rgba(7,7,7,.98) 100%)}.pbe27-lead-copy{position:relative;z-index:2;padding:19px}.pbe27-lead.has-image .pbe27-lead-copy{position:absolute;left:0;right:0;bottom:0;padding:28px}.pbe27-topic{color:var(--pbe-crimson-text);font:800 10px/1 'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.09em}.pbe27-current{display:inline-flex;margin-left:5px;padding:3px 5px;border:1px solid rgba(85,214,140,.14);border-radius:999px;background:rgba(85,214,140,.025);color:var(--pbe-gold);font:800 10px/1 'JetBrains Mono',monospace;text-transform:uppercase}.pbe27-lead h2{margin:13px 0 0;color:#fff;font:900 clamp(31px,3.8vw,52px)/.92 'Inter',sans-serif;text-shadow:0 3px 18px rgba(0,0,0,.55)}.pbe27-lead p{max-width:760px;margin:12px 0 0;color:var(--pbe-paper);font-size:12px;line-height:1.7;text-shadow:0 2px 10px rgba(0,0,0,.45)}.pbe27-meta{margin-top:13px;color:var(--pbe-paper-2);font:700 10px/1.45 'JetBrains Mono',monospace;text-transform:uppercase}.pbe27-tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:11px}.pbe27-tag{padding:5px 6px;border:1px solid rgba(255,255,255,.08);border-radius:999px;color:var(--pbe-paper-2);background:rgba(0,0,0,.24);font:700 11px/1 'JetBrains Mono',monospace}.pbe27-tag.player{color:var(--pbe-gold);border-color:rgba(212,175,55,.22)}.pbe27-lead-actions{display:flex;gap:6px;margin-top:16px}.pbe27-btn{min-height:34px;display:inline-flex;align-items:center;justify-content:center;padding:0 11px;border:1px solid rgba(255,255,255,.09);border-radius:7px;background:rgba(0,0,0,.28);color:var(--pbe-paper);cursor:pointer;text-decoration:none;font:800 11px/1 'JetBrains Mono',monospace;text-transform:uppercase;backdrop-filter:blur(9px)}.pbe27-btn.red{background:var(--pbe-crimson-bright);border-color:var(--pbe-crimson-bright);color:#16070a}
-.pbe27-impact{border:1px solid rgba(255,255,255,.06);border-radius:11px;background:rgba(12,19,29,.80);overflow:hidden}.pbe27-panel-head{min-height:43px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 13px;border-bottom:1px solid rgba(255,255,255,.055)}.pbe27-panel-head strong{color:var(--pbe-paper);font:900 16px/1 'Inter',sans-serif;text-transform:uppercase}.pbe27-panel-head span{color:var(--pbe-dim);font:700 10px/1 'JetBrains Mono',monospace;text-transform:uppercase}.pbe27-impact-list{padding:8px;display:grid;gap:5px}.pbe27-impact-row{display:grid;grid-template-columns:auto 40px 1fr auto;gap:8px;align-items:center;padding:7px;border:1px solid rgba(255,255,255,.04);border-radius:7px;background:rgba(255,255,255,.011)}.pbe27-impact-row:not(:has(.pbe27-impact-thumb)){grid-template-columns:40px 1fr auto}.pbe27-impact-thumb{width:46px;height:34px;object-fit:cover;border-radius:6px;border:1px solid rgba(255,255,255,.06)}.pbe27-impact-score{color:var(--pbe-crimson-bright);font:900 21px/1 'Inter',sans-serif;text-align:center}.pbe27-impact-title{color:var(--pbe-paper);font-size:11px;font-weight:800;line-height:1.35}.pbe27-impact-meta{margin-top:3px;color:var(--pbe-dim);font:700 11px/1.3 'JetBrains Mono',monospace;text-transform:uppercase}.pbe27-impact-row a{color:var(--pbe-dim);text-decoration:none;font:800 11px/1 'JetBrains Mono',monospace;text-transform:uppercase}
-.pbe27-feed{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:9px}.pbe27-card{min-height:260px;border:1px solid rgba(255,255,255,.06);border-radius:10px;background:linear-gradient(145deg,rgba(16,26,39,.87),rgba(9,15,23,.86));overflow:hidden}.pbe27-card-media{display:block;aspect-ratio:16/9;overflow:hidden;background:var(--pbe-ink)}.pbe27-card-media img{width:100%;height:100%;object-fit:cover;transition:transform .35s ease}.pbe27-card:hover .pbe27-card-media img{transform:scale(1.025)}.pbe27-card-body{padding:13px}.pbe27-card-top{display:flex;align-items:center;justify-content:space-between;gap:10px}.pbe27-card-topic{color:var(--pbe-crimson-text);font:800 11px/1 'JetBrains Mono',monospace;text-transform:uppercase}.pbe27-card-time{color:var(--pbe-dim);font:700 10px/1 'JetBrains Mono',monospace;text-transform:uppercase}.pbe27-card h3{margin:10px 0 0;color:var(--pbe-paper);font:900 20px/.98 'Inter',sans-serif}.pbe27-card p{margin:8px 0 0;color:var(--pbe-dim);font-size:11px;line-height:1.55}.pbe27-card-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:12px;padding-top:9px;border-top:1px solid rgba(255,255,255,.045)}.pbe27-source{color:var(--pbe-dim);font:700 11px/1 'JetBrains Mono',monospace;text-transform:uppercase}.pbe27-card a{color:var(--pbe-gold);text-decoration:none;font:800 11px/1 'JetBrains Mono',monospace;text-transform:uppercase}.pbe27-empty{min-height:280px;display:grid;place-items:center;padding:25px;border:1px solid rgba(255,255,255,.06);border-radius:10px;background:rgba(12,19,29,.75);text-align:center;color:var(--pbe-dim);font-size:12px;line-height:1.65}
-@media(max-width:1100px){.pbe27-hero,.pbe27-lead-grid{grid-template-columns:1fr}.pbe27-summary{grid-template-columns:repeat(3,1fr)}.pbe27-feed{grid-template-columns:1fr 1fr}.pbe27-status{min-width:0}.pbe27-lead{min-height:390px}}
-@media(max-width:700px){.pbe27-controls{grid-template-columns:1fr 1fr}.pbe27-input{grid-column:1/-1}.pbe27-feed{grid-template-columns:1fr}.pbe27-lead.has-image .pbe27-lead-copy{padding:22px}.pbe27-lead h2{font-size:38px}.pbe27-impact-row{grid-template-columns:auto 34px 1fr}.pbe27-impact-row>a{display:none}}
-@media(max-width:560px){.pbe27-hero{padding:20px}.pbe27-title{font-size:48px}.pbe27-summary{grid-template-columns:1fr 1fr}.pbe27-controls{grid-template-columns:1fr}.pbe27-input{grid-column:auto}.pbe27-lead{min-height:360px}.pbe27-lead.has-image .pbe27-lead-copy{padding:18px}.pbe27-lead h2{font-size:32px}.pbe27-lead p{font-size:11px}.pbe27-lead-actions{flex-wrap:wrap}.pbe27-impact-thumb{width:42px;height:32px}}
+/* PropBetEdge NFL — News Intelligence v2
+   ===========================================================================
+   This surface is allowed more editorial character than Market Watch or the
+   Prop Board, and it deliberately leaves card-grid grammar behind. The old
+   build put forty-nine identical rounded dark cards, each with a 16:9
+   photograph, in a three-up grid; every story therefore looked exactly as
+   important as every other story and the page ran to 10,390px.
+
+   The devices here are the ones a newspaper uses: rules, whitespace, image
+   scale and type scale. Three story treatments, one hairline-separated wire,
+   and no box around anything that does not need one.
+   =========================================================================== */
+
+/* A newsroom page is paper. Every other surface in this product sits over the
+   stadium photograph in body::before, which works when the content is a set of
+   opaque panels -- but this page deliberately has no panels, so headlines, deks
+   and a fifty-row wire would have been set directly on a picture of a crowd.
+   The route gets its own reading plane instead: a full-bleed ink page that
+   cancels the ambience below the shell, with the measure capped so a wire
+   headline is not 900px wide at 1440.
+
+   The negative inline margin is exactly .view-container's own padding, so the
+   plane reaches the viewport edge without creating horizontal overflow. */
+.pbe27{
+  --pbe27-measure:1320px;
+  --pbe27-pad:clamp(18px,2.6vw,46px);
+  margin-inline:calc(-1 * clamp(14px,1.45vw,26px));
+  padding:18px var(--pbe27-pad) 64px;
+  background:var(--pbe-ink);
+  border:1px solid var(--pbe-line);
+  border-radius:var(--r-sm);
+}
+.pbe27 *{box-sizing:border-box}
+.pbe27-masthead,
+.pbe27-controls,
+.pbe27-top,
+.pbe27-wire,
+.pbe27>.pbe27-empty{max-width:var(--pbe27-measure);margin-inline:auto}
+
+/* The universal player-media enhancer prepends a headshot into any element it
+   recognises as a player name; without a size for this chip it renders at the
+   image's natural size. 18px is the same treatment the previous chip had. */
+.pbe27-chip .pbe-player-headshot-v3{
+  width:18px!important;height:18px!important;flex:0 0 18px!important;
+  border-radius:4px!important;object-fit:cover!important;margin-left:-3px;
+}
+.pbe27-chip.sm .pbe-player-headshot-v3{
+  width:15px!important;height:15px!important;flex-basis:15px!important;border-radius:3px!important;
+}
+
+/* ---------------------------------------------------------------------------
+   Masthead. One line of identity and one line of what is happening now, over
+   a gold rule -- the parent brand's structural device. It is ~96px, not the
+   300px marketing hero it replaced, because the news is the point of the page.
+   --------------------------------------------------------------------------- */
+.pbe27-masthead{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:24px;
+  flex-wrap:wrap;
+  padding-bottom:10px;
+  border-bottom:2px solid var(--pbe-gold);
+}
+.pbe27-eyebrow{
+  display:block;
+  font-family:var(--pbe-font-data);
+  font-size:var(--fs-micro);
+  font-weight:700;
+  letter-spacing:var(--ls-micro);
+  text-transform:uppercase;
+  color:var(--pbe-faint);
+}
+.pbe27-wordmark{
+  margin:6px 0 0;
+  font-family:'Playfair Display',Georgia,serif;
+  font-size:clamp(30px,3.2vw,44px);
+  font-weight:700;
+  line-height:1;
+  letter-spacing:-.01em;
+  color:var(--pbe-paper);
+}
+.pbe27-mast-now{
+  display:flex;
+  align-items:baseline;
+  gap:12px;
+  flex-wrap:wrap;
+  padding-bottom:4px;
+}
+.pbe27-now-line{
+  font-family:var(--pbe-font-data);
+  font-size:var(--fs-label);
+  font-weight:700;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+  color:var(--pbe-dim);
+}
+.pbe27-now-stamp{
+  font-family:var(--pbe-font-data);
+  font-size:var(--fs-micro);
+  letter-spacing:var(--ls-micro);
+  text-transform:uppercase;
+  color:var(--pbe-faint);
+}
+
+/* ---------------------------------------------------------------------------
+   Filters. Every chip carries its own count, so the taxonomy is visibly the
+   data's and not a decoration -- a kind with nothing in it is never rendered.
+   --------------------------------------------------------------------------- */
+.pbe27-controls{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  flex-wrap:wrap;
+  padding:12px 0;
+  border-bottom:1px solid var(--pbe-line);
+}
+.pbe27-filters{display:flex;gap:4px;flex-wrap:wrap}
+.pbe27-filter{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  min-height:30px;
+  padding:0 11px;
+  border:1px solid transparent;
+  border-radius:var(--r-pill);
+  background:transparent;
+  color:var(--pbe-dim);
+  font-family:var(--pbe-font-data);
+  font-size:var(--fs-label);
+  font-weight:700;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+  cursor:pointer;
+  transition:color .14s ease,border-color .14s ease,background .14s ease;
+}
+.pbe27-filter b{
+  font-weight:600;
+  font-variant-numeric:tabular-nums;
+  color:var(--pbe-faint);
+}
+.pbe27-filter:hover{color:var(--pbe-paper);border-color:var(--pbe-line-strong)}
+.pbe27-filter.active{
+  color:var(--pbe-ink);
+  background:var(--pbe-gold);
+  border-color:var(--pbe-gold);
+}
+.pbe27-filter.active b{color:rgba(23,17,8,.62)}
+.pbe27-controls-right{display:flex;align-items:center;gap:8px;min-width:0;flex:0 1 auto}
+.pbe27-select,.pbe27-search{
+  height:32px;
+  border:1px solid var(--pbe-line-strong);
+  border-radius:var(--r-sm);
+  background:var(--pbe-ink-2);
+  color:var(--pbe-paper);
+  padding:0 10px;
+  outline:none;
+  font-family:var(--pbe-font-ui);
+  font-size:12px;
+}
+.pbe27-search{flex:1 1 260px;min-width:0;max-width:340px}
+.pbe27-select:focus,.pbe27-search:focus{border-color:var(--pbe-gold)}
+.pbe27-search::placeholder{color:var(--pbe-faint)}
+
+/* ---------------------------------------------------------------------------
+   Story treatments. Weight is assigned by how much of the story we can
+   actually vouch for -- see the header comment in news-intelligence-v2.js.
+   --------------------------------------------------------------------------- */
+.pbe27-top{
+  display:grid;
+  grid-template-columns:minmax(0,1.62fr) minmax(300px,.98fr);
+  gap:0;
+  margin-top:16px;
+}
+
+/* --- lead: the only full-bleed photograph on the page ------------------- */
+.pbe27-lead{padding-right:34px;border-right:1px solid var(--pbe-line)}
+.pbe27-lead-media{
+  display:block;
+  aspect-ratio:2.3/1;
+  max-height:min(40vh,344px);
+  overflow:hidden;
+  background:var(--pbe-ink-2);
+}
+.pbe27-lead-media img{
+  width:100%;height:100%;
+  object-fit:cover;
+  transition:transform .5s ease;
+}
+.pbe27-lead-media:hover img{transform:scale(1.02)}
+.pbe27-lead-copy{padding-top:18px}
+.pbe27-lead-title{
+  margin:10px 0 0;
+  font-family:'Playfair Display',Georgia,serif;
+  font-size:clamp(29px,2.9vw,42px);
+  font-weight:700;
+  line-height:1.08;
+  letter-spacing:-.012em;
+  color:var(--pbe-paper);
+  text-wrap:balance;
+}
+.pbe27-lead-title a{color:inherit;text-decoration:none}
+.pbe27-lead-title a:hover{text-decoration:underline;text-decoration-color:var(--pbe-gold);text-underline-offset:5px}
+.pbe27-lead .pbe27-dek{
+  max-width:62ch;
+  margin:13px 0 0;
+  font-size:15px;
+  line-height:1.62;
+  color:var(--pbe-dim);
+}
+
+/* --- majors: contained frame, half the type scale ---------------------- */
+.pbe27-majors{display:flex;flex-direction:column;padding-left:26px}
+.pbe27-major{
+  display:grid;
+  grid-template-columns:104px minmax(0,1fr);
+  gap:14px;
+  padding:16px 0;
+  border-bottom:1px solid var(--pbe-line-faint);
+}
+.pbe27-major:first-child{padding-top:0}
+.pbe27-major:last-child{border-bottom:0;padding-bottom:0}
+.pbe27-major-media{
+  display:block;
+  width:104px;height:72px;
+  overflow:hidden;
+  border-radius:var(--r-xs);
+  background:var(--pbe-ink-2);
+}
+.pbe27-major-media img{width:100%;height:100%;object-fit:cover}
+.pbe27-major-copy{min-width:0}
+.pbe27-major-title{
+  margin:8px 0 0;
+  font-family:var(--pbe-font-ui);
+  font-size:16px;
+  font-weight:750;
+  line-height:1.26;
+  letter-spacing:-.005em;
+  color:var(--pbe-paper);
+}
+.pbe27-major-title a{color:inherit;text-decoration:none}
+.pbe27-major-title a:hover{text-decoration:underline;text-decoration-color:var(--pbe-gold);text-underline-offset:4px}
+.pbe27-major .pbe27-dek{
+  margin:7px 0 0;
+  font-size:12.5px;
+  line-height:1.5;
+  color:var(--pbe-faint);
+  display:-webkit-box;
+  -webkit-line-clamp:2;
+  -webkit-box-orient:vertical;
+  overflow:hidden;
+}
+.pbe27-major .pbe27-paths{margin-top:9px}
+
+/* --- shared story furniture -------------------------------------------- */
+.pbe27-rail{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.pbe27-topic{
+  font-family:var(--pbe-font-data);
+  font-size:var(--fs-micro);
+  font-weight:700;
+  letter-spacing:var(--ls-micro);
+  text-transform:uppercase;
+  color:var(--pbe-faint);
+}
+/* Kind is carried by a single coloured word, not by a filled pill on every
+   row. Crimson is reserved for the two kinds that actually change a lineup. */
+.pbe27-topic.injury,.pbe27-wire-topic.injury{color:var(--pbe-crimson-text)}
+.pbe27-topic.discipline,.pbe27-wire-topic.discipline{color:var(--pbe-crimson-text)}
+.pbe27-topic.transaction,.pbe27-wire-topic.transaction{color:var(--pbe-model)}
+.pbe27-topic.roster,.pbe27-wire-topic.roster{color:var(--pbe-pos)}
+.pbe27-selected{
+  padding:2px 6px;
+  border:1px solid var(--pbe-gold);
+  border-radius:var(--r-xs);
+  color:var(--pbe-gold);
+  font-family:var(--pbe-font-data);
+  font-size:9px;
+  font-weight:700;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+}
+.pbe27-time{
+  margin-left:auto;
+  font-family:var(--pbe-font-data);
+  font-size:var(--fs-micro);
+  font-variant-numeric:tabular-nums;
+  letter-spacing:var(--ls-micro);
+  text-transform:uppercase;
+  color:var(--pbe-faint);
+}
+.pbe27-byline{
+  margin-top:11px;
+  font-family:var(--pbe-font-data);
+  font-size:var(--fs-micro);
+  letter-spacing:var(--ls-micro);
+  text-transform:uppercase;
+  color:var(--pbe-faint);
+}
+
+/* Entity chips are clickable research, not decoration: a team opens Team
+   Research and a player opens the unified Player Research drawer. They only
+   ever carry entities the article's own text corroborates. */
+.pbe27-chips{display:flex;gap:5px;flex-wrap:wrap;margin-top:11px}
+.pbe27-chip{
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  min-height:26px;
+  padding:0 9px;
+  border:1px solid var(--pbe-line-strong);
+  border-radius:var(--r-pill);
+  background:transparent;
+  color:var(--pbe-dim);
+  font-family:var(--pbe-font-data);
+  font-size:var(--fs-label);
+  font-weight:700;
+  letter-spacing:.04em;
+  cursor:pointer;
+  transition:color .14s ease,border-color .14s ease;
+}
+.pbe27-chip.player{color:var(--pbe-paper-2)}
+.pbe27-chip:hover{color:var(--pbe-paper);border-color:var(--pbe-gold)}
+.pbe27-chip.sm{min-height:22px;padding:0 7px;font-size:var(--fs-micro)}
+
+.pbe27-paths{display:flex;gap:7px;flex-wrap:wrap;margin-top:14px}
+.pbe27-path{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  min-height:34px;
+  padding:0 13px;
+  border:1px solid var(--pbe-line-strong);
+  border-radius:var(--r-sm);
+  background:transparent;
+  color:var(--pbe-paper);
+  font-family:var(--pbe-font-data);
+  font-size:var(--fs-label);
+  font-weight:700;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+  cursor:pointer;
+  transition:border-color .14s ease,color .14s ease;
+}
+.pbe27-path i{font-style:normal;color:var(--pbe-gold)}
+.pbe27-path:hover{border-color:var(--pbe-gold)}
+
+/* ---------------------------------------------------------------------------
+   Live wire. Chronological, hairline-separated, no image and no box. A row is
+   complete at headline + source + time, which is exactly what is true of the
+   stories that reach it.
+   --------------------------------------------------------------------------- */
+.pbe27-wire{margin-top:34px}
+.pbe27-section-head{
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  gap:16px;
+  padding-bottom:10px;
+  border-bottom:2px solid var(--pbe-gold);
+}
+.pbe27-section-head h2{
+  margin:0;
+  font-family:'Playfair Display',Georgia,serif;
+  font-size:24px;
+  font-weight:700;
+  line-height:1;
+  color:var(--pbe-paper);
+}
+.pbe27-section-head span{
+  font-family:var(--pbe-font-data);
+  font-size:var(--fs-micro);
+  letter-spacing:var(--ls-micro);
+  text-transform:uppercase;
+  color:var(--pbe-faint);
+}
+.pbe27-wire-note{
+  margin:11px 0 0;
+  padding-left:11px;
+  border-left:2px solid var(--pbe-line-strong);
+  max-width:88ch;
+  font-size:12px;
+  line-height:1.55;
+  color:var(--pbe-faint);
+}
+.pbe27-wire-daylabel{
+  margin-top:22px;
+  padding-bottom:7px;
+  border-bottom:1px solid var(--pbe-line);
+  font-family:var(--pbe-font-data);
+  font-size:var(--fs-micro);
+  font-weight:700;
+  letter-spacing:var(--ls-micro);
+  text-transform:uppercase;
+  color:var(--pbe-faint);
+}
+.pbe27-wire-row{
+  display:grid;
+  grid-template-columns:62px 92px minmax(0,1fr) auto;
+  align-items:baseline;
+  gap:16px;
+  padding:11px 0;
+  border-bottom:1px solid var(--pbe-line-faint);
+}
+.pbe27-wire-row.is-selected{box-shadow:inset 2px 0 0 var(--pbe-gold);padding-left:11px}
+.pbe27-wire-time{
+  font-family:var(--pbe-font-data);
+  font-size:var(--fs-label);
+  font-variant-numeric:tabular-nums;
+  color:var(--pbe-faint);
+  white-space:nowrap;
+}
+.pbe27-wire-topic{
+  font-family:var(--pbe-font-data);
+  font-size:var(--fs-micro);
+  font-weight:700;
+  letter-spacing:var(--ls-micro);
+  text-transform:uppercase;
+  color:var(--pbe-faint);
+  white-space:nowrap;
+}
+.pbe27-wire-main{
+  min-width:0;
+  display:flex;
+  align-items:baseline;
+  gap:10px 14px;
+  flex-wrap:wrap;
+}
+.pbe27-wire-title{
+  margin:0;
+  font-family:var(--pbe-font-ui);
+  font-size:14.5px;
+  font-weight:600;
+  line-height:1.4;
+  color:var(--pbe-paper);
+}
+.pbe27-wire-title a{color:inherit;text-decoration:none}
+.pbe27-wire-title a:hover{text-decoration:underline;text-decoration-color:var(--pbe-gold);text-underline-offset:4px}
+.pbe27-wire-ents{display:flex;gap:5px;flex-wrap:wrap;margin-left:auto}
+.pbe27-wire-source{
+  font-family:var(--pbe-font-data);
+  font-size:var(--fs-micro);
+  letter-spacing:var(--ls-micro);
+  text-transform:uppercase;
+  color:var(--pbe-faint);
+  white-space:nowrap;
+}
+.pbe27-wire-row:hover .pbe27-wire-title{color:#fff}
+
+.pbe27-empty{
+  min-height:200px;
+  display:grid;
+  place-items:center;
+  margin-top:22px;
+  padding:26px;
+  border:1px solid var(--pbe-line);
+  border-radius:var(--r-md);
+  text-align:center;
+  color:var(--pbe-dim);
+  font-size:13px;
+  line-height:1.65;
+}
+
+/* ---------------------------------------------------------------------------
+   Responsive. Not the desktop layout stacked: at phone width the lead image is
+   the first thing under the shell, the majors become a single-column list with
+   small frames, and the wire drops its fixed time/kind columns for a two-line
+   row so the headline gets the full measure.
+   --------------------------------------------------------------------------- */
+@media(max-width:1100px){
+  .pbe27-top{grid-template-columns:minmax(0,1fr);gap:26px}
+  .pbe27-lead{padding-right:0;border-right:0;padding-bottom:24px;border-bottom:1px solid var(--pbe-line)}
+  .pbe27-majors{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:20px;
+    padding-left:0;
+  }
+  .pbe27-major{
+    display:block;
+    padding:0;
+    border-bottom:0;
+    border-left:1px solid var(--pbe-line-faint);
+    padding-left:18px;
+  }
+  .pbe27-major:first-child{border-left:0;padding-left:0}
+  .pbe27-major-media{width:100%;height:auto;aspect-ratio:16/9;margin-bottom:12px}
+}
+
+@media(max-width:820px){
+  .pbe27-majors{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .pbe27-major:nth-child(3){grid-column:1/-1;border-left:0;padding-left:0;padding-top:18px;border-top:1px solid var(--pbe-line-faint)}
+  .pbe27-major:nth-child(3) .pbe27-major-media{display:none}
+}
+
+@media(max-width:700px){
+  .pbe27{--pbe27-pad:clamp(12px,3.4vw,18px);padding:18px var(--pbe27-pad) 52px}
+  .pbe27-masthead{align-items:flex-start;flex-direction:column;gap:10px;padding-bottom:10px}
+  .pbe27-mast-now{padding-bottom:0}
+  .pbe27-controls{align-items:stretch;flex-direction:column;gap:10px;padding:10px 0}
+  /* The filter chips scroll horizontally rather than wrapping to three rows
+     and pushing the lead image off a phone screen. */
+  .pbe27-filters{
+    flex-wrap:nowrap;
+    overflow-x:auto;
+    scrollbar-width:none;
+  }
+  .pbe27-filters::-webkit-scrollbar{display:none}
+  .pbe27-filter{flex:0 0 auto}
+  /* A flex row let the search field keep its intrinsic width and run past the
+     page's right padding. A grid gives the select its content width and hands
+     the rest to the field, which then actually shrinks. */
+  .pbe27-controls-right{display:grid;grid-template-columns:auto minmax(0,1fr);gap:7px}
+  .pbe27-search{max-width:none;min-width:0}
+
+  .pbe27-top{margin-top:16px;gap:20px}
+  /* On a phone the lead photograph runs edge to edge: it is the first thing
+     under the shell and the strongest signal that this is football news. */
+  .pbe27-lead-media{
+    margin-inline:calc(-1 * var(--pbe27-pad));
+    aspect-ratio:3/2;
+    max-height:none;
+  }
+  .pbe27-wire-main{display:block}
+  .pbe27-wire-ents{margin-left:0;margin-top:7px}
+  .pbe27-lead-copy{padding-top:14px}
+  .pbe27-lead .pbe27-dek{font-size:14px}
+
+  /* Majors become a list: a 92px frame beside the headline reads faster on a
+     phone than three stacked 16:9 photographs. */
+  .pbe27-majors{grid-template-columns:minmax(0,1fr);gap:0}
+  .pbe27-major{
+    display:grid;
+    grid-template-columns:92px minmax(0,1fr);
+    gap:13px;
+    padding:15px 0;
+    border-left:0;
+    border-top:0;
+    border-bottom:1px solid var(--pbe-line-faint);
+  }
+  .pbe27-major:first-child{padding-top:0}
+  .pbe27-major:nth-child(3){grid-column:auto;padding-top:15px;border-top:0}
+  .pbe27-major-media,
+  .pbe27-major:nth-child(3) .pbe27-major-media{display:block;width:92px;height:64px;aspect-ratio:auto;margin-bottom:0}
+  .pbe27-major .pbe27-dek,
+  .pbe27-major .pbe27-byline,
+  .pbe27-major .pbe27-chips{display:none}
+  /* Two research buttons do not fit beside a 92px thumbnail on a phone, and
+     wrapping them made every major three lines taller than its own headline.
+     A major keeps its single most relevant path here; the lead keeps both. */
+  .pbe27-major .pbe27-paths{margin-top:8px}
+  .pbe27-major .pbe27-path{min-height:30px;padding:0 10px}
+  .pbe27-major .pbe27-path:nth-of-type(n+2){display:none}
+
+  .pbe27-wire{margin-top:26px}
+  .pbe27-wire-row{
+    grid-template-columns:minmax(0,1fr) auto;
+    align-items:baseline;
+    gap:4px 12px;
+    padding:12px 0;
+  }
+  /* Kind and source share the first line with the timestamp, so a wire row is
+     two lines instead of three and the headline still gets the full measure. */
+  .pbe27-wire-time{grid-row:1;grid-column:2;justify-self:end}
+  .pbe27-wire-topic{grid-row:1;grid-column:1;overflow:hidden;text-overflow:ellipsis}
+  .pbe27-wire-topic::after{
+    content:' · ' attr(data-source);
+    color:var(--pbe-faint);
+    font-weight:400;
+  }
+  .pbe27-wire-source{display:none}
+  .pbe27-wire-main{grid-row:2;grid-column:1/-1;margin-top:3px}
+}
+
+@media(max-width:430px){
+  .pbe27-lead-title{font-size:27px}
+  .pbe27-section-head h2{font-size:21px}
+  .pbe27-major-media{width:82px;height:58px}
+  .pbe27-major-title{font-size:15px}
+  .pbe27-paths{gap:6px}
+}

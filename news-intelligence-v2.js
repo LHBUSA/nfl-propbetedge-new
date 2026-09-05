@@ -1,40 +1,497 @@
 /* PropBetEdge NFL — News Intelligence v2
- * Current newsroom intelligence with explicit NEWS semantics.
- */
+ * =============================================================================
+ * WHAT THIS SURFACE IS
+ *
+ * An NFL newsroom whose editorial hierarchy is decided by what the product can
+ * actually stand behind, and which connects a story to the research already in
+ * the app.
+ *
+ * THE HIERARCHY IS NOT ARBITRARY. Measured against /api/news-feed?limit=100 on
+ * 2026-09-04: 27 of 50 articles carried another article's summary, player tags
+ * and team tags -- 16 of them the same Patrick Mahomes dek, six the same Aaron
+ * Donald dek, five the same Jets dek. pbe-news-trust.js already suppresses a
+ * summary that repeats across the payload, because a real dek is unique. That
+ * same test is the honest editorial signal:
+ *
+ *   a story whose own summary survived the trust guard is article-specific
+ *   editorial -> it can carry a lead or major treatment, a dek, entity chips
+ *   and a research entry point.
+ *
+ *   a story whose summary was suppressed is, truthfully, a headline from a
+ *   source at a time -> it belongs in the wire, where headline, source and
+ *   time is the whole format and nothing is missing from it.
+ *
+ * That is why the page has three treatments rather than fifty identical cards:
+ * the treatment states how much we can vouch for. It also means the page
+ * degrades correctly. If the upstream feed is repaired tomorrow, more stories
+ * qualify for major treatment automatically; if it degrades further, the page
+ * becomes a clean wire instead of a wall of false attributions.
+ *
+ * ENTITY ATTRIBUTION. Players come from _trust.players, which are only the
+ * names the article's own visible text corroborates. Teams are corroborated
+ * here against NFL_TEAMS by city, nickname, full name or code appearing in
+ * that text, because the previous build rendered raw a.teams and printed
+ * "LAR SFO Aaron Donald" under a Falcons practice-squad signing and
+ * "KC DEN Patrick Mahomes" under a 49ers inactive report. An uncorroborated
+ * entity is dropped, never guessed at and never replaced.
+ *
+ * WHAT IS DELIBERATELY NOT BUILT. is_breaking is false on every row,
+ * availability is null on every row, props is empty on every row, and
+ * market_impact.band is CONTEXT on every row. So there is no BREAKING filter,
+ * no MARKET RELEVANCE badge and no prop signal on this page. Those would be
+ * taxonomy invented for the look of it.
+ * ========================================================================== */
 (() => {
   'use strict';
 
-  const state={loading:false,articles:[],query:'',topic:'all',team:'all',sort:'impact'};
-  const esc=v=>String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-  const impact=a=>{const n=Number(a?.impact_score);return Number.isFinite(n)?n:0};
-  const relevance=a=>{const n=Number(a?.relevance_score);return Number.isFinite(n)?n:0};
-  async function fetchJson(url){const r=await fetch(url,{cache:'no-store',headers:{Accept:'application/json'}});if(!r.ok)throw new Error(`HTTP ${r.status}`);return r.json();}
-  function timeAgo(v){if(!v)return'time unavailable';const d=new Date(v);if(Number.isNaN(d.getTime()))return'time unavailable';const m=Math.max(0,Math.floor((Date.now()-d.getTime())/60000));if(m<60)return`${m}m ago`;const h=Math.floor(m/60);if(h<48)return`${h}h ago`;return`${Math.floor(h/24)}d ago`;}
-  function selectedTeams(){const e=window.PBEEventSelector?.state?.current||window.PBEEventSelector?.state?.events?.find(x=>x.id===PBEEventSelector.state.selectedId);if(!e)return new Set();const names=[e.away,e.home].filter(Boolean).map(String),out=new Set();Object.values(window.NFL_TEAMS||{}).forEach(t=>{if(names.some(n=>n.toLowerCase()===String(t.name||'').toLowerCase()||n.toLowerCase().includes(String(t.city||'').toLowerCase())))out.add(t.abbr)});return out;}
-  function currentEventHit(a){const teams=selectedTeams();return(a.teams||[]).some(t=>teams.has(String(t).toUpperCase()));}
-  function topicOf(a){return String(a?.topic_kind||'general').toLowerCase();}
-  function normalizedTopic(a){const t=topicOf(a);if(/injury|return/.test(t))return'injury';if(/trade|signing|transaction|release|waiver/.test(t))return'transaction';if(/lineup|depth|starter/.test(t))return'lineup';if(/discipline|suspend/.test(t))return'discipline';if(/frontoffice|front_office/.test(t))return'frontoffice';return t||'general';}
-  function imageOf(a){return String(a?.image_url||'').trim();}
-  function topics(){return [...new Set(state.articles.map(normalizedTopic).filter(Boolean))].sort();}
-  function teams(){return [...new Set(state.articles.flatMap(a=>Array.isArray(a.teams)?a.teams:[]).filter(Boolean).map(x=>String(x).toUpperCase()))].sort();}
-  /* Only render a dek the trust guard corroborated -- see pbe-news-trust.js. */
-  function dek(a){return window.PBENewsTrust?(window.PBENewsTrust.safeSummary(a)||''):(a?.summary||'');}
+  const state = { loading:false, articles:[], query:'', topic:'all', team:'all', fetchedAt:null };
 
-  function visible(){const q=state.query.trim().toLowerCase();let rows=state.articles.filter(a=>{const qOk=!q||[a.title,a.summary,a.source,...(a.players||[]),...(a.teams||[])].some(v=>String(v||'').toLowerCase().includes(q));const tOk=state.topic==='all'||normalizedTopic(a)===state.topic;const teamOk=state.team==='all'||(a.teams||[]).map(x=>String(x).toUpperCase()).includes(state.team);return qOk&&tOk&&teamOk;});if(state.sort==='latest')rows.sort((a,b)=>new Date(b.published_at||0)-new Date(a.published_at||0));else if(state.sort==='current')rows.sort((a,b)=>Number(currentEventHit(b))-Number(currentEventHit(a))||impact(b)-impact(a)||new Date(b.published_at||0)-new Date(a.published_at||0));else rows.sort((a,b)=>impact(b)-impact(a)||relevance(b)-relevance(a)||new Date(b.published_at||0)-new Date(a.published_at||0));return rows;}
-  function countTopic(t){return state.articles.filter(a=>normalizedTopic(a)===t).length;}
-  function tags(a){return `<div class="pbe27-tags">${(a.teams||[]).slice(0,4).map(x=>`<span class="pbe27-tag">${esc(x)}</span>`).join('')}${(a.players||[]).slice(0,3).map(x=>`<span class="pbe27-tag player">${esc(x)}</span>`).join('')}</div>`;}
-  function lead(a){
-    if(!a)return'<div class="pbe27-empty">No current newsroom stories match these filters.</div>';
-    const image=imageOf(a);
-    return `<article class="pbe27-lead ${image?'has-image':''}">${image?`<div class="pbe27-lead-media"><img src="${esc(image)}" alt="${esc(a.image_alt||a.title)}" loading="eager" decoding="async" onerror="this.parentElement.hidden=true"><div class="pbe27-lead-shade"></div></div>`:''}<div class="pbe27-lead-copy"><div class="pbe27-topic">${esc(normalizedTopic(a).toUpperCase())}${currentEventHit(a)?'<span class="pbe27-current">SELECTED GAME</span>':''}</div><h2>${esc(a.title)}</h2>${dek(a)?`<p>${esc(dek(a))}</p>`:'<p class="pbe27-nodek">No verified summary from the source for this story.</p>'}<div class="pbe27-meta">${esc(a.source||'source unavailable')} · ${esc(timeAgo(a.published_at))} · impact ${esc(impact(a)||'—')} · relevance ${esc(relevance(a)||'—')}</div>${tags(a)}<div class="pbe27-lead-actions">${a.url?`<a class="pbe27-btn red" href="${esc(a.url)}">Read Story ↗</a>`:''}<button class="pbe27-btn" onclick="App.nav('injuries')">Injury Desk</button><button class="pbe27-btn" onclick="App.nav('trades')">Transactions</button></div></div></article>`;
+  const esc = v => String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  const norm = v => String(v ?? '').toLowerCase().replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
+  const num = (v, d = 0) => { const n = Number(v); return Number.isFinite(n) ? n : d; };
+  const impact = a => num(a?.impact_score);
+  const relevance = a => num(a?.relevance_score);
+
+  async function fetchJson(url) {
+    const r = await fetch(url, { cache:'no-store', headers:{ Accept:'application/json' } });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    return r.json();
   }
-  function impactBoard(rows){const top=[...rows].sort((a,b)=>impact(b)-impact(a)||relevance(b)-relevance(a)).slice(0,8);return `<aside class="pbe27-impact"><div class="pbe27-panel-head"><strong>Impact Board</strong><span>NEWS ENRICHMENT</span></div><div class="pbe27-impact-list">${top.length?top.map(a=>{const image=imageOf(a);return `<div class="pbe27-impact-row">${image?`<img class="pbe27-impact-thumb" src="${esc(image)}" alt="" loading="lazy" decoding="async" onerror="this.hidden=true">`:''}<div class="pbe27-impact-score">${esc(impact(a)||'—')}</div><div><div class="pbe27-impact-title">${esc(a.title)}</div><div class="pbe27-impact-meta">${esc(normalizedTopic(a))} · ${esc(a.source||'source unavailable')}</div></div>${a.url?`<a href="${esc(a.url)}">OPEN ↗</a>`:''}</div>`}).join(''):'<div class="pbe27-empty">No impact-ranked stories available.</div>'}</div></aside>`;}
-  function card(a){const image=imageOf(a);return `<article class="pbe27-card ${image?'has-image':''}">${image?`<a class="pbe27-card-media" ${a.url?`href="${esc(a.url)}"`:''}><img src="${esc(image)}" alt="${esc(a.image_alt||a.title)}" loading="lazy" decoding="async" onerror="this.parentElement.hidden=true"></a>`:''}<div class="pbe27-card-body"><div class="pbe27-card-top"><span class="pbe27-card-topic">${esc(normalizedTopic(a).toUpperCase())}${currentEventHit(a)?'<span class="pbe27-current">GAME</span>':''}</span><span class="pbe27-card-time">${esc(timeAgo(a.published_at))}</span></div><h3>${esc(a.title)}</h3>${dek(a)?`<p>${esc(dek(a))}</p>`:''}${tags(a)}<div class="pbe27-card-foot"><span class="pbe27-source">${esc(a.source||'source unavailable')} · impact ${esc(impact(a)||'—')}</span>${a.url?`<a href="${esc(a.url)}">OPEN ↗</a>`:''}</div></div></article>`;}
-  function summary(rows){return `<div class="pbe27-summary"><div class="pbe27-stat"><b>${state.articles.length}</b><span>Current NFL stories</span></div><div class="pbe27-stat"><b class="red">${countTopic('injury')}</b><span>Injury / return</span></div><div class="pbe27-stat"><b>${countTopic('transaction')}</b><span>Transactions</span></div><div class="pbe27-stat"><b>${countTopic('lineup')}</b><span>Lineup / role</span></div><div class="pbe27-stat"><b class="green">${rows.filter(currentEventHit).length}</b><span>Selected-game stories</span></div><div class="pbe27-stat"><b>${new Set(state.articles.flatMap(a=>a.teams||[])).size}</b><span>Teams referenced</span></div></div>`;}
-  function shell(){const rows=visible(),leadStory=rows[0]||null,rest=rows.slice(1);return `<section class="pbe27-news"><header class="pbe27-hero"><div><div class="pbe27-kicker">NFL NEWS INTELLIGENCE · CURRENT</div><h1 class="pbe27-title">What changed.<br><em>Who it affects.</em></h1><div class="pbe27-copy">The current PropBetEdge NFL newsroom in one operating surface: real source imagery, injuries, returns, transactions, lineup changes, discipline and broader league developments, with affected players/teams and enrichment scores kept attached to the source story.</div></div><aside class="pbe27-status"><b>NEWS</b><span>${state.articles.length} current stories · ${state.articles.filter(a=>imageOf(a)).length} source images · ${rows.filter(currentEventHit).length} selected-game matches</span></aside></header>${summary(rows)}<section class="pbe27-controls"><input id="pbe27-search" class="pbe27-input" placeholder="Search player, team, source or headline…" value="${esc(state.query)}"><select id="pbe27-topic" class="pbe27-select"><option value="all">All topics</option>${topics().map(t=>`<option value="${esc(t)}" ${state.topic===t?'selected':''}>${esc(t)}</option>`).join('')}</select><select id="pbe27-team" class="pbe27-select"><option value="all">All teams</option>${teams().map(t=>`<option value="${esc(t)}" ${state.team===t?'selected':''}>${esc(t)}</option>`).join('')}</select><select id="pbe27-sort" class="pbe27-select"><option value="impact" ${state.sort==='impact'?'selected':''}>Highest impact</option><option value="latest" ${state.sort==='latest'?'selected':''}>Latest first</option><option value="current" ${state.sort==='current'?'selected':''}>Selected game first</option></select></section>${rows.length?`<div class="pbe27-lead-grid">${lead(leadStory)}${impactBoard(rows)}</div><div class="pbe27-feed">${rest.map(card).join('')}</div>`:'<div class="pbe27-empty">No current NEWS items match the filters. No synthetic fallback is used.</div>'}</section>`;}
-  function renderShell(){const vc=document.getElementById('view-container');if(vc){vc.innerHTML=shell();wire();}}
-  function wire(){document.getElementById('pbe27-search')?.addEventListener('input',e=>{state.query=e.currentTarget.value||'';renderShell()});document.getElementById('pbe27-topic')?.addEventListener('change',e=>{state.topic=e.currentTarget.value||'all';renderShell()});document.getElementById('pbe27-team')?.addEventListener('change',e=>{state.team=e.currentTarget.value||'all';renderShell()});document.getElementById('pbe27-sort')?.addEventListener('change',e=>{state.sort=e.currentTarget.value||'impact';renderShell()});}
-  async function render(){if(state.loading)return;state.loading=true;const vc=document.getElementById('view-container');if(!vc){state.loading=false;return;}vc.innerHTML='<section class="pbe27-news"><div class="pbe27-empty">Loading current NFL newsroom intelligence…</div></section>';try{const payload=await fetchJson('/api/news-feed?limit=100');state.articles=window.PBENewsTrust?.prepare(Array.isArray(payload?.articles)?payload.articles:[])||(Array.isArray(payload?.articles)?payload.articles:[]);renderShell();}catch(error){vc.innerHTML=`<section class="pbe27-news"><div class="pbe27-empty">News Intelligence unavailable: ${esc(error instanceof Error?error.message:String(error))}</div></section>`;}finally{state.loading=false;}}
-  function install(){if(!window.App?.VIEWS)return false;App.VIEWS.newsintel=render;const group=document.getElementById('intelligence-nav-group');if(group&&!document.getElementById('nav-newsintel')){const trades=document.getElementById('nav-trades');const a=document.createElement('a');a.className='nav-item';a.id='nav-newsintel';a.href='javascript:void(0)';a.onclick=()=>App.nav('newsintel');a.innerHTML='<span class="ni-icon">▤</span> News Intelligence <span class="nav-badge" style="color:#f16b78;background:rgba(241,107,120,.06)">NEWS</span>';trades?.insertAdjacentElement('afterend',a);}return true;}
-  window.PBENewsIntel={render,state};install();document.addEventListener('DOMContentLoaded',install,{once:true});window.addEventListener('pbe:event-changed',()=>{if(document.querySelector('.pbe27-news')&&!state.loading)renderShell();});
+
+  /* ---- time -------------------------------------------------------------- */
+  function stamp(v) {
+    const d = new Date(v);
+    if (!v || Number.isNaN(d.getTime())) return '';
+    return d.toLocaleTimeString('en-US', { timeZone:'America/New_York', hour:'numeric', minute:'2-digit' });
+  }
+  function dayKey(v) {
+    const d = new Date(v);
+    if (!v || Number.isNaN(d.getTime())) return 'undated';
+    return d.toLocaleDateString('en-US', { timeZone:'America/New_York', year:'numeric', month:'2-digit', day:'2-digit' });
+  }
+  function dayLabel(v) {
+    const d = new Date(v);
+    if (!v || Number.isNaN(d.getTime())) return 'Undated';
+    const key = dayKey(v);
+    if (key === dayKey(Date.now())) return 'Today';
+    if (key === dayKey(Date.now() - 864e5)) return 'Yesterday';
+    return d.toLocaleDateString('en-US', { timeZone:'America/New_York', weekday:'long', month:'short', day:'numeric' });
+  }
+  function ago(v) {
+    const d = new Date(v);
+    if (!v || Number.isNaN(d.getTime())) return '';
+    const m = Math.max(0, Math.floor((Date.now() - d.getTime()) / 60000));
+    if (m < 60) return `${m}m ago`;
+    const h = Math.floor(m / 60);
+    return h < 48 ? `${h}h ago` : `${Math.floor(h / 24)}d ago`;
+  }
+
+  /* ---- topic ------------------------------------------------------------- */
+  const TOPIC_LABEL = {
+    injury:'Injury', transaction:'Transaction', roster:'Roster',
+    discipline:'Discipline', frontoffice:'Front office', general:'League'
+  };
+  function topicOf(a) {
+    const t = String(a?.topic_kind || 'general').toLowerCase();
+    if (/injury|return/.test(t)) return 'injury';
+    if (/trade|signing|transaction|release|waiver/.test(t)) return 'transaction';
+    if (/lineup|depth|starter|callup|call_up|practice/.test(t)) return 'roster';
+    if (/discipline|suspend/.test(t)) return 'discipline';
+    if (/frontoffice|front_office/.test(t)) return 'frontoffice';
+    return 'general';
+  }
+  const topicLabel = a => TOPIC_LABEL[topicOf(a)] || 'League';
+
+  /* ---- trust ------------------------------------------------------------- */
+  const trust = a => a?._trust || null;
+  /* A dek only exists when the guard let this article keep its own summary. */
+  const dek = a => (trust(a) ? trust(a).summary : (a?.summary || '')) || '';
+  const suppressed = a => Boolean(trust(a)?.summarySuppressed);
+  /* An article we can vouch for: its editorial is its own. */
+  const isEditorial = a => Boolean(dek(a));
+
+  /* Corroboration is scoped to what the reader can actually see.
+     pbe-news-trust.js corroborates an entity against the article's title plus
+     whatever summary survived its duplicate test. That is the right test for a
+     lead or a major, which display both. A wire row displays the headline and
+     nothing else, so justifying a chip there with a dek the row does not print
+     would put a claim on screen that the screen does not support -- measured
+     as two cases in the live feed: "NYG" under a Caleb Downs headline that
+     names only the Cowboys, and "Daniel Jones" under a Richardson headline.
+     Passing 'title' narrows the evidence to the headline alone.
+
+     Filtering and selected-game matching deliberately keep the full scope: a
+     story is about the teams it is about whether or not a given treatment
+     prints them. */
+  function playersOf(a, scope) {
+    const t = trust(a);
+    const list = (t ? t.players : (Array.isArray(a?.players) ? a.players : [])) || [];
+    if (scope !== 'title') return list;
+    const hay = norm(a?.title);
+    return list.filter(name => String(name || '').split(/\s+/)
+      .filter(part => part.replace(/[^a-z]/gi, '').length > 3)
+      .some(part => hay.includes(norm(part))));
+  }
+
+  /* Corroborated teams. The guard passes teams through untouched by design --
+     it has no team vocabulary -- but this page does, via NFL_TEAMS, so a code
+     is only shown when the article's own text names that franchise. */
+  let TEAM_INDEX = null;
+  function teamIndex() {
+    if (TEAM_INDEX && TEAM_INDEX.length) return TEAM_INDEX;
+    const map = (typeof window !== 'undefined' && window.NFL_TEAMS) || {};
+    TEAM_INDEX = Object.entries(map).map(([abbr, t]) => {
+      const name = String(t?.name || '');
+      const nickname = name.split(/\s+/).slice(-1)[0] || '';
+      const terms = [name, t?.city, nickname, abbr].map(norm).filter(v => v && v.length > 1);
+      return { abbr:String(abbr).toUpperCase(), name, terms:[...new Set(terms)] };
+    });
+    return TEAM_INDEX;
+  }
+  function teamsOf(a, scope) {
+    const declared = (Array.isArray(a?.teams) ? a.teams : []).map(x => String(x).toUpperCase());
+    if (!declared.length) return [];
+    const hay = scope === 'title' ? norm(a?.title) : norm(a?.title) + ' ' + norm(dek(a));
+    if (!hay.trim()) return [];
+    const index = teamIndex();
+    if (!index.length) return [];
+    return declared.filter(code => {
+      const row = index.find(t => t.abbr === code);
+      if (!row) return false;
+      /* A short term (a code, or a city like "LA") is only accepted as a whole
+         word, so "NE" does not match "Nebraska" and "SF" does not match a
+         substring of another token. */
+      return row.terms.some(term => term.length <= 3
+        ? new RegExp(`(^| )${term}( |$)`).test(hay)
+        : hay.includes(term));
+    });
+  }
+  const teamName = code => teamIndex().find(t => t.abbr === code)?.name || code;
+
+  /* ---- selected game ----------------------------------------------------- */
+  function selectedTeams() {
+    const sel = window.PBEEventSelector?.state;
+    const e = sel?.current || sel?.events?.find(x => x.id === sel?.selectedId);
+    if (!e) return new Set();
+    const names = [e.away, e.home].filter(Boolean).map(v => norm(v));
+    const out = new Set();
+    teamIndex().forEach(t => {
+      if (names.some(n => n === norm(t.name) || t.terms.some(term => term.length > 3 && n.includes(term)))) out.add(t.abbr);
+    });
+    return out;
+  }
+  function inSelectedGame(a) {
+    const picked = selectedTeams();
+    if (!picked.size) return false;
+    return teamsOf(a).some(code => picked.has(code));
+  }
+
+  /* ---- imagery ----------------------------------------------------------- */
+  /* Every row in this feed carries an image_url, so having an image is not by
+     itself a signal of anything. Scale is the signal: the lead is the only
+     story that gets a full-bleed photograph, majors get a contained frame, the
+     wire gets none. A wire row is not a card missing its picture. */
+  const imageOf = a => String(a?.image_url || '').trim();
+
+  /* ---- ordering ---------------------------------------------------------- */
+  function matchesFilters(a) {
+    const q = state.query.trim().toLowerCase();
+    if (q) {
+      const hay = [a.title, dek(a), a.source, ...playersOf(a), ...teamsOf(a)]
+        .map(v => String(v || '').toLowerCase()).join(' ');
+      if (!hay.includes(q)) return false;
+    }
+    if (state.topic === 'selected') { if (!inSelectedGame(a)) return false; }
+    else if (state.topic !== 'all' && topicOf(a) !== state.topic) return false;
+    if (state.team !== 'all' && !teamsOf(a).includes(state.team)) return false;
+    return true;
+  }
+  const byTime = (a, b) => new Date(b.published_at || 0) - new Date(a.published_at || 0);
+  const byWeight = (a, b) => impact(b) - impact(a) || relevance(b) - relevance(a) || byTime(a, b);
+
+  function composition() {
+    const rows = state.articles.filter(matchesFilters);
+    const editorial = rows.filter(isEditorial).sort(byWeight);
+    const lead = editorial[0] || rows.slice().sort(byWeight)[0] || null;
+    const majors = editorial.filter(a => a !== lead).slice(0, 3);
+    const promoted = new Set([lead, ...majors].filter(Boolean));
+    const wire = rows.filter(a => !promoted.has(a)).sort(byTime);
+    return { rows, lead, majors, wire };
+  }
+
+  /* ---- entity chips and research paths ----------------------------------- */
+  function chips(a, small, scope) {
+    const teams = teamsOf(a, scope).slice(0, 3);
+    const players = playersOf(a, scope).slice(0, 3);
+    if (!teams.length && !players.length) return '';
+    const sz = small ? ' sm' : '';
+    return `<div class="pbe27-chips">${
+      teams.map(code => `<button type="button" class="pbe27-chip team${sz}" data-team="${esc(code)}" title="${esc(teamName(code))} research">${esc(code)}</button>`).join('')
+    }${
+      players.map(nm => `<button type="button" class="pbe27-chip player${sz}" data-player="${esc(nm)}">${esc(nm)}</button>`).join('')
+    }</div>`;
+  }
+
+  /* One or two destinations, chosen from what this story actually resolves to.
+     Seven CTAs under every headline is marketing; this is the shortest useful
+     path from a development to the research that prices it. */
+  function paths(a) {
+    const out = [];
+    const players = playersOf(a);
+    const teams = teamsOf(a);
+    const topic = topicOf(a);
+    if (topic === 'injury') out.push(['route', 'injuries', 'Injury Intelligence']);
+    if (inSelectedGame(a)) out.push(['route', 'pbecast', 'Game Center']);
+    if (players.length) out.push(['player', players[0], `${players[0].split(/\s+/).slice(-1)[0]} research`]);
+    if (!out.length && teams.length) out.push(['team', teams[0], `${teamName(teams[0])} research`]);
+    if (out.length < 2 && players.length && topic !== 'injury') out.push(['route', 'usage', 'Usage research']);
+    return out.slice(0, 2);
+  }
+  function pathButtons(a) {
+    const list = paths(a);
+    if (!list.length) return '';
+    return `<div class="pbe27-paths">${list.map(([kind, value, label]) =>
+      `<button type="button" class="pbe27-path" data-path="${esc(kind)}" data-value="${esc(value)}">${esc(label)}<i>&rarr;</i></button>`
+    ).join('')}</div>`;
+  }
+
+  const sourceLine = a => `${esc(a.source || 'source unavailable')}${a.published_at ? ` &middot; ${esc(ago(a.published_at))}` : ''}`;
+
+  function railLine(a) {
+    return `<div class="pbe27-rail">
+      <span class="pbe27-topic ${esc(topicOf(a))}">${esc(topicLabel(a))}</span>
+      ${inSelectedGame(a) ? '<span class="pbe27-selected">Selected game</span>' : ''}
+      <span class="pbe27-time">${esc(stamp(a.published_at))} ET</span>
+    </div>`;
+  }
+
+  /* ---- treatments -------------------------------------------------------- */
+  function leadStory(a) {
+    if (!a) return '<div class="pbe27-empty">No current NFL story matches these filters.</div>';
+    const img = imageOf(a);
+    return `<article class="pbe27-lead">
+      ${img ? `<a class="pbe27-lead-media" ${a.url ? `href="${esc(a.url)}" target="_blank" rel="noopener"` : 'href="javascript:void(0)"'}><img src="${esc(img)}" alt="${esc(a.image_alt || a.title || '')}" fetchpriority="high" decoding="async" onerror="this.closest('.pbe27-lead-media').hidden=true"></a>` : ''}
+      <div class="pbe27-lead-copy">
+        ${railLine(a)}
+        <h2 class="pbe27-lead-title">${a.url ? `<a href="${esc(a.url)}" target="_blank" rel="noopener">${esc(a.title)}</a>` : esc(a.title)}</h2>
+        ${dek(a) ? `<p class="pbe27-dek">${esc(dek(a))}</p>` : ''}
+        <div class="pbe27-byline">${sourceLine(a)}</div>
+        ${chips(a)}
+        ${pathButtons(a)}
+      </div>
+    </article>`;
+  }
+
+  function majorStory(a) {
+    const img = imageOf(a);
+    return `<article class="pbe27-major">
+      ${img ? `<a class="pbe27-major-media" ${a.url ? `href="${esc(a.url)}" target="_blank" rel="noopener"` : 'href="javascript:void(0)"'}><img src="${esc(img)}" alt="${esc(a.image_alt || a.title || '')}" loading="lazy" decoding="async" onerror="this.closest('.pbe27-major-media').hidden=true"></a>` : ''}
+      <div class="pbe27-major-copy">
+        ${railLine(a)}
+        <h3 class="pbe27-major-title">${a.url ? `<a href="${esc(a.url)}" target="_blank" rel="noopener">${esc(a.title)}</a>` : esc(a.title)}</h3>
+        ${dek(a) ? `<p class="pbe27-dek">${esc(dek(a))}</p>` : ''}
+        <div class="pbe27-byline">${sourceLine(a)}</div>
+        ${chips(a, true)}
+        ${pathButtons(a)}
+      </div>
+    </article>`;
+  }
+
+  /* A wire row is complete. Headline, source and time is the entire format, so
+     a story with nothing else to say is not visibly missing anything. */
+  function wireRow(a) {
+    /* A wire row prints its headline and nothing else, so only the headline
+       may justify a chip on it. */
+    const players = playersOf(a, 'title').slice(0, 2);
+    const teams = teamsOf(a, 'title').slice(0, 2);
+    return `<article class="pbe27-wire-row${inSelectedGame(a) ? ' is-selected' : ''}">
+      <time class="pbe27-wire-time">${esc(stamp(a.published_at))}</time>
+      <span class="pbe27-wire-topic ${esc(topicOf(a))}" data-source="${esc(a.source || 'source unavailable')}">${esc(topicLabel(a))}</span>
+      <div class="pbe27-wire-main">
+        <h4 class="pbe27-wire-title">${a.url ? `<a href="${esc(a.url)}" target="_blank" rel="noopener">${esc(a.title)}</a>` : esc(a.title)}</h4>
+        ${(teams.length || players.length) ? `<div class="pbe27-wire-ents">${
+          teams.map(c => `<button type="button" class="pbe27-chip team sm" data-team="${esc(c)}" title="${esc(teamName(c))} research">${esc(c)}</button>`).join('')
+        }${
+          players.map(n => `<button type="button" class="pbe27-chip player sm" data-player="${esc(n)}">${esc(n)}</button>`).join('')
+        }</div>` : ''}
+      </div>
+      <span class="pbe27-wire-source">${esc(a.source || 'source unavailable')}</span>
+    </article>`;
+  }
+
+  function wireSection(rows) {
+    if (!rows.length) return '';
+    const groups = [];
+    for (const a of rows) {
+      const key = dayKey(a.published_at);
+      const last = groups[groups.length - 1];
+      if (last && last.key === key) last.items.push(a);
+      else groups.push({ key, label: dayLabel(a.published_at), items:[a] });
+    }
+    /* One truthful line about withheld source summaries, stated once for the
+       whole wire instead of repeated under every row that has none. */
+    const withheld = rows.filter(suppressed).length;
+    return `<section class="pbe27-wire">
+      <div class="pbe27-section-head">
+        <h2>Live wire</h2>
+        <span>${esc(String(rows.length))} stories &middot; newest first</span>
+      </div>
+      ${withheld ? `<p class="pbe27-wire-note">${esc(String(withheld))} of these carry no source summary specific to the story, so they are shown as headline, source and time only.</p>` : ''}
+      ${groups.map(g => `<div class="pbe27-wire-day"><div class="pbe27-wire-daylabel">${esc(g.label)}</div>${g.items.map(wireRow).join('')}</div>`).join('')}
+    </section>`;
+  }
+
+  /* ---- filters ----------------------------------------------------------- */
+  function filterBar() {
+    const counts = {};
+    state.articles.forEach(a => { const t = topicOf(a); counts[t] = (counts[t] || 0) + 1; });
+    const selected = state.articles.filter(inSelectedGame).length;
+    /* Only topics the feed actually classifies get a chip. Nothing is listed
+       that would resolve to zero, and no category is invented. */
+    const order = ['injury', 'transaction', 'roster', 'discipline', 'frontoffice', 'general'];
+    const chipsHtml = [['all', 'All', state.articles.length]]
+      .concat(order.filter(t => counts[t]).map(t => [t, TOPIC_LABEL[t], counts[t]]))
+      .concat(selected ? [['selected', 'Selected game', selected]] : [])
+      .map(([key, label, n]) => `<button type="button" class="pbe27-filter${state.topic === key ? ' active' : ''}" data-topic="${esc(key)}">${esc(label)}<b>${esc(String(n))}</b></button>`)
+      .join('');
+
+    const teamCodes = [...new Set(state.articles.flatMap(teamsOf))].sort();
+    return `<div class="pbe27-controls">
+      <div class="pbe27-filters" role="group" aria-label="Filter stories by kind">${chipsHtml}</div>
+      <div class="pbe27-controls-right">
+        ${teamCodes.length ? `<select id="pbe27-team" class="pbe27-select" aria-label="Filter by team">
+          <option value="all">All teams</option>
+          ${teamCodes.map(c => `<option value="${esc(c)}" ${state.team === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}
+        </select>` : ''}
+        <input id="pbe27-search" class="pbe27-search" type="search" placeholder="Search headline, player, team, source" value="${esc(state.query)}" aria-label="Search stories">
+      </div>
+    </div>`;
+  }
+
+  /* ---- masthead ---------------------------------------------------------- */
+  function masthead() {
+    const counts = {};
+    state.articles.forEach(a => { const t = topicOf(a); counts[t] = (counts[t] || 0) + 1; });
+    /* Each filter chip already carries its own count, so this line is a
+       one-glance summary rather than a second copy of the taxonomy. */
+    const parts = [
+      `${state.articles.length} current stories`,
+      counts.injury ? `${counts.injury} injury` : '',
+      counts.transaction ? `${counts.transaction} transactions` : ''
+    ].filter(Boolean);
+    return `<header class="pbe27-masthead">
+      <div class="pbe27-mast-id">
+        <span class="pbe27-eyebrow">NFL &middot; Live news + impact</span>
+        <h1 class="pbe27-wordmark">News Intelligence</h1>
+      </div>
+      <div class="pbe27-mast-now">
+        <span class="pbe27-now-line">${esc(parts.join(' · '))}</span>
+        ${state.fetchedAt ? `<span class="pbe27-now-stamp">Updated ${esc(ago(state.fetchedAt))}</span>` : ''}
+      </div>
+    </header>`;
+  }
+
+  /* ---- shell ------------------------------------------------------------- */
+  function shell() {
+    if (!state.articles.length) {
+      return `<section class="pbe27">${masthead()}<div class="pbe27-empty">No current NFL news is being returned. No synthetic fallback is used.</div></section>`;
+    }
+    const { rows, lead, majors, wire } = composition();
+    return `<section class="pbe27">
+      ${masthead()}
+      ${filterBar()}
+      ${rows.length ? `<div class="pbe27-top">
+        ${leadStory(lead)}
+        ${majors.length ? `<div class="pbe27-majors">${majors.map(majorStory).join('')}</div>` : ''}
+      </div>
+      ${wireSection(wire)}` : '<div class="pbe27-empty">No current NFL story matches these filters.</div>'}
+    </section>`;
+  }
+
+  function renderShell() {
+    const vc = document.getElementById('view-container');
+    if (!vc) return;
+    vc.innerHTML = shell();
+    wireEvents();
+  }
+
+  function wireEvents() {
+    const host = document.querySelector('.pbe27');
+    if (!host) return;
+    host.querySelectorAll('[data-topic]').forEach(btn => btn.addEventListener('click', () => {
+      state.topic = btn.dataset.topic || 'all';
+      renderShell();
+    }));
+    document.getElementById('pbe27-team')?.addEventListener('change', e => {
+      state.team = e.currentTarget.value || 'all';
+      renderShell();
+    });
+    document.getElementById('pbe27-search')?.addEventListener('input', e => {
+      const caret = e.currentTarget.selectionStart;
+      state.query = e.currentTarget.value || '';
+      renderShell();
+      /* renderShell replaces the input, so focus and caret are restored. */
+      const next = document.getElementById('pbe27-search');
+      if (next) { next.focus(); try { next.setSelectionRange(caret, caret); } catch {} }
+    });
+    /* Entity chips and research paths land on the research surfaces the app
+       already has, rather than on a bare route. */
+    host.querySelectorAll('[data-player]').forEach(el => el.addEventListener('click', () => {
+      if (window.PBEPlayerResearch?.show) window.PBEPlayerResearch.show(el.dataset.player);
+      else window.App?.nav('usage');
+    }));
+    host.querySelectorAll('[data-team]').forEach(el => el.addEventListener('click', () => {
+      if (window.PBETeamsV2?.openTeam) window.PBETeamsV2.openTeam(el.dataset.team);
+      else window.App?.nav('teams');
+    }));
+    host.querySelectorAll('[data-path]').forEach(el => el.addEventListener('click', () => {
+      const kind = el.dataset.path, value = el.dataset.value;
+      if (kind === 'player') { if (window.PBEPlayerResearch?.show) window.PBEPlayerResearch.show(value); else window.App?.nav('usage'); return; }
+      if (kind === 'team') { if (window.PBETeamsV2?.openTeam) window.PBETeamsV2.openTeam(value); else window.App?.nav('teams'); return; }
+      window.App?.nav(value);
+    }));
+  }
+
+  async function render() {
+    if (state.loading) return;
+    state.loading = true;
+    const vc = document.getElementById('view-container');
+    if (!vc) { state.loading = false; return; }
+    vc.innerHTML = '<section class="pbe27"><div class="pbe27-empty">Loading current NFL newsroom intelligence…</div></section>';
+    try {
+      const payload = await fetchJson('/api/news-feed?limit=100');
+      const raw = Array.isArray(payload?.articles) ? payload.articles : [];
+      state.articles = window.PBENewsTrust?.prepare(raw) || raw;
+      state.fetchedAt = Date.now();
+      renderShell();
+    } catch (error) {
+      vc.innerHTML = `<section class="pbe27"><div class="pbe27-empty">News Intelligence unavailable: ${esc(error instanceof Error ? error.message : String(error))}</div></section>`;
+    } finally {
+      state.loading = false;
+    }
+  }
+
+  function install() {
+    if (!window.App?.VIEWS) return false;
+    App.VIEWS.newsintel = render;
+    const group = document.getElementById('intelligence-nav-group');
+    if (group && !document.getElementById('nav-newsintel')) {
+      const trades = document.getElementById('nav-trades');
+      const a = document.createElement('a');
+      a.className = 'nav-item';
+      a.id = 'nav-newsintel';
+      a.href = 'javascript:void(0)';
+      a.onclick = () => App.nav('newsintel');
+      a.innerHTML = '<span class="ni-icon">▤</span> News Intelligence <span class="nav-badge" style="color:#f16b78;background:rgba(241,107,120,.06)">NEWS</span>';
+      trades?.insertAdjacentElement('afterend', a);
+    }
+    return true;
+  }
+
+  window.PBENewsIntel = { render, state };
+  install();
+  document.addEventListener('DOMContentLoaded', install, { once:true });
+  window.addEventListener('pbe:event-changed', () => {
+    if (document.querySelector('.pbe27') && !state.loading) renderShell();
+  });
 })();

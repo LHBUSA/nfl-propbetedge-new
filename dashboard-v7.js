@@ -292,6 +292,21 @@
   function render() {
     const container = document.getElementById('view-container');
     if (!container) return;
+    /* load() is asynchronous: it awaits the scoreboard, then the event detail
+       and the news feed, and only then writes into #view-container. Several
+       boot paths start that work regardless of the requested route, so on a
+       deep link to /#newsintel the dashboard's fetches could resolve after
+       that view had rendered and overwrite it -- reproduced at 390/430/768
+       while 1440 happened to win the race.
+
+       The test is the location hash, not App.current: App.current keeps its
+       'home' default until App.boot() runs on pbe:upgrades-ready -- after every
+       enhancement script has loaded -- and boot defers its nav() by a timeout,
+       so App.current says 'home' throughout boot even on a deep link. The hash
+       is authoritative from the first byte. */
+    const raw = String(location.hash || '').replace(/^#/, '');
+    const route = window.App?.normalize ? window.App.normalize(raw) : (raw.split('?')[0] || 'home');
+    if (route !== 'home') return;
     const html = markup();
     const current = container.querySelector('.pbehome7');
     if (current && html === state.lastMarkup) {
@@ -322,6 +337,8 @@
       state.error = error instanceof Error ? error.message : String(error);
       render();
     }
+    /* Nothing to refresh once the dashboard is no longer on screen. */
+    clearTimeout(state.poll);
     state.poll = setTimeout(() => {
       if (document.querySelector('.pbehome7')) load();
     }, 20000);
