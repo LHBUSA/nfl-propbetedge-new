@@ -85,38 +85,38 @@ for (const width of WIDTHS) {
   await sleep(6000);
 
   for (const tab of TABS) {
-    await evalIn(`(()=>{const b=[...document.querySelectorAll('.qbd-tab')]
+    await evalIn(`(()=>{const b=[...document.querySelectorAll('.q2-tab')]
       .find(x=>x.dataset.tab===${JSON.stringify(tab)}); if(b) b.click(); return !!b;})()`);
     await sleep(tab === 'overview' ? 7000 : 5000);
-    const m = await evalIn(`(()=>{const r=document.querySelector('.qbd');
+    const m = await evalIn(`(()=>{const r=document.querySelector('.q2');
       const d=document.documentElement;
       return { present:!!r, docH:d.scrollHeight, docW:d.scrollWidth, winW:innerWidth,
         overflowX: d.scrollWidth>innerWidth+1,
-        panels:document.querySelectorAll('.qbd-panel').length,
-        rows:document.querySelectorAll('.qbd-cond-row,.qbd-cmprow,.qbd-table tbody tr').length,
+        panels:document.querySelectorAll('.q2-panel').length,
+        rows:document.querySelectorAll('.q2-crow,.q2-cmprow,.q2-btrow,.q2-table tbody tr').length,
         /* A percentage must be accompanied by its sample: either an explicit
            N=, or the numerator/denominator it was computed from. */
         naked:(()=>{ let bad=0;
-          document.querySelectorAll('.qbd-cond-row,.qbd-cmprow').forEach(el=>{
+          document.querySelectorAll('.q2-crow,.q2-cmprow,.q2-btrow').forEach(el=>{
             const t=(el.textContent||'').replace(/\\s+/g,' ');
             if(/%/.test(t) && !/N=\\d/.test(t) && !/\\d+\\s*\\/\\s*\\d+/.test(t)) bad++; });
           return bad; })(),
         nakedRows:(()=>{ const out=[];
-          document.querySelectorAll('.qbd-cond-row,.qbd-cmprow').forEach(el=>{
+          document.querySelectorAll('.q2-crow,.q2-cmprow,.q2-btrow').forEach(el=>{
             const t=(el.textContent||'').replace(/\\s+/g,' ').trim();
             if(/%/.test(t) && !/N=\\d/.test(t) && !/\\d+\\s*\\/\\s*\\d+/.test(t)) out.push(t.slice(0,120)); });
           return out; })(),
-        empty:document.querySelectorAll('.qbd-stat.is-empty').length,
+        empty:document.querySelectorAll('.q2-big.is-empty').length,
         /* Any element wider than the viewport that is NOT inside a deliberate
-           horizontal scroller (.qbd-tablewrap) is a layout bug, and it is
+           horizontal scroller (.q2-tablewrap) is a layout bug, and it is
            invisible to documentElement.scrollWidth when an ancestor clips it. */
         wide:(()=>{ const out=[];
-          document.querySelectorAll('.qbd *').forEach(el=>{
-            if(el.closest('.qbd-tablewrap')) return;
+          document.querySelectorAll('.q2 *').forEach(el=>{
+            if(el.closest('.q2-tablewrap')) return;
             const r=el.getBoundingClientRect();
             if(r.width>innerWidth+1) out.push(el.className+':'+Math.round(r.width)); });
           return [...new Set(out)].slice(0,6); })(),
-        err: !!document.querySelector('.qbd-error') };})()`);
+        err: !!document.querySelector('.q2-error') };})()`);
     report.push({ width, tab, ...m });
 
     const cap = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true });

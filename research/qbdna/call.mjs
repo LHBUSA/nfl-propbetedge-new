@@ -9,6 +9,7 @@ const ROUTES = {
   'qb-dna': 'api/qb-dna.js',
   'prop-history': 'api/qb-dna/prop-history.js',
   'compare': 'api/qb-dna/compare.js',
+  'prop-lab': 'api/qb-dna/prop-lab.js',
   'game-context': 'api/qb-dna/game-context.js'
 };
 

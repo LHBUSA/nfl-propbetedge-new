@@ -128,27 +128,67 @@ export function baseline(rows) {
  */
 const isOutdoorResolved = r => (r.ind !== 1) && r.ws === 'ok' && num(r.tf) !== null;
 
+/* Every condition carries the GROUP it belongs to, so the product can present
+   research surfaces rather than one undifferentiated list. `rollup: true`
+   marks a band that overlaps finer bands below it — it is still computed, but
+   a grouped view shows the finer ones so nothing is double counted visually. */
+export const CONDITION_GROUPS = {
+  location:      'Location',
+  venue:         'Venue',
+  temperature:   'Temperature',
+  precipitation: 'Precipitation',
+  wind:          'Wind',
+  context:       'Game context',
+  market:        'Market position'
+};
+
 export const CONDITIONS = {
-  home:            { label: 'Home',        pick: r => r.ha === 1 },
-  road:            { label: 'Road',        pick: r => r.ha === 0 },
-  dome:            { label: 'Dome / closed roof', pick: r => r.rf === 'dome' || r.rf === 'closed' },
-  outdoor:         { label: 'Outdoor',     pick: r => r.rf === 'outdoors' || r.rf === 'open' },
-  below_freezing:  { label: 'Below freezing', weather: true, pick: r => isOutdoorResolved(r) && r.tf < 32 },
-  cold_33_50:      { label: '33-50 F',     weather: true, pick: r => isOutdoorResolved(r) && r.tf >= 33 && r.tf <= 50 },
-  mild_51_70:      { label: '51-70 F',     weather: true, pick: r => isOutdoorResolved(r) && r.tf > 50 && r.tf <= 70 },
-  warm_70_plus:    { label: 'Above 70 F',  weather: true, pick: r => isOutdoorResolved(r) && r.tf > 70 },
-  snow:            { label: 'Snow',        weather: true, pick: r => isOutdoorResolved(r) && num(r.sn) > 0 },
-  rain:            { label: 'Rain',        weather: true, pick: r => isOutdoorResolved(r) && num(r.rn) > 0 },
-  dry:             { label: 'Dry',         weather: true, pick: r => isOutdoorResolved(r) && !(num(r.sn) > 0) && !(num(r.rn) > 0) },
-  wind_10_plus:    { label: 'Wind 10+ mph', weather: true, pick: r => isOutdoorResolved(r) && num(r.wd) >= 10 },
-  wind_15_plus:    { label: 'Wind 15+ mph', weather: true, pick: r => isOutdoorResolved(r) && num(r.wd) >= 15 },
-  wind_20_plus:    { label: 'Wind 20+ mph', weather: true, pick: r => isOutdoorResolved(r) && num(r.wd) >= 20 },
+  home:            { group: 'location', label: 'Home',  pick: r => r.ha === 1 },
+  road:            { group: 'location', label: 'Road',  pick: r => r.ha === 0 },
+  dome:            { group: 'venue', label: 'Dome / closed roof',
+                     pick: r => r.rf === 'dome' || r.rf === 'closed' },
+  outdoor:         { group: 'venue', label: 'Outdoor',
+                     pick: r => r.rf === 'outdoors' || r.rf === 'open' },
+
+  /* Temperature bands are exclusive and cover the whole range, so a grouped
+     view sums to the outdoor-resolved games and nothing is counted twice.
+     below_freezing is retained as a rollup of the two coldest bands. */
+  arctic_sub20:    { group: 'temperature', label: 'Below 20 F', weather: true,
+                     pick: r => isOutdoorResolved(r) && r.tf < 20 },
+  freezing_20_32:  { group: 'temperature', label: '20-32 F', weather: true,
+                     pick: r => isOutdoorResolved(r) && r.tf >= 20 && r.tf < 32 },
+  below_freezing:  { group: 'temperature', label: 'Below freezing', weather: true, rollup: true,
+                     pick: r => isOutdoorResolved(r) && r.tf < 32 },
+  cold_33_50:      { group: 'temperature', label: '33-50 F', weather: true,
+                     pick: r => isOutdoorResolved(r) && r.tf >= 32 && r.tf <= 50 },
+  mild_51_70:      { group: 'temperature', label: '51-70 F', weather: true,
+                     pick: r => isOutdoorResolved(r) && r.tf > 50 && r.tf <= 70 },
+  warm_70_plus:    { group: 'temperature', label: 'Above 70 F', weather: true,
+                     pick: r => isOutdoorResolved(r) && r.tf > 70 },
+
+  snow:            { group: 'precipitation', label: 'Snow', weather: true,
+                     pick: r => isOutdoorResolved(r) && num(r.sn) > 0 },
+  rain:            { group: 'precipitation', label: 'Rain', weather: true,
+                     pick: r => isOutdoorResolved(r) && num(r.rn) > 0 },
+  dry:             { group: 'precipitation', label: 'Dry', weather: true,
+                     pick: r => isOutdoorResolved(r) && !(num(r.sn) > 0) && !(num(r.rn) > 0) },
+
+  wind_10_plus:    { group: 'wind', label: 'Wind 10+ mph', weather: true,
+                     pick: r => isOutdoorResolved(r) && num(r.wd) >= 10 },
+  wind_15_plus:    { group: 'wind', label: 'Wind 15+ mph', weather: true,
+                     pick: r => isOutdoorResolved(r) && num(r.wd) >= 15 },
+  wind_20_plus:    { group: 'wind', label: 'Wind 20+ mph', weather: true,
+                     pick: r => isOutdoorResolved(r) && num(r.wd) >= 20 },
+
   // kickoff hour is the venue's local hour; 19:00 or later is the primetime window
-  primetime:       { label: 'Primetime',   pick: r => num(r.kh) !== null && r.kh >= 19 },
-  divisional:      { label: 'Divisional',  pick: r => r.div === 1 },
-  playoffs:        { label: 'Playoffs',    pick: r => r.st && r.st !== 'REG' },
-  favorite:        { label: 'Favorite',    pick: r => num(r.spr) !== null && r.spr > 0 },
-  underdog:        { label: 'Underdog',    pick: r => num(r.spr) !== null && r.spr < 0 }
+  primetime:       { group: 'context', label: 'Primetime',
+                     pick: r => num(r.kh) !== null && r.kh >= 19 },
+  divisional:      { group: 'context', label: 'Divisional', pick: r => r.div === 1 },
+  playoffs:        { group: 'context', label: 'Playoffs', pick: r => r.st && r.st !== 'REG' },
+  favorite:        { group: 'market', label: 'Favorite',
+                     pick: r => num(r.spr) !== null && r.spr > 0 },
+  underdog:        { group: 'market', label: 'Underdog',
+                     pick: r => num(r.spr) !== null && r.spr < 0 }
 };
 
 export function splitRows(rows, key) {
@@ -177,30 +217,125 @@ export function conditionProfile(rows, metricKey = 'py', minN = 1) {
   const base = stats(vals(rows, metricKey));
   const out = {};
   for (const key of Object.keys(CONDITIONS)) {
+    const c = CONDITIONS[key];
     const s = splitRows(rows, key);
     if (s.unavailable) { out[key] = { available: false, reason: s.reason }; continue; }
     const n = s.rows.length;
     if (n < minN) {
-      out[key] = { available: true, label: s.label, games: n, suppressed: `n<${minN}`, coverage: s.coverage || undefined };
+      out[key] = { available: true, key, group: c.group, label: s.label, games: n,
+                   suppressed: `n<${minN}`, coverage: s.coverage || undefined };
       continue;
     }
     const b = baseline(s.rows);
     const st = stats(vals(s.rows, metricKey));
+    const decided = b.games_with_result;
     out[key] = {
-      available: true, label: s.label, games: n,
+      available: true, key, group: c.group, rollup: Boolean(c.rollup),
+      label: s.label, games: n,
       wins: b.wins, losses: b.losses,
+      games_with_result: decided,
+      // W-L as a rate, so the record can never be printed without its N
+      win_pct: rate(b.wins ?? 0, decided),
+      record: b.wins === null ? null : `${b.wins}-${b.losses}`,
       passing_yards_avg: st ? st.mean : null,
       passing_yards_median: st ? st.median : null,
       completion_pct: b.completion_pct,
       attempts_avg: b.attempts_per_game ? b.attempts_per_game.mean : null,
-      ypa: b.ypa, td_rate: b.td_rate, int_rate: b.int_rate,
+      tds_avg: b.tds_per_game ? b.tds_per_game.mean : null,
+      ints_avg: b.ints_per_game ? b.ints_per_game.mean : null,
+      tds_total: sum(s.rows, 'td'), ints_total: sum(s.rows, 'int'),
+      ypa: b.ypa, td_rate: b.td_rate, int_rate: b.int_rate, sack_rate: b.sack_rate,
       baseline_delta_pct: (st && base && base.mean)
         ? +(100 * (st.mean - base.mean) / base.mean).toFixed(1) : null,
       sample_label: SAMPLE(n),
       coverage: s.coverage || undefined
     };
   }
-  return { baseline_mean: base ? base.mean : null, baseline_n: base ? base.n : 0, conditions: out };
+  return {
+    baseline_mean: base ? base.mean : null,
+    baseline_n: base ? base.n : 0,
+    groups: CONDITION_GROUPS,
+    conditions: out
+  };
+}
+
+/* ---- DNA SIGNALS ----------------------------------------------------------
+ * The condition matrix answers "what changes his production" only if a reader
+ * is willing to scan twenty rows. This reduces it to the few movements that
+ * are both LARGE and BACKED BY ENOUGH GAMES to be worth a reader's attention.
+ *
+ * Sample discipline is the whole point, and it is enforced here rather than
+ * left to the surface:
+ *
+ *   N >= 10  may be called a STRENGTH or a WATCHOUT
+ *   N 5-9    is a SIGNAL, explicitly carrying SMALL SAMPLE
+ *   N < 5    is never either; it is reported as VERY SMALL SAMPLE only
+ *
+ * A big number on three games is not an insight, and labelling it as one is
+ * exactly the mythology this product exists to avoid.
+ */
+export const SIGNAL_TIERS = {
+  qualifying_n: 10,     // may be labelled STRENGTH / WATCHOUT
+  signal_n: 5,          // may be labelled SIGNAL
+  min_move_pct: 4       // below this the movement is noise, whatever the N
+};
+
+export function dnaSignals(profile, opts = {}) {
+  const qualN = opts.qualifying_n ?? SIGNAL_TIERS.qualifying_n;
+  const sigN = opts.signal_n ?? SIGNAL_TIERS.signal_n;
+  const minMove = opts.min_move_pct ?? SIGNAL_TIERS.min_move_pct;
+
+  const rows = Object.values(profile.conditions)
+    .filter(c => c.available && c.games > 0 && typeof c.baseline_delta_pct === 'number')
+    // a rollup band duplicates the finer bands beneath it; showing both as
+    // separate signals would double-count the same games
+    .filter(c => !c.rollup);
+
+  const classify = c => {
+    const move = Math.abs(c.baseline_delta_pct);
+    if (move < minMove) return { tier: 'NEUTRAL', eligible: false };
+    if (c.games >= qualN) {
+      return { tier: c.baseline_delta_pct > 0 ? 'STRENGTH' : 'WATCHOUT', eligible: true };
+    }
+    if (c.games >= sigN) return { tier: 'SIGNAL', eligible: true };
+    return { tier: 'INSUFFICIENT', eligible: false };
+  };
+
+  const scored = rows.map(c => {
+    const k = classify(c);
+    return {
+      key: c.key, group: c.group, label: c.label,
+      tier: k.tier, eligible: k.eligible,
+      direction: c.baseline_delta_pct > 0 ? 'up' : 'down',
+      baseline_delta_pct: c.baseline_delta_pct,
+      passing_yards_avg: c.passing_yards_avg,
+      games: c.games, record: c.record, win_pct: c.win_pct,
+      completion_pct: c.completion_pct,
+      sample_label: c.sample_label,
+      // the one sentence a surface is allowed to print for this signal
+      statement: `${c.passing_yards_avg} yds/game · `
+        + `${c.baseline_delta_pct > 0 ? '+' : ''}${c.baseline_delta_pct}% vs own baseline · `
+        + `N=${c.games} · ${c.sample_label}`
+    };
+  }).sort((a, b) => Math.abs(b.baseline_delta_pct) - Math.abs(a.baseline_delta_pct));
+
+  return {
+    policy: {
+      qualifying_n: qualN, signal_n: sigN, min_move_pct: minMove,
+      rule: `A movement is only called a strength or a watchout with at least `
+          + `${qualN} games behind it. Between ${sigN} and ${qualN - 1} games it is a `
+          + `signal carrying its sample label. Below ${sigN} games it is neither, `
+          + `however large the number looks.`
+    },
+    baseline_mean: profile.baseline_mean,
+    baseline_n: profile.baseline_n,
+    strengths: scored.filter(x => x.tier === 'STRENGTH'),
+    watchouts: scored.filter(x => x.tier === 'WATCHOUT'),
+    signals: scored.filter(x => x.tier === 'SIGNAL'),
+    // reported, never promoted
+    insufficient: scored.filter(x => x.tier === 'INSUFFICIENT'),
+    neutral_count: scored.filter(x => x.tier === 'NEUTRAL').length
+  };
 }
 
 export function propThreshold(rows, market, line) {

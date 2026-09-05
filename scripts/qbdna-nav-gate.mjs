@@ -107,7 +107,7 @@ for (const width of WIDTHS) {
     const drawer=document.getElementById('nav-qbdna');
     return {
       route: window.App && window.App.current,
-      rendered: !!document.querySelector('.qbd'),
+      rendered: !!document.querySelector('.q2'),
       shellBtnExists: !!shellBtn,
       shellBtnActive: !!(shellBtn && shellBtn.classList.contains('active')),
       drawerExists: !!drawer,
@@ -160,7 +160,7 @@ for (const width of WIDTHS) {
       await new Promise(r=>setTimeout(r,6000));
       const b2=[...document.querySelectorAll('.pbes-nav-btn')].find(x=>x.dataset.route==='qbdna');
       return { ok:true, route: window.App && window.App.current,
-               rendered: !!document.querySelector('.qbd'),
+               rendered: !!document.querySelector('.q2'),
                active: !!(b2 && b2.classList.contains('active')),
                hash: location.hash };})()`);
     check(width, 'clicking QB DNA routes to the surface',
@@ -173,11 +173,11 @@ for (const width of WIDTHS) {
       history.back();
       await new Promise(r=>setTimeout(r,4000));
       const back = { route: window.App && window.App.current, hash: location.hash,
-                     qbd: !!document.querySelector('.qbd') };
+                     qbd: !!document.querySelector('.q2') };
       history.forward();
       await new Promise(r=>setTimeout(r,5000));
       const fwd = { route: window.App && window.App.current, hash: location.hash,
-                    qbd: !!document.querySelector('.qbd') };
+                    qbd: !!document.querySelector('.q2') };
       return { back, fwd };})()`);
     check(width, 'back leaves QB DNA', backFwd.back.hash !== '#qbdna', JSON.stringify(backFwd.back));
     check(width, 'forward returns to QB DNA',
@@ -224,7 +224,7 @@ for (const width of WIDTHS) {
       return { ok:true, barItems, barVisible, drawerOpen, visible, reachable,
                height:Math.round(r2.height),
                route: window.App && window.App.current,
-               rendered: !!document.querySelector('.qbd'),
+               rendered: !!document.querySelector('.q2'),
                active: !!document.getElementById('nav-qbdna')?.classList.contains('active'),
                drawerClosed: !document.querySelector('#sidebar.open'),
                hash: location.hash };})()`);
@@ -245,12 +245,12 @@ for (const width of WIDTHS) {
   const layout = await evalIn(`(async()=>{
     // let any late loader finish and confirm it did not steal the route
     await new Promise(r=>setTimeout(r,7000));
-    const root=document.querySelector('.qbd');
+    const root=document.querySelector('.q2');
     if(!root) return {rendered:false};
     const rr=root.getBoundingClientRect();
     const d=document.documentElement;
     // does any fixed shell band sit on top of the first panel?
-    const first=root.querySelector('.qbd-panel');
+    const first=root.querySelector('.q2-panel');
     const fr=first?first.getBoundingClientRect():null;
     let covered=false, coveredBy=null;
     if(fr){
@@ -264,8 +264,8 @@ for (const width of WIDTHS) {
       docOverflowX: d.scrollWidth>innerWidth+1,
       leftEdge: Math.round(rr.left),
       covered, coveredBy,
-      panels: root.querySelectorAll('.qbd-panel').length,
-      zeroHeightPanels: [...root.querySelectorAll('.qbd-panel')]
+      panels: root.querySelectorAll('.q2-panel').length,
+      zeroHeightPanels: [...root.querySelectorAll('.q2-panel')]
         .filter(p=>p.getBoundingClientRect().height<10).length
     };})()`);
   check(width, 'no route race: still QB DNA after the loader settles',

@@ -49,7 +49,7 @@ const ev = async (e, ms = 25000) => {
 };
 await ev(`window.App && App.nav('qbdna')`, 12000);
 await sleep(6000);
-await ev(`(()=>{const b=[...document.querySelectorAll('.qbd-tab')]
+await ev(`(()=>{const b=[...document.querySelectorAll('.q2-tab')]
   .find(x=>x.dataset.tab===${JSON.stringify(TAB)}); if(b)b.click(); return !!b;})()`);
 await sleep(6000);
 console.log(JSON.stringify(await ev(EXPR), null, 1));

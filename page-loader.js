@@ -104,8 +104,10 @@
        never conceal overflow or substitute for responsive component layout. */
     {css:'./scrollbar-clean-v1.css'},
 
-    /* QB DNA prototype — hash route /#qbdna only, deliberately NOT in nav */
-    {css:'./qb-dna-v1.css',js:'./qb-dna-v1.js'}
+    /* QB DNA — v2 is the sole UI authority for the qbdna route. v1 is retired
+       and deliberately NOT loaded; stacking it would leave two renderers
+       fighting over the same view container. */
+    {css:'./qb-dna-v2.css',js:'./qb-dna-v2.js'}
   ];
 
   const PRO_MODULES=[

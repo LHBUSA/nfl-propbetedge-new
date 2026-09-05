@@ -24,16 +24,17 @@ const DP = 9900 + Math.floor(Math.random() * 90);
 const CASES = [
   { name: 'no-nfl-history', tab: 'overview',
     state: { playerId: '00-0039107' },            // Stetson Bennett, LAR, 0 NFL games
-    expect: '.qbd-unavail' },
+    expect: '.q2-unavail' },
+  // in v2 the withheld market is a card inside the prop lab
   { name: 'market-unavailable', tab: 'props',
-    state: { playerId: '00-0033873', market: 'interceptions', line: '' },
-    expect: '.qbd-unavail' },
+    state: { playerId: '00-0033873', openMarket: 'passing_yards' },
+    expect: '.q2-mkt.is-off' },
   { name: 'very-small-sample', tab: 'conditions',
     state: { playerId: '00-0033873' },
-    expect: '.qbd-samp[data-s="VERY SMALL SAMPLE"]' },
+    expect: '.q2-samp[data-s="VERY SMALL SAMPLE"]' },
   { name: 'thin-starter', tab: 'overview',
     state: { playerId: '00-0040743' },            // Tyler Shough, NO — real but small
-    expect: '.qbd-panel' }
+    expect: '.q2-panel' }
 ];
 
 mkdirSync(OUT, { recursive: true });
@@ -97,7 +98,7 @@ for (const width of WIDTHS) {
       const S = window.PBEQBDna.state;
       Object.assign(S, ${JSON.stringify(c.state)});
       S.tab = ${JSON.stringify(c.tab)};
-      S.dna = null; S.prop = null; S.cmp = null; S.ctxCmp = null;
+      S.dna = null; S.lab = null; S.cmp = null; S.ctxCmp = null;
       /* Clear the selected game exactly as the player-change handler does, so
          each case resolves THIS quarterback's own next game rather than
          inheriting the previous case's selection. */
@@ -115,18 +116,18 @@ for (const width of WIDTHS) {
         text: el ? (el.textContent||'').replace(/\\s+/g,' ').trim().slice(0,220) : null,
         docH: d.scrollHeight,
         overflowX: d.scrollWidth > innerWidth + 1,
-        wide: (()=>{ const o=[]; document.querySelectorAll('.qbd *').forEach(x=>{
-          if(x.closest('.qbd-tablewrap')) return;
+        wide: (()=>{ const o=[]; document.querySelectorAll('.q2 *').forEach(x=>{
+          if(x.closest('.q2-tablewrap')) return;
           if(x.getBoundingClientRect().width > innerWidth+1) o.push(x.className); });
           return [...new Set(o)].slice(0,4); })(),
         /* the point of these captures: a withheld answer must contain no
            fabricated figure where a real one would have been */
         fabricated: (()=>{
-          const p = document.querySelector('.qbd-unavail');
+          const p = document.querySelector('.q2-unavail') || document.querySelector('.q2-mkt.is-off');
           if (!p) return null;
           return /\\b\\d+\\.\\d\\b/.test(p.textContent||'');
         })(),
-        err: !!document.querySelector('.qbd-error')
+        err: !!document.querySelector('.q2-error')
       };})()`);
     report.push({ width, case: c.name, ...m });
 

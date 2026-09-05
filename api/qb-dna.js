@@ -8,8 +8,8 @@
  * Returns player, baseline, current_season, career, conditions, sample metadata
  * and provenance. Every rate carries numerator, denominator and N.
  */
-import { resolvePlayer, gamesFor, baseline, conditionProfile, provenance, dataWindow,
-         MARKETS, SAMPLE, dataset } from './_qbdna/engine.js';
+import { resolvePlayer, gamesFor, baseline, conditionProfile, dnaSignals, provenance,
+         dataWindow, MARKETS, SAMPLE, dataset } from './_qbdna/engine.js';
 import { gateReport, SERVED_FIELDS } from './_qbdna/gating.js';
 import { playerMedia, teamBlock } from './_qbdna/media.js';
 
@@ -182,6 +182,23 @@ export default function handler(req, res) {
       environment_status: r.ws ?? 'not_resolved'
     })).reverse(),
     conditions: profile.conditions,
+    condition_groups: profile.groups,
+    /* The few movements large enough AND backed by enough games to be worth a
+       reader's attention. Classified here, never in the surface. */
+    dna_signals: dnaSignals(profile),
+    /* The chart series, computed here so the frontend draws rather than
+       calculates. Ordered oldest to newest. */
+    form_series: {
+      metric, metric_label: MARKETS[metric].label,
+      mean: profile.baseline_mean,
+      median: (baseline(rows).passing_yards || {}).median ?? null,
+      games: rows.slice(-20).map(r => ({
+        date: r.d, season: r.s, week: r.w,
+        opponent: r.ha === 1 ? r.a : r.h, home: r.ha === 1,
+        value: r[metricKey] ?? null,
+        result: r.win === 1 ? 'W' : r.win === 0 ? 'L' : null
+      }))
+    },
     history_available: true,
     sample: {
       baseline_games: profile.baseline_n,

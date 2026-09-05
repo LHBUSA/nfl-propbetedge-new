@@ -19,6 +19,7 @@ const API = {
   '/api/qb-dna': 'api/qb-dna.js',
   '/api/qb-dna/prop-history': 'api/qb-dna/prop-history.js',
   '/api/qb-dna/compare': 'api/qb-dna/compare.js',
+  '/api/qb-dna/prop-lab': 'api/qb-dna/prop-lab.js',
   '/api/qb-dna/game-context': 'api/qb-dna/game-context.js'
 };
 

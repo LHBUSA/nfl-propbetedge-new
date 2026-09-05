@@ -30,11 +30,12 @@ const DP = 9900 + Math.floor(Math.random() * 90);
 const SURFACES = [
   { name: 'overview',  tab: 'overview',   state: { playerId: '00-0033873' } },
   { name: 'conditions', tab: 'conditions', state: { playerId: '00-0033873' } },
-  { name: 'props',     tab: 'props',      state: { playerId: '00-0033873', market: 'passing_yards', line: '' } },
+  { name: 'props',     tab: 'props',      state: { playerId: '00-0033873', openMarket: 'passing_yards' } },
   { name: 'compare',   tab: 'compare',    state: { playerId: '00-0033873', comparePlayerId: '00-0034857' } },
   { name: 'no-history', tab: 'overview',  state: { playerId: '00-0039107' } },
+  // in v2 the withheld market is a card inside the lab, not a whole panel
   { name: 'market-unavailable', tab: 'props',
-    state: { playerId: '00-0033873', market: 'interceptions', line: '' } }
+    state: { playerId: '00-0033873', openMarket: 'passing_yards' } }
 ];
 
 mkdirSync(OUT, { recursive: true });
@@ -81,8 +82,8 @@ if (SHARE) {
 }
 
 const PROBE = `(() => {
-  const root = document.querySelector('.qbd');
-  if (!root) return { error: 'no .qbd root' };
+  const root = document.querySelector('.q2');
+  if (!root) return { error: 'no .q2 root' };
   const imgs = [...root.querySelectorAll('img')];
   const rows = imgs.map(im => {
     const r = im.getBoundingClientRect();
@@ -107,11 +108,11 @@ const PROBE = `(() => {
     // a PBE mark inside QB DNA would be a logo standing in for a person
     pbeMarks: rows.filter(r => /propbetedge|pbe[-_]?logo|\\/logo\\.|brand/i.test(r.src)).length,
     upscaled: rows.filter(r => r.upscale !== null && r.upscale > 1.15).length,
-    faces: rows.filter(r => /qbd-face/.test(r.cls)).length,
-    crests: rows.filter(r => /qbd-crest/.test(r.cls)).length,
-    facesOk: rows.filter(r => /qbd-face/.test(r.cls) && r.nw > 0).length,
-    crestsOk: rows.filter(r => /qbd-crest/.test(r.cls) && r.nw > 0).length,
-    explicitUnavailable: root.querySelectorAll('.qbd-face-none').length,
+    faces: rows.filter(r => /q2-face/.test(r.cls)).length,
+    crests: rows.filter(r => /q2-crest/.test(r.cls)).length,
+    facesOk: rows.filter(r => /q2-face/.test(r.cls) && r.nw > 0).length,
+    crestsOk: rows.filter(r => /q2-crest/.test(r.cls) && r.nw > 0).length,
+    explicitUnavailable: root.querySelectorAll('.q2-face-none').length,
     // any element that draws letters inside a disc as a stand-in for a team
     initialsBadges: [...root.querySelectorAll('*')].filter(el => {
       if (el.children.length) return false;
@@ -120,11 +121,11 @@ const PROBE = `(() => {
       const cs = getComputedStyle(el);
       return parseFloat(cs.borderRadius) > 8 || cs.borderRadius.includes('50%');
     }).length,
-    primaryFaceAlt: (root.querySelector('.qbd-mast-id .qbd-face, .qbd-mast-id .qbd-face-none') || {})
-      .getAttribute ? (root.querySelector('.qbd-mast-id .qbd-face') || {}).alt || null : null,
-    compareAlts: [...root.querySelectorAll('.qbd-vs-face .qbd-face')].map(i => i.alt),
-    matchupCrests: root.querySelectorAll('.qbd-match .qbd-crest').length,
-    matchupAlts: [...root.querySelectorAll('.qbd-match .qbd-crest')].map(i => i.alt)
+    primaryFaceAlt: (root.querySelector('.q2-hero .q2-face, .q2-hero .q2-face-none') || {})
+      .getAttribute ? (root.querySelector('.q2-hero .q2-face') || {}).alt || null : null,
+    compareAlts: [...root.querySelectorAll('.q2-vs-side .q2-face')].map(i => i.alt),
+    matchupCrests: root.querySelectorAll('.q2-match .q2-crest').length,
+    matchupAlts: [...root.querySelectorAll('.q2-match .q2-crest')].map(i => i.alt)
   };
 })()`;
 
@@ -145,7 +146,7 @@ for (const width of WIDTHS) {
       S.dna=null;S.prop=null;S.cmp=null;S.ctxCmp=null;S.eventId=null;S.ctx=null;
       await window.PBEQBDna.load(); return true;})()`);
     // give every lazy image a chance to actually decode before measuring
-    await evalIn(`(async()=>{const im=[...document.querySelectorAll('.qbd img')];
+    await evalIn(`(async()=>{const im=[...document.querySelectorAll('.q2 img')];
       im.forEach(i=>i.loading='eager');
       await Promise.all(im.map(i=>i.complete?null:new Promise(r=>{i.onload=r;i.onerror=r;})));
       return im.length;})()`, 45000);
