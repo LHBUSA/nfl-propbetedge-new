@@ -1,0 +1,2165 @@
+{
+  "ok": true,
+  "player": {
+    "pbe_player_id": null,
+    "gsis_id": "00-0034857",
+    "espn_id": "3918298",
+    "pfr_id": "AlleJo02",
+    "name": "Josh Allen",
+    "position": "QB",
+    "current_team": "BUF",
+    "matched_by": "gsis_id"
+  },
+  "metric": "passing_yards",
+  "metric_label": "Passing yards",
+  "window": {
+    "seasons": [
+      2019,
+      2020,
+      2021,
+      2022,
+      2023,
+      2024
+    ],
+    "games": 111,
+    "date_range": [
+      "2019-09-08",
+      "2025-01-26"
+    ]
+  },
+  "baseline": {
+    "games": 111,
+    "date_range": [
+      "2019-09-08",
+      "2025-01-26"
+    ],
+    "wins": 78,
+    "losses": 33,
+    "games_with_result": 111,
+    "attempts": 3973,
+    "completions": 2429,
+    "completion_pct": {
+      "numerator": 2429,
+      "denominator": 3973,
+      "pct": 61.1
+    },
+    "passing_yards_total": 27719,
+    "passing_yards": {
+      "n": 111,
+      "mean": 249.7,
+      "median": 253,
+      "std": 77.6,
+      "min": 5,
+      "max": 424,
+      "p25": 197,
+      "p75": 311
+    },
+    "attempts_per_game": {
+      "n": 111,
+      "mean": 35.8,
+      "median": 36,
+      "std": 9.4,
+      "min": 5,
+      "max": 67,
+      "p25": 30,
+      "p75": 42
+    },
+    "completions_per_game": {
+      "n": 111,
+      "mean": 21.9,
+      "median": 22,
+      "std": 6.6,
+      "min": 3,
+      "max": 42,
+      "p25": 17,
+      "p75": 26
+    },
+    "tds_per_game": {
+      "n": 111,
+      "mean": 1.9,
+      "median": 2,
+      "std": 1.2,
+      "min": 0,
+      "max": 5,
+      "p25": 1,
+      "p75": 3
+    },
+    "ints_per_game": {
+      "n": 111,
+      "mean": 0.7,
+      "median": 0,
+      "std": 0.8,
+      "min": 0,
+      "max": 3,
+      "p25": 0,
+      "p75": 1
+    },
+    "ypa": {
+      "numerator": 27719,
+      "denominator": 3973,
+      "value": 6.98,
+      "unit": "yards per attempt"
+    },
+    "td_rate": {
+      "numerator": 210,
+      "denominator": 3973,
+      "pct": 5.3
+    },
+    "int_rate": {
+      "numerator": 76,
+      "denominator": 3973,
+      "pct": 1.9
+    },
+    "sack_rate": {
+      "numerator": 189,
+      "denominator": 3964,
+      "pct": 4.8
+    },
+    "rush_yards_total": 4179,
+    "sample_label": "STRONG SAMPLE"
+  },
+  "career": {
+    "games": 111,
+    "date_range": [
+      "2019-09-08",
+      "2025-01-26"
+    ],
+    "wins": 78,
+    "losses": 33,
+    "games_with_result": 111,
+    "attempts": 3973,
+    "completions": 2429,
+    "completion_pct": {
+      "numerator": 2429,
+      "denominator": 3973,
+      "pct": 61.1
+    },
+    "passing_yards_total": 27719,
+    "passing_yards": {
+      "n": 111,
+      "mean": 249.7,
+      "median": 253,
+      "std": 77.6,
+      "min": 5,
+      "max": 424,
+      "p25": 197,
+      "p75": 311
+    },
+    "attempts_per_game": {
+      "n": 111,
+      "mean": 35.8,
+      "median": 36,
+      "std": 9.4,
+      "min": 5,
+      "max": 67,
+      "p25": 30,
+      "p75": 42
+    },
+    "completions_per_game": {
+      "n": 111,
+      "mean": 21.9,
+      "median": 22,
+      "std": 6.6,
+      "min": 3,
+      "max": 42,
+      "p25": 17,
+      "p75": 26
+    },
+    "tds_per_game": {
+      "n": 111,
+      "mean": 1.9,
+      "median": 2,
+      "std": 1.2,
+      "min": 0,
+      "max": 5,
+      "p25": 1,
+      "p75": 3
+    },
+    "ints_per_game": {
+      "n": 111,
+      "mean": 0.7,
+      "median": 0,
+      "std": 0.8,
+      "min": 0,
+      "max": 3,
+      "p25": 0,
+      "p75": 1
+    },
+    "ypa": {
+      "numerator": 27719,
+      "denominator": 3973,
+      "value": 6.98,
+      "unit": "yards per attempt"
+    },
+    "td_rate": {
+      "numerator": 210,
+      "denominator": 3973,
+      "pct": 5.3
+    },
+    "int_rate": {
+      "numerator": 76,
+      "denominator": 3973,
+      "pct": 1.9
+    },
+    "sack_rate": {
+      "numerator": 189,
+      "denominator": 3964,
+      "pct": 4.8
+    },
+    "rush_yards_total": 4179,
+    "sample_label": "STRONG SAMPLE"
+  },
+  "current_season": {
+    "season": 2024,
+    "games": 19,
+    "date_range": [
+      "2024-09-08",
+      "2025-01-26"
+    ],
+    "wins": 15,
+    "losses": 4,
+    "games_with_result": 19,
+    "attempts": 587,
+    "completions": 365,
+    "completion_pct": {
+      "numerator": 365,
+      "denominator": 587,
+      "pct": 62.2
+    },
+    "passing_yards_total": 4367,
+    "passing_yards": {
+      "n": 19,
+      "mean": 229.8,
+      "median": 235,
+      "std": 72.3,
+      "min": 127,
+      "max": 362,
+      "p25": 154,
+      "p75": 280
+    },
+    "attempts_per_game": {
+      "n": 19,
+      "mean": 30.9,
+      "median": 31,
+      "std": 6.8,
+      "min": 17,
+      "max": 41,
+      "p25": 27,
+      "p75": 37
+    },
+    "completions_per_game": {
+      "n": 19,
+      "mean": 19.2,
+      "median": 20,
+      "std": 4.7,
+      "min": 9,
+      "max": 27,
+      "p25": 16,
+      "p75": 23
+    },
+    "tds_per_game": {
+      "n": 19,
+      "mean": 1.7,
+      "median": 2,
+      "std": 1.1,
+      "min": 0,
+      "max": 4,
+      "p25": 1,
+      "p75": 2
+    },
+    "ints_per_game": {
+      "n": 19,
+      "mean": 0.3,
+      "median": 0,
+      "std": 0.6,
+      "min": 0,
+      "max": 2,
+      "p25": 0,
+      "p75": 1
+    },
+    "ypa": {
+      "numerator": 4367,
+      "denominator": 587,
+      "value": 7.44,
+      "unit": "yards per attempt"
+    },
+    "td_rate": {
+      "numerator": 32,
+      "denominator": 587,
+      "pct": 5.5
+    },
+    "int_rate": {
+      "numerator": 6,
+      "denominator": 587,
+      "pct": 1
+    },
+    "sack_rate": {
+      "numerator": 19,
+      "denominator": 586,
+      "pct": 3.2
+    },
+    "rush_yards_total": 636,
+    "sample_label": "MODERATE SAMPLE"
+  },
+  "recent": {
+    "last_5": {
+      "games": 5,
+      "date_range": [
+        "2024-12-22",
+        "2025-01-26"
+      ],
+      "wins": 4,
+      "losses": 1,
+      "games_with_result": 5,
+      "attempts": 146,
+      "completions": 90,
+      "completion_pct": {
+        "numerator": 90,
+        "denominator": 146,
+        "pct": 61.6
+      },
+      "passing_yards_total": 972,
+      "passing_yards": {
+        "n": 5,
+        "mean": 194.4,
+        "median": 182,
+        "std": 59.5,
+        "min": 127,
+        "max": 272,
+        "p25": 154,
+        "p75": 237
+      },
+      "attempts_per_game": {
+        "n": 5,
+        "mean": 29.2,
+        "median": 29,
+        "std": 5.1,
+        "min": 23,
+        "max": 37,
+        "p25": 27,
+        "p75": 30
+      },
+      "completions_per_game": {
+        "n": 5,
+        "mean": 18,
+        "median": 16,
+        "std": 2.8,
+        "min": 16,
+        "max": 22,
+        "p25": 16,
+        "p75": 20
+      },
+      "tds_per_game": {
+        "n": 5,
+        "mean": 1.4,
+        "median": 2,
+        "std": 0.9,
+        "min": 0,
+        "max": 2,
+        "p25": 1,
+        "p75": 2
+      },
+      "ints_per_game": {
+        "n": 5,
+        "mean": 0.2,
+        "median": 0,
+        "std": 0.4,
+        "min": 0,
+        "max": 1,
+        "p25": 0,
+        "p75": 0
+      },
+      "ypa": {
+        "numerator": 972,
+        "denominator": 146,
+        "value": 6.66,
+        "unit": "yards per attempt"
+      },
+      "td_rate": {
+        "numerator": 7,
+        "denominator": 146,
+        "pct": 4.8
+      },
+      "int_rate": {
+        "numerator": 1,
+        "denominator": 146,
+        "pct": 0.7
+      },
+      "sack_rate": {
+        "numerator": 6,
+        "denominator": 146,
+        "pct": 4.1
+      },
+      "rush_yards_total": 152,
+      "sample_label": "SMALL SAMPLE"
+    },
+    "last_10": {
+      "games": 10,
+      "date_range": [
+        "2024-11-10",
+        "2025-01-26"
+      ],
+      "wins": 8,
+      "losses": 2,
+      "games_with_result": 10,
+      "attempts": 313,
+      "completions": 197,
+      "completion_pct": {
+        "numerator": 197,
+        "denominator": 313,
+        "pct": 62.9
+      },
+      "passing_yards_total": 2366,
+      "passing_yards": {
+        "n": 10,
+        "mean": 236.6,
+        "median": 249.5,
+        "std": 81.8,
+        "min": 127,
+        "max": 362,
+        "p25": 154,
+        "p75": 280
+      },
+      "attempts_per_game": {
+        "n": 10,
+        "mean": 31.3,
+        "median": 32,
+        "std": 7.5,
+        "min": 17,
+        "max": 40,
+        "p25": 27,
+        "p75": 37
+      },
+      "completions_per_game": {
+        "n": 10,
+        "mean": 19.7,
+        "median": 21,
+        "std": 4.3,
+        "min": 13,
+        "max": 27,
+        "p25": 16,
+        "p75": 22
+      },
+      "tds_per_game": {
+        "n": 10,
+        "mean": 1.5,
+        "median": 2,
+        "std": 1,
+        "min": 0,
+        "max": 3,
+        "p25": 1,
+        "p75": 2
+      },
+      "ints_per_game": {
+        "n": 10,
+        "mean": 0.4,
+        "median": 0,
+        "std": 0.7,
+        "min": 0,
+        "max": 2,
+        "p25": 0,
+        "p75": 1
+      },
+      "ypa": {
+        "numerator": 2366,
+        "denominator": 313,
+        "value": 7.56,
+        "unit": "yards per attempt"
+      },
+      "td_rate": {
+        "numerator": 15,
+        "denominator": 313,
+        "pct": 4.8
+      },
+      "int_rate": {
+        "numerator": 4,
+        "denominator": 313,
+        "pct": 1.3
+      },
+      "sack_rate": {
+        "numerator": 8,
+        "denominator": 313,
+        "pct": 2.6
+      },
+      "rush_yards_total": 425,
+      "sample_label": "MODERATE SAMPLE"
+    }
+  },
+  "game_log": [
+    {
+      "game_id": "2024_21_BUF_KC",
+      "date": "2025-01-26",
+      "season": 2024,
+      "week": 21,
+      "team": "BUF",
+      "opponent": "KC",
+      "home": false,
+      "attempts": 37,
+      "completions": 22,
+      "passing_yards": 237,
+      "touchdowns": 2,
+      "interceptions": 0,
+      "result": "L",
+      "roof": "outdoors",
+      "temp_f": 30.6,
+      "wind_mph": 2.9,
+      "environment_status": "ok"
+    },
+    {
+      "game_id": "2024_20_BAL_BUF",
+      "date": "2025-01-19",
+      "season": 2024,
+      "week": 20,
+      "team": "BUF",
+      "opponent": "BAL",
+      "home": true,
+      "attempts": 23,
+      "completions": 16,
+      "passing_yards": 127,
+      "touchdowns": 0,
+      "interceptions": 0,
+      "result": "W",
+      "roof": "outdoors",
+      "temp_f": 18.1,
+      "wind_mph": 5.4,
+      "environment_status": "ok"
+    },
+    {
+      "game_id": "2024_19_DEN_BUF",
+      "date": "2025-01-12",
+      "season": 2024,
+      "week": 19,
+      "team": "BUF",
+      "opponent": "DEN",
+      "home": true,
+      "attempts": 29,
+      "completions": 20,
+      "passing_yards": 272,
+      "touchdowns": 2,
+      "interceptions": 0,
+      "result": "W",
+      "roof": "outdoors",
+      "temp_f": 30.7,
+      "wind_mph": 8.7,
+      "environment_status": "ok"
+    },
+    {
+      "game_id": "2024_17_NYJ_BUF",
+      "date": "2024-12-29",
+      "season": 2024,
+      "week": 17,
+      "team": "BUF",
+      "opponent": "NYJ",
+      "home": true,
+      "attempts": 27,
+      "completions": 16,
+      "passing_yards": 182,
+      "touchdowns": 2,
+      "interceptions": 0,
+      "result": "W",
+      "roof": "outdoors",
+      "temp_f": 52.4,
+      "wind_mph": 19.6,
+      "environment_status": "ok"
+    },
+    {
+      "game_id": "2024_16_NE_BUF",
+      "date": "2024-12-22",
+      "season": 2024,
+      "week": 16,
+      "team": "BUF",
+      "opponent": "NE",
+      "home": true,
+      "attempts": 30,
+      "completions": 16,
+      "passing_yards": 154,
+      "touchdowns": 1,
+      "interceptions": 1,
+      "result": "W",
+      "roof": "outdoors",
+      "temp_f": 8.8,
+      "wind_mph": 0.7,
+      "environment_status": "ok"
+    },
+    {
+      "game_id": "2024_15_BUF_DET",
+      "date": "2024-12-15",
+      "season": 2024,
+      "week": 15,
+      "team": "BUF",
+      "opponent": "DET",
+      "home": false,
+      "attempts": 34,
+      "completions": 23,
+      "passing_yards": 362,
+      "touchdowns": 2,
+      "interceptions": 0,
+      "result": "W",
+      "roof": "dome",
+      "temp_f": null,
+      "wind_mph": null,
+      "environment_status": "skipped_indoor"
+    },
+    {
+      "game_id": "2024_14_BUF_LA",
+      "date": "2024-12-08",
+      "season": 2024,
+      "week": 14,
+      "team": "BUF",
+      "opponent": "LA",
+      "home": false,
+      "attempts": 37,
+      "completions": 22,
+      "passing_yards": 342,
+      "touchdowns": 3,
+      "interceptions": 0,
+      "result": "L",
+      "roof": "dome",
+      "temp_f": null,
+      "wind_mph": null,
+      "environment_status": "skipped_indoor"
+    },
+    {
+      "game_id": "2024_13_SF_BUF",
+      "date": "2024-12-01",
+      "season": 2024,
+      "week": 13,
+      "team": "BUF",
+      "opponent": "SF",
+      "home": true,
+      "attempts": 17,
+      "completions": 13,
+      "passing_yards": 148,
+      "touchdowns": 2,
+      "interceptions": 0,
+      "result": "W",
+      "roof": "outdoors",
+      "temp_f": 26.9,
+      "wind_mph": 8.4,
+      "environment_status": "ok"
+    },
+    {
+      "game_id": "2024_11_KC_BUF",
+      "date": "2024-11-17",
+      "season": 2024,
+      "week": 11,
+      "team": "BUF",
+      "opponent": "KC",
+      "home": true,
+      "attempts": 40,
+      "completions": 27,
+      "passing_yards": 262,
+      "touchdowns": 1,
+      "interceptions": 1,
+      "result": "W",
+      "roof": "outdoors",
+      "temp_f": 52.6,
+      "wind_mph": 4.8,
+      "environment_status": "ok"
+    },
+    {
+      "game_id": "2024_10_BUF_IND",
+      "date": "2024-11-10",
+      "season": 2024,
+      "week": 10,
+      "team": "BUF",
+      "opponent": "IND",
+      "home": false,
+      "attempts": 39,
+      "completions": 22,
+      "passing_yards": 280,
+      "touchdowns": 0,
+      "interceptions": 2,
+      "result": "W",
+      "roof": "closed",
+      "temp_f": null,
+      "wind_mph": null,
+      "environment_status": "skipped_indoor"
+    },
+    {
+      "game_id": "2024_09_MIA_BUF",
+      "date": "2024-11-03",
+      "season": 2024,
+      "week": 9,
+      "team": "BUF",
+      "opponent": "MIA",
+      "home": true,
+      "attempts": 41,
+      "completions": 25,
+      "passing_yards": 235,
+      "touchdowns": 3,
+      "interceptions": 1,
+      "result": "W",
+      "roof": "outdoors",
+      "temp_f": 52.8,
+      "wind_mph": 5.5,
+      "environment_status": "ok"
+    },
+    {
+      "game_id": "2024_08_BUF_SEA",
+      "date": "2024-10-27",
+      "season": 2024,
+      "week": 8,
+      "team": "BUF",
+      "opponent": "SEA",
+      "home": false,
+      "attempts": 35,
+      "completions": 24,
+      "passing_yards": 283,
+      "touchdowns": 2,
+      "interceptions": 1,
+      "result": "W",
+      "roof": "outdoors",
+      "temp_f": 53.6,
+      "wind_mph": 13.4,
+      "environment_status": "ok"
+    }
+  ],
+  "conditions": {
+    "home": {
+      "available": true,
+      "label": "Home",
+      "games": 59,
+      "wins": 46,
+      "losses": 13,
+      "passing_yards_avg": 231.1,
+      "passing_yards_median": 232,
+      "completion_pct": {
+        "numerator": 1203,
+        "denominator": 1976,
+        "pct": 60.9
+      },
+      "attempts_avg": 33.5,
+      "ypa": {
+        "numerator": 13637,
+        "denominator": 1976,
+        "value": 6.9,
+        "unit": "yards per attempt"
+      },
+      "td_rate": {
+        "numerator": 115,
+        "denominator": 1976,
+        "pct": 5.8
+      },
+      "int_rate": {
+        "numerator": 37,
+        "denominator": 1976,
+        "pct": 1.9
+      },
+      "baseline_delta_pct": -7.4,
+      "sample_label": "STRONG SAMPLE"
+    },
+    "road": {
+      "available": true,
+      "label": "Road",
+      "games": 52,
+      "wins": 32,
+      "losses": 20,
+      "passing_yards_avg": 270.8,
+      "passing_yards_median": 264,
+      "completion_pct": {
+        "numerator": 1226,
+        "denominator": 1997,
+        "pct": 61.4
+      },
+      "attempts_avg": 38.4,
+      "ypa": {
+        "numerator": 14082,
+        "denominator": 1997,
+        "value": 7.05,
+        "unit": "yards per attempt"
+      },
+      "td_rate": {
+        "numerator": 95,
+        "denominator": 1997,
+        "pct": 4.8
+      },
+      "int_rate": {
+        "numerator": 39,
+        "denominator": 1997,
+        "pct": 2
+      },
+      "baseline_delta_pct": 8.5,
+      "sample_label": "STRONG SAMPLE"
+    },
+    "dome": {
+      "available": true,
+      "label": "Dome / closed roof",
+      "games": 14,
+      "wins": 10,
+      "losses": 4,
+      "passing_yards_avg": 271.5,
+      "passing_yards_median": 272,
+      "completion_pct": {
+        "numerator": 313,
+        "denominator": 502,
+        "pct": 62.4
+      },
+      "attempts_avg": 35.9,
+      "ypa": {
+        "numerator": 3801,
+        "denominator": 502,
+        "value": 7.57,
+        "unit": "yards per attempt"
+      },
+      "td_rate": {
+        "numerator": 26,
+        "denominator": 502,
+        "pct": 5.2
+      },
+      "int_rate": {
+        "numerator": 10,
+        "denominator": 502,
+        "pct": 2
+      },
+      "baseline_delta_pct": 8.7,
+      "sample_label": "MODERATE SAMPLE"
+    },
+    "outdoor": {
+      "available": true,
+      "label": "Outdoor",
+      "games": 97,
+      "wins": 68,
+      "losses": 29,
+      "passing_yards_avg": 246.6,
+      "passing_yards_median": 248,
+      "completion_pct": {
+        "numerator": 2116,
+        "denominator": 3471,
+        "pct": 61
+      },
+      "attempts_avg": 35.8,
+      "ypa": {
+        "numerator": 23918,
+        "denominator": 3471,
+        "value": 6.89,
+        "unit": "yards per attempt"
+      },
+      "td_rate": {
+        "numerator": 184,
+        "denominator": 3471,
+        "pct": 5.3
+      },
+      "int_rate": {
+        "numerator": 66,
+        "denominator": 3471,
+        "pct": 1.9
+      },
+      "baseline_delta_pct": -1.2,
+      "sample_label": "STRONG SAMPLE"
+    },
+    "below_freezing": {
+      "available": true,
+      "label": "Below freezing",
+      "games": 16,
+      "wins": 14,
+      "losses": 2,
+      "passing_yards_avg": 219.4,
+      "passing_yards_median": 206.5,
+      "completion_pct": {
+        "numerator": 306,
+        "denominator": 509,
+        "pct": 60.1
+      },
+      "attempts_avg": 31.8,
+      "ypa": {
+        "numerator": 3510,
+        "denominator": 509,
+        "value": 6.9,
+        "unit": "yards per attempt"
+      },
+      "td_rate": {
+        "numerator": 34,
+        "denominator": 509,
+        "pct": 6.7
+      },
+      "int_rate": {
+        "numerator": 11,
+        "denominator": 509,
+        "pct": 2.2
+      },
+      "baseline_delta_pct": -12.1,
+      "sample_label": "MODERATE SAMPLE",
+      "coverage": {
+        "outdoor_games": 97,
+        "environment_resolved": 97,
+        "note": null
+      }
+    },
+    "cold_33_50": {
+      "available": true,
+      "label": "33-50 F",
+      "games": 33,
+      "wins": 19,
+      "losses": 14,
+      "passing_yards_avg": 229.2,
+      "passing_yards_median": 224,
+      "completion_pct": {
+        "numerator": 668,
+        "denominator": 1142,
+        "pct": 58.5
+      },
+      "attempts_avg": 34.6,
+      "ypa": {
+        "numerator": 7563,
+        "denominator": 1142,
+        "value": 6.62,
+        "unit": "yards per attempt"
+      },
+      "td_rate": {
+        "numerator": 53,
+        "denominator": 1142,
+        "pct": 4.6
+      },
+      "int_rate": {
+        "numerator": 21,
+        "denominator": 1142,
+        "pct": 1.8
+      },
+      "baseline_delta_pct": -8.2,
+      "sample_label": "STRONG SAMPLE",
+      "coverage": {
+        "outdoor_games": 97,
+        "environment_resolved": 97,
+        "note": null
+      }
+    },
+    "mild_51_70": {
+      "available": true,
+      "label": "51-70 F",
+      "games": 32,
+      "wins": 24,
+      "losses": 8,
+      "passing_yards_avg": 269.2,
+      "passing_yards_median": 263,
+      "completion_pct": {
+        "numerator": 745,
+        "denominator": 1181,
+        "pct": 63.1
+      },
+      "attempts_avg": 36.9,
+      "ypa": {
+        "numerator": 8613,
+        "denominator": 1181,
+        "value": 7.29,
+        "unit": "yards per attempt"
+      },
+      "td_rate": {
+        "numerator": 67,
+        "denominator": 1181,
+        "pct": 5.7
+      },
+      "int_rate": {
+        "numerator": 22,
+        "denominator": 1181,
+        "pct": 1.9
+      },
+      "baseline_delta_pct": 7.8,
+      "sample_label": "STRONG SAMPLE",
+      "coverage": {
+        "outdoor_games": 97,
+        "environment_resolved": 97,
+        "note": null
+      }
+    },
+    "warm_70_plus": {
+      "available": true,
+      "label": "Above 70 F",
+      "games": 15,
+      "wins": 10,
+      "losses": 5,
+      "passing_yards_avg": 268.4,
+      "passing_yards_median": 254,
+      "completion_pct": {
+        "numerator": 374,
+        "denominator": 600,
+        "pct": 62.3
+      },
+      "attempts_avg": 40,
+      "ypa": {
+        "numerator": 4026,
+        "denominator": 600,
+        "value": 6.71,
+        "unit": "yards per attempt"
+      },
+      "td_rate": {
+        "numerator": 29,
+        "denominator": 600,
+        "pct": 4.8
+      },
+      "int_rate": {
+        "numerator": 12,
+        "denominator": 600,
+        "pct": 2
+      },
+      "baseline_delta_pct": 7.5,
+      "sample_label": "MODERATE SAMPLE",
+      "coverage": {
+        "outdoor_games": 97,
+        "environment_resolved": 97,
+        "note": null
+      }
+    },
+    "snow": {
+      "available": true,
+      "label": "Snow",
+      "games": 7,
+      "wins": 5,
+      "losses": 2,
+      "passing_yards_avg": 194.7,
+      "passing_yards_median": 169,
+      "completion_pct": {
+        "numerator": 132,
+        "denominator": 227,
+        "pct": 58.1
+      },
+      "attempts_avg": 32.4,
+      "ypa": {
+        "numerator": 1363,
+        "denominator": 227,
+        "value": 6,
+        "unit": "yards per attempt"
+      },
+      "td_rate": {
+        "numerator": 8,
+        "denominator": 227,
+        "pct": 3.5
+      },
+      "int_rate": {
+        "numerator": 2,
+        "denominator": 227,
+        "pct": 0.9
+      },
+      "baseline_delta_pct": -22,
+      "sample_label": "SMALL SAMPLE",
+      "coverage": {
+        "outdoor_games": 97,
+        "environment_resolved": 97,
+        "note": null
+      }
+    },
+    "rain": {
+      "available": true,
+      "label": "Rain",
+      "games": 20,
+      "wins": 12,
+      "losses": 8,
+      "passing_yards_avg": 242.7,
+      "passing_yards_median": 242,
+      "completion_pct": {
+        "numerator": 433,
+        "denominator": 718,
+        "pct": 60.3
+      },
+      "attempts_avg": 35.9,
+      "ypa": {
+        "numerator": 4853,
+        "denominator": 718,
+        "value": 6.76,
+        "unit": "yards per attempt"
+      },
+      "td_rate": {
+        "numerator": 32,
+        "denominator": 718,
+        "pct": 4.5
+      },
+      "int_rate": {
+        "numerator": 15,
+        "denominator": 718,
+        "pct": 2.1
+      },
+      "baseline_delta_pct": -2.8,
+      "sample_label": "STRONG SAMPLE",
+      "coverage": {
+        "outdoor_games": 97,
+        "environment_resolved": 97,
+        "note": null
+      }
+    },
+    "dry": {
+      "available": true,
+      "label": "Dry",
+      "games": 70,
+      "wins": 51,
+      "losses": 19,
+      "passing_yards_avg": 252.9,
+      "passing_yards_median": 253.5,
+      "completion_pct": {
+        "numerator": 1551,
+        "denominator": 2526,
+        "pct": 61.4
+      },
+      "attempts_avg": 36.1,
+      "ypa": {
+        "numerator": 17702,
+        "denominator": 2526,
+        "value": 7.01,
+        "unit": "yards per attempt"
+      },
+      "td_rate": {
+        "numerator": 144,
+        "denominator": 2526,
+        "pct": 5.7
+      },
+      "int_rate": {
+        "numerator": 49,
+        "denominator": 2526,
+        "pct": 1.9
+      },
+      "baseline_delta_pct": 1.3,
+      "sample_label": "STRONG SAMPLE",
+      "coverage": {
+        "outdoor_games": 97,
+        "environment_resolved": 97,
+        "note": null
+      }
+    },
+    "wind_10_plus": {
+      "available": true,
+      "label": "Wind 10+ mph",
+      "games": 40,
+      "wins": 28,
+      "losses": 12,
+      "passing_yards_avg": 242.2,
+      "passing_yards_median": 235.5,
+      "completion_pct": {
+        "numerator": 870,
+        "denominator": 1442,
+        "pct": 60.3
+      },
+      "attempts_avg": 36,
+      "ypa": {
+        "numerator": 9688,
+        "denominator": 1442,
+        "value": 6.72,
+        "unit": "yards per attempt"
+      },
+      "td_rate": {
+        "numerator": 71,
+        "denominator": 1442,
+        "pct": 4.9
+      },
+      "int_rate": {
+        "numerator": 20,
+        "denominator": 1442,
+        "pct": 1.4
+      },
+      "baseline_delta_pct": -3,
+      "sample_label": "STRONG SAMPLE",
+      "coverage": {
+        "outdoor_games": 97,
+        "environment_resolved": 97,
+        "note": null
+      }
+    },
+    "wind_15_plus": {
+      "available": true,
+      "label": "Wind 15+ mph",
+      "games": 13,
+      "wins": 9,
+      "losses": 4,
+      "passing_yards_avg": 247.5,
+      "passing_yards_median": 232,
+      "completion_pct": {
+        "numerator": 270,
+        "denominator": 451,
+        "pct": 59.9
+      },
+      "attempts_avg": 34.7,
+      "ypa": {
+        "numerator": 3218,
+        "denominator": 451,
+        "value": 7.14,
+        "unit": "yards per attempt"
+      },
+      "td_rate": {
+        "numerator": 27,
+        "denominator": 451,
+        "pct": 6
+      },
+      "int_rate": {
+        "numerator": 7,
+        "denominator": 451,
+        "pct": 1.6
+      },
+      "baseline_delta_pct": -0.9,
+      "sample_label": "MODERATE SAMPLE",
+      "coverage": {
+        "outdoor_games": 97,
+        "environment_resolved": 97,
+        "note": null
+      }
+    },
+    "wind_20_plus": {
+      "available": true,
+      "label": "Wind 20+ mph",
+      "games": 2,
+      "wins": 1,
+      "losses": 1,
+      "passing_yards_avg": 158.5,
+      "passing_yards_median": 158.5,
+      "completion_pct": {
+        "numerator": 30,
+        "denominator": 60,
+        "pct": 50
+      },
+      "attempts_avg": 30,
+      "ypa": {
+        "numerator": 317,
+        "denominator": 60,
+        "value": 5.28,
+        "unit": "yards per attempt"
+      },
+      "td_rate": {
+        "numerator": 3,
+        "denominator": 60,
+        "pct": 5
+      },
+      "int_rate": {
+        "numerator": 2,
+        "denominator": 60,
+        "pct": 3.3
+      },
+      "baseline_delta_pct": -36.5,
+      "sample_label": "VERY SMALL SAMPLE",
+      "coverage": {
+        "outdoor_games": 97,
+        "environment_resolved": 97,
+        "note": null
+      }
+    },
+    "primetime": {
+      "available": true,
+      "label": "Primetime",
+      "games": 28,
+      "wins": 21,
+      "losses": 7,
+      "passing_yards_avg": 249.5,
+      "passing_yards_median": 248,
+      "completion_pct": {
+        "numerator": 615,
+        "denominator": 941,
+        "pct": 65.4
+      },
+      "attempts_avg": 33.6,
+      "ypa": {
+        "numerator": 6986,
+        "denominator": 941,
+        "value": 7.42,
+        "unit": "yards per attempt"
+      },
+      "td_rate": {
+        "numerator": 64,
+        "denominator": 941,
+        "pct": 6.8
+      },
+      "int_rate": {
+        "numerator": 22,
+        "denominator": 941,
+        "pct": 2.3
+      },
+      "baseline_delta_pct": -0.1,
+      "sample_label": "STRONG SAMPLE"
+    },
+    "divisional": {
+      "available": true,
+      "label": "Divisional",
+      "games": 37,
+      "wins": 29,
+      "losses": 8,
+      "passing_yards_avg": 244.4,
+      "passing_yards_median": 239,
+      "completion_pct": {
+        "numerator": 786,
+        "denominator": 1290,
+        "pct": 60.9
+      },
+      "attempts_avg": 34.9,
+      "ypa": {
+        "numerator": 9044,
+        "denominator": 1290,
+        "value": 7.01,
+        "unit": "yards per attempt"
+      },
+      "td_rate": {
+        "numerator": 74,
+        "denominator": 1290,
+        "pct": 5.7
+      },
+      "int_rate": {
+        "numerator": 24,
+        "denominator": 1290,
+        "pct": 1.9
+      },
+      "baseline_delta_pct": -2.1,
+      "sample_label": "STRONG SAMPLE"
+    },
+    "playoffs": {
+      "available": true,
+      "label": "Playoffs",
+      "games": 13,
+      "wins": 7,
+      "losses": 6,
+      "passing_yards_avg": 258.4,
+      "passing_yards_median": 264,
+      "completion_pct": {
+        "numerator": 302,
+        "denominator": 492,
+        "pct": 61.4
+      },
+      "attempts_avg": 37.8,
+      "ypa": {
+        "numerator": 3359,
+        "denominator": 492,
+        "value": 6.83,
+        "unit": "yards per attempt"
+      },
+      "td_rate": {
+        "numerator": 25,
+        "denominator": 492,
+        "pct": 5.1
+      },
+      "int_rate": {
+        "numerator": 4,
+        "denominator": 492,
+        "pct": 0.8
+      },
+      "baseline_delta_pct": 3.5,
+      "sample_label": "MODERATE SAMPLE"
+    },
+    "favorite": {
+      "available": true,
+      "label": "Favorite",
+      "games": 82,
+      "wins": 65,
+      "losses": 17,
+      "passing_yards_avg": 254.3,
+      "passing_yards_median": 253.5,
+      "completion_pct": {
+        "numerator": 1818,
+        "denominator": 2916,
+        "pct": 62.3
+      },
+      "attempts_avg": 35.6,
+      "ypa": {
+        "numerator": 20855,
+        "denominator": 2916,
+        "value": 7.15,
+        "unit": "yards per attempt"
+      },
+      "td_rate": {
+        "numerator": 164,
+        "denominator": 2916,
+        "pct": 5.6
+      },
+      "int_rate": {
+        "numerator": 60,
+        "denominator": 2916,
+        "pct": 2.1
+      },
+      "baseline_delta_pct": 1.8,
+      "sample_label": "STRONG SAMPLE"
+    },
+    "underdog": {
+      "available": true,
+      "label": "Underdog",
+      "games": 29,
+      "wins": 13,
+      "losses": 16,
+      "passing_yards_avg": 236.7,
+      "passing_yards_median": 237,
+      "completion_pct": {
+        "numerator": 611,
+        "denominator": 1057,
+        "pct": 57.8
+      },
+      "attempts_avg": 36.4,
+      "ypa": {
+        "numerator": 6864,
+        "denominator": 1057,
+        "value": 6.49,
+        "unit": "yards per attempt"
+      },
+      "td_rate": {
+        "numerator": 46,
+        "denominator": 1057,
+        "pct": 4.4
+      },
+      "int_rate": {
+        "numerator": 16,
+        "denominator": 1057,
+        "pct": 1.5
+      },
+      "baseline_delta_pct": -5.2,
+      "sample_label": "STRONG SAMPLE"
+    }
+  },
+  "sample": {
+    "baseline_games": 111,
+    "baseline_mean": 249.7,
+    "label": "STRONG SAMPLE",
+    "scale": {
+      "STRONG SAMPLE": "N>=20",
+      "MODERATE SAMPLE": "N 10-19",
+      "SMALL SAMPLE": "N 5-9",
+      "VERY SMALL SAMPLE": "N<5"
+    }
+  },
+  "served_fields": {
+    "attempts": "nflverse_pbp",
+    "completions": "nflverse_pbp",
+    "passing_yards": "nflverse_pbp",
+    "passing_touchdowns": "nflverse_pbp",
+    "interceptions": "nflverse_pbp",
+    "sacks": "nflverse_pbp",
+    "dropbacks": "nflverse_pbp",
+    "scrambles": "nflverse_pbp",
+    "air_yards": "nflverse_pbp",
+    "yards_after_catch": "nflverse_pbp",
+    "qb_epa": "nflverse_pbp",
+    "rush_attempts": "nflverse_pbp",
+    "rush_yards": "nflverse_pbp",
+    "rush_touchdowns": "nflverse_pbp",
+    "roof": "nflverse_schedules",
+    "surface": "nflverse_schedules",
+    "spread_line": "nflverse_schedules",
+    "div_game": "nflverse_schedules",
+    "temp_f": "open_meteo_archive",
+    "wind_mph": "open_meteo_archive",
+    "rain_in": "open_meteo_archive",
+    "snow_cm": "open_meteo_archive",
+    "kickoff_local_hour": "derived_from_venue_tz",
+    "venue": "espn_teams"
+  },
+  "advanced_availability": {
+    "policy": {
+      "serve_threshold_pct": 90,
+      "retain_threshold_pct": 50,
+      "rule": "A field below the serve threshold is never used to compute a public number. It is withheld with a reason rather than returned as a smaller sample."
+    },
+    "by_field": {
+      "defenders_in_box": {
+        "seasons": {
+          "2019": {
+            "field": "defenders_in_box",
+            "season": 2019,
+            "status": "INTERNAL_ONLY",
+            "coverage_pct": 74.2,
+            "served": false,
+            "reason": "coverage 74.2% is below the 90% serve threshold; retained internally, not exposed publicly"
+          },
+          "2020": {
+            "field": "defenders_in_box",
+            "season": 2020,
+            "status": "INTERNAL_ONLY",
+            "coverage_pct": 74.4,
+            "served": false,
+            "reason": "coverage 74.4% is below the 90% serve threshold; retained internally, not exposed publicly"
+          },
+          "2021": {
+            "field": "defenders_in_box",
+            "season": 2021,
+            "status": "INTERNAL_ONLY",
+            "coverage_pct": 74.4,
+            "served": false,
+            "reason": "coverage 74.4% is below the 90% serve threshold; retained internally, not exposed publicly"
+          },
+          "2022": {
+            "field": "defenders_in_box",
+            "season": 2022,
+            "status": "INTERNAL_ONLY",
+            "coverage_pct": 74.4,
+            "served": false,
+            "reason": "coverage 74.4% is below the 90% serve threshold; retained internally, not exposed publicly"
+          },
+          "2023": {
+            "field": "defenders_in_box",
+            "season": 2023,
+            "status": "AVAILABLE",
+            "coverage_pct": 100,
+            "served": false,
+            "reason": "coverage 100% is adequate, but this prototype has not yet aggregated this field into per-game metrics"
+          },
+          "2024": {
+            "field": "defenders_in_box",
+            "season": 2024,
+            "status": "NOT_PUBLISHED",
+            "coverage_pct": null,
+            "served": false,
+            "reason": "the source has not published this field for this season"
+          }
+        },
+        "any_season_adequate": true,
+        "served_in_this_response": false
+      },
+      "defense_coverage_type": {
+        "seasons": {
+          "2019": {
+            "field": "defense_coverage_type",
+            "season": 2019,
+            "status": "WITHHELD",
+            "coverage_pct": 38.5,
+            "served": false,
+            "reason": "coverage 38.5% is below the 50% retention threshold; a split built on it would describe the charted subset, not the season"
+          },
+          "2020": {
+            "field": "defense_coverage_type",
+            "season": 2020,
+            "status": "WITHHELD",
+            "coverage_pct": 39,
+            "served": false,
+            "reason": "coverage 39% is below the 50% retention threshold; a split built on it would describe the charted subset, not the season"
+          },
+          "2021": {
+            "field": "defense_coverage_type",
+            "season": 2021,
+            "status": "WITHHELD",
+            "coverage_pct": 38.7,
+            "served": false,
+            "reason": "coverage 38.7% is below the 50% retention threshold; a split built on it would describe the charted subset, not the season"
+          },
+          "2022": {
+            "field": "defense_coverage_type",
+            "season": 2022,
+            "status": "WITHHELD",
+            "coverage_pct": 37.8,
+            "served": false,
+            "reason": "coverage 37.8% is below the 50% retention threshold; a split built on it would describe the charted subset, not the season"
+          },
+          "2023": {
+            "field": "defense_coverage_type",
+            "season": 2023,
+            "status": "WITHHELD",
+            "coverage_pct": 49.6,
+            "served": false,
+            "reason": "coverage 49.6% is below the 50% retention threshold; a split built on it would describe the charted subset, not the season"
+          },
+          "2024": {
+            "field": "defense_coverage_type",
+            "season": 2024,
+            "status": "NOT_PUBLISHED",
+            "coverage_pct": null,
+            "served": false,
+            "reason": "the source has not published this field for this season"
+          }
+        },
+        "any_season_adequate": false,
+        "served_in_this_response": false
+      },
+      "defense_man_zone_type": {
+        "seasons": {
+          "2019": {
+            "field": "defense_man_zone_type",
+            "season": 2019,
+            "status": "WITHHELD",
+            "coverage_pct": 38.5,
+            "served": false,
+            "reason": "coverage 38.5% is below the 50% retention threshold; a split built on it would describe the charted subset, not the season"
+          },
+          "2020": {
+            "field": "defense_man_zone_type",
+            "season": 2020,
+            "status": "WITHHELD",
+            "coverage_pct": 39,
+            "served": false,
+            "reason": "coverage 39% is below the 50% retention threshold; a split built on it would describe the charted subset, not the season"
+          },
+          "2021": {
+            "field": "defense_man_zone_type",
+            "season": 2021,
+            "status": "WITHHELD",
+            "coverage_pct": 38.7,
+            "served": false,
+            "reason": "coverage 38.7% is below the 50% retention threshold; a split built on it would describe the charted subset, not the season"
+          },
+          "2022": {
+            "field": "defense_man_zone_type",
+            "season": 2022,
+            "status": "WITHHELD",
+            "coverage_pct": 37.8,
+            "served": false,
+            "reason": "coverage 37.8% is below the 50% retention threshold; a split built on it would describe the charted subset, not the season"
+          },
+          "2023": {
+            "field": "defense_man_zone_type",
+            "season": 2023,
+            "status": "WITHHELD",
+            "coverage_pct": 49.6,
+            "served": false,
+            "reason": "coverage 49.6% is below the 50% retention threshold; a split built on it would describe the charted subset, not the season"
+          },
+          "2024": {
+            "field": "defense_man_zone_type",
+            "season": 2024,
+            "status": "NOT_PUBLISHED",
+            "coverage_pct": null,
+            "served": false,
+            "reason": "the source has not published this field for this season"
+          }
+        },
+        "any_season_adequate": false,
+        "served_in_this_response": false
+      },
+      "defense_personnel": {
+        "seasons": {
+          "2019": {
+            "field": "defense_personnel",
+            "season": 2019,
+            "status": "INTERNAL_ONLY",
+            "coverage_pct": 76.1,
+            "served": false,
+            "reason": "coverage 76.1% is below the 90% serve threshold; retained internally, not exposed publicly"
+          },
+          "2020": {
+            "field": "defense_personnel",
+            "season": 2020,
+            "status": "INTERNAL_ONLY",
+            "coverage_pct": 76.1,
+            "served": false,
+            "reason": "coverage 76.1% is below the 90% serve threshold; retained internally, not exposed publicly"
+          },
+          "2021": {
+            "field": "defense_personnel",
+            "season": 2021,
+            "status": "INTERNAL_ONLY",
+            "coverage_pct": 76.2,
+            "served": false,
+            "reason": "coverage 76.2% is below the 90% serve threshold; retained internally, not exposed publicly"
+          },
+          "2022": {
+            "field": "defense_personnel",
+            "season": 2022,
+            "status": "INTERNAL_ONLY",
+            "coverage_pct": 76.2,
+            "served": false,
+            "reason": "coverage 76.2% is below the 90% serve threshold; retained internally, not exposed publicly"
+          },
+          "2023": {
+            "field": "defense_personnel",
+            "season": 2023,
+            "status": "AVAILABLE",
+            "coverage_pct": 100,
+            "served": false,
+            "reason": "coverage 100% is adequate, but this prototype has not yet aggregated this field into per-game metrics"
+          },
+          "2024": {
+            "field": "defense_personnel",
+            "season": 2024,
+            "status": "NOT_PUBLISHED",
+            "coverage_pct": null,
+            "served": false,
+            "reason": "the source has not published this field for this season"
+          }
+        },
+        "any_season_adequate": true,
+        "served_in_this_response": false
+      },
+      "ngs_air_yards": {
+        "seasons": {
+          "2019": {
+            "field": "ngs_air_yards",
+            "season": 2019,
+            "status": "WITHHELD",
+            "coverage_pct": 37.1,
+            "served": false,
+            "reason": "coverage 37.1% is below the 50% retention threshold; a split built on it would describe the charted subset, not the season"
+          },
+          "2020": {
+            "field": "ngs_air_yards",
+            "season": 2020,
+            "status": "WITHHELD",
+            "coverage_pct": 37.6,
+            "served": false,
+            "reason": "coverage 37.6% is below the 50% retention threshold; a split built on it would describe the charted subset, not the season"
+          },
+          "2021": {
+            "field": "ngs_air_yards",
+            "season": 2021,
+            "status": "WITHHELD",
+            "coverage_pct": 37.4,
+            "served": false,
+            "reason": "coverage 37.4% is below the 50% retention threshold; a split built on it would describe the charted subset, not the season"
+          },
+          "2022": {
+            "field": "ngs_air_yards",
+            "season": 2022,
+            "status": "WITHHELD",
+            "coverage_pct": 36.3,
+            "served": false,
+            "reason": "coverage 36.3% is below the 50% retention threshold; a split built on it would describe the charted subset, not the season"
+          },
+          "2023": {
+            "field": "ngs_air_yards",
+            "season": 2023,
+            "status": "WITHHELD",
+            "coverage_pct": 0,
+            "served": false,
+            "reason": "coverage 0% is below the 50% retention threshold; a split built on it would describe the charted subset, not the season"
+          },
+          "2024": {
+            "field": "ngs_air_yards",
+            "season": 2024,
+            "status": "NOT_PUBLISHED",
+            "coverage_pct": null,
+            "served": false,
+            "reason": "the source has not published this field for this season"
+          }
+        },
+        "any_season_adequate": false,
+        "served_in_this_response": false
+      },
+      "number_of_pass_rushers": {
+        "seasons": {
+          "2019": {
+            "field": "number_of_pass_rushers",
+            "season": 2019,
+            "status": "WITHHELD",
+            "coverage_pct": 43.3,
+            "served": false,
+            "reason": "coverage 43.3% is below the 50% retention threshold; a split built on it would describe the charted subset, not the season"
+          },
+          "2020": {
+            "field": "number_of_pass_rushers",
+            "season": 2020,
+            "status": "WITHHELD",
+            "coverage_pct": 43.5,
+            "served": false,
+            "reason": "coverage 43.5% is below the 50% retention threshold; a split built on it would describe the charted subset, not the season"
+          },
+          "2021": {
+            "field": "number_of_pass_rushers",
+            "season": 2021,
+            "status": "WITHHELD",
+            "coverage_pct": 43.3,
+            "served": false,
+            "reason": "coverage 43.3% is below the 50% retention threshold; a split built on it would describe the charted subset, not the season"
+          },
+          "2022": {
+            "field": "number_of_pass_rushers",
+            "season": 2022,
+            "status": "WITHHELD",
+            "coverage_pct": 42.7,
+            "served": false,
+            "reason": "coverage 42.7% is below the 50% retention threshold; a split built on it would describe the charted subset, not the season"
+          },
+          "2023": {
+            "field": "number_of_pass_rushers",
+            "season": 2023,
+            "status": "AVAILABLE",
+            "coverage_pct": 97.2,
+            "served": false,
+            "reason": "coverage 97.2% is adequate, but this prototype has not yet aggregated this field into per-game metrics"
+          },
+          "2024": {
+            "field": "number_of_pass_rushers",
+            "season": 2024,
+            "status": "NOT_PUBLISHED",
+            "coverage_pct": null,
+            "served": false,
+            "reason": "the source has not published this field for this season"
+          }
+        },
+        "any_season_adequate": true,
+        "served_in_this_response": false
+      },
+      "offense_formation": {
+        "seasons": {
+          "2019": {
+            "field": "offense_formation",
+            "season": 2019,
+            "status": "INTERNAL_ONLY",
+            "coverage_pct": 73.1,
+            "served": false,
+            "reason": "coverage 73.1% is below the 90% serve threshold; retained internally, not exposed publicly"
+          },
+          "2020": {
+            "field": "offense_formation",
+            "season": 2020,
+            "status": "INTERNAL_ONLY",
+            "coverage_pct": 73.1,
+            "served": false,
+            "reason": "coverage 73.1% is below the 90% serve threshold; retained internally, not exposed publicly"
+          },
+          "2021": {
+            "field": "offense_formation",
+            "season": 2021,
+            "status": "INTERNAL_ONLY",
+            "coverage_pct": 73,
+            "served": false,
+            "reason": "coverage 73% is below the 90% serve threshold; retained internally, not exposed publicly"
+          },
+          "2022": {
+            "field": "offense_formation",
+            "season": 2022,
+            "status": "INTERNAL_ONLY",
+            "coverage_pct": 73.4,
+            "served": false,
+            "reason": "coverage 73.4% is below the 90% serve threshold; retained internally, not exposed publicly"
+          },
+          "2023": {
+            "field": "offense_formation",
+            "season": 2023,
+            "status": "INTERNAL_ONLY",
+            "coverage_pct": 80.1,
+            "served": false,
+            "reason": "coverage 80.1% is below the 90% serve threshold; retained internally, not exposed publicly"
+          },
+          "2024": {
+            "field": "offense_formation",
+            "season": 2024,
+            "status": "NOT_PUBLISHED",
+            "coverage_pct": null,
+            "served": false,
+            "reason": "the source has not published this field for this season"
+          }
+        },
+        "any_season_adequate": false,
+        "served_in_this_response": false
+      },
+      "offense_personnel": {
+        "seasons": {
+          "2019": {
+            "field": "offense_personnel",
+            "season": 2019,
+            "status": "INTERNAL_ONLY",
+            "coverage_pct": 76.1,
+            "served": false,
+            "reason": "coverage 76.1% is below the 90% serve threshold; retained internally, not exposed publicly"
+          },
+          "2020": {
+            "field": "offense_personnel",
+            "season": 2020,
+            "status": "INTERNAL_ONLY",
+            "coverage_pct": 76.1,
+            "served": false,
+            "reason": "coverage 76.1% is below the 90% serve threshold; retained internally, not exposed publicly"
+          },
+          "2021": {
+            "field": "offense_personnel",
+            "season": 2021,
+            "status": "INTERNAL_ONLY",
+            "coverage_pct": 76.2,
+            "served": false,
+            "reason": "coverage 76.2% is below the 90% serve threshold; retained internally, not exposed publicly"
+          },
+          "2022": {
+            "field": "offense_personnel",
+            "season": 2022,
+            "status": "INTERNAL_ONLY",
+            "coverage_pct": 76.2,
+            "served": false,
+            "reason": "coverage 76.2% is below the 90% serve threshold; retained internally, not exposed publicly"
+          },
+          "2023": {
+            "field": "offense_personnel",
+            "season": 2023,
+            "status": "AVAILABLE",
+            "coverage_pct": 100,
+            "served": false,
+            "reason": "coverage 100% is adequate, but this prototype has not yet aggregated this field into per-game metrics"
+          },
+          "2024": {
+            "field": "offense_personnel",
+            "season": 2024,
+            "status": "NOT_PUBLISHED",
+            "coverage_pct": null,
+            "served": false,
+            "reason": "the source has not published this field for this season"
+          }
+        },
+        "any_season_adequate": true,
+        "served_in_this_response": false
+      },
+      "route": {
+        "seasons": {
+          "2019": {
+            "field": "route",
+            "season": 2019,
+            "status": "WITHHELD",
+            "coverage_pct": 37,
+            "served": false,
+            "reason": "coverage 37% is below the 50% retention threshold; a split built on it would describe the charted subset, not the season"
+          },
+          "2020": {
+            "field": "route",
+            "season": 2020,
+            "status": "WITHHELD",
+            "coverage_pct": 37.5,
+            "served": false,
+            "reason": "coverage 37.5% is below the 50% retention threshold; a split built on it would describe the charted subset, not the season"
+          },
+          "2021": {
+            "field": "route",
+            "season": 2021,
+            "status": "WITHHELD",
+            "coverage_pct": 37.3,
+            "served": false,
+            "reason": "coverage 37.3% is below the 50% retention threshold; a split built on it would describe the charted subset, not the season"
+          },
+          "2022": {
+            "field": "route",
+            "season": 2022,
+            "status": "WITHHELD",
+            "coverage_pct": 36.2,
+            "served": false,
+            "reason": "coverage 36.2% is below the 50% retention threshold; a split built on it would describe the charted subset, not the season"
+          },
+          "2023": {
+            "field": "route",
+            "season": 2023,
+            "status": "WITHHELD",
+            "coverage_pct": 42.5,
+            "served": false,
+            "reason": "coverage 42.5% is below the 50% retention threshold; a split built on it would describe the charted subset, not the season"
+          },
+          "2024": {
+            "field": "route",
+            "season": 2024,
+            "status": "NOT_PUBLISHED",
+            "coverage_pct": null,
+            "served": false,
+            "reason": "the source has not published this field for this season"
+          }
+        },
+        "any_season_adequate": false,
+        "served_in_this_response": false
+      },
+      "time_to_throw": {
+        "seasons": {
+          "2019": {
+            "field": "time_to_throw",
+            "season": 2019,
+            "status": "WITHHELD",
+            "coverage_pct": 38.5,
+            "served": false,
+            "reason": "coverage 38.5% is below the 50% retention threshold; a split built on it would describe the charted subset, not the season"
+          },
+          "2020": {
+            "field": "time_to_throw",
+            "season": 2020,
+            "status": "WITHHELD",
+            "coverage_pct": 39,
+            "served": false,
+            "reason": "coverage 39% is below the 50% retention threshold; a split built on it would describe the charted subset, not the season"
+          },
+          "2021": {
+            "field": "time_to_throw",
+            "season": 2021,
+            "status": "WITHHELD",
+            "coverage_pct": 38.6,
+            "served": false,
+            "reason": "coverage 38.6% is below the 50% retention threshold; a split built on it would describe the charted subset, not the season"
+          },
+          "2022": {
+            "field": "time_to_throw",
+            "season": 2022,
+            "status": "WITHHELD",
+            "coverage_pct": 37.8,
+            "served": false,
+            "reason": "coverage 37.8% is below the 50% retention threshold; a split built on it would describe the charted subset, not the season"
+          },
+          "2023": {
+            "field": "time_to_throw",
+            "season": 2023,
+            "status": "WITHHELD",
+            "coverage_pct": 44,
+            "served": false,
+            "reason": "coverage 44% is below the 50% retention threshold; a split built on it would describe the charted subset, not the season"
+          },
+          "2024": {
+            "field": "time_to_throw",
+            "season": 2024,
+            "status": "NOT_PUBLISHED",
+            "coverage_pct": null,
+            "served": false,
+            "reason": "the source has not published this field for this season"
+          }
+        },
+        "any_season_adequate": false,
+        "served_in_this_response": false
+      },
+      "was_pressure": {
+        "seasons": {
+          "2019": {
+            "field": "was_pressure",
+            "season": 2019,
+            "status": "WITHHELD",
+            "coverage_pct": 38.5,
+            "served": false,
+            "reason": "coverage 38.5% is below the 50% retention threshold; a split built on it would describe the charted subset, not the season"
+          },
+          "2020": {
+            "field": "was_pressure",
+            "season": 2020,
+            "status": "WITHHELD",
+            "coverage_pct": 39,
+            "served": false,
+            "reason": "coverage 39% is below the 50% retention threshold; a split built on it would describe the charted subset, not the season"
+          },
+          "2021": {
+            "field": "was_pressure",
+            "season": 2021,
+            "status": "WITHHELD",
+            "coverage_pct": 38.6,
+            "served": false,
+            "reason": "coverage 38.6% is below the 50% retention threshold; a split built on it would describe the charted subset, not the season"
+          },
+          "2022": {
+            "field": "was_pressure",
+            "season": 2022,
+            "status": "WITHHELD",
+            "coverage_pct": 37.8,
+            "served": false,
+            "reason": "coverage 37.8% is below the 50% retention threshold; a split built on it would describe the charted subset, not the season"
+          },
+          "2023": {
+            "field": "was_pressure",
+            "season": 2023,
+            "status": "AVAILABLE",
+            "coverage_pct": 100,
+            "served": false,
+            "reason": "coverage 100% is adequate, but this prototype has not yet aggregated this field into per-game metrics"
+          },
+          "2024": {
+            "field": "was_pressure",
+            "season": 2024,
+            "status": "NOT_PUBLISHED",
+            "coverage_pct": null,
+            "served": false,
+            "reason": "the source has not published this field for this season"
+          }
+        },
+        "any_season_adequate": true,
+        "served_in_this_response": false
+      }
+    },
+    "unavailable_fields": [
+      "defenders_in_box",
+      "defense_coverage_type",
+      "defense_man_zone_type",
+      "defense_personnel",
+      "ngs_air_yards",
+      "number_of_pass_rushers",
+      "offense_formation",
+      "offense_personnel",
+      "route",
+      "time_to_throw",
+      "was_pressure"
+    ]
+  },
+  "provenance": {
+    "dataset_generated_at": "2026-09-05T15:03:12Z",
+    "seasons": [
+      2019,
+      2020,
+      2021,
+      2022,
+      2023,
+      2024
+    ],
+    "qb_games_in_dataset": 3522,
+    "sources": [
+      {
+        "name": "nflverse play_by_play + participation + players",
+        "url": "https://github.com/nflverse/nflverse-data",
+        "licence": "CC-BY-4.0",
+        "attribution": "Data by nflverse, CC BY 4.0"
+      },
+      {
+        "name": "ESPN public team/venue endpoints",
+        "url": "https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams"
+      },
+      {
+        "name": "Open-Meteo historical archive",
+        "url": "https://archive-api.open-meteo.com/v1/archive",
+        "licence": "CC-BY-4.0",
+        "attribution": "Weather data by Open-Meteo.com, CC BY 4.0"
+      }
+    ],
+    "field_availability_by_season": {
+      "2019": {
+        "offense_formation": 73.1,
+        "offense_personnel": 76.1,
+        "defense_personnel": 76.1,
+        "defenders_in_box": 74.2,
+        "number_of_pass_rushers": 43.3,
+        "ngs_air_yards": 37.1,
+        "time_to_throw": 38.5,
+        "was_pressure": 38.5,
+        "route": 37,
+        "defense_man_zone_type": 38.5,
+        "defense_coverage_type": 38.5
+      },
+      "2020": {
+        "offense_formation": 73.1,
+        "offense_personnel": 76.1,
+        "defense_personnel": 76.1,
+        "defenders_in_box": 74.4,
+        "number_of_pass_rushers": 43.5,
+        "ngs_air_yards": 37.6,
+        "time_to_throw": 39,
+        "was_pressure": 39,
+        "route": 37.5,
+        "defense_man_zone_type": 39,
+        "defense_coverage_type": 39
+      },
+      "2021": {
+        "offense_formation": 73,
+        "offense_personnel": 76.2,
+        "defense_personnel": 76.2,
+        "defenders_in_box": 74.4,
+        "number_of_pass_rushers": 43.3,
+        "ngs_air_yards": 37.4,
+        "time_to_throw": 38.6,
+        "was_pressure": 38.6,
+        "route": 37.3,
+        "defense_man_zone_type": 38.7,
+        "defense_coverage_type": 38.7
+      },
+      "2022": {
+        "offense_formation": 73.4,
+        "offense_personnel": 76.2,
+        "defense_personnel": 76.2,
+        "defenders_in_box": 74.4,
+        "number_of_pass_rushers": 42.7,
+        "ngs_air_yards": 36.3,
+        "time_to_throw": 37.8,
+        "was_pressure": 37.8,
+        "route": 36.2,
+        "defense_man_zone_type": 37.8,
+        "defense_coverage_type": 37.8
+      },
+      "2023": {
+        "offense_formation": 80.1,
+        "offense_personnel": 100,
+        "defense_personnel": 100,
+        "defenders_in_box": 100,
+        "number_of_pass_rushers": 97.2,
+        "ngs_air_yards": 0,
+        "time_to_throw": 44,
+        "was_pressure": 100,
+        "route": 42.5,
+        "defense_man_zone_type": 49.6,
+        "defense_coverage_type": 49.6
+      },
+      "2024": {
+        "offense_formation": null,
+        "offense_personnel": null,
+        "defense_personnel": null,
+        "defenders_in_box": null,
+        "number_of_pass_rushers": null,
+        "ngs_air_yards": null,
+        "time_to_throw": null,
+        "was_pressure": null,
+        "route": null,
+        "defense_man_zone_type": null,
+        "defense_coverage_type": null
+      }
+    },
+    "notes": [
+      "Sample labels describe SIZE ONLY. They are not claims of statistical significance.",
+      "Roofed and closed-roof games are excluded from outdoor weather splits by construction.",
+      "A split whose inputs are missing reports available:false. It never reports zero."
+    ]
+  }
+}

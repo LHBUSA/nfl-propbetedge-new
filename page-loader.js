@@ -102,7 +102,10 @@
 
     /* Last by design: scrollbar policy may style true scrollers, but it must
        never conceal overflow or substitute for responsive component layout. */
-    {css:'./scrollbar-clean-v1.css'}
+    {css:'./scrollbar-clean-v1.css'},
+
+    /* QB DNA prototype — hash route /#qbdna only, deliberately NOT in nav */
+    {css:'./qb-dna-v1.css',js:'./qb-dna-v1.js'}
   ];
 
   const PRO_MODULES=[

@@ -7,3 +7,11 @@ recovery-*.png
 workers/**/node_modules/
 workers/**/.wrangler/
 .ui-audit/
+
+# Warehouse working data. These are re-fetchable from public sources by the
+# ingest jobs; the repo carries the code and the small derived artifacts only.
+data/nflverse/
+data/warehouse/
+research/out/
+research/qbdna/__pycache__/
+.gate/

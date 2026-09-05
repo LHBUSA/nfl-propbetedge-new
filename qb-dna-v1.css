@@ -1,0 +1,421 @@
+/* ============================================================================
+   PropBetEdge NFL — QB DNA (prototype route /#qbdna)
+   ----------------------------------------------------------------------------
+   A quarterback intelligence terminal, not a stat card. The composition rules:
+
+   · Numbers are the largest thing on screen; labels are small and tracked.
+   · Every figure carries its N in the same visual unit, never in a tooltip.
+   · Gold is a LINE and a KEY, never a fill behind data.
+   · An unavailable value is COLOURLESS and states its reason in place. It is
+     never a dash that could be mistaken for a zero.
+   · Deltas read against the player's OWN baseline, drawn from a centre line so
+     the eye reads direction before it reads magnitude.
+
+   Owns the .qbd- namespace. No :root here - pbe-tokens.css is the authority.
+   ========================================================================== */
+
+.qbd {
+  --qbd-gut: var(--s-5);
+  --qbd-track: 200px;          /* the delta track; see .qbd-delta */
+  padding: 0 0 var(--s-8);
+  color: var(--pbe-paper);
+  font-family: var(--pbe-font-ui);
+  /* A terminal reads on its own ground. The shell's stadium photograph is a
+     dashboard device; behind dense figures it destroys legibility, so this
+     route paints an opaque ink ground over it rather than dimming it. */
+  position: relative; z-index: 1;
+  min-height: 100vh;
+}
+/* The shell's hero photograph is painted by an ancestor, so an opaque
+   background on .qbd alone still leaves it showing through the container's
+   gutters. This lays the ink ground across the viewport, behind this view only. */
+.qbd::before {
+  content: ''; position: fixed; inset: 0; z-index: -1;
+  background: var(--pbe-ink); pointer-events: none;
+}
+
+/* ---- masthead ----------------------------------------------------------- */
+.qbd-mast {
+  border-bottom: 1px solid var(--pbe-line-strong);
+  padding: var(--s-5) var(--qbd-gut) var(--s-4);
+  display: grid; grid-template-columns: 1fr auto; gap: var(--s-4); align-items: end;
+}
+.qbd-eyebrow {
+  font: 700 var(--fs-micro)/1 var(--pbe-font-data);
+  letter-spacing: var(--ls-micro); text-transform: uppercase;
+  color: var(--pbe-gold); margin-bottom: var(--s-3);
+  display: flex; align-items: center; gap: var(--s-2); flex-wrap: wrap;
+}
+.qbd-eyebrow::before {
+  content: ''; width: 22px; height: 1px; background: var(--pbe-gold); flex: none;
+}
+.qbd-title { font: 700 var(--fs-h1)/1.05 var(--pbe-font-ui); letter-spacing: var(--ls-tight); margin: 0; }
+.qbd-title em { font-family: var(--pbe-font-display); font-style: italic; font-weight: 500; }
+.qbd-sub {
+  margin-top: var(--s-2); max-width: 62ch;
+  font: 400 var(--fs-sm)/1.55 var(--pbe-font-ui); color: var(--pbe-dim);
+}
+.qbd-mastmeta { text-align: right; font: 500 var(--fs-micro)/1.7 var(--pbe-font-data);
+  letter-spacing: .08em; color: var(--pbe-faint-text); text-transform: uppercase; }
+.qbd-mastmeta b { color: var(--pbe-dim); font-weight: 600; }
+
+/* ---- prototype banner --------------------------------------------------- */
+.qbd-proto {
+  margin: 0 var(--qbd-gut); margin-top: var(--s-4);
+  border: 1px solid var(--pbe-line-strong); border-left: 2px solid var(--pbe-gold);
+  background: var(--pbe-ink-4); padding: var(--s-3) var(--s-4);
+  font: 400 var(--fs-sm)/1.5 var(--pbe-font-ui); color: var(--pbe-dim);
+}
+.qbd-proto strong {
+  display: block; color: var(--pbe-gold); font: 700 var(--fs-micro)/1 var(--pbe-font-data);
+  letter-spacing: var(--ls-micro); text-transform: uppercase; margin-bottom: 6px;
+}
+
+/* ---- player selector ---------------------------------------------------- */
+.qbd-bar {
+  position: sticky; top: 0; z-index: 4;
+  margin-top: var(--s-4);
+  padding: var(--s-3) var(--qbd-gut);
+  background: var(--pbe-ink);
+  border-top: 1px solid var(--pbe-line);
+  border-bottom: 1px solid var(--pbe-line);
+  display: flex; gap: var(--s-4); align-items: center; flex-wrap: wrap;
+}
+.qbd-field { display: flex; align-items: center; gap: var(--s-2); }
+.qbd-field > label {
+  font: 700 var(--fs-micro)/1 var(--pbe-font-data); letter-spacing: var(--ls-micro);
+  text-transform: uppercase; color: var(--pbe-faint-text); white-space: nowrap;
+}
+.qbd-select, .qbd-input {
+  background: var(--pbe-ink-4); color: var(--pbe-paper);
+  border: 1px solid var(--pbe-line-strong); border-radius: var(--r-xs);
+  font: 500 var(--fs-sm)/1 var(--pbe-font-ui);
+  padding: 7px 9px; min-height: 32px;
+}
+.qbd-input { font-family: var(--pbe-font-data); width: 92px; }
+.qbd-select:focus-visible, .qbd-input:focus-visible,
+.qbd-tab:focus-visible, .qbd-chip:focus-visible {
+  outline: 2px solid var(--pbe-gold); outline-offset: 1px;
+}
+
+/* ---- tabs --------------------------------------------------------------- */
+.qbd-tabs {
+  display: flex; gap: 0; padding: 0 var(--qbd-gut);
+  border-bottom: 1px solid var(--pbe-line); margin-bottom: var(--s-5);
+  overflow-x: auto; scrollbar-width: none;
+}
+.qbd-tabs::-webkit-scrollbar { display: none; }
+.qbd-tab {
+  appearance: none; background: none; border: 0; cursor: pointer;
+  padding: var(--s-3) var(--s-4); margin-bottom: -1px;
+  border-bottom: 2px solid transparent;
+  font: 700 var(--fs-label)/1 var(--pbe-font-data); letter-spacing: var(--ls-label);
+  text-transform: uppercase; color: var(--pbe-faint-text);
+  transition: color var(--t-fast), border-color var(--t-fast); white-space: nowrap;
+}
+.qbd-tab:hover { color: var(--pbe-dim); }
+.qbd-tab.is-on { color: var(--pbe-paper); border-bottom-color: var(--pbe-gold); }
+
+/* ---- generic panel ------------------------------------------------------ */
+.qbd-body { padding: 0 var(--qbd-gut); }
+.qbd-panel { border: 1px solid var(--pbe-line); background: var(--pbe-ink-2); margin-bottom: var(--s-5); }
+.qbd-panel-head {
+  display: flex; justify-content: space-between; align-items: baseline; gap: var(--s-3);
+  padding: var(--s-3) var(--s-4); border-bottom: 1px solid var(--pbe-line); flex-wrap: wrap;
+}
+.qbd-panel-head h3 {
+  margin: 0; font: 700 var(--fs-label)/1 var(--pbe-font-data);
+  letter-spacing: var(--ls-label); text-transform: uppercase; color: var(--pbe-paper);
+}
+.qbd-panel-head span {
+  font: 500 var(--fs-micro)/1 var(--pbe-font-data); letter-spacing: .08em;
+  text-transform: uppercase; color: var(--pbe-faint-text);
+}
+.qbd-panel-body { padding: var(--s-4); }
+
+/* ---- the metric rail: the visual anchor of the whole view --------------- */
+.qbd-rail {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  border-top: 1px solid var(--pbe-line);
+}
+.qbd-stat {
+  padding: var(--s-4);
+  border-right: 1px solid var(--pbe-line); border-bottom: 1px solid var(--pbe-line);
+}
+.qbd-stat:last-child { border-right: 0; }
+.qbd-stat-k {
+  font: 700 var(--fs-micro)/1 var(--pbe-font-data); letter-spacing: var(--ls-micro);
+  text-transform: uppercase; color: var(--pbe-faint-text); margin-bottom: 10px;
+}
+.qbd-stat-v {
+  font: 600 var(--fs-data-xl)/1 var(--pbe-font-data);
+  color: var(--pbe-paper); letter-spacing: -.02em; font-variant-numeric: tabular-nums;
+}
+.qbd-stat-v small { font-size: var(--fs-data-sm); color: var(--pbe-dim); margin-left: 3px; font-weight: 500; }
+/* the N line - always present, never optional */
+.qbd-stat-n {
+  margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--pbe-line-faint);
+  font: 500 var(--fs-micro)/1.5 var(--pbe-font-data); color: var(--pbe-faint-text);
+  font-variant-numeric: tabular-nums;
+}
+.qbd-stat.is-empty .qbd-stat-v { color: var(--pbe-unavailable); font-size: var(--fs-data); font-weight: 500; }
+
+/* ---- sample-size key ---------------------------------------------------- */
+.qbd-samp {
+  display: inline-flex; align-items: center; gap: 5px;
+  font: 700 var(--fs-micro)/1 var(--pbe-font-data); letter-spacing: .1em;
+  text-transform: uppercase; white-space: nowrap;
+}
+.qbd-samp::before {
+  content: ''; width: 6px; height: 6px; border-radius: 50%; flex: none;
+  background: currentColor;
+}
+.qbd-samp[data-s="STRONG SAMPLE"]     { color: var(--pbe-paper-2); }
+.qbd-samp[data-s="MODERATE SAMPLE"]   { color: var(--pbe-dim); }
+.qbd-samp[data-s="SMALL SAMPLE"]      { color: var(--pbe-faint-text); }
+/* the weakest band is the only one that gets a warning treatment, because it
+   is the one a reader is most likely to over-interpret */
+.qbd-samp[data-s="VERY SMALL SAMPLE"] { color: var(--pbe-crimson-text); }
+.qbd-samp[data-s="VERY SMALL SAMPLE"]::before { border-radius: 0; transform: rotate(45deg); }
+
+.qbd-key {
+  display: flex; gap: var(--s-4); flex-wrap: wrap; padding: var(--s-3) var(--s-4);
+  border-top: 1px solid var(--pbe-line-faint); background: var(--pbe-ink-4);
+}
+.qbd-key i { font-style: normal; color: var(--pbe-faint-text);
+  font: 500 var(--fs-micro)/1 var(--pbe-font-data); letter-spacing: .06em; }
+
+/* ---- condition matrix --------------------------------------------------- */
+.qbd-cond { display: grid; }
+.qbd-cond-row {
+  display: grid;
+  /* label takes the slack; every data column is fixed so the eye can run down
+     a straight edge from row to row */
+  grid-template-columns: minmax(120px, 1fr) 58px var(--qbd-track) 74px 128px;
+  gap: var(--s-4); align-items: center;
+  padding: 10px var(--s-4);
+  border-bottom: 1px solid var(--pbe-line-faint);
+}
+.qbd-cond-row:hover { background: rgba(245,241,235,.022); }
+.qbd-cond-label { font: 500 var(--fs-sm)/1.3 var(--pbe-font-ui); color: var(--pbe-paper); }
+.qbd-cond-n {
+  font: 500 var(--fs-data-sm)/1 var(--pbe-font-data); color: var(--pbe-dim);
+  font-variant-numeric: tabular-nums; text-align: right;
+}
+.qbd-cond-val {
+  font: 600 var(--fs-data)/1 var(--pbe-font-data); color: var(--pbe-paper);
+  text-align: right; font-variant-numeric: tabular-nums;
+}
+
+/* Delta drawn from a centre line: direction before magnitude.
+   The domain is set per panel from the data actually on screen, so a set of
+   small movements is still readable instead of collapsing into slivers. */
+.qbd-delta { position: relative; height: 18px; width: var(--qbd-track); }
+.qbd-delta::before {
+  content: ''; position: absolute; left: 50%; top: 0; bottom: 0;
+  width: 1px; background: var(--pbe-line-strong);
+}
+.qbd-delta-fill {
+  position: absolute; top: 4px; height: 10px; min-width: 2px;
+  background: var(--pbe-pos-soft); border: 1px solid var(--pbe-pos);
+}
+.qbd-delta-fill.is-neg { background: var(--pbe-neg-soft); border-color: var(--pbe-neg); }
+.qbd-delta-num {
+  position: absolute; top: 0; font: 600 var(--fs-micro)/18px var(--pbe-font-data);
+  color: var(--pbe-dim); font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+/* the label clears the BAR, not just the centre line, so a 0.6% bar and its
+   label never sit on top of each other */
+.qbd-delta-num.at-l { right: calc(50% + var(--bar, 0px) + 6px); }
+.qbd-delta-num.at-r { left:  calc(50% + var(--bar, 0px) + 6px); }
+
+/* the axis that tells the reader what the track is worth */
+.qbd-axis {
+  display: grid; grid-template-columns: minmax(120px, 1fr) 58px var(--qbd-track) 74px 128px;
+  gap: var(--s-4); padding: 8px var(--s-4);
+  border-bottom: 1px solid var(--pbe-line);
+}
+.qbd-axis-track {
+  grid-column: 3; display: flex; justify-content: space-between;
+  font: 500 var(--fs-micro)/1 var(--pbe-font-data); color: var(--pbe-faint-text);
+  letter-spacing: .06em;
+}
+.qbd-axis-head {
+  grid-column: 1 / 3; font: 700 var(--fs-micro)/1 var(--pbe-font-data);
+  letter-spacing: var(--ls-micro); text-transform: uppercase; color: var(--pbe-faint-text);
+}
+.qbd-axis-val {
+  grid-column: 4 / 6; font: 700 var(--fs-micro)/1 var(--pbe-font-data);
+  letter-spacing: var(--ls-micro); text-transform: uppercase; color: var(--pbe-faint-text);
+}
+
+/* an unavailable row is colourless and says why, in place */
+.qbd-cond-row.is-off { background: transparent; }
+.qbd-cond-row.is-off .qbd-cond-label { color: var(--pbe-faint-text); }
+.qbd-cond-why {
+  grid-column: 2 / -1;
+  font: 400 var(--fs-micro)/1.5 var(--pbe-font-ui); color: var(--pbe-unavailable);
+  font-style: italic;
+}
+
+/* ---- tables ------------------------------------------------------------- */
+.qbd-tablewrap { overflow-x: auto; }
+.qbd-table { width: 100%; border-collapse: collapse; min-width: 620px; }
+.qbd-table th {
+  text-align: left; padding: 9px var(--s-3);
+  font: 700 var(--fs-micro)/1 var(--pbe-font-data); letter-spacing: var(--ls-micro);
+  text-transform: uppercase; color: var(--pbe-faint-text);
+  border-bottom: 1px solid var(--pbe-line-strong); white-space: nowrap;
+}
+.qbd-table td {
+  padding: 9px var(--s-3); border-bottom: 1px solid var(--pbe-line-faint);
+  font: 500 var(--fs-data-sm)/1.4 var(--pbe-font-data);
+  color: var(--pbe-paper-2); font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.qbd-table td.t-txt { font-family: var(--pbe-font-ui); }
+.qbd-table td.t-num { text-align: right; }
+.qbd-table tr:hover td { background: rgba(245,241,235,.022); }
+.qbd-w { color: var(--pbe-pos); font-weight: 700; }
+.qbd-l { color: var(--pbe-neg); font-weight: 700; }
+
+/* ---- prop outcome bar --------------------------------------------------- */
+.qbd-obar { display: flex; height: 34px; border: 1px solid var(--pbe-line-strong); overflow: hidden; }
+.qbd-obar div {
+  display: flex; align-items: center; justify-content: center;
+  font: 700 var(--fs-micro)/1 var(--pbe-font-data); letter-spacing: .1em;
+  color: var(--pbe-ink); min-width: 0; overflow: hidden;
+}
+.qbd-obar .o { background: var(--pbe-pos); }
+.qbd-obar .p { background: var(--pbe-subtle); color: var(--pbe-paper); }
+.qbd-obar .u { background: var(--pbe-neg); color: var(--pbe-paper); }
+.qbd-obar-legend {
+  display: flex; justify-content: space-between; margin-top: var(--s-2);
+  font: 500 var(--fs-micro)/1 var(--pbe-font-data); color: var(--pbe-faint-text);
+  letter-spacing: .06em;
+}
+.qbd-statement {
+  margin-top: var(--s-4); padding: var(--s-3) var(--s-4);
+  border-left: 2px solid var(--pbe-gold); background: var(--pbe-ink-4);
+  font: 500 var(--fs-data)/1.5 var(--pbe-font-data); color: var(--pbe-paper);
+  font-variant-numeric: tabular-nums;
+}
+.qbd-caveat {
+  margin-top: var(--s-3); font: 400 var(--fs-micro)/1.6 var(--pbe-font-ui);
+  color: var(--pbe-faint-text); max-width: 78ch;
+}
+
+/* ---- today panel -------------------------------------------------------- */
+.qbd-today { display: grid; grid-template-columns: 260px 1fr; }
+.qbd-today-id {
+  padding: var(--s-4); border-right: 1px solid var(--pbe-line); background: var(--pbe-ink-4);
+}
+.qbd-today-match { font: 700 var(--fs-h2)/1.1 var(--pbe-font-data); letter-spacing: -.01em; }
+.qbd-today-when { margin-top: 6px; font: 500 var(--fs-micro)/1.6 var(--pbe-font-data);
+  color: var(--pbe-faint-text); letter-spacing: .06em; text-transform: uppercase; }
+.qbd-today-env { margin-top: var(--s-4); display: grid; gap: 9px; }
+.qbd-env-row { display: flex; justify-content: space-between; gap: var(--s-3);
+  font: 500 var(--fs-sm)/1 var(--pbe-font-data); font-variant-numeric: tabular-nums; }
+.qbd-env-row span { color: var(--pbe-faint-text); font-size: var(--fs-micro);
+  letter-spacing: .08em; text-transform: uppercase; align-self: center; }
+.qbd-env-row b { color: var(--pbe-paper); font-weight: 600; }
+.qbd-env-row b.na { color: var(--pbe-unavailable); font-weight: 500; font-style: italic;
+  font-family: var(--pbe-font-ui); font-size: var(--fs-micro); }
+.qbd-today-prov {
+  margin-top: var(--s-5); padding-top: var(--s-3);
+  border-top: 1px solid var(--pbe-line-faint);
+  font: 400 var(--fs-micro)/1.9 var(--pbe-font-data); color: var(--pbe-faint-text);
+  letter-spacing: .04em;
+}
+.qbd-today-prov b { color: var(--pbe-dim); font-weight: 600; }
+
+/* ---- compare ------------------------------------------------------------ */
+.qbd-vs { display: grid; grid-template-columns: 1fr 132px 1fr; align-items: center; }
+.qbd-vs-side { padding: var(--s-4); }
+.qbd-vs-side.b { text-align: right; }
+.qbd-vs-name { font: 700 var(--fs-h3)/1.2 var(--pbe-font-ui); }
+.qbd-vs-meta { margin-top: 4px; font: 500 var(--fs-micro)/1 var(--pbe-font-data);
+  color: var(--pbe-faint-text); letter-spacing: .08em; text-transform: uppercase; }
+.qbd-vs-mid {
+  text-align: center; font: 700 var(--fs-micro)/1 var(--pbe-font-data);
+  letter-spacing: var(--ls-micro); color: var(--pbe-gold);
+  border-left: 1px solid var(--pbe-line); border-right: 1px solid var(--pbe-line);
+  align-self: stretch; display: flex; align-items: center; justify-content: center;
+}
+.qbd-cmprow {
+  display: grid; grid-template-columns: 1fr 132px 1fr; align-items: center;
+  border-top: 1px solid var(--pbe-line-faint);
+}
+.qbd-cmprow > div { padding: 10px var(--s-4); }
+.qbd-cmprow .a, .qbd-cmprow .b {
+  font: 600 var(--fs-data)/1 var(--pbe-font-data); font-variant-numeric: tabular-nums;
+  display: flex; align-items: baseline; gap: 7px;
+}
+.qbd-cmprow .b { justify-content: flex-end; }
+.qbd-cmprow .a em, .qbd-cmprow .b em {
+  font: 500 var(--fs-micro)/1 var(--pbe-font-data); font-style: normal;
+  color: var(--pbe-faint-text); letter-spacing: .06em;
+}
+.qbd-cmprow .k {
+  text-align: center; font: 700 var(--fs-micro)/1.4 var(--pbe-font-data);
+  letter-spacing: .1em; text-transform: uppercase; color: var(--pbe-faint-text);
+  border-left: 1px solid var(--pbe-line-faint); border-right: 1px solid var(--pbe-line-faint);
+  align-self: stretch; display: flex; align-items: center; justify-content: center;
+}
+.qbd-lead { color: var(--pbe-gold); }
+
+/* ---- withheld / provenance --------------------------------------------- */
+.qbd-gate { display: grid; gap: 1px; background: var(--pbe-line-faint); }
+.qbd-gate-row {
+  display: grid; grid-template-columns: 200px 120px 1fr; gap: var(--s-3);
+  padding: 10px var(--s-4); background: var(--pbe-ink-2); align-items: baseline;
+}
+.qbd-gate-f { font: 500 var(--fs-sm)/1.3 var(--pbe-font-data); color: var(--pbe-dim); }
+.qbd-gate-s {
+  font: 700 var(--fs-micro)/1 var(--pbe-font-data); letter-spacing: .1em;
+  text-transform: uppercase; color: var(--pbe-unavailable);
+}
+.qbd-gate-s[data-st="AVAILABLE"] { color: var(--pbe-dim); }
+.qbd-gate-s[data-st="WITHHELD"] { color: var(--pbe-crimson-text); }
+.qbd-gate-why { font: 400 var(--fs-micro)/1.55 var(--pbe-font-ui); color: var(--pbe-faint-text); }
+
+.qbd-src { display: grid; gap: var(--s-3); }
+.qbd-src-item { border-left: 1px solid var(--pbe-line-strong); padding-left: var(--s-3); }
+.qbd-src-item b { display: block; font: 600 var(--fs-sm)/1.4 var(--pbe-font-ui); color: var(--pbe-paper); }
+.qbd-src-item span { font: 400 var(--fs-micro)/1.6 var(--pbe-font-ui); color: var(--pbe-faint-text); }
+
+.qbd-loading, .qbd-error {
+  padding: var(--s-7) var(--s-4); text-align: center;
+  font: 500 var(--fs-sm)/1.6 var(--pbe-font-ui); color: var(--pbe-faint-text);
+}
+.qbd-error { color: var(--pbe-crimson-text); }
+
+/* ---- responsive --------------------------------------------------------- */
+@media (max-width: 900px) {
+  .qbd { --qbd-gut: var(--s-4); }
+  .qbd-mast { grid-template-columns: 1fr; }
+  .qbd-mastmeta { text-align: left; }
+  .qbd-today { grid-template-columns: 1fr; }
+  .qbd-today-id { border-right: 0; border-bottom: 1px solid var(--pbe-line); }
+  .qbd-gate-row { grid-template-columns: 1fr; gap: 4px; }
+}
+@media (max-width: 620px) {
+  .qbd { --qbd-gut: var(--s-3); }
+  .qbd-title { font-size: 22px; }
+  .qbd-bar { position: static; gap: var(--s-3); }
+  .qbd-field { flex: 1 1 100%; }
+  .qbd-select { flex: 1; min-width: 0; }
+  /* The matrix drops the delta BAR, but never the delta number - movement from
+     the player's own baseline is the point of the row. The track collapses to
+     its label. The axis goes entirely: it describes a track no longer drawn,
+     and its fixed columns would force the panel wider than the screen. */
+  .qbd-cond-row { grid-template-columns: 1fr 54px 54px 70px; gap: var(--s-3); row-gap: 4px; }
+  .qbd-axis { display: none; }
+  .qbd-delta { width: auto; height: auto; }
+  .qbd-delta::before, .qbd-delta-fill { display: none; }
+  .qbd-delta-num { position: static; text-align: right; display: block; line-height: 1.2; }
+  .qbd-delta-num.at-l, .qbd-delta-num.at-r { left: auto; right: auto; }
+  .qbd-cond-row > .qbd-samp { grid-column: 1 / -1; }
+  .qbd-cond-row > .qbd-cond-why { grid-column: 1 / -1; }
+  .qbd-vs, .qbd-cmprow { grid-template-columns: 1fr 84px 1fr; }
+  .qbd-stat-v { font-size: var(--fs-data-lg); }
+}

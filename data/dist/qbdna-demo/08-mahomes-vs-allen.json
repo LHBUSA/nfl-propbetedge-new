@@ -1,0 +1,4875 @@
+{
+  "ok": true,
+  "mode": "players",
+  "player_a": {
+    "gsis_id": "00-0033873",
+    "espn_id": "3139477",
+    "name": "Patrick Mahomes",
+    "team": "KC",
+    "matched_by": "gsis_id"
+  },
+  "player_b": {
+    "gsis_id": "00-0034857",
+    "espn_id": "3918298",
+    "name": "Josh Allen",
+    "team": "BUF",
+    "matched_by": "gsis_id"
+  },
+  "baseline": {
+    "a": {
+      "games": 114,
+      "wins": 92,
+      "losses": 22,
+      "passing_yards_avg": 282.6,
+      "passing_yards_median": 272.5,
+      "attempts_avg": 39,
+      "completion_pct": {
+        "numerator": 2841,
+        "denominator": 4448,
+        "pct": 63.9
+      },
+      "ypa": {
+        "numerator": 32212,
+        "denominator": 4448,
+        "value": 7.24,
+        "unit": "yards per attempt"
+      },
+      "td_rate": {
+        "numerator": 238,
+        "denominator": 4448,
+        "pct": 5.4
+      },
+      "int_rate": {
+        "numerator": 71,
+        "denominator": 4448,
+        "pct": 1.6
+      },
+      "sack_rate": {
+        "numerator": 194,
+        "denominator": 4441,
+        "pct": 4.4
+      },
+      "tds_avg": 2.1,
+      "ints_avg": 0.6,
+      "sample_label": "STRONG SAMPLE"
+    },
+    "b": {
+      "games": 111,
+      "wins": 78,
+      "losses": 33,
+      "passing_yards_avg": 249.7,
+      "passing_yards_median": 253,
+      "attempts_avg": 35.8,
+      "completion_pct": {
+        "numerator": 2429,
+        "denominator": 3973,
+        "pct": 61.1
+      },
+      "ypa": {
+        "numerator": 27719,
+        "denominator": 3973,
+        "value": 6.98,
+        "unit": "yards per attempt"
+      },
+      "td_rate": {
+        "numerator": 210,
+        "denominator": 3973,
+        "pct": 5.3
+      },
+      "int_rate": {
+        "numerator": 76,
+        "denominator": 3973,
+        "pct": 1.9
+      },
+      "sack_rate": {
+        "numerator": 189,
+        "denominator": 3964,
+        "pct": 4.8
+      },
+      "tds_avg": 1.9,
+      "ints_avg": 0.7,
+      "sample_label": "STRONG SAMPLE"
+    },
+    "deltas": {
+      "passing_yards_avg": {
+        "available": true,
+        "a": 282.6,
+        "b": 249.7,
+        "diff": 32.9,
+        "pct": 13.2,
+        "n_a": 114,
+        "n_b": 111,
+        "sample_label_a": "STRONG SAMPLE",
+        "sample_label_b": "STRONG SAMPLE"
+      },
+      "attempts_avg": {
+        "available": true,
+        "a": 39,
+        "b": 35.8,
+        "diff": 3.2,
+        "pct": 8.9,
+        "n_a": 114,
+        "n_b": 111,
+        "sample_label_a": "STRONG SAMPLE",
+        "sample_label_b": "STRONG SAMPLE"
+      },
+      "tds_avg": {
+        "available": true,
+        "a": 2.1,
+        "b": 1.9,
+        "diff": 0.2,
+        "pct": 10.5,
+        "n_a": 114,
+        "n_b": 111,
+        "sample_label_a": "STRONG SAMPLE",
+        "sample_label_b": "STRONG SAMPLE"
+      },
+      "ints_avg": {
+        "available": true,
+        "a": 0.6,
+        "b": 0.7,
+        "diff": -0.1,
+        "pct": -14.3,
+        "n_a": 114,
+        "n_b": 111,
+        "sample_label_a": "STRONG SAMPLE",
+        "sample_label_b": "STRONG SAMPLE"
+      },
+      "completion_pct": {
+        "available": true,
+        "a": {
+          "numerator": 2841,
+          "denominator": 4448,
+          "pct": 63.9
+        },
+        "b": {
+          "numerator": 2429,
+          "denominator": 3973,
+          "pct": 61.1
+        },
+        "diff_pts": 2.8,
+        "n_a": 114,
+        "n_b": 111
+      },
+      "td_rate": {
+        "available": true,
+        "a": {
+          "numerator": 238,
+          "denominator": 4448,
+          "pct": 5.4
+        },
+        "b": {
+          "numerator": 210,
+          "denominator": 3973,
+          "pct": 5.3
+        },
+        "diff_pts": 0.1,
+        "n_a": 114,
+        "n_b": 111
+      },
+      "int_rate": {
+        "available": true,
+        "a": {
+          "numerator": 71,
+          "denominator": 4448,
+          "pct": 1.6
+        },
+        "b": {
+          "numerator": 76,
+          "denominator": 3973,
+          "pct": 1.9
+        },
+        "diff_pts": -0.3,
+        "n_a": 114,
+        "n_b": 111
+      },
+      "sack_rate": {
+        "available": true,
+        "a": {
+          "numerator": 194,
+          "denominator": 4441,
+          "pct": 4.4
+        },
+        "b": {
+          "numerator": 189,
+          "denominator": 3964,
+          "pct": 4.8
+        },
+        "diff_pts": -0.4,
+        "n_a": 114,
+        "n_b": 111
+      },
+      "ypa": {
+        "available": true,
+        "a": {
+          "numerator": 32212,
+          "denominator": 4448,
+          "value": 7.24,
+          "unit": "yards per attempt"
+        },
+        "b": {
+          "numerator": 27719,
+          "denominator": 3973,
+          "value": 6.98,
+          "unit": "yards per attempt"
+        },
+        "diff": 0.26,
+        "unit": "yards per attempt",
+        "n_a": 114,
+        "n_b": 111
+      }
+    }
+  },
+  "head_to_head": {
+    "available": true,
+    "games": 9,
+    "a": {
+      "games": 9,
+      "wins": 5,
+      "losses": 4,
+      "passing_yards_avg": 273.9,
+      "passing_yards_median": 271,
+      "attempts_avg": 38,
+      "completion_pct": {
+        "numerator": 224,
+        "denominator": 342,
+        "pct": 65.5
+      },
+      "ypa": {
+        "numerator": 2465,
+        "denominator": 342,
+        "value": 7.21,
+        "unit": "yards per attempt"
+      },
+      "td_rate": {
+        "numerator": 19,
+        "denominator": 342,
+        "pct": 5.6
+      },
+      "int_rate": {
+        "numerator": 7,
+        "denominator": 342,
+        "pct": 2
+      },
+      "sack_rate": {
+        "numerator": 14,
+        "denominator": 342,
+        "pct": 4.1
+      },
+      "tds_avg": 2.1,
+      "ints_avg": 0.8,
+      "sample_label": "SMALL SAMPLE"
+    },
+    "b": {
+      "games": 9,
+      "wins": 4,
+      "losses": 5,
+      "passing_yards_avg": 255.6,
+      "passing_yards_median": 262,
+      "attempts_avg": 38.7,
+      "completion_pct": {
+        "numerator": 209,
+        "denominator": 348,
+        "pct": 60.1
+      },
+      "ypa": {
+        "numerator": 2300,
+        "denominator": 348,
+        "value": 6.61,
+        "unit": "yards per attempt"
+      },
+      "td_rate": {
+        "numerator": 19,
+        "denominator": 348,
+        "pct": 5.5
+      },
+      "int_rate": {
+        "numerator": 4,
+        "denominator": 348,
+        "pct": 1.1
+      },
+      "sack_rate": {
+        "numerator": 12,
+        "denominator": 347,
+        "pct": 3.5
+      },
+      "tds_avg": 2.1,
+      "ints_avg": 0.4,
+      "sample_label": "SMALL SAMPLE"
+    },
+    "deltas": {
+      "passing_yards_avg": {
+        "available": true,
+        "a": 273.9,
+        "b": 255.6,
+        "diff": 18.3,
+        "pct": 7.2,
+        "n_a": 9,
+        "n_b": 9,
+        "sample_label_a": "SMALL SAMPLE",
+        "sample_label_b": "SMALL SAMPLE"
+      },
+      "attempts_avg": {
+        "available": true,
+        "a": 38,
+        "b": 38.7,
+        "diff": -0.7,
+        "pct": -1.8,
+        "n_a": 9,
+        "n_b": 9,
+        "sample_label_a": "SMALL SAMPLE",
+        "sample_label_b": "SMALL SAMPLE"
+      },
+      "tds_avg": {
+        "available": true,
+        "a": 2.1,
+        "b": 2.1,
+        "diff": 0,
+        "pct": 0,
+        "n_a": 9,
+        "n_b": 9,
+        "sample_label_a": "SMALL SAMPLE",
+        "sample_label_b": "SMALL SAMPLE"
+      },
+      "ints_avg": {
+        "available": true,
+        "a": 0.8,
+        "b": 0.4,
+        "diff": 0.4,
+        "pct": 100,
+        "n_a": 9,
+        "n_b": 9,
+        "sample_label_a": "SMALL SAMPLE",
+        "sample_label_b": "SMALL SAMPLE"
+      },
+      "completion_pct": {
+        "available": true,
+        "a": {
+          "numerator": 224,
+          "denominator": 342,
+          "pct": 65.5
+        },
+        "b": {
+          "numerator": 209,
+          "denominator": 348,
+          "pct": 60.1
+        },
+        "diff_pts": 5.4,
+        "n_a": 9,
+        "n_b": 9
+      },
+      "td_rate": {
+        "available": true,
+        "a": {
+          "numerator": 19,
+          "denominator": 342,
+          "pct": 5.6
+        },
+        "b": {
+          "numerator": 19,
+          "denominator": 348,
+          "pct": 5.5
+        },
+        "diff_pts": 0.1,
+        "n_a": 9,
+        "n_b": 9
+      },
+      "int_rate": {
+        "available": true,
+        "a": {
+          "numerator": 7,
+          "denominator": 342,
+          "pct": 2
+        },
+        "b": {
+          "numerator": 4,
+          "denominator": 348,
+          "pct": 1.1
+        },
+        "diff_pts": 0.9,
+        "n_a": 9,
+        "n_b": 9
+      },
+      "sack_rate": {
+        "available": true,
+        "a": {
+          "numerator": 14,
+          "denominator": 342,
+          "pct": 4.1
+        },
+        "b": {
+          "numerator": 12,
+          "denominator": 347,
+          "pct": 3.5
+        },
+        "diff_pts": 0.6,
+        "n_a": 9,
+        "n_b": 9
+      },
+      "ypa": {
+        "available": true,
+        "a": {
+          "numerator": 2465,
+          "denominator": 342,
+          "value": 7.21,
+          "unit": "yards per attempt"
+        },
+        "b": {
+          "numerator": 2300,
+          "denominator": 348,
+          "value": 6.61,
+          "unit": "yards per attempt"
+        },
+        "diff": 0.6,
+        "unit": "yards per attempt",
+        "n_a": 9,
+        "n_b": 9
+      }
+    },
+    "sample_label": "SMALL SAMPLE",
+    "meetings": [
+      {
+        "game_id": "2024_21_BUF_KC",
+        "date": "2025-01-26",
+        "season": 2024,
+        "week": 21,
+        "a": {
+          "team": "KC",
+          "home": true,
+          "passing_yards": 245,
+          "attempts": 29,
+          "td": 1,
+          "int": 0,
+          "result": "W"
+        },
+        "b": {
+          "team": "BUF",
+          "home": false,
+          "passing_yards": 237,
+          "attempts": 37,
+          "td": 2,
+          "int": 0,
+          "result": "L"
+        }
+      },
+      {
+        "game_id": "2024_11_KC_BUF",
+        "date": "2024-11-17",
+        "season": 2024,
+        "week": 11,
+        "a": {
+          "team": "KC",
+          "home": false,
+          "passing_yards": 196,
+          "attempts": 35,
+          "td": 3,
+          "int": 2,
+          "result": "L"
+        },
+        "b": {
+          "team": "BUF",
+          "home": true,
+          "passing_yards": 262,
+          "attempts": 40,
+          "td": 1,
+          "int": 1,
+          "result": "W"
+        }
+      },
+      {
+        "game_id": "2023_20_KC_BUF",
+        "date": "2024-01-21",
+        "season": 2023,
+        "week": 20,
+        "a": {
+          "team": "KC",
+          "home": false,
+          "passing_yards": 215,
+          "attempts": 23,
+          "td": 2,
+          "int": 0,
+          "result": "W"
+        },
+        "b": {
+          "team": "BUF",
+          "home": true,
+          "passing_yards": 186,
+          "attempts": 39,
+          "td": 1,
+          "int": 0,
+          "result": "L"
+        }
+      },
+      {
+        "game_id": "2023_14_BUF_KC",
+        "date": "2023-12-10",
+        "season": 2023,
+        "week": 14,
+        "a": {
+          "team": "KC",
+          "home": true,
+          "passing_yards": 271,
+          "attempts": 44,
+          "td": 1,
+          "int": 1,
+          "result": "L"
+        },
+        "b": {
+          "team": "BUF",
+          "home": false,
+          "passing_yards": 233,
+          "attempts": 45,
+          "td": 1,
+          "int": 1,
+          "result": "W"
+        }
+      },
+      {
+        "game_id": "2022_06_BUF_KC",
+        "date": "2022-10-16",
+        "season": 2022,
+        "week": 6,
+        "a": {
+          "team": "KC",
+          "home": true,
+          "passing_yards": 338,
+          "attempts": 43,
+          "td": 2,
+          "int": 2,
+          "result": "L"
+        },
+        "b": {
+          "team": "BUF",
+          "home": false,
+          "passing_yards": 329,
+          "attempts": 41,
+          "td": 3,
+          "int": 0,
+          "result": "W"
+        }
+      },
+      {
+        "game_id": "2021_20_BUF_KC",
+        "date": "2022-01-23",
+        "season": 2021,
+        "week": 20,
+        "a": {
+          "team": "KC",
+          "home": true,
+          "passing_yards": 378,
+          "attempts": 46,
+          "td": 3,
+          "int": 0,
+          "result": "W"
+        },
+        "b": {
+          "team": "BUF",
+          "home": false,
+          "passing_yards": 329,
+          "attempts": 40,
+          "td": 4,
+          "int": 0,
+          "result": "L"
+        }
+      },
+      {
+        "game_id": "2021_05_BUF_KC",
+        "date": "2021-10-10",
+        "season": 2021,
+        "week": 5,
+        "a": {
+          "team": "KC",
+          "home": true,
+          "passing_yards": 272,
+          "attempts": 56,
+          "td": 2,
+          "int": 2,
+          "result": "L"
+        },
+        "b": {
+          "team": "BUF",
+          "home": false,
+          "passing_yards": 315,
+          "attempts": 26,
+          "td": 3,
+          "int": 0,
+          "result": "W"
+        }
+      },
+      {
+        "game_id": "2020_20_BUF_KC",
+        "date": "2021-01-24",
+        "season": 2020,
+        "week": 20,
+        "a": {
+          "team": "KC",
+          "home": true,
+          "passing_yards": 325,
+          "attempts": 39,
+          "td": 3,
+          "int": 0,
+          "result": "W"
+        },
+        "b": {
+          "team": "BUF",
+          "home": false,
+          "passing_yards": 287,
+          "attempts": 53,
+          "td": 2,
+          "int": 1,
+          "result": "L"
+        }
+      },
+      {
+        "game_id": "2020_06_KC_BUF",
+        "date": "2020-10-19",
+        "season": 2020,
+        "week": 6,
+        "a": {
+          "team": "KC",
+          "home": false,
+          "passing_yards": 225,
+          "attempts": 27,
+          "td": 2,
+          "int": 0,
+          "result": "W"
+        },
+        "b": {
+          "team": "BUF",
+          "home": true,
+          "passing_yards": 122,
+          "attempts": 27,
+          "td": 2,
+          "int": 1,
+          "result": "L"
+        }
+      }
+    ]
+  },
+  "conditions": {
+    "home": {
+      "available": true,
+      "label": "Home",
+      "a": {
+        "games": 61,
+        "wins": 50,
+        "losses": 11,
+        "passing_yards_avg": 280.9,
+        "passing_yards_median": 275,
+        "attempts_avg": 39.7,
+        "completion_pct": {
+          "numerator": 1520,
+          "denominator": 2421,
+          "pct": 62.8
+        },
+        "ypa": {
+          "numerator": 17135,
+          "denominator": 2421,
+          "value": 7.08,
+          "unit": "yards per attempt"
+        },
+        "td_rate": {
+          "numerator": 125,
+          "denominator": 2421,
+          "pct": 5.2
+        },
+        "int_rate": {
+          "numerator": 34,
+          "denominator": 2421,
+          "pct": 1.4
+        },
+        "sack_rate": {
+          "numerator": 111,
+          "denominator": 2417,
+          "pct": 4.6
+        },
+        "tds_avg": 2,
+        "ints_avg": 0.6,
+        "sample_label": "STRONG SAMPLE"
+      },
+      "b": {
+        "games": 59,
+        "wins": 46,
+        "losses": 13,
+        "passing_yards_avg": 231.1,
+        "passing_yards_median": 232,
+        "attempts_avg": 33.5,
+        "completion_pct": {
+          "numerator": 1203,
+          "denominator": 1976,
+          "pct": 60.9
+        },
+        "ypa": {
+          "numerator": 13637,
+          "denominator": 1976,
+          "value": 6.9,
+          "unit": "yards per attempt"
+        },
+        "td_rate": {
+          "numerator": 115,
+          "denominator": 1976,
+          "pct": 5.8
+        },
+        "int_rate": {
+          "numerator": 37,
+          "denominator": 1976,
+          "pct": 1.9
+        },
+        "sack_rate": {
+          "numerator": 95,
+          "denominator": 1972,
+          "pct": 4.8
+        },
+        "tds_avg": 1.9,
+        "ints_avg": 0.6,
+        "sample_label": "STRONG SAMPLE"
+      },
+      "deltas": {
+        "passing_yards_avg": {
+          "available": true,
+          "a": 280.9,
+          "b": 231.1,
+          "diff": 49.8,
+          "pct": 21.5,
+          "n_a": 61,
+          "n_b": 59,
+          "sample_label_a": "STRONG SAMPLE",
+          "sample_label_b": "STRONG SAMPLE"
+        },
+        "attempts_avg": {
+          "available": true,
+          "a": 39.7,
+          "b": 33.5,
+          "diff": 6.2,
+          "pct": 18.5,
+          "n_a": 61,
+          "n_b": 59,
+          "sample_label_a": "STRONG SAMPLE",
+          "sample_label_b": "STRONG SAMPLE"
+        },
+        "tds_avg": {
+          "available": true,
+          "a": 2,
+          "b": 1.9,
+          "diff": 0.1,
+          "pct": 5.3,
+          "n_a": 61,
+          "n_b": 59,
+          "sample_label_a": "STRONG SAMPLE",
+          "sample_label_b": "STRONG SAMPLE"
+        },
+        "ints_avg": {
+          "available": true,
+          "a": 0.6,
+          "b": 0.6,
+          "diff": 0,
+          "pct": 0,
+          "n_a": 61,
+          "n_b": 59,
+          "sample_label_a": "STRONG SAMPLE",
+          "sample_label_b": "STRONG SAMPLE"
+        },
+        "completion_pct": {
+          "available": true,
+          "a": {
+            "numerator": 1520,
+            "denominator": 2421,
+            "pct": 62.8
+          },
+          "b": {
+            "numerator": 1203,
+            "denominator": 1976,
+            "pct": 60.9
+          },
+          "diff_pts": 1.9,
+          "n_a": 61,
+          "n_b": 59
+        },
+        "td_rate": {
+          "available": true,
+          "a": {
+            "numerator": 125,
+            "denominator": 2421,
+            "pct": 5.2
+          },
+          "b": {
+            "numerator": 115,
+            "denominator": 1976,
+            "pct": 5.8
+          },
+          "diff_pts": -0.6,
+          "n_a": 61,
+          "n_b": 59
+        },
+        "int_rate": {
+          "available": true,
+          "a": {
+            "numerator": 34,
+            "denominator": 2421,
+            "pct": 1.4
+          },
+          "b": {
+            "numerator": 37,
+            "denominator": 1976,
+            "pct": 1.9
+          },
+          "diff_pts": -0.5,
+          "n_a": 61,
+          "n_b": 59
+        },
+        "sack_rate": {
+          "available": true,
+          "a": {
+            "numerator": 111,
+            "denominator": 2417,
+            "pct": 4.6
+          },
+          "b": {
+            "numerator": 95,
+            "denominator": 1972,
+            "pct": 4.8
+          },
+          "diff_pts": -0.2,
+          "n_a": 61,
+          "n_b": 59
+        },
+        "ypa": {
+          "available": true,
+          "a": {
+            "numerator": 17135,
+            "denominator": 2421,
+            "value": 7.08,
+            "unit": "yards per attempt"
+          },
+          "b": {
+            "numerator": 13637,
+            "denominator": 1976,
+            "value": 6.9,
+            "unit": "yards per attempt"
+          },
+          "diff": 0.18,
+          "unit": "yards per attempt",
+          "n_a": 61,
+          "n_b": 59
+        }
+      },
+      "a_vs_own_baseline": -0.6,
+      "b_vs_own_baseline": -7.4,
+      "sample_label_a": "STRONG SAMPLE",
+      "sample_label_b": "STRONG SAMPLE"
+    },
+    "road": {
+      "available": true,
+      "label": "Road",
+      "a": {
+        "games": 53,
+        "wins": 42,
+        "losses": 11,
+        "passing_yards_avg": 284.5,
+        "passing_yards_median": 270,
+        "attempts_avg": 38.2,
+        "completion_pct": {
+          "numerator": 1321,
+          "denominator": 2027,
+          "pct": 65.2
+        },
+        "ypa": {
+          "numerator": 15077,
+          "denominator": 2027,
+          "value": 7.44,
+          "unit": "yards per attempt"
+        },
+        "td_rate": {
+          "numerator": 113,
+          "denominator": 2027,
+          "pct": 5.6
+        },
+        "int_rate": {
+          "numerator": 37,
+          "denominator": 2027,
+          "pct": 1.8
+        },
+        "sack_rate": {
+          "numerator": 83,
+          "denominator": 2024,
+          "pct": 4.1
+        },
+        "tds_avg": 2.1,
+        "ints_avg": 0.7,
+        "sample_label": "STRONG SAMPLE"
+      },
+      "b": {
+        "games": 52,
+        "wins": 32,
+        "losses": 20,
+        "passing_yards_avg": 270.8,
+        "passing_yards_median": 264,
+        "attempts_avg": 38.4,
+        "completion_pct": {
+          "numerator": 1226,
+          "denominator": 1997,
+          "pct": 61.4
+        },
+        "ypa": {
+          "numerator": 14082,
+          "denominator": 1997,
+          "value": 7.05,
+          "unit": "yards per attempt"
+        },
+        "td_rate": {
+          "numerator": 95,
+          "denominator": 1997,
+          "pct": 4.8
+        },
+        "int_rate": {
+          "numerator": 39,
+          "denominator": 1997,
+          "pct": 2
+        },
+        "sack_rate": {
+          "numerator": 94,
+          "denominator": 1992,
+          "pct": 4.7
+        },
+        "tds_avg": 1.8,
+        "ints_avg": 0.8,
+        "sample_label": "STRONG SAMPLE"
+      },
+      "deltas": {
+        "passing_yards_avg": {
+          "available": true,
+          "a": 284.5,
+          "b": 270.8,
+          "diff": 13.7,
+          "pct": 5.1,
+          "n_a": 53,
+          "n_b": 52,
+          "sample_label_a": "STRONG SAMPLE",
+          "sample_label_b": "STRONG SAMPLE"
+        },
+        "attempts_avg": {
+          "available": true,
+          "a": 38.2,
+          "b": 38.4,
+          "diff": -0.2,
+          "pct": -0.5,
+          "n_a": 53,
+          "n_b": 52,
+          "sample_label_a": "STRONG SAMPLE",
+          "sample_label_b": "STRONG SAMPLE"
+        },
+        "tds_avg": {
+          "available": true,
+          "a": 2.1,
+          "b": 1.8,
+          "diff": 0.3,
+          "pct": 16.7,
+          "n_a": 53,
+          "n_b": 52,
+          "sample_label_a": "STRONG SAMPLE",
+          "sample_label_b": "STRONG SAMPLE"
+        },
+        "ints_avg": {
+          "available": true,
+          "a": 0.7,
+          "b": 0.8,
+          "diff": -0.1,
+          "pct": -12.5,
+          "n_a": 53,
+          "n_b": 52,
+          "sample_label_a": "STRONG SAMPLE",
+          "sample_label_b": "STRONG SAMPLE"
+        },
+        "completion_pct": {
+          "available": true,
+          "a": {
+            "numerator": 1321,
+            "denominator": 2027,
+            "pct": 65.2
+          },
+          "b": {
+            "numerator": 1226,
+            "denominator": 1997,
+            "pct": 61.4
+          },
+          "diff_pts": 3.8,
+          "n_a": 53,
+          "n_b": 52
+        },
+        "td_rate": {
+          "available": true,
+          "a": {
+            "numerator": 113,
+            "denominator": 2027,
+            "pct": 5.6
+          },
+          "b": {
+            "numerator": 95,
+            "denominator": 1997,
+            "pct": 4.8
+          },
+          "diff_pts": 0.8,
+          "n_a": 53,
+          "n_b": 52
+        },
+        "int_rate": {
+          "available": true,
+          "a": {
+            "numerator": 37,
+            "denominator": 2027,
+            "pct": 1.8
+          },
+          "b": {
+            "numerator": 39,
+            "denominator": 1997,
+            "pct": 2
+          },
+          "diff_pts": -0.2,
+          "n_a": 53,
+          "n_b": 52
+        },
+        "sack_rate": {
+          "available": true,
+          "a": {
+            "numerator": 83,
+            "denominator": 2024,
+            "pct": 4.1
+          },
+          "b": {
+            "numerator": 94,
+            "denominator": 1992,
+            "pct": 4.7
+          },
+          "diff_pts": -0.6,
+          "n_a": 53,
+          "n_b": 52
+        },
+        "ypa": {
+          "available": true,
+          "a": {
+            "numerator": 15077,
+            "denominator": 2027,
+            "value": 7.44,
+            "unit": "yards per attempt"
+          },
+          "b": {
+            "numerator": 14082,
+            "denominator": 1997,
+            "value": 7.05,
+            "unit": "yards per attempt"
+          },
+          "diff": 0.39,
+          "unit": "yards per attempt",
+          "n_a": 53,
+          "n_b": 52
+        }
+      },
+      "a_vs_own_baseline": 0.7,
+      "b_vs_own_baseline": 8.5,
+      "sample_label_a": "STRONG SAMPLE",
+      "sample_label_b": "STRONG SAMPLE"
+    },
+    "dome": {
+      "available": true,
+      "label": "Dome / closed roof",
+      "a": {
+        "games": 18,
+        "wins": 17,
+        "losses": 1,
+        "passing_yards_avg": 296.5,
+        "passing_yards_median": 300,
+        "attempts_avg": 41,
+        "completion_pct": {
+          "numerator": 487,
+          "denominator": 738,
+          "pct": 66
+        },
+        "ypa": {
+          "numerator": 5337,
+          "denominator": 738,
+          "value": 7.23,
+          "unit": "yards per attempt"
+        },
+        "td_rate": {
+          "numerator": 43,
+          "denominator": 738,
+          "pct": 5.8
+        },
+        "int_rate": {
+          "numerator": 8,
+          "denominator": 738,
+          "pct": 1.1
+        },
+        "sack_rate": {
+          "numerator": 27,
+          "denominator": 735,
+          "pct": 3.7
+        },
+        "tds_avg": 2.4,
+        "ints_avg": 0.4,
+        "sample_label": "MODERATE SAMPLE"
+      },
+      "b": {
+        "games": 14,
+        "wins": 10,
+        "losses": 4,
+        "passing_yards_avg": 271.5,
+        "passing_yards_median": 272,
+        "attempts_avg": 35.9,
+        "completion_pct": {
+          "numerator": 313,
+          "denominator": 502,
+          "pct": 62.4
+        },
+        "ypa": {
+          "numerator": 3801,
+          "denominator": 502,
+          "value": 7.57,
+          "unit": "yards per attempt"
+        },
+        "td_rate": {
+          "numerator": 26,
+          "denominator": 502,
+          "pct": 5.2
+        },
+        "int_rate": {
+          "numerator": 10,
+          "denominator": 502,
+          "pct": 2
+        },
+        "sack_rate": {
+          "numerator": 22,
+          "denominator": 501,
+          "pct": 4.4
+        },
+        "tds_avg": 1.9,
+        "ints_avg": 0.7,
+        "sample_label": "MODERATE SAMPLE"
+      },
+      "deltas": {
+        "passing_yards_avg": {
+          "available": true,
+          "a": 296.5,
+          "b": 271.5,
+          "diff": 25,
+          "pct": 9.2,
+          "n_a": 18,
+          "n_b": 14,
+          "sample_label_a": "MODERATE SAMPLE",
+          "sample_label_b": "MODERATE SAMPLE"
+        },
+        "attempts_avg": {
+          "available": true,
+          "a": 41,
+          "b": 35.9,
+          "diff": 5.1,
+          "pct": 14.2,
+          "n_a": 18,
+          "n_b": 14,
+          "sample_label_a": "MODERATE SAMPLE",
+          "sample_label_b": "MODERATE SAMPLE"
+        },
+        "tds_avg": {
+          "available": true,
+          "a": 2.4,
+          "b": 1.9,
+          "diff": 0.5,
+          "pct": 26.3,
+          "n_a": 18,
+          "n_b": 14,
+          "sample_label_a": "MODERATE SAMPLE",
+          "sample_label_b": "MODERATE SAMPLE"
+        },
+        "ints_avg": {
+          "available": true,
+          "a": 0.4,
+          "b": 0.7,
+          "diff": -0.3,
+          "pct": -42.9,
+          "n_a": 18,
+          "n_b": 14,
+          "sample_label_a": "MODERATE SAMPLE",
+          "sample_label_b": "MODERATE SAMPLE"
+        },
+        "completion_pct": {
+          "available": true,
+          "a": {
+            "numerator": 487,
+            "denominator": 738,
+            "pct": 66
+          },
+          "b": {
+            "numerator": 313,
+            "denominator": 502,
+            "pct": 62.4
+          },
+          "diff_pts": 3.6,
+          "n_a": 18,
+          "n_b": 14
+        },
+        "td_rate": {
+          "available": true,
+          "a": {
+            "numerator": 43,
+            "denominator": 738,
+            "pct": 5.8
+          },
+          "b": {
+            "numerator": 26,
+            "denominator": 502,
+            "pct": 5.2
+          },
+          "diff_pts": 0.6,
+          "n_a": 18,
+          "n_b": 14
+        },
+        "int_rate": {
+          "available": true,
+          "a": {
+            "numerator": 8,
+            "denominator": 738,
+            "pct": 1.1
+          },
+          "b": {
+            "numerator": 10,
+            "denominator": 502,
+            "pct": 2
+          },
+          "diff_pts": -0.9,
+          "n_a": 18,
+          "n_b": 14
+        },
+        "sack_rate": {
+          "available": true,
+          "a": {
+            "numerator": 27,
+            "denominator": 735,
+            "pct": 3.7
+          },
+          "b": {
+            "numerator": 22,
+            "denominator": 501,
+            "pct": 4.4
+          },
+          "diff_pts": -0.7,
+          "n_a": 18,
+          "n_b": 14
+        },
+        "ypa": {
+          "available": true,
+          "a": {
+            "numerator": 5337,
+            "denominator": 738,
+            "value": 7.23,
+            "unit": "yards per attempt"
+          },
+          "b": {
+            "numerator": 3801,
+            "denominator": 502,
+            "value": 7.57,
+            "unit": "yards per attempt"
+          },
+          "diff": -0.34,
+          "unit": "yards per attempt",
+          "n_a": 18,
+          "n_b": 14
+        }
+      },
+      "a_vs_own_baseline": 4.9,
+      "b_vs_own_baseline": 8.7,
+      "sample_label_a": "MODERATE SAMPLE",
+      "sample_label_b": "MODERATE SAMPLE"
+    },
+    "outdoor": {
+      "available": true,
+      "label": "Outdoor",
+      "a": {
+        "games": 96,
+        "wins": 75,
+        "losses": 21,
+        "passing_yards_avg": 279.9,
+        "passing_yards_median": 271.5,
+        "attempts_avg": 38.6,
+        "completion_pct": {
+          "numerator": 2354,
+          "denominator": 3710,
+          "pct": 63.5
+        },
+        "ypa": {
+          "numerator": 26875,
+          "denominator": 3710,
+          "value": 7.24,
+          "unit": "yards per attempt"
+        },
+        "td_rate": {
+          "numerator": 195,
+          "denominator": 3710,
+          "pct": 5.3
+        },
+        "int_rate": {
+          "numerator": 63,
+          "denominator": 3710,
+          "pct": 1.7
+        },
+        "sack_rate": {
+          "numerator": 167,
+          "denominator": 3706,
+          "pct": 4.5
+        },
+        "tds_avg": 2,
+        "ints_avg": 0.7,
+        "sample_label": "STRONG SAMPLE"
+      },
+      "b": {
+        "games": 97,
+        "wins": 68,
+        "losses": 29,
+        "passing_yards_avg": 246.6,
+        "passing_yards_median": 248,
+        "attempts_avg": 35.8,
+        "completion_pct": {
+          "numerator": 2116,
+          "denominator": 3471,
+          "pct": 61
+        },
+        "ypa": {
+          "numerator": 23918,
+          "denominator": 3471,
+          "value": 6.89,
+          "unit": "yards per attempt"
+        },
+        "td_rate": {
+          "numerator": 184,
+          "denominator": 3471,
+          "pct": 5.3
+        },
+        "int_rate": {
+          "numerator": 66,
+          "denominator": 3471,
+          "pct": 1.9
+        },
+        "sack_rate": {
+          "numerator": 167,
+          "denominator": 3463,
+          "pct": 4.8
+        },
+        "tds_avg": 1.9,
+        "ints_avg": 0.7,
+        "sample_label": "STRONG SAMPLE"
+      },
+      "deltas": {
+        "passing_yards_avg": {
+          "available": true,
+          "a": 279.9,
+          "b": 246.6,
+          "diff": 33.3,
+          "pct": 13.5,
+          "n_a": 96,
+          "n_b": 97,
+          "sample_label_a": "STRONG SAMPLE",
+          "sample_label_b": "STRONG SAMPLE"
+        },
+        "attempts_avg": {
+          "available": true,
+          "a": 38.6,
+          "b": 35.8,
+          "diff": 2.8,
+          "pct": 7.8,
+          "n_a": 96,
+          "n_b": 97,
+          "sample_label_a": "STRONG SAMPLE",
+          "sample_label_b": "STRONG SAMPLE"
+        },
+        "tds_avg": {
+          "available": true,
+          "a": 2,
+          "b": 1.9,
+          "diff": 0.1,
+          "pct": 5.3,
+          "n_a": 96,
+          "n_b": 97,
+          "sample_label_a": "STRONG SAMPLE",
+          "sample_label_b": "STRONG SAMPLE"
+        },
+        "ints_avg": {
+          "available": true,
+          "a": 0.7,
+          "b": 0.7,
+          "diff": 0,
+          "pct": 0,
+          "n_a": 96,
+          "n_b": 97,
+          "sample_label_a": "STRONG SAMPLE",
+          "sample_label_b": "STRONG SAMPLE"
+        },
+        "completion_pct": {
+          "available": true,
+          "a": {
+            "numerator": 2354,
+            "denominator": 3710,
+            "pct": 63.5
+          },
+          "b": {
+            "numerator": 2116,
+            "denominator": 3471,
+            "pct": 61
+          },
+          "diff_pts": 2.5,
+          "n_a": 96,
+          "n_b": 97
+        },
+        "td_rate": {
+          "available": true,
+          "a": {
+            "numerator": 195,
+            "denominator": 3710,
+            "pct": 5.3
+          },
+          "b": {
+            "numerator": 184,
+            "denominator": 3471,
+            "pct": 5.3
+          },
+          "diff_pts": 0,
+          "n_a": 96,
+          "n_b": 97
+        },
+        "int_rate": {
+          "available": true,
+          "a": {
+            "numerator": 63,
+            "denominator": 3710,
+            "pct": 1.7
+          },
+          "b": {
+            "numerator": 66,
+            "denominator": 3471,
+            "pct": 1.9
+          },
+          "diff_pts": -0.2,
+          "n_a": 96,
+          "n_b": 97
+        },
+        "sack_rate": {
+          "available": true,
+          "a": {
+            "numerator": 167,
+            "denominator": 3706,
+            "pct": 4.5
+          },
+          "b": {
+            "numerator": 167,
+            "denominator": 3463,
+            "pct": 4.8
+          },
+          "diff_pts": -0.3,
+          "n_a": 96,
+          "n_b": 97
+        },
+        "ypa": {
+          "available": true,
+          "a": {
+            "numerator": 26875,
+            "denominator": 3710,
+            "value": 7.24,
+            "unit": "yards per attempt"
+          },
+          "b": {
+            "numerator": 23918,
+            "denominator": 3471,
+            "value": 6.89,
+            "unit": "yards per attempt"
+          },
+          "diff": 0.35,
+          "unit": "yards per attempt",
+          "n_a": 96,
+          "n_b": 97
+        }
+      },
+      "a_vs_own_baseline": -1,
+      "b_vs_own_baseline": -1.2,
+      "sample_label_a": "STRONG SAMPLE",
+      "sample_label_b": "STRONG SAMPLE"
+    },
+    "below_freezing": {
+      "available": true,
+      "label": "Below freezing",
+      "a": {
+        "games": 13,
+        "wins": 11,
+        "losses": 2,
+        "passing_yards_avg": 261.3,
+        "passing_yards_median": 245,
+        "attempts_avg": 35.2,
+        "completion_pct": {
+          "numerator": 287,
+          "denominator": 458,
+          "pct": 62.7
+        },
+        "ypa": {
+          "numerator": 3397,
+          "denominator": 458,
+          "value": 7.42,
+          "unit": "yards per attempt"
+        },
+        "td_rate": {
+          "numerator": 22,
+          "denominator": 458,
+          "pct": 4.8
+        },
+        "int_rate": {
+          "numerator": 5,
+          "denominator": 458,
+          "pct": 1.1
+        },
+        "sack_rate": {
+          "numerator": 27,
+          "denominator": 458,
+          "pct": 5.9
+        },
+        "tds_avg": 1.7,
+        "ints_avg": 0.4,
+        "sample_label": "MODERATE SAMPLE"
+      },
+      "b": {
+        "games": 16,
+        "wins": 14,
+        "losses": 2,
+        "passing_yards_avg": 219.4,
+        "passing_yards_median": 206.5,
+        "attempts_avg": 31.8,
+        "completion_pct": {
+          "numerator": 306,
+          "denominator": 509,
+          "pct": 60.1
+        },
+        "ypa": {
+          "numerator": 3510,
+          "denominator": 509,
+          "value": 6.9,
+          "unit": "yards per attempt"
+        },
+        "td_rate": {
+          "numerator": 34,
+          "denominator": 509,
+          "pct": 6.7
+        },
+        "int_rate": {
+          "numerator": 11,
+          "denominator": 509,
+          "pct": 2.2
+        },
+        "sack_rate": {
+          "numerator": 27,
+          "denominator": 509,
+          "pct": 5.3
+        },
+        "tds_avg": 2.1,
+        "ints_avg": 0.7,
+        "sample_label": "MODERATE SAMPLE"
+      },
+      "deltas": {
+        "passing_yards_avg": {
+          "available": true,
+          "a": 261.3,
+          "b": 219.4,
+          "diff": 41.9,
+          "pct": 19.1,
+          "n_a": 13,
+          "n_b": 16,
+          "sample_label_a": "MODERATE SAMPLE",
+          "sample_label_b": "MODERATE SAMPLE"
+        },
+        "attempts_avg": {
+          "available": true,
+          "a": 35.2,
+          "b": 31.8,
+          "diff": 3.4,
+          "pct": 10.7,
+          "n_a": 13,
+          "n_b": 16,
+          "sample_label_a": "MODERATE SAMPLE",
+          "sample_label_b": "MODERATE SAMPLE"
+        },
+        "tds_avg": {
+          "available": true,
+          "a": 1.7,
+          "b": 2.1,
+          "diff": -0.4,
+          "pct": -19,
+          "n_a": 13,
+          "n_b": 16,
+          "sample_label_a": "MODERATE SAMPLE",
+          "sample_label_b": "MODERATE SAMPLE"
+        },
+        "ints_avg": {
+          "available": true,
+          "a": 0.4,
+          "b": 0.7,
+          "diff": -0.3,
+          "pct": -42.9,
+          "n_a": 13,
+          "n_b": 16,
+          "sample_label_a": "MODERATE SAMPLE",
+          "sample_label_b": "MODERATE SAMPLE"
+        },
+        "completion_pct": {
+          "available": true,
+          "a": {
+            "numerator": 287,
+            "denominator": 458,
+            "pct": 62.7
+          },
+          "b": {
+            "numerator": 306,
+            "denominator": 509,
+            "pct": 60.1
+          },
+          "diff_pts": 2.6,
+          "n_a": 13,
+          "n_b": 16
+        },
+        "td_rate": {
+          "available": true,
+          "a": {
+            "numerator": 22,
+            "denominator": 458,
+            "pct": 4.8
+          },
+          "b": {
+            "numerator": 34,
+            "denominator": 509,
+            "pct": 6.7
+          },
+          "diff_pts": -1.9,
+          "n_a": 13,
+          "n_b": 16
+        },
+        "int_rate": {
+          "available": true,
+          "a": {
+            "numerator": 5,
+            "denominator": 458,
+            "pct": 1.1
+          },
+          "b": {
+            "numerator": 11,
+            "denominator": 509,
+            "pct": 2.2
+          },
+          "diff_pts": -1.1,
+          "n_a": 13,
+          "n_b": 16
+        },
+        "sack_rate": {
+          "available": true,
+          "a": {
+            "numerator": 27,
+            "denominator": 458,
+            "pct": 5.9
+          },
+          "b": {
+            "numerator": 27,
+            "denominator": 509,
+            "pct": 5.3
+          },
+          "diff_pts": 0.6,
+          "n_a": 13,
+          "n_b": 16
+        },
+        "ypa": {
+          "available": true,
+          "a": {
+            "numerator": 3397,
+            "denominator": 458,
+            "value": 7.42,
+            "unit": "yards per attempt"
+          },
+          "b": {
+            "numerator": 3510,
+            "denominator": 509,
+            "value": 6.9,
+            "unit": "yards per attempt"
+          },
+          "diff": 0.52,
+          "unit": "yards per attempt",
+          "n_a": 13,
+          "n_b": 16
+        }
+      },
+      "a_vs_own_baseline": -7.5,
+      "b_vs_own_baseline": -12.1,
+      "sample_label_a": "MODERATE SAMPLE",
+      "sample_label_b": "MODERATE SAMPLE",
+      "coverage_a": {
+        "outdoor_games": 96,
+        "environment_resolved": 96,
+        "note": null
+      },
+      "coverage_b": {
+        "outdoor_games": 97,
+        "environment_resolved": 97,
+        "note": null
+      }
+    },
+    "cold_33_50": {
+      "available": true,
+      "label": "33-50 F",
+      "a": {
+        "games": 32,
+        "wins": 26,
+        "losses": 6,
+        "passing_yards_avg": 267.6,
+        "passing_yards_median": 270.5,
+        "attempts_avg": 38.5,
+        "completion_pct": {
+          "numerator": 786,
+          "denominator": 1233,
+          "pct": 63.7
+        },
+        "ypa": {
+          "numerator": 8562,
+          "denominator": 1233,
+          "value": 6.94,
+          "unit": "yards per attempt"
+        },
+        "td_rate": {
+          "numerator": 63,
+          "denominator": 1233,
+          "pct": 5.1
+        },
+        "int_rate": {
+          "numerator": 14,
+          "denominator": 1233,
+          "pct": 1.1
+        },
+        "sack_rate": {
+          "numerator": 42,
+          "denominator": 1230,
+          "pct": 3.4
+        },
+        "tds_avg": 2,
+        "ints_avg": 0.4,
+        "sample_label": "STRONG SAMPLE"
+      },
+      "b": {
+        "games": 33,
+        "wins": 19,
+        "losses": 14,
+        "passing_yards_avg": 229.2,
+        "passing_yards_median": 224,
+        "attempts_avg": 34.6,
+        "completion_pct": {
+          "numerator": 668,
+          "denominator": 1142,
+          "pct": 58.5
+        },
+        "ypa": {
+          "numerator": 7563,
+          "denominator": 1142,
+          "value": 6.62,
+          "unit": "yards per attempt"
+        },
+        "td_rate": {
+          "numerator": 53,
+          "denominator": 1142,
+          "pct": 4.6
+        },
+        "int_rate": {
+          "numerator": 21,
+          "denominator": 1142,
+          "pct": 1.8
+        },
+        "sack_rate": {
+          "numerator": 49,
+          "denominator": 1140,
+          "pct": 4.3
+        },
+        "tds_avg": 1.6,
+        "ints_avg": 0.6,
+        "sample_label": "STRONG SAMPLE"
+      },
+      "deltas": {
+        "passing_yards_avg": {
+          "available": true,
+          "a": 267.6,
+          "b": 229.2,
+          "diff": 38.4,
+          "pct": 16.8,
+          "n_a": 32,
+          "n_b": 33,
+          "sample_label_a": "STRONG SAMPLE",
+          "sample_label_b": "STRONG SAMPLE"
+        },
+        "attempts_avg": {
+          "available": true,
+          "a": 38.5,
+          "b": 34.6,
+          "diff": 3.9,
+          "pct": 11.3,
+          "n_a": 32,
+          "n_b": 33,
+          "sample_label_a": "STRONG SAMPLE",
+          "sample_label_b": "STRONG SAMPLE"
+        },
+        "tds_avg": {
+          "available": true,
+          "a": 2,
+          "b": 1.6,
+          "diff": 0.4,
+          "pct": 25,
+          "n_a": 32,
+          "n_b": 33,
+          "sample_label_a": "STRONG SAMPLE",
+          "sample_label_b": "STRONG SAMPLE"
+        },
+        "ints_avg": {
+          "available": true,
+          "a": 0.4,
+          "b": 0.6,
+          "diff": -0.2,
+          "pct": -33.3,
+          "n_a": 32,
+          "n_b": 33,
+          "sample_label_a": "STRONG SAMPLE",
+          "sample_label_b": "STRONG SAMPLE"
+        },
+        "completion_pct": {
+          "available": true,
+          "a": {
+            "numerator": 786,
+            "denominator": 1233,
+            "pct": 63.7
+          },
+          "b": {
+            "numerator": 668,
+            "denominator": 1142,
+            "pct": 58.5
+          },
+          "diff_pts": 5.2,
+          "n_a": 32,
+          "n_b": 33
+        },
+        "td_rate": {
+          "available": true,
+          "a": {
+            "numerator": 63,
+            "denominator": 1233,
+            "pct": 5.1
+          },
+          "b": {
+            "numerator": 53,
+            "denominator": 1142,
+            "pct": 4.6
+          },
+          "diff_pts": 0.5,
+          "n_a": 32,
+          "n_b": 33
+        },
+        "int_rate": {
+          "available": true,
+          "a": {
+            "numerator": 14,
+            "denominator": 1233,
+            "pct": 1.1
+          },
+          "b": {
+            "numerator": 21,
+            "denominator": 1142,
+            "pct": 1.8
+          },
+          "diff_pts": -0.7,
+          "n_a": 32,
+          "n_b": 33
+        },
+        "sack_rate": {
+          "available": true,
+          "a": {
+            "numerator": 42,
+            "denominator": 1230,
+            "pct": 3.4
+          },
+          "b": {
+            "numerator": 49,
+            "denominator": 1140,
+            "pct": 4.3
+          },
+          "diff_pts": -0.9,
+          "n_a": 32,
+          "n_b": 33
+        },
+        "ypa": {
+          "available": true,
+          "a": {
+            "numerator": 8562,
+            "denominator": 1233,
+            "value": 6.94,
+            "unit": "yards per attempt"
+          },
+          "b": {
+            "numerator": 7563,
+            "denominator": 1142,
+            "value": 6.62,
+            "unit": "yards per attempt"
+          },
+          "diff": 0.32,
+          "unit": "yards per attempt",
+          "n_a": 32,
+          "n_b": 33
+        }
+      },
+      "a_vs_own_baseline": -5.3,
+      "b_vs_own_baseline": -8.2,
+      "sample_label_a": "STRONG SAMPLE",
+      "sample_label_b": "STRONG SAMPLE",
+      "coverage_a": {
+        "outdoor_games": 96,
+        "environment_resolved": 96,
+        "note": null
+      },
+      "coverage_b": {
+        "outdoor_games": 97,
+        "environment_resolved": 97,
+        "note": null
+      }
+    },
+    "mild_51_70": {
+      "available": true,
+      "label": "51-70 F",
+      "a": {
+        "games": 28,
+        "wins": 19,
+        "losses": 9,
+        "passing_yards_avg": 273.8,
+        "passing_yards_median": 269.5,
+        "attempts_avg": 40,
+        "completion_pct": {
+          "numerator": 696,
+          "denominator": 1121,
+          "pct": 62.1
+        },
+        "ypa": {
+          "numerator": 7666,
+          "denominator": 1121,
+          "value": 6.84,
+          "unit": "yards per attempt"
+        },
+        "td_rate": {
+          "numerator": 48,
+          "denominator": 1121,
+          "pct": 4.3
+        },
+        "int_rate": {
+          "numerator": 26,
+          "denominator": 1121,
+          "pct": 2.3
+        },
+        "sack_rate": {
+          "numerator": 60,
+          "denominator": 1121,
+          "pct": 5.4
+        },
+        "tds_avg": 1.7,
+        "ints_avg": 0.9,
+        "sample_label": "STRONG SAMPLE"
+      },
+      "b": {
+        "games": 32,
+        "wins": 24,
+        "losses": 8,
+        "passing_yards_avg": 269.2,
+        "passing_yards_median": 263,
+        "attempts_avg": 36.9,
+        "completion_pct": {
+          "numerator": 745,
+          "denominator": 1181,
+          "pct": 63.1
+        },
+        "ypa": {
+          "numerator": 8613,
+          "denominator": 1181,
+          "value": 7.29,
+          "unit": "yards per attempt"
+        },
+        "td_rate": {
+          "numerator": 67,
+          "denominator": 1181,
+          "pct": 5.7
+        },
+        "int_rate": {
+          "numerator": 22,
+          "denominator": 1181,
+          "pct": 1.9
+        },
+        "sack_rate": {
+          "numerator": 50,
+          "denominator": 1178,
+          "pct": 4.2
+        },
+        "tds_avg": 2.1,
+        "ints_avg": 0.7,
+        "sample_label": "STRONG SAMPLE"
+      },
+      "deltas": {
+        "passing_yards_avg": {
+          "available": true,
+          "a": 273.8,
+          "b": 269.2,
+          "diff": 4.6,
+          "pct": 1.7,
+          "n_a": 28,
+          "n_b": 32,
+          "sample_label_a": "STRONG SAMPLE",
+          "sample_label_b": "STRONG SAMPLE"
+        },
+        "attempts_avg": {
+          "available": true,
+          "a": 40,
+          "b": 36.9,
+          "diff": 3.1,
+          "pct": 8.4,
+          "n_a": 28,
+          "n_b": 32,
+          "sample_label_a": "STRONG SAMPLE",
+          "sample_label_b": "STRONG SAMPLE"
+        },
+        "tds_avg": {
+          "available": true,
+          "a": 1.7,
+          "b": 2.1,
+          "diff": -0.4,
+          "pct": -19,
+          "n_a": 28,
+          "n_b": 32,
+          "sample_label_a": "STRONG SAMPLE",
+          "sample_label_b": "STRONG SAMPLE"
+        },
+        "ints_avg": {
+          "available": true,
+          "a": 0.9,
+          "b": 0.7,
+          "diff": 0.2,
+          "pct": 28.6,
+          "n_a": 28,
+          "n_b": 32,
+          "sample_label_a": "STRONG SAMPLE",
+          "sample_label_b": "STRONG SAMPLE"
+        },
+        "completion_pct": {
+          "available": true,
+          "a": {
+            "numerator": 696,
+            "denominator": 1121,
+            "pct": 62.1
+          },
+          "b": {
+            "numerator": 745,
+            "denominator": 1181,
+            "pct": 63.1
+          },
+          "diff_pts": -1,
+          "n_a": 28,
+          "n_b": 32
+        },
+        "td_rate": {
+          "available": true,
+          "a": {
+            "numerator": 48,
+            "denominator": 1121,
+            "pct": 4.3
+          },
+          "b": {
+            "numerator": 67,
+            "denominator": 1181,
+            "pct": 5.7
+          },
+          "diff_pts": -1.4,
+          "n_a": 28,
+          "n_b": 32
+        },
+        "int_rate": {
+          "available": true,
+          "a": {
+            "numerator": 26,
+            "denominator": 1121,
+            "pct": 2.3
+          },
+          "b": {
+            "numerator": 22,
+            "denominator": 1181,
+            "pct": 1.9
+          },
+          "diff_pts": 0.4,
+          "n_a": 28,
+          "n_b": 32
+        },
+        "sack_rate": {
+          "available": true,
+          "a": {
+            "numerator": 60,
+            "denominator": 1121,
+            "pct": 5.4
+          },
+          "b": {
+            "numerator": 50,
+            "denominator": 1178,
+            "pct": 4.2
+          },
+          "diff_pts": 1.2,
+          "n_a": 28,
+          "n_b": 32
+        },
+        "ypa": {
+          "available": true,
+          "a": {
+            "numerator": 7666,
+            "denominator": 1121,
+            "value": 6.84,
+            "unit": "yards per attempt"
+          },
+          "b": {
+            "numerator": 8613,
+            "denominator": 1181,
+            "value": 7.29,
+            "unit": "yards per attempt"
+          },
+          "diff": -0.45,
+          "unit": "yards per attempt",
+          "n_a": 28,
+          "n_b": 32
+        }
+      },
+      "a_vs_own_baseline": -3.1,
+      "b_vs_own_baseline": 7.8,
+      "sample_label_a": "STRONG SAMPLE",
+      "sample_label_b": "STRONG SAMPLE",
+      "coverage_a": {
+        "outdoor_games": 96,
+        "environment_resolved": 96,
+        "note": null
+      },
+      "coverage_b": {
+        "outdoor_games": 97,
+        "environment_resolved": 97,
+        "note": null
+      }
+    },
+    "warm_70_plus": {
+      "available": true,
+      "label": "Above 70 F",
+      "a": {
+        "games": 23,
+        "wins": 19,
+        "losses": 4,
+        "passing_yards_avg": 315.2,
+        "passing_yards_median": 305,
+        "attempts_avg": 39,
+        "completion_pct": {
+          "numerator": 585,
+          "denominator": 898,
+          "pct": 65.1
+        },
+        "ypa": {
+          "numerator": 7250,
+          "denominator": 898,
+          "value": 8.07,
+          "unit": "yards per attempt"
+        },
+        "td_rate": {
+          "numerator": 62,
+          "denominator": 898,
+          "pct": 6.9
+        },
+        "int_rate": {
+          "numerator": 18,
+          "denominator": 898,
+          "pct": 2
+        },
+        "sack_rate": {
+          "numerator": 38,
+          "denominator": 897,
+          "pct": 4.2
+        },
+        "tds_avg": 2.7,
+        "ints_avg": 0.8,
+        "sample_label": "STRONG SAMPLE"
+      },
+      "b": {
+        "games": 15,
+        "wins": 10,
+        "losses": 5,
+        "passing_yards_avg": 268.4,
+        "passing_yards_median": 254,
+        "attempts_avg": 40,
+        "completion_pct": {
+          "numerator": 374,
+          "denominator": 600,
+          "pct": 62.3
+        },
+        "ypa": {
+          "numerator": 4026,
+          "denominator": 600,
+          "value": 6.71,
+          "unit": "yards per attempt"
+        },
+        "td_rate": {
+          "numerator": 29,
+          "denominator": 600,
+          "pct": 4.8
+        },
+        "int_rate": {
+          "numerator": 12,
+          "denominator": 600,
+          "pct": 2
+        },
+        "sack_rate": {
+          "numerator": 39,
+          "denominator": 597,
+          "pct": 6.5
+        },
+        "tds_avg": 1.9,
+        "ints_avg": 0.8,
+        "sample_label": "MODERATE SAMPLE"
+      },
+      "deltas": {
+        "passing_yards_avg": {
+          "available": true,
+          "a": 315.2,
+          "b": 268.4,
+          "diff": 46.8,
+          "pct": 17.4,
+          "n_a": 23,
+          "n_b": 15,
+          "sample_label_a": "STRONG SAMPLE",
+          "sample_label_b": "MODERATE SAMPLE"
+        },
+        "attempts_avg": {
+          "available": true,
+          "a": 39,
+          "b": 40,
+          "diff": -1,
+          "pct": -2.5,
+          "n_a": 23,
+          "n_b": 15,
+          "sample_label_a": "STRONG SAMPLE",
+          "sample_label_b": "MODERATE SAMPLE"
+        },
+        "tds_avg": {
+          "available": true,
+          "a": 2.7,
+          "b": 1.9,
+          "diff": 0.8,
+          "pct": 42.1,
+          "n_a": 23,
+          "n_b": 15,
+          "sample_label_a": "STRONG SAMPLE",
+          "sample_label_b": "MODERATE SAMPLE"
+        },
+        "ints_avg": {
+          "available": true,
+          "a": 0.8,
+          "b": 0.8,
+          "diff": 0,
+          "pct": 0,
+          "n_a": 23,
+          "n_b": 15,
+          "sample_label_a": "STRONG SAMPLE",
+          "sample_label_b": "MODERATE SAMPLE"
+        },
+        "completion_pct": {
+          "available": true,
+          "a": {
+            "numerator": 585,
+            "denominator": 898,
+            "pct": 65.1
+          },
+          "b": {
+            "numerator": 374,
+            "denominator": 600,
+            "pct": 62.3
+          },
+          "diff_pts": 2.8,
+          "n_a": 23,
+          "n_b": 15
+        },
+        "td_rate": {
+          "available": true,
+          "a": {
+            "numerator": 62,
+            "denominator": 898,
+            "pct": 6.9
+          },
+          "b": {
+            "numerator": 29,
+            "denominator": 600,
+            "pct": 4.8
+          },
+          "diff_pts": 2.1,
+          "n_a": 23,
+          "n_b": 15
+        },
+        "int_rate": {
+          "available": true,
+          "a": {
+            "numerator": 18,
+            "denominator": 898,
+            "pct": 2
+          },
+          "b": {
+            "numerator": 12,
+            "denominator": 600,
+            "pct": 2
+          },
+          "diff_pts": 0,
+          "n_a": 23,
+          "n_b": 15
+        },
+        "sack_rate": {
+          "available": true,
+          "a": {
+            "numerator": 38,
+            "denominator": 897,
+            "pct": 4.2
+          },
+          "b": {
+            "numerator": 39,
+            "denominator": 597,
+            "pct": 6.5
+          },
+          "diff_pts": -2.3,
+          "n_a": 23,
+          "n_b": 15
+        },
+        "ypa": {
+          "available": true,
+          "a": {
+            "numerator": 7250,
+            "denominator": 898,
+            "value": 8.07,
+            "unit": "yards per attempt"
+          },
+          "b": {
+            "numerator": 4026,
+            "denominator": 600,
+            "value": 6.71,
+            "unit": "yards per attempt"
+          },
+          "diff": 1.36,
+          "unit": "yards per attempt",
+          "n_a": 23,
+          "n_b": 15
+        }
+      },
+      "a_vs_own_baseline": 11.5,
+      "b_vs_own_baseline": 7.5,
+      "sample_label_a": "STRONG SAMPLE",
+      "sample_label_b": "MODERATE SAMPLE",
+      "coverage_a": {
+        "outdoor_games": 96,
+        "environment_resolved": 96,
+        "note": null
+      },
+      "coverage_b": {
+        "outdoor_games": 97,
+        "environment_resolved": 97,
+        "note": null
+      }
+    },
+    "snow": {
+      "available": true,
+      "label": "Snow",
+      "a": {
+        "games": 3,
+        "wins": 3,
+        "losses": 0,
+        "passing_yards_avg": 245,
+        "passing_yards_median": 200,
+        "attempts_avg": 31.3,
+        "completion_pct": {
+          "numerator": 64,
+          "denominator": 94,
+          "pct": 68.1
+        },
+        "ypa": {
+          "numerator": 735,
+          "denominator": 94,
+          "value": 7.82,
+          "unit": "yards per attempt"
+        },
+        "td_rate": {
+          "numerator": 5,
+          "denominator": 94,
+          "pct": 5.3
+        },
+        "int_rate": {
+          "numerator": 1,
+          "denominator": 94,
+          "pct": 1.1
+        },
+        "sack_rate": {
+          "numerator": 6,
+          "denominator": 94,
+          "pct": 6.4
+        },
+        "tds_avg": 1.7,
+        "ints_avg": 0.3,
+        "sample_label": "VERY SMALL SAMPLE"
+      },
+      "b": {
+        "games": 7,
+        "wins": 5,
+        "losses": 2,
+        "passing_yards_avg": 194.7,
+        "passing_yards_median": 169,
+        "attempts_avg": 32.4,
+        "completion_pct": {
+          "numerator": 132,
+          "denominator": 227,
+          "pct": 58.1
+        },
+        "ypa": {
+          "numerator": 1363,
+          "denominator": 227,
+          "value": 6,
+          "unit": "yards per attempt"
+        },
+        "td_rate": {
+          "numerator": 8,
+          "denominator": 227,
+          "pct": 3.5
+        },
+        "int_rate": {
+          "numerator": 2,
+          "denominator": 227,
+          "pct": 0.9
+        },
+        "sack_rate": {
+          "numerator": 9,
+          "denominator": 227,
+          "pct": 4
+        },
+        "tds_avg": 1.1,
+        "ints_avg": 0.3,
+        "sample_label": "SMALL SAMPLE"
+      },
+      "deltas": {
+        "passing_yards_avg": {
+          "available": true,
+          "a": 245,
+          "b": 194.7,
+          "diff": 50.3,
+          "pct": 25.8,
+          "n_a": 3,
+          "n_b": 7,
+          "sample_label_a": "VERY SMALL SAMPLE",
+          "sample_label_b": "SMALL SAMPLE"
+        },
+        "attempts_avg": {
+          "available": true,
+          "a": 31.3,
+          "b": 32.4,
+          "diff": -1.1,
+          "pct": -3.4,
+          "n_a": 3,
+          "n_b": 7,
+          "sample_label_a": "VERY SMALL SAMPLE",
+          "sample_label_b": "SMALL SAMPLE"
+        },
+        "tds_avg": {
+          "available": true,
+          "a": 1.7,
+          "b": 1.1,
+          "diff": 0.6,
+          "pct": 54.5,
+          "n_a": 3,
+          "n_b": 7,
+          "sample_label_a": "VERY SMALL SAMPLE",
+          "sample_label_b": "SMALL SAMPLE"
+        },
+        "ints_avg": {
+          "available": true,
+          "a": 0.3,
+          "b": 0.3,
+          "diff": 0,
+          "pct": 0,
+          "n_a": 3,
+          "n_b": 7,
+          "sample_label_a": "VERY SMALL SAMPLE",
+          "sample_label_b": "SMALL SAMPLE"
+        },
+        "completion_pct": {
+          "available": true,
+          "a": {
+            "numerator": 64,
+            "denominator": 94,
+            "pct": 68.1
+          },
+          "b": {
+            "numerator": 132,
+            "denominator": 227,
+            "pct": 58.1
+          },
+          "diff_pts": 10,
+          "n_a": 3,
+          "n_b": 7
+        },
+        "td_rate": {
+          "available": true,
+          "a": {
+            "numerator": 5,
+            "denominator": 94,
+            "pct": 5.3
+          },
+          "b": {
+            "numerator": 8,
+            "denominator": 227,
+            "pct": 3.5
+          },
+          "diff_pts": 1.8,
+          "n_a": 3,
+          "n_b": 7
+        },
+        "int_rate": {
+          "available": true,
+          "a": {
+            "numerator": 1,
+            "denominator": 94,
+            "pct": 1.1
+          },
+          "b": {
+            "numerator": 2,
+            "denominator": 227,
+            "pct": 0.9
+          },
+          "diff_pts": 0.2,
+          "n_a": 3,
+          "n_b": 7
+        },
+        "sack_rate": {
+          "available": true,
+          "a": {
+            "numerator": 6,
+            "denominator": 94,
+            "pct": 6.4
+          },
+          "b": {
+            "numerator": 9,
+            "denominator": 227,
+            "pct": 4
+          },
+          "diff_pts": 2.4,
+          "n_a": 3,
+          "n_b": 7
+        },
+        "ypa": {
+          "available": true,
+          "a": {
+            "numerator": 735,
+            "denominator": 94,
+            "value": 7.82,
+            "unit": "yards per attempt"
+          },
+          "b": {
+            "numerator": 1363,
+            "denominator": 227,
+            "value": 6,
+            "unit": "yards per attempt"
+          },
+          "diff": 1.82,
+          "unit": "yards per attempt",
+          "n_a": 3,
+          "n_b": 7
+        }
+      },
+      "a_vs_own_baseline": -13.3,
+      "b_vs_own_baseline": -22,
+      "sample_label_a": "VERY SMALL SAMPLE",
+      "sample_label_b": "SMALL SAMPLE",
+      "coverage_a": {
+        "outdoor_games": 96,
+        "environment_resolved": 96,
+        "note": null
+      },
+      "coverage_b": {
+        "outdoor_games": 97,
+        "environment_resolved": 97,
+        "note": null
+      }
+    },
+    "rain": {
+      "available": true,
+      "label": "Rain",
+      "a": {
+        "games": 4,
+        "wins": 3,
+        "losses": 1,
+        "passing_yards_avg": 277.5,
+        "passing_yards_median": 288.5,
+        "attempts_avg": 43.5,
+        "completion_pct": {
+          "numerator": 108,
+          "denominator": 174,
+          "pct": 62.1
+        },
+        "ypa": {
+          "numerator": 1110,
+          "denominator": 174,
+          "value": 6.38,
+          "unit": "yards per attempt"
+        },
+        "td_rate": {
+          "numerator": 9,
+          "denominator": 174,
+          "pct": 5.2
+        },
+        "int_rate": {
+          "numerator": 3,
+          "denominator": 174,
+          "pct": 1.7
+        },
+        "sack_rate": {
+          "numerator": 4,
+          "denominator": 174,
+          "pct": 2.3
+        },
+        "tds_avg": 2.3,
+        "ints_avg": 0.8,
+        "sample_label": "VERY SMALL SAMPLE"
+      },
+      "b": {
+        "games": 20,
+        "wins": 12,
+        "losses": 8,
+        "passing_yards_avg": 242.7,
+        "passing_yards_median": 242,
+        "attempts_avg": 35.9,
+        "completion_pct": {
+          "numerator": 433,
+          "denominator": 718,
+          "pct": 60.3
+        },
+        "ypa": {
+          "numerator": 4853,
+          "denominator": 718,
+          "value": 6.76,
+          "unit": "yards per attempt"
+        },
+        "td_rate": {
+          "numerator": 32,
+          "denominator": 718,
+          "pct": 4.5
+        },
+        "int_rate": {
+          "numerator": 15,
+          "denominator": 718,
+          "pct": 2.1
+        },
+        "sack_rate": {
+          "numerator": 40,
+          "denominator": 717,
+          "pct": 5.6
+        },
+        "tds_avg": 1.6,
+        "ints_avg": 0.8,
+        "sample_label": "STRONG SAMPLE"
+      },
+      "deltas": {
+        "passing_yards_avg": {
+          "available": true,
+          "a": 277.5,
+          "b": 242.7,
+          "diff": 34.8,
+          "pct": 14.3,
+          "n_a": 4,
+          "n_b": 20,
+          "sample_label_a": "VERY SMALL SAMPLE",
+          "sample_label_b": "STRONG SAMPLE"
+        },
+        "attempts_avg": {
+          "available": true,
+          "a": 43.5,
+          "b": 35.9,
+          "diff": 7.6,
+          "pct": 21.2,
+          "n_a": 4,
+          "n_b": 20,
+          "sample_label_a": "VERY SMALL SAMPLE",
+          "sample_label_b": "STRONG SAMPLE"
+        },
+        "tds_avg": {
+          "available": true,
+          "a": 2.3,
+          "b": 1.6,
+          "diff": 0.7,
+          "pct": 43.7,
+          "n_a": 4,
+          "n_b": 20,
+          "sample_label_a": "VERY SMALL SAMPLE",
+          "sample_label_b": "STRONG SAMPLE"
+        },
+        "ints_avg": {
+          "available": true,
+          "a": 0.8,
+          "b": 0.8,
+          "diff": 0,
+          "pct": 0,
+          "n_a": 4,
+          "n_b": 20,
+          "sample_label_a": "VERY SMALL SAMPLE",
+          "sample_label_b": "STRONG SAMPLE"
+        },
+        "completion_pct": {
+          "available": true,
+          "a": {
+            "numerator": 108,
+            "denominator": 174,
+            "pct": 62.1
+          },
+          "b": {
+            "numerator": 433,
+            "denominator": 718,
+            "pct": 60.3
+          },
+          "diff_pts": 1.8,
+          "n_a": 4,
+          "n_b": 20
+        },
+        "td_rate": {
+          "available": true,
+          "a": {
+            "numerator": 9,
+            "denominator": 174,
+            "pct": 5.2
+          },
+          "b": {
+            "numerator": 32,
+            "denominator": 718,
+            "pct": 4.5
+          },
+          "diff_pts": 0.7,
+          "n_a": 4,
+          "n_b": 20
+        },
+        "int_rate": {
+          "available": true,
+          "a": {
+            "numerator": 3,
+            "denominator": 174,
+            "pct": 1.7
+          },
+          "b": {
+            "numerator": 15,
+            "denominator": 718,
+            "pct": 2.1
+          },
+          "diff_pts": -0.4,
+          "n_a": 4,
+          "n_b": 20
+        },
+        "sack_rate": {
+          "available": true,
+          "a": {
+            "numerator": 4,
+            "denominator": 174,
+            "pct": 2.3
+          },
+          "b": {
+            "numerator": 40,
+            "denominator": 717,
+            "pct": 5.6
+          },
+          "diff_pts": -3.3,
+          "n_a": 4,
+          "n_b": 20
+        },
+        "ypa": {
+          "available": true,
+          "a": {
+            "numerator": 1110,
+            "denominator": 174,
+            "value": 6.38,
+            "unit": "yards per attempt"
+          },
+          "b": {
+            "numerator": 4853,
+            "denominator": 718,
+            "value": 6.76,
+            "unit": "yards per attempt"
+          },
+          "diff": -0.38,
+          "unit": "yards per attempt",
+          "n_a": 4,
+          "n_b": 20
+        }
+      },
+      "a_vs_own_baseline": -1.8,
+      "b_vs_own_baseline": -2.8,
+      "sample_label_a": "VERY SMALL SAMPLE",
+      "sample_label_b": "STRONG SAMPLE",
+      "coverage_a": {
+        "outdoor_games": 96,
+        "environment_resolved": 96,
+        "note": null
+      },
+      "coverage_b": {
+        "outdoor_games": 97,
+        "environment_resolved": 97,
+        "note": null
+      }
+    },
+    "dry": {
+      "available": true,
+      "label": "Dry",
+      "a": {
+        "games": 89,
+        "wins": 69,
+        "losses": 20,
+        "passing_yards_avg": 281.2,
+        "passing_yards_median": 271,
+        "attempts_avg": 38.7,
+        "completion_pct": {
+          "numerator": 2182,
+          "denominator": 3442,
+          "pct": 63.4
+        },
+        "ypa": {
+          "numerator": 25030,
+          "denominator": 3442,
+          "value": 7.27,
+          "unit": "yards per attempt"
+        },
+        "td_rate": {
+          "numerator": 181,
+          "denominator": 3442,
+          "pct": 5.3
+        },
+        "int_rate": {
+          "numerator": 59,
+          "denominator": 3442,
+          "pct": 1.7
+        },
+        "sack_rate": {
+          "numerator": 157,
+          "denominator": 3438,
+          "pct": 4.6
+        },
+        "tds_avg": 2,
+        "ints_avg": 0.7,
+        "sample_label": "STRONG SAMPLE"
+      },
+      "b": {
+        "games": 70,
+        "wins": 51,
+        "losses": 19,
+        "passing_yards_avg": 252.9,
+        "passing_yards_median": 253.5,
+        "attempts_avg": 36.1,
+        "completion_pct": {
+          "numerator": 1551,
+          "denominator": 2526,
+          "pct": 61.4
+        },
+        "ypa": {
+          "numerator": 17702,
+          "denominator": 2526,
+          "value": 7.01,
+          "unit": "yards per attempt"
+        },
+        "td_rate": {
+          "numerator": 144,
+          "denominator": 2526,
+          "pct": 5.7
+        },
+        "int_rate": {
+          "numerator": 49,
+          "denominator": 2526,
+          "pct": 1.9
+        },
+        "sack_rate": {
+          "numerator": 118,
+          "denominator": 2519,
+          "pct": 4.7
+        },
+        "tds_avg": 2.1,
+        "ints_avg": 0.7,
+        "sample_label": "STRONG SAMPLE"
+      },
+      "deltas": {
+        "passing_yards_avg": {
+          "available": true,
+          "a": 281.2,
+          "b": 252.9,
+          "diff": 28.3,
+          "pct": 11.2,
+          "n_a": 89,
+          "n_b": 70,
+          "sample_label_a": "STRONG SAMPLE",
+          "sample_label_b": "STRONG SAMPLE"
+        },
+        "attempts_avg": {
+          "available": true,
+          "a": 38.7,
+          "b": 36.1,
+          "diff": 2.6,
+          "pct": 7.2,
+          "n_a": 89,
+          "n_b": 70,
+          "sample_label_a": "STRONG SAMPLE",
+          "sample_label_b": "STRONG SAMPLE"
+        },
+        "tds_avg": {
+          "available": true,
+          "a": 2,
+          "b": 2.1,
+          "diff": -0.1,
+          "pct": -4.8,
+          "n_a": 89,
+          "n_b": 70,
+          "sample_label_a": "STRONG SAMPLE",
+          "sample_label_b": "STRONG SAMPLE"
+        },
+        "ints_avg": {
+          "available": true,
+          "a": 0.7,
+          "b": 0.7,
+          "diff": 0,
+          "pct": 0,
+          "n_a": 89,
+          "n_b": 70,
+          "sample_label_a": "STRONG SAMPLE",
+          "sample_label_b": "STRONG SAMPLE"
+        },
+        "completion_pct": {
+          "available": true,
+          "a": {
+            "numerator": 2182,
+            "denominator": 3442,
+            "pct": 63.4
+          },
+          "b": {
+            "numerator": 1551,
+            "denominator": 2526,
+            "pct": 61.4
+          },
+          "diff_pts": 2,
+          "n_a": 89,
+          "n_b": 70
+        },
+        "td_rate": {
+          "available": true,
+          "a": {
+            "numerator": 181,
+            "denominator": 3442,
+            "pct": 5.3
+          },
+          "b": {
+            "numerator": 144,
+            "denominator": 2526,
+            "pct": 5.7
+          },
+          "diff_pts": -0.4,
+          "n_a": 89,
+          "n_b": 70
+        },
+        "int_rate": {
+          "available": true,
+          "a": {
+            "numerator": 59,
+            "denominator": 3442,
+            "pct": 1.7
+          },
+          "b": {
+            "numerator": 49,
+            "denominator": 2526,
+            "pct": 1.9
+          },
+          "diff_pts": -0.2,
+          "n_a": 89,
+          "n_b": 70
+        },
+        "sack_rate": {
+          "available": true,
+          "a": {
+            "numerator": 157,
+            "denominator": 3438,
+            "pct": 4.6
+          },
+          "b": {
+            "numerator": 118,
+            "denominator": 2519,
+            "pct": 4.7
+          },
+          "diff_pts": -0.1,
+          "n_a": 89,
+          "n_b": 70
+        },
+        "ypa": {
+          "available": true,
+          "a": {
+            "numerator": 25030,
+            "denominator": 3442,
+            "value": 7.27,
+            "unit": "yards per attempt"
+          },
+          "b": {
+            "numerator": 17702,
+            "denominator": 2526,
+            "value": 7.01,
+            "unit": "yards per attempt"
+          },
+          "diff": 0.26,
+          "unit": "yards per attempt",
+          "n_a": 89,
+          "n_b": 70
+        }
+      },
+      "a_vs_own_baseline": -0.5,
+      "b_vs_own_baseline": 1.3,
+      "sample_label_a": "STRONG SAMPLE",
+      "sample_label_b": "STRONG SAMPLE",
+      "coverage_a": {
+        "outdoor_games": 96,
+        "environment_resolved": 96,
+        "note": null
+      },
+      "coverage_b": {
+        "outdoor_games": 97,
+        "environment_resolved": 97,
+        "note": null
+      }
+    },
+    "wind_10_plus": {
+      "available": true,
+      "label": "Wind 10+ mph",
+      "a": {
+        "games": 37,
+        "wins": 28,
+        "losses": 9,
+        "passing_yards_avg": 271.3,
+        "passing_yards_median": 260,
+        "attempts_avg": 38.2,
+        "completion_pct": {
+          "numerator": 868,
+          "denominator": 1415,
+          "pct": 61.3
+        },
+        "ypa": {
+          "numerator": 10037,
+          "denominator": 1415,
+          "value": 7.09,
+          "unit": "yards per attempt"
+        },
+        "td_rate": {
+          "numerator": 67,
+          "denominator": 1415,
+          "pct": 4.7
+        },
+        "int_rate": {
+          "numerator": 24,
+          "denominator": 1415,
+          "pct": 1.7
+        },
+        "sack_rate": {
+          "numerator": 60,
+          "denominator": 1412,
+          "pct": 4.2
+        },
+        "tds_avg": 1.8,
+        "ints_avg": 0.6,
+        "sample_label": "STRONG SAMPLE"
+      },
+      "b": {
+        "games": 40,
+        "wins": 28,
+        "losses": 12,
+        "passing_yards_avg": 242.2,
+        "passing_yards_median": 235.5,
+        "attempts_avg": 36,
+        "completion_pct": {
+          "numerator": 870,
+          "denominator": 1442,
+          "pct": 60.3
+        },
+        "ypa": {
+          "numerator": 9688,
+          "denominator": 1442,
+          "value": 6.72,
+          "unit": "yards per attempt"
+        },
+        "td_rate": {
+          "numerator": 71,
+          "denominator": 1442,
+          "pct": 4.9
+        },
+        "int_rate": {
+          "numerator": 20,
+          "denominator": 1442,
+          "pct": 1.4
+        },
+        "sack_rate": {
+          "numerator": 64,
+          "denominator": 1439,
+          "pct": 4.4
+        },
+        "tds_avg": 1.8,
+        "ints_avg": 0.5,
+        "sample_label": "STRONG SAMPLE"
+      },
+      "deltas": {
+        "passing_yards_avg": {
+          "available": true,
+          "a": 271.3,
+          "b": 242.2,
+          "diff": 29.1,
+          "pct": 12,
+          "n_a": 37,
+          "n_b": 40,
+          "sample_label_a": "STRONG SAMPLE",
+          "sample_label_b": "STRONG SAMPLE"
+        },
+        "attempts_avg": {
+          "available": true,
+          "a": 38.2,
+          "b": 36,
+          "diff": 2.2,
+          "pct": 6.1,
+          "n_a": 37,
+          "n_b": 40,
+          "sample_label_a": "STRONG SAMPLE",
+          "sample_label_b": "STRONG SAMPLE"
+        },
+        "tds_avg": {
+          "available": true,
+          "a": 1.8,
+          "b": 1.8,
+          "diff": 0,
+          "pct": 0,
+          "n_a": 37,
+          "n_b": 40,
+          "sample_label_a": "STRONG SAMPLE",
+          "sample_label_b": "STRONG SAMPLE"
+        },
+        "ints_avg": {
+          "available": true,
+          "a": 0.6,
+          "b": 0.5,
+          "diff": 0.1,
+          "pct": 20,
+          "n_a": 37,
+          "n_b": 40,
+          "sample_label_a": "STRONG SAMPLE",
+          "sample_label_b": "STRONG SAMPLE"
+        },
+        "completion_pct": {
+          "available": true,
+          "a": {
+            "numerator": 868,
+            "denominator": 1415,
+            "pct": 61.3
+          },
+          "b": {
+            "numerator": 870,
+            "denominator": 1442,
+            "pct": 60.3
+          },
+          "diff_pts": 1,
+          "n_a": 37,
+          "n_b": 40
+        },
+        "td_rate": {
+          "available": true,
+          "a": {
+            "numerator": 67,
+            "denominator": 1415,
+            "pct": 4.7
+          },
+          "b": {
+            "numerator": 71,
+            "denominator": 1442,
+            "pct": 4.9
+          },
+          "diff_pts": -0.2,
+          "n_a": 37,
+          "n_b": 40
+        },
+        "int_rate": {
+          "available": true,
+          "a": {
+            "numerator": 24,
+            "denominator": 1415,
+            "pct": 1.7
+          },
+          "b": {
+            "numerator": 20,
+            "denominator": 1442,
+            "pct": 1.4
+          },
+          "diff_pts": 0.3,
+          "n_a": 37,
+          "n_b": 40
+        },
+        "sack_rate": {
+          "available": true,
+          "a": {
+            "numerator": 60,
+            "denominator": 1412,
+            "pct": 4.2
+          },
+          "b": {
+            "numerator": 64,
+            "denominator": 1439,
+            "pct": 4.4
+          },
+          "diff_pts": -0.2,
+          "n_a": 37,
+          "n_b": 40
+        },
+        "ypa": {
+          "available": true,
+          "a": {
+            "numerator": 10037,
+            "denominator": 1415,
+            "value": 7.09,
+            "unit": "yards per attempt"
+          },
+          "b": {
+            "numerator": 9688,
+            "denominator": 1442,
+            "value": 6.72,
+            "unit": "yards per attempt"
+          },
+          "diff": 0.37,
+          "unit": "yards per attempt",
+          "n_a": 37,
+          "n_b": 40
+        }
+      },
+      "a_vs_own_baseline": -4,
+      "b_vs_own_baseline": -3,
+      "sample_label_a": "STRONG SAMPLE",
+      "sample_label_b": "STRONG SAMPLE",
+      "coverage_a": {
+        "outdoor_games": 96,
+        "environment_resolved": 96,
+        "note": null
+      },
+      "coverage_b": {
+        "outdoor_games": 97,
+        "environment_resolved": 97,
+        "note": null
+      }
+    },
+    "wind_15_plus": {
+      "available": true,
+      "label": "Wind 15+ mph",
+      "a": {
+        "games": 10,
+        "wins": 7,
+        "losses": 3,
+        "passing_yards_avg": 282.8,
+        "passing_yards_median": 261,
+        "attempts_avg": 38.8,
+        "completion_pct": {
+          "numerator": 231,
+          "denominator": 388,
+          "pct": 59.5
+        },
+        "ypa": {
+          "numerator": 2828,
+          "denominator": 388,
+          "value": 7.29,
+          "unit": "yards per attempt"
+        },
+        "td_rate": {
+          "numerator": 21,
+          "denominator": 388,
+          "pct": 5.4
+        },
+        "int_rate": {
+          "numerator": 9,
+          "denominator": 388,
+          "pct": 2.3
+        },
+        "sack_rate": {
+          "numerator": 16,
+          "denominator": 387,
+          "pct": 4.1
+        },
+        "tds_avg": 2.1,
+        "ints_avg": 0.9,
+        "sample_label": "MODERATE SAMPLE"
+      },
+      "b": {
+        "games": 13,
+        "wins": 9,
+        "losses": 4,
+        "passing_yards_avg": 247.5,
+        "passing_yards_median": 232,
+        "attempts_avg": 34.7,
+        "completion_pct": {
+          "numerator": 270,
+          "denominator": 451,
+          "pct": 59.9
+        },
+        "ypa": {
+          "numerator": 3218,
+          "denominator": 451,
+          "value": 7.14,
+          "unit": "yards per attempt"
+        },
+        "td_rate": {
+          "numerator": 27,
+          "denominator": 451,
+          "pct": 6
+        },
+        "int_rate": {
+          "numerator": 7,
+          "denominator": 451,
+          "pct": 1.6
+        },
+        "sack_rate": {
+          "numerator": 17,
+          "denominator": 450,
+          "pct": 3.8
+        },
+        "tds_avg": 2.1,
+        "ints_avg": 0.5,
+        "sample_label": "MODERATE SAMPLE"
+      },
+      "deltas": {
+        "passing_yards_avg": {
+          "available": true,
+          "a": 282.8,
+          "b": 247.5,
+          "diff": 35.3,
+          "pct": 14.3,
+          "n_a": 10,
+          "n_b": 13,
+          "sample_label_a": "MODERATE SAMPLE",
+          "sample_label_b": "MODERATE SAMPLE"
+        },
+        "attempts_avg": {
+          "available": true,
+          "a": 38.8,
+          "b": 34.7,
+          "diff": 4.1,
+          "pct": 11.8,
+          "n_a": 10,
+          "n_b": 13,
+          "sample_label_a": "MODERATE SAMPLE",
+          "sample_label_b": "MODERATE SAMPLE"
+        },
+        "tds_avg": {
+          "available": true,
+          "a": 2.1,
+          "b": 2.1,
+          "diff": 0,
+          "pct": 0,
+          "n_a": 10,
+          "n_b": 13,
+          "sample_label_a": "MODERATE SAMPLE",
+          "sample_label_b": "MODERATE SAMPLE"
+        },
+        "ints_avg": {
+          "available": true,
+          "a": 0.9,
+          "b": 0.5,
+          "diff": 0.4,
+          "pct": 80,
+          "n_a": 10,
+          "n_b": 13,
+          "sample_label_a": "MODERATE SAMPLE",
+          "sample_label_b": "MODERATE SAMPLE"
+        },
+        "completion_pct": {
+          "available": true,
+          "a": {
+            "numerator": 231,
+            "denominator": 388,
+            "pct": 59.5
+          },
+          "b": {
+            "numerator": 270,
+            "denominator": 451,
+            "pct": 59.9
+          },
+          "diff_pts": -0.4,
+          "n_a": 10,
+          "n_b": 13
+        },
+        "td_rate": {
+          "available": true,
+          "a": {
+            "numerator": 21,
+            "denominator": 388,
+            "pct": 5.4
+          },
+          "b": {
+            "numerator": 27,
+            "denominator": 451,
+            "pct": 6
+          },
+          "diff_pts": -0.6,
+          "n_a": 10,
+          "n_b": 13
+        },
+        "int_rate": {
+          "available": true,
+          "a": {
+            "numerator": 9,
+            "denominator": 388,
+            "pct": 2.3
+          },
+          "b": {
+            "numerator": 7,
+            "denominator": 451,
+            "pct": 1.6
+          },
+          "diff_pts": 0.7,
+          "n_a": 10,
+          "n_b": 13
+        },
+        "sack_rate": {
+          "available": true,
+          "a": {
+            "numerator": 16,
+            "denominator": 387,
+            "pct": 4.1
+          },
+          "b": {
+            "numerator": 17,
+            "denominator": 450,
+            "pct": 3.8
+          },
+          "diff_pts": 0.3,
+          "n_a": 10,
+          "n_b": 13
+        },
+        "ypa": {
+          "available": true,
+          "a": {
+            "numerator": 2828,
+            "denominator": 388,
+            "value": 7.29,
+            "unit": "yards per attempt"
+          },
+          "b": {
+            "numerator": 3218,
+            "denominator": 451,
+            "value": 7.14,
+            "unit": "yards per attempt"
+          },
+          "diff": 0.15,
+          "unit": "yards per attempt",
+          "n_a": 10,
+          "n_b": 13
+        }
+      },
+      "a_vs_own_baseline": 0.1,
+      "b_vs_own_baseline": -0.9,
+      "sample_label_a": "MODERATE SAMPLE",
+      "sample_label_b": "MODERATE SAMPLE",
+      "coverage_a": {
+        "outdoor_games": 96,
+        "environment_resolved": 96,
+        "note": null
+      },
+      "coverage_b": {
+        "outdoor_games": 97,
+        "environment_resolved": 97,
+        "note": null
+      }
+    },
+    "wind_20_plus": {
+      "available": true,
+      "label": "Wind 20+ mph",
+      "a": {
+        "games": 1,
+        "wins": 1,
+        "losses": 0,
+        "passing_yards_avg": 175,
+        "passing_yards_median": 175,
+        "attempts_avg": 30,
+        "completion_pct": {
+          "numerator": 15,
+          "denominator": 30,
+          "pct": 50
+        },
+        "ypa": {
+          "numerator": 175,
+          "denominator": 30,
+          "value": 5.83,
+          "unit": "yards per attempt"
+        },
+        "td_rate": {
+          "numerator": 1,
+          "denominator": 30,
+          "pct": 3.3
+        },
+        "int_rate": {
+          "numerator": 0,
+          "denominator": 30,
+          "pct": 0
+        },
+        "sack_rate": {
+          "numerator": 1,
+          "denominator": 30,
+          "pct": 3.3
+        },
+        "tds_avg": 1,
+        "ints_avg": 0,
+        "sample_label": "VERY SMALL SAMPLE"
+      },
+      "b": {
+        "games": 2,
+        "wins": 1,
+        "losses": 1,
+        "passing_yards_avg": 158.5,
+        "passing_yards_median": 158.5,
+        "attempts_avg": 30,
+        "completion_pct": {
+          "numerator": 30,
+          "denominator": 60,
+          "pct": 50
+        },
+        "ypa": {
+          "numerator": 317,
+          "denominator": 60,
+          "value": 5.28,
+          "unit": "yards per attempt"
+        },
+        "td_rate": {
+          "numerator": 3,
+          "denominator": 60,
+          "pct": 5
+        },
+        "int_rate": {
+          "numerator": 2,
+          "denominator": 60,
+          "pct": 3.3
+        },
+        "sack_rate": {
+          "numerator": 3,
+          "denominator": 60,
+          "pct": 5
+        },
+        "tds_avg": 1.5,
+        "ints_avg": 1,
+        "sample_label": "VERY SMALL SAMPLE"
+      },
+      "deltas": {
+        "passing_yards_avg": {
+          "available": true,
+          "a": 175,
+          "b": 158.5,
+          "diff": 16.5,
+          "pct": 10.4,
+          "n_a": 1,
+          "n_b": 2,
+          "sample_label_a": "VERY SMALL SAMPLE",
+          "sample_label_b": "VERY SMALL SAMPLE"
+        },
+        "attempts_avg": {
+          "available": true,
+          "a": 30,
+          "b": 30,
+          "diff": 0,
+          "pct": 0,
+          "n_a": 1,
+          "n_b": 2,
+          "sample_label_a": "VERY SMALL SAMPLE",
+          "sample_label_b": "VERY SMALL SAMPLE"
+        },
+        "tds_avg": {
+          "available": true,
+          "a": 1,
+          "b": 1.5,
+          "diff": -0.5,
+          "pct": -33.3,
+          "n_a": 1,
+          "n_b": 2,
+          "sample_label_a": "VERY SMALL SAMPLE",
+          "sample_label_b": "VERY SMALL SAMPLE"
+        },
+        "ints_avg": {
+          "available": true,
+          "a": 0,
+          "b": 1,
+          "diff": -1,
+          "pct": -100,
+          "n_a": 1,
+          "n_b": 2,
+          "sample_label_a": "VERY SMALL SAMPLE",
+          "sample_label_b": "VERY SMALL SAMPLE"
+        },
+        "completion_pct": {
+          "available": true,
+          "a": {
+            "numerator": 15,
+            "denominator": 30,
+            "pct": 50
+          },
+          "b": {
+            "numerator": 30,
+            "denominator": 60,
+            "pct": 50
+          },
+          "diff_pts": 0,
+          "n_a": 1,
+          "n_b": 2
+        },
+        "td_rate": {
+          "available": true,
+          "a": {
+            "numerator": 1,
+            "denominator": 30,
+            "pct": 3.3
+          },
+          "b": {
+            "numerator": 3,
+            "denominator": 60,
+            "pct": 5
+          },
+          "diff_pts": -1.7,
+          "n_a": 1,
+          "n_b": 2
+        },
+        "int_rate": {
+          "available": true,
+          "a": {
+            "numerator": 0,
+            "denominator": 30,
+            "pct": 0
+          },
+          "b": {
+            "numerator": 2,
+            "denominator": 60,
+            "pct": 3.3
+          },
+          "diff_pts": -3.3,
+          "n_a": 1,
+          "n_b": 2
+        },
+        "sack_rate": {
+          "available": true,
+          "a": {
+            "numerator": 1,
+            "denominator": 30,
+            "pct": 3.3
+          },
+          "b": {
+            "numerator": 3,
+            "denominator": 60,
+            "pct": 5
+          },
+          "diff_pts": -1.7,
+          "n_a": 1,
+          "n_b": 2
+        },
+        "ypa": {
+          "available": true,
+          "a": {
+            "numerator": 175,
+            "denominator": 30,
+            "value": 5.83,
+            "unit": "yards per attempt"
+          },
+          "b": {
+            "numerator": 317,
+            "denominator": 60,
+            "value": 5.28,
+            "unit": "yards per attempt"
+          },
+          "diff": 0.55,
+          "unit": "yards per attempt",
+          "n_a": 1,
+          "n_b": 2
+        }
+      },
+      "a_vs_own_baseline": -38.1,
+      "b_vs_own_baseline": -36.5,
+      "sample_label_a": "VERY SMALL SAMPLE",
+      "sample_label_b": "VERY SMALL SAMPLE",
+      "coverage_a": {
+        "outdoor_games": 96,
+        "environment_resolved": 96,
+        "note": null
+      },
+      "coverage_b": {
+        "outdoor_games": 97,
+        "environment_resolved": 97,
+        "note": null
+      }
+    },
+    "primetime": {
+      "available": true,
+      "label": "Primetime",
+      "a": {
+        "games": 32,
+        "wins": 26,
+        "losses": 6,
+        "passing_yards_avg": 278,
+        "passing_yards_median": 273.5,
+        "attempts_avg": 40,
+        "completion_pct": {
+          "numerator": 812,
+          "denominator": 1281,
+          "pct": 63.4
+        },
+        "ypa": {
+          "numerator": 8897,
+          "denominator": 1281,
+          "value": 6.95,
+          "unit": "yards per attempt"
+        },
+        "td_rate": {
+          "numerator": 64,
+          "denominator": 1281,
+          "pct": 5
+        },
+        "int_rate": {
+          "numerator": 20,
+          "denominator": 1281,
+          "pct": 1.6
+        },
+        "sack_rate": {
+          "numerator": 48,
+          "denominator": 1279,
+          "pct": 3.8
+        },
+        "tds_avg": 2,
+        "ints_avg": 0.6,
+        "sample_label": "STRONG SAMPLE"
+      },
+      "b": {
+        "games": 28,
+        "wins": 21,
+        "losses": 7,
+        "passing_yards_avg": 249.5,
+        "passing_yards_median": 248,
+        "attempts_avg": 33.6,
+        "completion_pct": {
+          "numerator": 615,
+          "denominator": 941,
+          "pct": 65.4
+        },
+        "ypa": {
+          "numerator": 6986,
+          "denominator": 941,
+          "value": 7.42,
+          "unit": "yards per attempt"
+        },
+        "td_rate": {
+          "numerator": 64,
+          "denominator": 941,
+          "pct": 6.8
+        },
+        "int_rate": {
+          "numerator": 22,
+          "denominator": 941,
+          "pct": 2.3
+        },
+        "sack_rate": {
+          "numerator": 39,
+          "denominator": 940,
+          "pct": 4.1
+        },
+        "tds_avg": 2.3,
+        "ints_avg": 0.8,
+        "sample_label": "STRONG SAMPLE"
+      },
+      "deltas": {
+        "passing_yards_avg": {
+          "available": true,
+          "a": 278,
+          "b": 249.5,
+          "diff": 28.5,
+          "pct": 11.4,
+          "n_a": 32,
+          "n_b": 28,
+          "sample_label_a": "STRONG SAMPLE",
+          "sample_label_b": "STRONG SAMPLE"
+        },
+        "attempts_avg": {
+          "available": true,
+          "a": 40,
+          "b": 33.6,
+          "diff": 6.4,
+          "pct": 19,
+          "n_a": 32,
+          "n_b": 28,
+          "sample_label_a": "STRONG SAMPLE",
+          "sample_label_b": "STRONG SAMPLE"
+        },
+        "tds_avg": {
+          "available": true,
+          "a": 2,
+          "b": 2.3,
+          "diff": -0.3,
+          "pct": -13,
+          "n_a": 32,
+          "n_b": 28,
+          "sample_label_a": "STRONG SAMPLE",
+          "sample_label_b": "STRONG SAMPLE"
+        },
+        "ints_avg": {
+          "available": true,
+          "a": 0.6,
+          "b": 0.8,
+          "diff": -0.2,
+          "pct": -25,
+          "n_a": 32,
+          "n_b": 28,
+          "sample_label_a": "STRONG SAMPLE",
+          "sample_label_b": "STRONG SAMPLE"
+        },
+        "completion_pct": {
+          "available": true,
+          "a": {
+            "numerator": 812,
+            "denominator": 1281,
+            "pct": 63.4
+          },
+          "b": {
+            "numerator": 615,
+            "denominator": 941,
+            "pct": 65.4
+          },
+          "diff_pts": -2,
+          "n_a": 32,
+          "n_b": 28
+        },
+        "td_rate": {
+          "available": true,
+          "a": {
+            "numerator": 64,
+            "denominator": 1281,
+            "pct": 5
+          },
+          "b": {
+            "numerator": 64,
+            "denominator": 941,
+            "pct": 6.8
+          },
+          "diff_pts": -1.8,
+          "n_a": 32,
+          "n_b": 28
+        },
+        "int_rate": {
+          "available": true,
+          "a": {
+            "numerator": 20,
+            "denominator": 1281,
+            "pct": 1.6
+          },
+          "b": {
+            "numerator": 22,
+            "denominator": 941,
+            "pct": 2.3
+          },
+          "diff_pts": -0.7,
+          "n_a": 32,
+          "n_b": 28
+        },
+        "sack_rate": {
+          "available": true,
+          "a": {
+            "numerator": 48,
+            "denominator": 1279,
+            "pct": 3.8
+          },
+          "b": {
+            "numerator": 39,
+            "denominator": 940,
+            "pct": 4.1
+          },
+          "diff_pts": -0.3,
+          "n_a": 32,
+          "n_b": 28
+        },
+        "ypa": {
+          "available": true,
+          "a": {
+            "numerator": 8897,
+            "denominator": 1281,
+            "value": 6.95,
+            "unit": "yards per attempt"
+          },
+          "b": {
+            "numerator": 6986,
+            "denominator": 941,
+            "value": 7.42,
+            "unit": "yards per attempt"
+          },
+          "diff": -0.47,
+          "unit": "yards per attempt",
+          "n_a": 32,
+          "n_b": 28
+        }
+      },
+      "a_vs_own_baseline": -1.6,
+      "b_vs_own_baseline": -0.1,
+      "sample_label_a": "STRONG SAMPLE",
+      "sample_label_b": "STRONG SAMPLE"
+    },
+    "divisional": {
+      "available": true,
+      "label": "Divisional",
+      "a": {
+        "games": 33,
+        "wins": 29,
+        "losses": 4,
+        "passing_yards_avg": 279.3,
+        "passing_yards_median": 270,
+        "attempts_avg": 39,
+        "completion_pct": {
+          "numerator": 807,
+          "denominator": 1287,
+          "pct": 62.7
+        },
+        "ypa": {
+          "numerator": 9216,
+          "denominator": 1287,
+          "value": 7.16,
+          "unit": "yards per attempt"
+        },
+        "td_rate": {
+          "numerator": 63,
+          "denominator": 1287,
+          "pct": 4.9
+        },
+        "int_rate": {
+          "numerator": 20,
+          "denominator": 1287,
+          "pct": 1.6
+        },
+        "sack_rate": {
+          "numerator": 59,
+          "denominator": 1284,
+          "pct": 4.6
+        },
+        "tds_avg": 1.9,
+        "ints_avg": 0.6,
+        "sample_label": "STRONG SAMPLE"
+      },
+      "b": {
+        "games": 37,
+        "wins": 29,
+        "losses": 8,
+        "passing_yards_avg": 244.4,
+        "passing_yards_median": 239,
+        "attempts_avg": 34.9,
+        "completion_pct": {
+          "numerator": 786,
+          "denominator": 1290,
+          "pct": 60.9
+        },
+        "ypa": {
+          "numerator": 9044,
+          "denominator": 1290,
+          "value": 7.01,
+          "unit": "yards per attempt"
+        },
+        "td_rate": {
+          "numerator": 74,
+          "denominator": 1290,
+          "pct": 5.7
+        },
+        "int_rate": {
+          "numerator": 24,
+          "denominator": 1290,
+          "pct": 1.9
+        },
+        "sack_rate": {
+          "numerator": 66,
+          "denominator": 1285,
+          "pct": 5.1
+        },
+        "tds_avg": 2,
+        "ints_avg": 0.6,
+        "sample_label": "STRONG SAMPLE"
+      },
+      "deltas": {
+        "passing_yards_avg": {
+          "available": true,
+          "a": 279.3,
+          "b": 244.4,
+          "diff": 34.9,
+          "pct": 14.3,
+          "n_a": 33,
+          "n_b": 37,
+          "sample_label_a": "STRONG SAMPLE",
+          "sample_label_b": "STRONG SAMPLE"
+        },
+        "attempts_avg": {
+          "available": true,
+          "a": 39,
+          "b": 34.9,
+          "diff": 4.1,
+          "pct": 11.7,
+          "n_a": 33,
+          "n_b": 37,
+          "sample_label_a": "STRONG SAMPLE",
+          "sample_label_b": "STRONG SAMPLE"
+        },
+        "tds_avg": {
+          "available": true,
+          "a": 1.9,
+          "b": 2,
+          "diff": -0.1,
+          "pct": -5,
+          "n_a": 33,
+          "n_b": 37,
+          "sample_label_a": "STRONG SAMPLE",
+          "sample_label_b": "STRONG SAMPLE"
+        },
+        "ints_avg": {
+          "available": true,
+          "a": 0.6,
+          "b": 0.6,
+          "diff": 0,
+          "pct": 0,
+          "n_a": 33,
+          "n_b": 37,
+          "sample_label_a": "STRONG SAMPLE",
+          "sample_label_b": "STRONG SAMPLE"
+        },
+        "completion_pct": {
+          "available": true,
+          "a": {
+            "numerator": 807,
+            "denominator": 1287,
+            "pct": 62.7
+          },
+          "b": {
+            "numerator": 786,
+            "denominator": 1290,
+            "pct": 60.9
+          },
+          "diff_pts": 1.8,
+          "n_a": 33,
+          "n_b": 37
+        },
+        "td_rate": {
+          "available": true,
+          "a": {
+            "numerator": 63,
+            "denominator": 1287,
+            "pct": 4.9
+          },
+          "b": {
+            "numerator": 74,
+            "denominator": 1290,
+            "pct": 5.7
+          },
+          "diff_pts": -0.8,
+          "n_a": 33,
+          "n_b": 37
+        },
+        "int_rate": {
+          "available": true,
+          "a": {
+            "numerator": 20,
+            "denominator": 1287,
+            "pct": 1.6
+          },
+          "b": {
+            "numerator": 24,
+            "denominator": 1290,
+            "pct": 1.9
+          },
+          "diff_pts": -0.3,
+          "n_a": 33,
+          "n_b": 37
+        },
+        "sack_rate": {
+          "available": true,
+          "a": {
+            "numerator": 59,
+            "denominator": 1284,
+            "pct": 4.6
+          },
+          "b": {
+            "numerator": 66,
+            "denominator": 1285,
+            "pct": 5.1
+          },
+          "diff_pts": -0.5,
+          "n_a": 33,
+          "n_b": 37
+        },
+        "ypa": {
+          "available": true,
+          "a": {
+            "numerator": 9216,
+            "denominator": 1287,
+            "value": 7.16,
+            "unit": "yards per attempt"
+          },
+          "b": {
+            "numerator": 9044,
+            "denominator": 1290,
+            "value": 7.01,
+            "unit": "yards per attempt"
+          },
+          "diff": 0.15,
+          "unit": "yards per attempt",
+          "n_a": 33,
+          "n_b": 37
+        }
+      },
+      "a_vs_own_baseline": -1.2,
+      "b_vs_own_baseline": -2.1,
+      "sample_label_a": "STRONG SAMPLE",
+      "sample_label_b": "STRONG SAMPLE"
+    },
+    "playoffs": {
+      "available": true,
+      "label": "Playoffs",
+      "a": {
+        "games": 19,
+        "wins": 16,
+        "losses": 3,
+        "passing_yards_avg": 275.8,
+        "passing_yards_median": 270,
+        "attempts_avg": 38.2,
+        "completion_pct": {
+          "numerator": 468,
+          "denominator": 725,
+          "pct": 64.6
+        },
+        "ypa": {
+          "numerator": 5241,
+          "denominator": 725,
+          "value": 7.23,
+          "unit": "yards per attempt"
+        },
+        "td_rate": {
+          "numerator": 43,
+          "denominator": 725,
+          "pct": 5.9
+        },
+        "int_rate": {
+          "numerator": 10,
+          "denominator": 725,
+          "pct": 1.4
+        },
+        "sack_rate": {
+          "numerator": 38,
+          "denominator": 724,
+          "pct": 5.2
+        },
+        "tds_avg": 2.3,
+        "ints_avg": 0.5,
+        "sample_label": "MODERATE SAMPLE"
+      },
+      "b": {
+        "games": 13,
+        "wins": 7,
+        "losses": 6,
+        "passing_yards_avg": 258.4,
+        "passing_yards_median": 264,
+        "attempts_avg": 37.8,
+        "completion_pct": {
+          "numerator": 302,
+          "denominator": 492,
+          "pct": 61.4
+        },
+        "ypa": {
+          "numerator": 3359,
+          "denominator": 492,
+          "value": 6.83,
+          "unit": "yards per attempt"
+        },
+        "td_rate": {
+          "numerator": 25,
+          "denominator": 492,
+          "pct": 5.1
+        },
+        "int_rate": {
+          "numerator": 4,
+          "denominator": 492,
+          "pct": 0.8
+        },
+        "sack_rate": {
+          "numerator": 28,
+          "denominator": 491,
+          "pct": 5.7
+        },
+        "tds_avg": 1.9,
+        "ints_avg": 0.3,
+        "sample_label": "MODERATE SAMPLE"
+      },
+      "deltas": {
+        "passing_yards_avg": {
+          "available": true,
+          "a": 275.8,
+          "b": 258.4,
+          "diff": 17.4,
+          "pct": 6.7,
+          "n_a": 19,
+          "n_b": 13,
+          "sample_label_a": "MODERATE SAMPLE",
+          "sample_label_b": "MODERATE SAMPLE"
+        },
+        "attempts_avg": {
+          "available": true,
+          "a": 38.2,
+          "b": 37.8,
+          "diff": 0.4,
+          "pct": 1.1,
+          "n_a": 19,
+          "n_b": 13,
+          "sample_label_a": "MODERATE SAMPLE",
+          "sample_label_b": "MODERATE SAMPLE"
+        },
+        "tds_avg": {
+          "available": true,
+          "a": 2.3,
+          "b": 1.9,
+          "diff": 0.4,
+          "pct": 21.1,
+          "n_a": 19,
+          "n_b": 13,
+          "sample_label_a": "MODERATE SAMPLE",
+          "sample_label_b": "MODERATE SAMPLE"
+        },
+        "ints_avg": {
+          "available": true,
+          "a": 0.5,
+          "b": 0.3,
+          "diff": 0.2,
+          "pct": 66.7,
+          "n_a": 19,
+          "n_b": 13,
+          "sample_label_a": "MODERATE SAMPLE",
+          "sample_label_b": "MODERATE SAMPLE"
+        },
+        "completion_pct": {
+          "available": true,
+          "a": {
+            "numerator": 468,
+            "denominator": 725,
+            "pct": 64.6
+          },
+          "b": {
+            "numerator": 302,
+            "denominator": 492,
+            "pct": 61.4
+          },
+          "diff_pts": 3.2,
+          "n_a": 19,
+          "n_b": 13
+        },
+        "td_rate": {
+          "available": true,
+          "a": {
+            "numerator": 43,
+            "denominator": 725,
+            "pct": 5.9
+          },
+          "b": {
+            "numerator": 25,
+            "denominator": 492,
+            "pct": 5.1
+          },
+          "diff_pts": 0.8,
+          "n_a": 19,
+          "n_b": 13
+        },
+        "int_rate": {
+          "available": true,
+          "a": {
+            "numerator": 10,
+            "denominator": 725,
+            "pct": 1.4
+          },
+          "b": {
+            "numerator": 4,
+            "denominator": 492,
+            "pct": 0.8
+          },
+          "diff_pts": 0.6,
+          "n_a": 19,
+          "n_b": 13
+        },
+        "sack_rate": {
+          "available": true,
+          "a": {
+            "numerator": 38,
+            "denominator": 724,
+            "pct": 5.2
+          },
+          "b": {
+            "numerator": 28,
+            "denominator": 491,
+            "pct": 5.7
+          },
+          "diff_pts": -0.5,
+          "n_a": 19,
+          "n_b": 13
+        },
+        "ypa": {
+          "available": true,
+          "a": {
+            "numerator": 5241,
+            "denominator": 725,
+            "value": 7.23,
+            "unit": "yards per attempt"
+          },
+          "b": {
+            "numerator": 3359,
+            "denominator": 492,
+            "value": 6.83,
+            "unit": "yards per attempt"
+          },
+          "diff": 0.4,
+          "unit": "yards per attempt",
+          "n_a": 19,
+          "n_b": 13
+        }
+      },
+      "a_vs_own_baseline": -2.4,
+      "b_vs_own_baseline": 3.5,
+      "sample_label_a": "MODERATE SAMPLE",
+      "sample_label_b": "MODERATE SAMPLE"
+    },
+    "favorite": {
+      "available": true,
+      "label": "Favorite",
+      "a": {
+        "games": 104,
+        "wins": 84,
+        "losses": 20,
+        "passing_yards_avg": 285,
+        "passing_yards_median": 274,
+        "attempts_avg": 39.2,
+        "completion_pct": {
+          "numerator": 2595,
+          "denominator": 4078,
+          "pct": 63.6
+        },
+        "ypa": {
+          "numerator": 29636,
+          "denominator": 4078,
+          "value": 7.27,
+          "unit": "yards per attempt"
+        },
+        "td_rate": {
+          "numerator": 217,
+          "denominator": 4078,
+          "pct": 5.3
+        },
+        "int_rate": {
+          "numerator": 62,
+          "denominator": 4078,
+          "pct": 1.5
+        },
+        "sack_rate": {
+          "numerator": 178,
+          "denominator": 4071,
+          "pct": 4.4
+        },
+        "tds_avg": 2.1,
+        "ints_avg": 0.6,
+        "sample_label": "STRONG SAMPLE"
+      },
+      "b": {
+        "games": 82,
+        "wins": 65,
+        "losses": 17,
+        "passing_yards_avg": 254.3,
+        "passing_yards_median": 253.5,
+        "attempts_avg": 35.6,
+        "completion_pct": {
+          "numerator": 1818,
+          "denominator": 2916,
+          "pct": 62.3
+        },
+        "ypa": {
+          "numerator": 20855,
+          "denominator": 2916,
+          "value": 7.15,
+          "unit": "yards per attempt"
+        },
+        "td_rate": {
+          "numerator": 164,
+          "denominator": 2916,
+          "pct": 5.6
+        },
+        "int_rate": {
+          "numerator": 60,
+          "denominator": 2916,
+          "pct": 2.1
+        },
+        "sack_rate": {
+          "numerator": 131,
+          "denominator": 2910,
+          "pct": 4.5
+        },
+        "tds_avg": 2,
+        "ints_avg": 0.7,
+        "sample_label": "STRONG SAMPLE"
+      },
+      "deltas": {
+        "passing_yards_avg": {
+          "available": true,
+          "a": 285,
+          "b": 254.3,
+          "diff": 30.7,
+          "pct": 12.1,
+          "n_a": 104,
+          "n_b": 82,
+          "sample_label_a": "STRONG SAMPLE",
+          "sample_label_b": "STRONG SAMPLE"
+        },
+        "attempts_avg": {
+          "available": true,
+          "a": 39.2,
+          "b": 35.6,
+          "diff": 3.6,
+          "pct": 10.1,
+          "n_a": 104,
+          "n_b": 82,
+          "sample_label_a": "STRONG SAMPLE",
+          "sample_label_b": "STRONG SAMPLE"
+        },
+        "tds_avg": {
+          "available": true,
+          "a": 2.1,
+          "b": 2,
+          "diff": 0.1,
+          "pct": 5,
+          "n_a": 104,
+          "n_b": 82,
+          "sample_label_a": "STRONG SAMPLE",
+          "sample_label_b": "STRONG SAMPLE"
+        },
+        "ints_avg": {
+          "available": true,
+          "a": 0.6,
+          "b": 0.7,
+          "diff": -0.1,
+          "pct": -14.3,
+          "n_a": 104,
+          "n_b": 82,
+          "sample_label_a": "STRONG SAMPLE",
+          "sample_label_b": "STRONG SAMPLE"
+        },
+        "completion_pct": {
+          "available": true,
+          "a": {
+            "numerator": 2595,
+            "denominator": 4078,
+            "pct": 63.6
+          },
+          "b": {
+            "numerator": 1818,
+            "denominator": 2916,
+            "pct": 62.3
+          },
+          "diff_pts": 1.3,
+          "n_a": 104,
+          "n_b": 82
+        },
+        "td_rate": {
+          "available": true,
+          "a": {
+            "numerator": 217,
+            "denominator": 4078,
+            "pct": 5.3
+          },
+          "b": {
+            "numerator": 164,
+            "denominator": 2916,
+            "pct": 5.6
+          },
+          "diff_pts": -0.3,
+          "n_a": 104,
+          "n_b": 82
+        },
+        "int_rate": {
+          "available": true,
+          "a": {
+            "numerator": 62,
+            "denominator": 4078,
+            "pct": 1.5
+          },
+          "b": {
+            "numerator": 60,
+            "denominator": 2916,
+            "pct": 2.1
+          },
+          "diff_pts": -0.6,
+          "n_a": 104,
+          "n_b": 82
+        },
+        "sack_rate": {
+          "available": true,
+          "a": {
+            "numerator": 178,
+            "denominator": 4071,
+            "pct": 4.4
+          },
+          "b": {
+            "numerator": 131,
+            "denominator": 2910,
+            "pct": 4.5
+          },
+          "diff_pts": -0.1,
+          "n_a": 104,
+          "n_b": 82
+        },
+        "ypa": {
+          "available": true,
+          "a": {
+            "numerator": 29636,
+            "denominator": 4078,
+            "value": 7.27,
+            "unit": "yards per attempt"
+          },
+          "b": {
+            "numerator": 20855,
+            "denominator": 2916,
+            "value": 7.15,
+            "unit": "yards per attempt"
+          },
+          "diff": 0.12,
+          "unit": "yards per attempt",
+          "n_a": 104,
+          "n_b": 82
+        }
+      },
+      "a_vs_own_baseline": 0.8,
+      "b_vs_own_baseline": 1.8,
+      "sample_label_a": "STRONG SAMPLE",
+      "sample_label_b": "STRONG SAMPLE"
+    },
+    "underdog": {
+      "available": true,
+      "label": "Underdog",
+      "a": {
+        "games": 10,
+        "wins": 8,
+        "losses": 2,
+        "passing_yards_avg": 257.6,
+        "passing_yards_median": 245,
+        "attempts_avg": 37,
+        "completion_pct": {
+          "numerator": 246,
+          "denominator": 370,
+          "pct": 66.5
+        },
+        "ypa": {
+          "numerator": 2576,
+          "denominator": 370,
+          "value": 6.96,
+          "unit": "yards per attempt"
+        },
+        "td_rate": {
+          "numerator": 21,
+          "denominator": 370,
+          "pct": 5.7
+        },
+        "int_rate": {
+          "numerator": 9,
+          "denominator": 370,
+          "pct": 2.4
+        },
+        "sack_rate": {
+          "numerator": 16,
+          "denominator": 370,
+          "pct": 4.3
+        },
+        "tds_avg": 2.1,
+        "ints_avg": 0.9,
+        "sample_label": "MODERATE SAMPLE"
+      },
+      "b": {
+        "games": 29,
+        "wins": 13,
+        "losses": 16,
+        "passing_yards_avg": 236.7,
+        "passing_yards_median": 237,
+        "attempts_avg": 36.4,
+        "completion_pct": {
+          "numerator": 611,
+          "denominator": 1057,
+          "pct": 57.8
+        },
+        "ypa": {
+          "numerator": 6864,
+          "denominator": 1057,
+          "value": 6.49,
+          "unit": "yards per attempt"
+        },
+        "td_rate": {
+          "numerator": 46,
+          "denominator": 1057,
+          "pct": 4.4
+        },
+        "int_rate": {
+          "numerator": 16,
+          "denominator": 1057,
+          "pct": 1.5
+        },
+        "sack_rate": {
+          "numerator": 58,
+          "denominator": 1054,
+          "pct": 5.5
+        },
+        "tds_avg": 1.6,
+        "ints_avg": 0.6,
+        "sample_label": "STRONG SAMPLE"
+      },
+      "deltas": {
+        "passing_yards_avg": {
+          "available": true,
+          "a": 257.6,
+          "b": 236.7,
+          "diff": 20.9,
+          "pct": 8.8,
+          "n_a": 10,
+          "n_b": 29,
+          "sample_label_a": "MODERATE SAMPLE",
+          "sample_label_b": "STRONG SAMPLE"
+        },
+        "attempts_avg": {
+          "available": true,
+          "a": 37,
+          "b": 36.4,
+          "diff": 0.6,
+          "pct": 1.6,
+          "n_a": 10,
+          "n_b": 29,
+          "sample_label_a": "MODERATE SAMPLE",
+          "sample_label_b": "STRONG SAMPLE"
+        },
+        "tds_avg": {
+          "available": true,
+          "a": 2.1,
+          "b": 1.6,
+          "diff": 0.5,
+          "pct": 31.3,
+          "n_a": 10,
+          "n_b": 29,
+          "sample_label_a": "MODERATE SAMPLE",
+          "sample_label_b": "STRONG SAMPLE"
+        },
+        "ints_avg": {
+          "available": true,
+          "a": 0.9,
+          "b": 0.6,
+          "diff": 0.3,
+          "pct": 50,
+          "n_a": 10,
+          "n_b": 29,
+          "sample_label_a": "MODERATE SAMPLE",
+          "sample_label_b": "STRONG SAMPLE"
+        },
+        "completion_pct": {
+          "available": true,
+          "a": {
+            "numerator": 246,
+            "denominator": 370,
+            "pct": 66.5
+          },
+          "b": {
+            "numerator": 611,
+            "denominator": 1057,
+            "pct": 57.8
+          },
+          "diff_pts": 8.7,
+          "n_a": 10,
+          "n_b": 29
+        },
+        "td_rate": {
+          "available": true,
+          "a": {
+            "numerator": 21,
+            "denominator": 370,
+            "pct": 5.7
+          },
+          "b": {
+            "numerator": 46,
+            "denominator": 1057,
+            "pct": 4.4
+          },
+          "diff_pts": 1.3,
+          "n_a": 10,
+          "n_b": 29
+        },
+        "int_rate": {
+          "available": true,
+          "a": {
+            "numerator": 9,
+            "denominator": 370,
+            "pct": 2.4
+          },
+          "b": {
+            "numerator": 16,
+            "denominator": 1057,
+            "pct": 1.5
+          },
+          "diff_pts": 0.9,
+          "n_a": 10,
+          "n_b": 29
+        },
+        "sack_rate": {
+          "available": true,
+          "a": {
+            "numerator": 16,
+            "denominator": 370,
+            "pct": 4.3
+          },
+          "b": {
+            "numerator": 58,
+            "denominator": 1054,
+            "pct": 5.5
+          },
+          "diff_pts": -1.2,
+          "n_a": 10,
+          "n_b": 29
+        },
+        "ypa": {
+          "available": true,
+          "a": {
+            "numerator": 2576,
+            "denominator": 370,
+            "value": 6.96,
+            "unit": "yards per attempt"
+          },
+          "b": {
+            "numerator": 6864,
+            "denominator": 1057,
+            "value": 6.49,
+            "unit": "yards per attempt"
+          },
+          "diff": 0.47,
+          "unit": "yards per attempt",
+          "n_a": 10,
+          "n_b": 29
+        }
+      },
+      "a_vs_own_baseline": -8.8,
+      "b_vs_own_baseline": -5.2,
+      "sample_label_a": "MODERATE SAMPLE",
+      "sample_label_b": "STRONG SAMPLE"
+    }
+  },
+  "provenance": {
+    "dataset_generated_at": "2026-09-05T15:03:12Z",
+    "seasons": [
+      2019,
+      2020,
+      2021,
+      2022,
+      2023,
+      2024
+    ],
+    "qb_games_in_dataset": 3522,
+    "sources": [
+      {
+        "name": "nflverse play_by_play + participation + players",
+        "url": "https://github.com/nflverse/nflverse-data",
+        "licence": "CC-BY-4.0",
+        "attribution": "Data by nflverse, CC BY 4.0"
+      },
+      {
+        "name": "ESPN public team/venue endpoints",
+        "url": "https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams"
+      },
+      {
+        "name": "Open-Meteo historical archive",
+        "url": "https://archive-api.open-meteo.com/v1/archive",
+        "licence": "CC-BY-4.0",
+        "attribution": "Weather data by Open-Meteo.com, CC BY 4.0"
+      }
+    ],
+    "field_availability_by_season": {
+      "2019": {
+        "offense_formation": 73.1,
+        "offense_personnel": 76.1,
+        "defense_personnel": 76.1,
+        "defenders_in_box": 74.2,
+        "number_of_pass_rushers": 43.3,
+        "ngs_air_yards": 37.1,
+        "time_to_throw": 38.5,
+        "was_pressure": 38.5,
+        "route": 37,
+        "defense_man_zone_type": 38.5,
+        "defense_coverage_type": 38.5
+      },
+      "2020": {
+        "offense_formation": 73.1,
+        "offense_personnel": 76.1,
+        "defense_personnel": 76.1,
+        "defenders_in_box": 74.4,
+        "number_of_pass_rushers": 43.5,
+        "ngs_air_yards": 37.6,
+        "time_to_throw": 39,
+        "was_pressure": 39,
+        "route": 37.5,
+        "defense_man_zone_type": 39,
+        "defense_coverage_type": 39
+      },
+      "2021": {
+        "offense_formation": 73,
+        "offense_personnel": 76.2,
+        "defense_personnel": 76.2,
+        "defenders_in_box": 74.4,
+        "number_of_pass_rushers": 43.3,
+        "ngs_air_yards": 37.4,
+        "time_to_throw": 38.6,
+        "was_pressure": 38.6,
+        "route": 37.3,
+        "defense_man_zone_type": 38.7,
+        "defense_coverage_type": 38.7
+      },
+      "2022": {
+        "offense_formation": 73.4,
+        "offense_personnel": 76.2,
+        "defense_personnel": 76.2,
+        "defenders_in_box": 74.4,
+        "number_of_pass_rushers": 42.7,
+        "ngs_air_yards": 36.3,
+        "time_to_throw": 37.8,
+        "was_pressure": 37.8,
+        "route": 36.2,
+        "defense_man_zone_type": 37.8,
+        "defense_coverage_type": 37.8
+      },
+      "2023": {
+        "offense_formation": 80.1,
+        "offense_personnel": 100,
+        "defense_personnel": 100,
+        "defenders_in_box": 100,
+        "number_of_pass_rushers": 97.2,
+        "ngs_air_yards": 0,
+        "time_to_throw": 44,
+        "was_pressure": 100,
+        "route": 42.5,
+        "defense_man_zone_type": 49.6,
+        "defense_coverage_type": 49.6
+      },
+      "2024": {
+        "offense_formation": null,
+        "offense_personnel": null,
+        "defense_personnel": null,
+        "defenders_in_box": null,
+        "number_of_pass_rushers": null,
+        "ngs_air_yards": null,
+        "time_to_throw": null,
+        "was_pressure": null,
+        "route": null,
+        "defense_man_zone_type": null,
+        "defense_coverage_type": null
+      }
+    },
+    "notes": [
+      "Sample labels describe SIZE ONLY. They are not claims of statistical significance.",
+      "Roofed and closed-roof games are excluded from outdoor weather splits by construction.",
+      "A split whose inputs are missing reports available:false. It never reports zero."
+    ]
+  }
+}
