@@ -57,8 +57,33 @@ function side(comp,where){
   const c=A(comp?.competitors).find(x=>x?.homeAway===where)||{};const t=c.team||{};
   return {id:F(t.id,c.id),abbreviation:F(t.abbreviation,t.shortDisplayName),display_name:F(t.displayName,t.name,t.shortDisplayName),short_name:F(t.shortDisplayName,t.name),location:F(t.location),color:F(t.color),alternate_color:F(t.alternateColor),logo:logo(t),score:N(c.score),winner:Boolean(c.winner),possession:Boolean(c.possession),records:A(c.records).map(r=>({name:r.name,summary:r.summary,type:r.type}))};
 }
+/* ADDITIVE, 2026-09-05. Five fields the upstream package has always carried and
+   this normalizer dropped. Nothing existing is renamed or changed; every field
+   below is new, and every one is null-safe for consumers that ignore them.
+
+   Audited across 59 completed games / 10,832 plays before adding:
+     stat_yardage   100% present. The play's OFFICIAL yardage. It is NOT the
+                    same as the start->end yards_to_endzone delta: the delta
+                    matched it on 81% of same-possession plays and 3% of
+                    possession-change plays, because `end` is the NEXT SNAP spot
+                    after enforcement while stat_yardage is the play's own
+                    result. On a kick it is the KICK DISTANCE
+                    (= start.yards_to_endzone + 18 on 212 of 253 field goals),
+                    never field advance.
+     is_turnover    100% present. TRUE implies possession changed -- 122 true,
+                    0 of them with an unchanged frame. FALSE does NOT imply
+                    possession held: 1,159 plays changed frame without it
+                    (kickoffs 529, punts 433, turnovers on downs, FG misses).
+                    start.team_id !== end.team_id is the necessary test.
+     is_penalty     100% present. A per-play flag, not a play type: 463 true,
+                    of which 59 sit on Rush / Pass / Kickoff / Punt plays.
+     start.team_id  98.4% present.
+     end.team_id    99.9% present. Consumers must handle absence.
+
+   Kept null rather than coerced to 0 where the upstream value is missing, so a
+   consumer can tell "not reported" from "zero". */
 function play(p){
-  return {id:S(F(p?.id,p?.sequenceNumber,p?.text)),sequence:N(F(p?.sequenceNumber,p?.id)),text:F(p?.text,p?.shortText,p?.type?.text),short_text:F(p?.shortText,p?.text),type:F(p?.type?.text,p?.type?.abbreviation),type_id:F(p?.type?.id),period:N(F(p?.period?.number,p?.period)),clock:F(p?.clock?.displayValue,p?.displayClock),wallclock:F(p?.wallclock),scoring_play:Boolean(p?.scoringPlay),score_value:N(p?.scoreValue),team:{id:F(p?.team?.id),abbreviation:F(p?.team?.abbreviation),display_name:F(p?.team?.displayName,p?.team?.name),logo:logo(p?.team)},start:{down:N(p?.start?.down),distance:N(p?.start?.distance),yard_line:N(p?.start?.yardLine),yards_to_endzone:N(p?.start?.yardsToEndzone),possession_text:F(p?.start?.possessionText),down_distance_text:F(p?.start?.shortDownDistanceText,p?.start?.downDistanceText)},end:{down:N(p?.end?.down),distance:N(p?.end?.distance),yard_line:N(p?.end?.yardLine),yards_to_endzone:N(p?.end?.yardsToEndzone),possession_text:F(p?.end?.possessionText),down_distance_text:F(p?.end?.shortDownDistanceText,p?.end?.downDistanceText)},home_score:N(p?.homeScore),away_score:N(p?.awayScore),participants:A(p?.participants).map(x=>({id:F(x?.athlete?.id,x?.id),name:F(x?.athlete?.displayName,x?.athlete?.fullName,x?.displayName),short_name:F(x?.athlete?.shortName),headshot:headshot(x?.athlete),position:F(x?.athlete?.position?.abbreviation,x?.position?.abbreviation),role:F(x?.type?.text,x?.type?.abbreviation,typeof x?.type==='string'?x.type:null)})).filter(x=>x.id||x.name)};
+  return {id:S(F(p?.id,p?.sequenceNumber,p?.text)),sequence:N(F(p?.sequenceNumber,p?.id)),text:F(p?.text,p?.shortText,p?.type?.text),short_text:F(p?.shortText,p?.text),type:F(p?.type?.text,p?.type?.abbreviation),type_id:F(p?.type?.id),period:N(F(p?.period?.number,p?.period)),clock:F(p?.clock?.displayValue,p?.displayClock),wallclock:F(p?.wallclock),scoring_play:Boolean(p?.scoringPlay),stat_yardage:N(p?.statYardage),is_turnover:p?.isTurnover===undefined||p?.isTurnover===null?null:Boolean(p.isTurnover),is_penalty:p?.isPenalty===undefined||p?.isPenalty===null?null:Boolean(p.isPenalty),score_value:N(p?.scoreValue),team:{id:F(p?.team?.id),abbreviation:F(p?.team?.abbreviation),display_name:F(p?.team?.displayName,p?.team?.name),logo:logo(p?.team)},start:{down:N(p?.start?.down),distance:N(p?.start?.distance),yard_line:N(p?.start?.yardLine),yards_to_endzone:N(p?.start?.yardsToEndzone),possession_text:F(p?.start?.possessionText),down_distance_text:F(p?.start?.shortDownDistanceText,p?.start?.downDistanceText),team_id:F(p?.start?.team?.id)},end:{down:N(p?.end?.down),distance:N(p?.end?.distance),yard_line:N(p?.end?.yardLine),yards_to_endzone:N(p?.end?.yardsToEndzone),possession_text:F(p?.end?.possessionText),down_distance_text:F(p?.end?.shortDownDistanceText,p?.end?.downDistanceText),team_id:F(p?.end?.team?.id)},home_score:N(p?.homeScore),away_score:N(p?.awayScore),participants:A(p?.participants).map(x=>({id:F(x?.athlete?.id,x?.id),name:F(x?.athlete?.displayName,x?.athlete?.fullName,x?.displayName),short_name:F(x?.athlete?.shortName),headshot:headshot(x?.athlete),position:F(x?.athlete?.position?.abbreviation,x?.position?.abbreviation),role:F(x?.type?.text,x?.type?.abbreviation,typeof x?.type==='string'?x.type:null)})).filter(x=>x.id||x.name)};
 }
 function game(event){
   const c=competition(event),status=c.status||event?.status||{},sit=c.situation||{},away=side(c,'away'),home=side(c,'home');

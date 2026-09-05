@@ -1,0 +1,1487 @@
+{
+ "rush": {
+  "game": 401671600,
+  "raw": {
+   "sequenceNumber": "7900",
+   "period": {
+    "number": 1
+   },
+   "homeScore": 0,
+   "start": {
+    "shortDownDistanceText": "2nd & 7",
+    "possessionText": "DEN 33",
+    "downDistanceText": "2nd & 7 at DEN 33",
+    "distance": 7,
+    "yardLine": 33,
+    "team": {
+     "id": "7"
+    },
+    "down": 2,
+    "yardsToEndzone": 67
+   },
+   "scoringPlay": false,
+   "clock": {
+    "displayValue": "14:25"
+   },
+   "type": {
+    "id": "5",
+    "text": "Rush",
+    "abbreviation": "RUSH"
+   },
+   "priority": false,
+   "statYardage": 7,
+   "awayScore": 0,
+   "wallclock": "2024-10-27T20:26:35Z",
+   "isTurnover": false,
+   "modified": "2024-10-28T05:41Z",
+   "teamParticipants": [
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.pvt/v2/sports/football/leagues/nfl/seasons/2024/teams/7?lang=en&region=us"
+     },
+     "id": "7",
+     "type": "offense",
+     "order": 1
+    },
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.pvt/v2/sports/football/leagues/nfl/seasons/2024/teams/29?lang=en&region=us"
+     },
+     "id": "29",
+     "type": "defense",
+     "order": 2
+    }
+   ],
+   "end": {
+    "shortDownDistanceText": "1st & 10",
+    "possessionText": "DEN 40",
+    "downDistanceText": "1st & 10 at DEN 40",
+    "distance": 10,
+    "yardLine": 40,
+    "team": {
+     "id": "7"
+    },
+    "down": 1,
+    "yardsToEndzone": 60
+   },
+   "id": "40167160079",
+   "text": "(Shotgun) J.McLaughlin right end pushed ob at DEN 40 for 7 yards (X.Woods).",
+   "isPenalty": false
+  },
+  "drive": {
+   "id": "4016716001",
+   "team": {
+    "id": "7",
+    "abbreviation": "DEN",
+    "display_name": "Denver Broncos"
+   },
+   "result": "Fumble"
+  },
+  "teams": {
+   "home": {
+    "id": "7",
+    "abbreviation": "DEN",
+    "color": "0a2343"
+   },
+   "away": {
+    "id": "29",
+    "abbreviation": "CAR",
+    "color": "0085ca"
+   }
+  }
+ },
+ "pass_complete": {
+  "game": 401671600,
+  "raw": {
+   "sequenceNumber": "38800",
+   "period": {
+    "number": 1
+   },
+   "homeScore": 0,
+   "start": {
+    "shortDownDistanceText": "2nd & Goal",
+    "possessionText": "DEN 19",
+    "downDistanceText": "2nd & Goal at DEN 19",
+    "distance": 19,
+    "yardLine": 19,
+    "team": {
+     "id": "29"
+    },
+    "down": 2,
+    "yardsToEndzone": 19
+   },
+   "scoringPlay": false,
+   "clock": {
+    "displayValue": "8:02"
+   },
+   "type": {
+    "id": "24",
+    "text": "Pass Reception",
+    "abbreviation": "REC"
+   },
+   "priority": false,
+   "statYardage": 13,
+   "awayScore": 0,
+   "wallclock": "2024-10-27T20:34:53Z",
+   "isTurnover": false,
+   "modified": "2024-10-28T05:41Z",
+   "teamParticipants": [
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.pvt/v2/sports/football/leagues/nfl/seasons/2024/teams/29?lang=en&region=us"
+     },
+     "id": "29",
+     "type": "offense",
+     "order": 1
+    },
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.pvt/v2/sports/football/leagues/nfl/seasons/2024/teams/7?lang=en&region=us"
+     },
+     "id": "7",
+     "type": "defense",
+     "order": 2
+    }
+   ],
+   "end": {
+    "shortDownDistanceText": "3rd & 10",
+    "possessionText": "DEN 6",
+    "downDistanceText": "3rd & 10 at DEN 6",
+    "distance": 10,
+    "yardLine": 6,
+    "team": {
+     "id": "29"
+    },
+    "down": 3,
+    "yardsToEndzone": 6
+   },
+   "id": "401671600388",
+   "text": "(Shotgun) B.Young pass short left to C.Hubbard to DEN 6 for 13 yards (D.Key).",
+   "isPenalty": false
+  },
+  "drive": {
+   "id": "4016716002",
+   "team": {
+    "id": "29",
+    "abbreviation": "CAR",
+    "display_name": "Carolina Panthers"
+   },
+   "result": "Touchdown"
+  },
+  "teams": {
+   "home": {
+    "id": "7",
+    "abbreviation": "DEN",
+    "color": "0a2343"
+   },
+   "away": {
+    "id": "29",
+    "abbreviation": "CAR",
+    "color": "0085ca"
+   }
+  }
+ },
+ "incomplete": {
+  "game": 401671600,
+  "raw": {
+   "sequenceNumber": "66000",
+   "period": {
+    "number": 1
+   },
+   "homeScore": 0,
+   "start": {
+    "shortDownDistanceText": "2nd & 5",
+    "possessionText": "CAR 28",
+    "downDistanceText": "2nd & 5 at CAR 28",
+    "distance": 5,
+    "yardLine": 72,
+    "team": {
+     "id": "7"
+    },
+    "down": 2,
+    "yardsToEndzone": 41
+   },
+   "scoringPlay": false,
+   "clock": {
+    "displayValue": "3:01"
+   },
+   "type": {
+    "id": "3",
+    "text": "Pass Incompletion"
+   },
+   "priority": false,
+   "statYardage": 0,
+   "awayScore": 7,
+   "wallclock": "2024-10-27T20:44:45Z",
+   "isTurnover": false,
+   "modified": "2024-10-28T05:41Z",
+   "teamParticipants": [
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.pvt/v2/sports/football/leagues/nfl/seasons/2024/teams/7?lang=en&region=us"
+     },
+     "id": "7",
+     "type": "offense",
+     "order": 1
+    },
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.pvt/v2/sports/football/leagues/nfl/seasons/2024/teams/29?lang=en&region=us"
+     },
+     "id": "29",
+     "type": "defense",
+     "order": 2
+    }
+   ],
+   "end": {
+    "shortDownDistanceText": "3rd & 18",
+    "possessionText": "CAR 28",
+    "downDistanceText": "3rd & 18 at CAR 28",
+    "distance": 18,
+    "yardLine": 72,
+    "team": {
+     "id": "7"
+    },
+    "down": 3,
+    "yardsToEndzone": 28
+   },
+   "id": "401671600660",
+   "text": "(Shotgun) B.Nix pass incomplete short right to C.Sutton (J.Horn).",
+   "isPenalty": false
+  },
+  "drive": {
+   "id": "4016716003",
+   "team": {
+    "id": "7",
+    "abbreviation": "DEN",
+    "display_name": "Denver Broncos"
+   },
+   "result": "Punt"
+  },
+  "teams": {
+   "home": {
+    "id": "7",
+    "abbreviation": "DEN",
+    "color": "0a2343"
+   },
+   "away": {
+    "id": "29",
+    "abbreviation": "CAR",
+    "color": "0085ca"
+   }
+  }
+ },
+ "sack": {
+  "game": 401671600,
+  "raw": {
+   "sequenceNumber": "68300",
+   "period": {
+    "number": 1
+   },
+   "homeScore": 0,
+   "start": {
+    "shortDownDistanceText": "3rd & 5",
+    "possessionText": "CAR 28",
+    "downDistanceText": "3rd & 5 at CAR 28",
+    "distance": 5,
+    "yardLine": 72,
+    "team": {
+     "id": "7"
+    },
+    "down": 3,
+    "yardsToEndzone": 28
+   },
+   "scoringPlay": false,
+   "clock": {
+    "displayValue": "2:56"
+   },
+   "type": {
+    "id": "7",
+    "text": "Sack"
+   },
+   "priority": false,
+   "statYardage": -13,
+   "awayScore": 7,
+   "wallclock": "2024-10-27T20:45:26Z",
+   "isTurnover": false,
+   "modified": "2024-10-28T05:41Z",
+   "teamParticipants": [
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.pvt/v2/sports/football/leagues/nfl/seasons/2024/teams/7?lang=en&region=us"
+     },
+     "id": "7",
+     "type": "offense",
+     "order": 1
+    },
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.pvt/v2/sports/football/leagues/nfl/seasons/2024/teams/29?lang=en&region=us"
+     },
+     "id": "29",
+     "type": "defense",
+     "order": 2
+    }
+   ],
+   "end": {
+    "shortDownDistanceText": "4th & 10",
+    "possessionText": "CAR 41",
+    "downDistanceText": "4th & 10 at CAR 41",
+    "distance": 10,
+    "yardLine": 59,
+    "team": {
+     "id": "7"
+    },
+    "down": 4,
+    "yardsToEndzone": 41
+   },
+   "id": "401671600683",
+   "text": "(Shotgun) B.Nix sacked at CAR 41 for -13 yards (A.Robinson).",
+   "isPenalty": false
+  },
+  "drive": {
+   "id": "4016716003",
+   "team": {
+    "id": "7",
+    "abbreviation": "DEN",
+    "display_name": "Denver Broncos"
+   },
+   "result": "Punt"
+  },
+  "teams": {
+   "home": {
+    "id": "7",
+    "abbreviation": "DEN",
+    "color": "0a2343"
+   },
+   "away": {
+    "id": "29",
+    "abbreviation": "CAR",
+    "color": "0085ca"
+   }
+  }
+ },
+ "interception": {
+  "game": 401671600,
+  "raw": {
+   "sequenceNumber": "305300",
+   "period": {
+    "number": 3
+   },
+   "homeScore": 28,
+   "start": {
+    "shortDownDistanceText": "4th & 5",
+    "possessionText": "DEN 25",
+    "downDistanceText": "4th & 5 at DEN 25",
+    "distance": 5,
+    "yardLine": 25,
+    "team": {
+     "id": "29"
+    },
+    "down": 4,
+    "yardsToEndzone": 25
+   },
+   "scoringPlay": false,
+   "clock": {
+    "displayValue": "2:54"
+   },
+   "type": {
+    "id": "26",
+    "text": "Pass Interception Return",
+    "abbreviation": "INTR"
+   },
+   "priority": false,
+   "statYardage": 28,
+   "awayScore": 7,
+   "wallclock": "2024-10-27T22:37:20Z",
+   "isTurnover": true,
+   "modified": "2024-10-28T05:41Z",
+   "teamParticipants": [
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.pvt/v2/sports/football/leagues/nfl/seasons/2024/teams/7?lang=en&region=us"
+     },
+     "id": "7",
+     "type": "defense",
+     "order": 1
+    },
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.pvt/v2/sports/football/leagues/nfl/seasons/2024/teams/29?lang=en&region=us"
+     },
+     "id": "29",
+     "type": "offense",
+     "order": 2
+    }
+   ],
+   "end": {
+    "shortDownDistanceText": "1st & 10",
+    "possessionText": "DEN 39",
+    "downDistanceText": "1st & 10 at DEN 39",
+    "distance": 10,
+    "yardLine": 39,
+    "team": {
+     "id": "7"
+    },
+    "down": 1,
+    "yardsToEndzone": 61
+   },
+   "id": "4016716003053",
+   "text": "(Shotgun) B.Young pass short right intended for T.Tremble INTERCEPTED by P.Surtain at DEN 11. P.Surtain pushed ob at DEN 39 for 28 yards (X.Legette).",
+   "isPenalty": false
+  },
+  "drive": {
+   "id": "40167160016",
+   "team": {
+    "id": "29",
+    "abbreviation": "CAR",
+    "display_name": "Carolina Panthers"
+   },
+   "result": "Interception"
+  },
+  "teams": {
+   "home": {
+    "id": "7",
+    "abbreviation": "DEN",
+    "color": "0a2343"
+   },
+   "away": {
+    "id": "29",
+    "abbreviation": "CAR",
+    "color": "0085ca"
+   }
+  }
+ },
+ "fumble_lost": {
+  "game": 401671600,
+  "raw": {
+   "sequenceNumber": "10600",
+   "period": {
+    "number": 1
+   },
+   "homeScore": 0,
+   "start": {
+    "shortDownDistanceText": "1st & 10",
+    "possessionText": "DEN 40",
+    "downDistanceText": "1st & 10 at DEN 40",
+    "distance": 10,
+    "yardLine": 40,
+    "team": {
+     "id": "7"
+    },
+    "down": 1,
+    "yardsToEndzone": 60
+   },
+   "scoringPlay": false,
+   "clock": {
+    "displayValue": "13:50"
+   },
+   "type": {
+    "id": "29",
+    "text": "Fumble Recovery (Opponent)"
+   },
+   "priority": false,
+   "statYardage": 8,
+   "awayScore": 0,
+   "wallclock": "2024-10-27T20:27:13Z",
+   "isTurnover": true,
+   "modified": "2024-10-28T05:41Z",
+   "teamParticipants": [
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.pvt/v2/sports/football/leagues/nfl/seasons/2024/teams/29?lang=en&region=us"
+     },
+     "id": "29",
+     "type": "defense",
+     "order": 1
+    },
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.pvt/v2/sports/football/leagues/nfl/seasons/2024/teams/7?lang=en&region=us"
+     },
+     "id": "7",
+     "type": "offense",
+     "order": 2
+    }
+   ],
+   "end": {
+    "shortDownDistanceText": "1st & 10",
+    "possessionText": "DEN 49",
+    "downDistanceText": "1st & 10 at DEN 49",
+    "distance": 10,
+    "yardLine": 49,
+    "team": {
+     "id": "29"
+    },
+    "down": 1,
+    "yardsToEndzone": 49
+   },
+   "id": "401671600106",
+   "text": "(Shotgun) B.Nix pass short left to L.Humphrey to DEN 48 for 8 yards (S.Tuttle). FUMBLES (S.Tuttle), RECOVERED by CAR-S.Tuttle at DEN 49.",
+   "isPenalty": false
+  },
+  "drive": {
+   "id": "4016716001",
+   "team": {
+    "id": "7",
+    "abbreviation": "DEN",
+    "display_name": "Denver Broncos"
+   },
+   "result": "Fumble"
+  },
+  "teams": {
+   "home": {
+    "id": "7",
+    "abbreviation": "DEN",
+    "color": "0a2343"
+   },
+   "away": {
+    "id": "29",
+    "abbreviation": "CAR",
+    "color": "0085ca"
+   }
+  }
+ },
+ "touchdown_pass": {
+  "game": 401671600,
+  "raw": {
+   "sequenceNumber": "41300",
+   "period": {
+    "number": 1
+   },
+   "homeScore": 0,
+   "scoringType": {
+    "displayName": "Touchdown",
+    "name": "touchdown",
+    "abbreviation": "TD"
+   },
+   "start": {
+    "shortDownDistanceText": "3rd & Goal",
+    "possessionText": "DEN 6",
+    "downDistanceText": "3rd & Goal at DEN 6",
+    "distance": 6,
+    "yardLine": 6,
+    "team": {
+     "id": "29"
+    },
+    "down": 3,
+    "yardsToEndzone": 6
+   },
+   "scoringPlay": true,
+   "clock": {
+    "displayValue": "7:12"
+   },
+   "type": {
+    "id": "67",
+    "text": "Passing Touchdown",
+    "abbreviation": "TD"
+   },
+   "priority": false,
+   "statYardage": 6,
+   "awayScore": 7,
+   "wallclock": "2024-10-27T20:35:41Z",
+   "isTurnover": false,
+   "modified": "2024-10-28T05:41Z",
+   "teamParticipants": [
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.pvt/v2/sports/football/leagues/nfl/seasons/2024/teams/29?lang=en&region=us"
+     },
+     "id": "29",
+     "type": "offense",
+     "order": 1
+    },
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.pvt/v2/sports/football/leagues/nfl/seasons/2024/teams/7?lang=en&region=us"
+     },
+     "id": "7",
+     "type": "defense",
+     "order": 2
+    }
+   ],
+   "end": {
+    "distance": 10,
+    "yardLine": 0,
+    "team": {
+     "id": "29"
+    },
+    "down": -1,
+    "yardsToEndzone": 15
+   },
+   "pointAfterAttempt": {
+    "id": 61,
+    "text": "Extra Point Good",
+    "abbreviation": "Extra Point Good",
+    "value": 1
+   },
+   "id": "401671600413",
+   "text": "(Shotgun) B.Young pass short middle to X.Legette for 6 yards, TOUCHDOWN [J.Franklin-Myers].E.Pineiro extra point is GOOD, Center-J.Jansen, Holder-J.Hekker.",
+   "isPenalty": false
+  },
+  "drive": {
+   "id": "4016716002",
+   "team": {
+    "id": "29",
+    "abbreviation": "CAR",
+    "display_name": "Carolina Panthers"
+   },
+   "result": "Touchdown"
+  },
+  "teams": {
+   "home": {
+    "id": "7",
+    "abbreviation": "DEN",
+    "color": "0a2343"
+   },
+   "away": {
+    "id": "29",
+    "abbreviation": "CAR",
+    "color": "0085ca"
+   }
+  }
+ },
+ "touchdown_rush": {
+  "game": 401671600,
+  "raw": {
+   "sequenceNumber": "194000",
+   "period": {
+    "number": 2
+   },
+   "homeScore": 21,
+   "scoringType": {
+    "displayName": "Touchdown",
+    "name": "touchdown",
+    "abbreviation": "TD"
+   },
+   "start": {
+    "shortDownDistanceText": "3rd & Goal",
+    "possessionText": "CAR 1",
+    "downDistanceText": "3rd & Goal at CAR 1",
+    "distance": 1,
+    "yardLine": 99,
+    "team": {
+     "id": "7"
+    },
+    "down": 3,
+    "yardsToEndzone": 1
+   },
+   "scoringPlay": true,
+   "clock": {
+    "displayValue": "1:12"
+   },
+   "type": {
+    "id": "68",
+    "text": "Rushing Touchdown",
+    "abbreviation": "TD"
+   },
+   "priority": false,
+   "statYardage": 1,
+   "awayScore": 7,
+   "wallclock": "2024-10-27T21:41:34Z",
+   "isTurnover": false,
+   "modified": "2024-10-28T05:41Z",
+   "teamParticipants": [
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.pvt/v2/sports/football/leagues/nfl/seasons/2024/teams/7?lang=en&region=us"
+     },
+     "id": "7",
+     "type": "offense",
+     "order": 1
+    },
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.pvt/v2/sports/football/leagues/nfl/seasons/2024/teams/29?lang=en&region=us"
+     },
+     "id": "29",
+     "type": "defense",
+     "order": 2
+    }
+   ],
+   "end": {
+    "distance": 13,
+    "yardLine": 100,
+    "team": {
+     "id": "7"
+    },
+    "down": -1,
+    "yardsToEndzone": 15
+   },
+   "pointAfterAttempt": {
+    "id": 61,
+    "text": "Extra Point Good",
+    "abbreviation": "Extra Point Good",
+    "value": 1
+   },
+   "id": "4016716001940",
+   "text": "B.Nix up the middle for 1 yard, TOUCHDOWN.W.Lutz extra point is GOOD, Center-M.Fraboni, Holder-R.Dixon.",
+   "isPenalty": false
+  },
+  "drive": {
+   "id": "4016716009",
+   "team": {
+    "id": "7",
+    "abbreviation": "DEN",
+    "display_name": "Denver Broncos"
+   },
+   "result": "Touchdown"
+  },
+  "teams": {
+   "home": {
+    "id": "7",
+    "abbreviation": "DEN",
+    "color": "0a2343"
+   },
+   "away": {
+    "id": "29",
+    "abbreviation": "CAR",
+    "color": "0085ca"
+   }
+  }
+ },
+ "punt": {
+  "game": 401671600,
+  "raw": {
+   "sequenceNumber": "70300",
+   "period": {
+    "number": 1
+   },
+   "homeScore": 0,
+   "start": {
+    "shortDownDistanceText": "4th & 18",
+    "possessionText": "CAR 41",
+    "downDistanceText": "4th & 18 at CAR 41",
+    "distance": 18,
+    "yardLine": 59,
+    "team": {
+     "id": "7"
+    },
+    "down": 4,
+    "yardsToEndzone": 41
+   },
+   "scoringPlay": false,
+   "clock": {
+    "displayValue": "2:04"
+   },
+   "type": {
+    "id": "52",
+    "text": "Punt",
+    "abbreviation": "PUNT"
+   },
+   "priority": false,
+   "statYardage": 0,
+   "awayScore": 7,
+   "wallclock": "2024-10-27T20:46:18Z",
+   "isTurnover": false,
+   "modified": "2024-10-28T05:41Z",
+   "teamParticipants": [
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.pvt/v2/sports/football/leagues/nfl/seasons/2024/teams/29?lang=en&region=us"
+     },
+     "id": "29",
+     "type": "defense",
+     "order": 1
+    },
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.pvt/v2/sports/football/leagues/nfl/seasons/2024/teams/7?lang=en&region=us"
+     },
+     "id": "7",
+     "type": "offense",
+     "order": 2
+    }
+   ],
+   "end": {
+    "shortDownDistanceText": "1st & 10",
+    "possessionText": "CAR 1",
+    "downDistanceText": "1st & 10 at CAR 1",
+    "distance": 10,
+    "yardLine": 99,
+    "team": {
+     "id": "29"
+    },
+    "down": 1,
+    "yardsToEndzone": 99
+   },
+   "id": "401671600703",
+   "text": "R.Dixon punts 40 yards to CAR 1, impetus ends at CAR 1, Center-M.Fraboni, downed by DEN-J.Skinner.",
+   "isPenalty": false
+  },
+  "drive": {
+   "id": "4016716003",
+   "team": {
+    "id": "7",
+    "abbreviation": "DEN",
+    "display_name": "Denver Broncos"
+   },
+   "result": "Punt"
+  },
+  "teams": {
+   "home": {
+    "id": "7",
+    "abbreviation": "DEN",
+    "color": "0a2343"
+   },
+   "away": {
+    "id": "29",
+    "abbreviation": "CAR",
+    "color": "0085ca"
+   }
+  }
+ },
+ "kickoff": {
+  "game": 401671600,
+  "raw": {
+   "sequenceNumber": "4000",
+   "period": {
+    "number": 1
+   },
+   "homeScore": 0,
+   "start": {
+    "distance": 0,
+    "yardLine": 65,
+    "team": {
+     "id": "29"
+    },
+    "down": 0,
+    "yardsToEndzone": 65
+   },
+   "scoringPlay": false,
+   "clock": {
+    "displayValue": "15:00"
+   },
+   "type": {
+    "id": "53",
+    "text": "Kickoff",
+    "abbreviation": "K"
+   },
+   "priority": false,
+   "statYardage": 0,
+   "awayScore": 0,
+   "wallclock": "2024-10-27T20:25:18Z",
+   "isTurnover": false,
+   "modified": "2024-10-28T05:41Z",
+   "teamParticipants": [
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.pvt/v2/sports/football/leagues/nfl/seasons/2024/teams/7?lang=en&region=us"
+     },
+     "id": "7",
+     "type": "offense",
+     "order": 1
+    },
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.pvt/v2/sports/football/leagues/nfl/seasons/2024/teams/29?lang=en&region=us"
+     },
+     "id": "29",
+     "type": "defense",
+     "order": 2
+    }
+   ],
+   "end": {
+    "shortDownDistanceText": "1st & 7",
+    "possessionText": "DEN 30",
+    "downDistanceText": "1st & 7 at DEN 30",
+    "distance": 7,
+    "yardLine": 30,
+    "team": {
+     "id": "7"
+    },
+    "down": 1,
+    "yardsToEndzone": 70
+   },
+   "id": "40167160040",
+   "text": "E.Pineiro kicks 65 yards from CAR 35 to end zone, Touchback to the DEN 30.",
+   "isPenalty": false
+  },
+  "drive": {
+   "id": "4016716001",
+   "team": {
+    "id": "7",
+    "abbreviation": "DEN",
+    "display_name": "Denver Broncos"
+   },
+   "result": "Fumble"
+  },
+  "teams": {
+   "home": {
+    "id": "7",
+    "abbreviation": "DEN",
+    "color": "0a2343"
+   },
+   "away": {
+    "id": "29",
+    "abbreviation": "CAR",
+    "color": "0085ca"
+   }
+  }
+ },
+ "penalty": {
+  "game": 401671600,
+  "raw": {
+   "sequenceNumber": "205500",
+   "period": {
+    "number": 2
+   },
+   "homeScore": 21,
+   "start": {
+    "shortDownDistanceText": "3rd & 8",
+    "possessionText": "CAR 32",
+    "downDistanceText": "3rd & 8 at CAR 32",
+    "distance": 8,
+    "yardLine": 68,
+    "team": {
+     "id": "29"
+    },
+    "down": 3,
+    "yardsToEndzone": 68
+   },
+   "scoringPlay": false,
+   "clock": {
+    "displayValue": "1:03"
+   },
+   "type": {
+    "id": "8",
+    "text": "Penalty",
+    "abbreviation": "PEN"
+   },
+   "priority": false,
+   "statYardage": -5,
+   "awayScore": 7,
+   "wallclock": "2024-10-27T21:47:18Z",
+   "isTurnover": false,
+   "modified": "2024-10-28T05:41Z",
+   "teamParticipants": [
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.pvt/v2/sports/football/leagues/nfl/seasons/2024/teams/29?lang=en&region=us"
+     },
+     "id": "29",
+     "type": "offense",
+     "order": 1
+    },
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.pvt/v2/sports/football/leagues/nfl/seasons/2024/teams/7?lang=en&region=us"
+     },
+     "id": "7",
+     "type": "defense",
+     "order": 2
+    }
+   ],
+   "end": {
+    "shortDownDistanceText": "3rd & 10",
+    "possessionText": "CAR 27",
+    "downDistanceText": "3rd & 10 at CAR 27",
+    "distance": 10,
+    "yardLine": 73,
+    "team": {
+     "id": "29"
+    },
+    "down": 3,
+    "yardsToEndzone": 73
+   },
+   "id": "4016716002055",
+   "text": "(Shotgun) PENALTY on CAR-B.Christensen, False Start, 5 yards, enforced at CAR 32 - No Play.",
+   "isPenalty": true
+  },
+  "drive": {
+   "id": "40167160010",
+   "team": {
+    "id": "29",
+    "abbreviation": "CAR",
+    "display_name": "Carolina Panthers"
+   },
+   "result": "Punt"
+  },
+  "teams": {
+   "home": {
+    "id": "7",
+    "abbreviation": "DEN",
+    "color": "0a2343"
+   },
+   "away": {
+    "id": "29",
+    "abbreviation": "CAR",
+    "color": "0085ca"
+   }
+  }
+ },
+ "turnover_on_downs": {
+  "game": 401671600,
+  "raw": {
+   "sequenceNumber": "267600",
+   "period": {
+    "number": 3
+   },
+   "homeScore": 21,
+   "start": {
+    "shortDownDistanceText": "4th & 6",
+    "possessionText": "CAR 24",
+    "downDistanceText": "4th & 6 at CAR 24",
+    "distance": 6,
+    "yardLine": 76,
+    "team": {
+     "id": "29"
+    },
+    "down": 4,
+    "yardsToEndzone": 9
+   },
+   "scoringPlay": false,
+   "clock": {
+    "displayValue": "8:24"
+   },
+   "type": {
+    "id": "3",
+    "text": "Pass Incompletion"
+   },
+   "priority": false,
+   "statYardage": 0,
+   "awayScore": 7,
+   "wallclock": "2024-10-27T22:23:42Z",
+   "isTurnover": false,
+   "modified": "2024-10-28T05:41Z",
+   "teamParticipants": [
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.pvt/v2/sports/football/leagues/nfl/seasons/2024/teams/7?lang=en&region=us"
+     },
+     "id": "7",
+     "type": "defense",
+     "order": 1
+    },
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.pvt/v2/sports/football/leagues/nfl/seasons/2024/teams/29?lang=en&region=us"
+     },
+     "id": "29",
+     "type": "offense",
+     "order": 2
+    }
+   ],
+   "end": {
+    "shortDownDistanceText": "1st & 9",
+    "possessionText": "CAR 24",
+    "downDistanceText": "1st & 9 at CAR 24",
+    "distance": 9,
+    "yardLine": 76,
+    "team": {
+     "id": "7"
+    },
+    "down": 1,
+    "yardsToEndzone": 24
+   },
+   "id": "4016716002676",
+   "text": "(Punt formation) J.Hekker pass incomplete short left to S.Franklin.",
+   "isPenalty": false
+  },
+  "drive": {
+   "id": "40167160014",
+   "team": {
+    "id": "29",
+    "abbreviation": "CAR",
+    "display_name": "Carolina Panthers"
+   },
+   "result": "Downs"
+  },
+  "teams": {
+   "home": {
+    "id": "7",
+    "abbreviation": "DEN",
+    "color": "0a2343"
+   },
+   "away": {
+    "id": "29",
+    "abbreviation": "CAR",
+    "color": "0085ca"
+   }
+  }
+ },
+ "incomplete_penalty": {
+  "game": 401772924,
+  "raw": {
+   "sequenceNumber": "66900",
+   "period": {
+    "number": 1
+   },
+   "homeScore": 0,
+   "penalty": {
+    "type": {
+     "text": "Ineligible Downfield Pass",
+     "slug": "ineligible-downfield-pass"
+    },
+    "yards": 5,
+    "status": {
+     "text": "Accepted",
+     "slug": "accepted"
+    }
+   },
+   "start": {
+    "shortDownDistanceText": "1st & 10",
+    "possessionText": "SF 33",
+    "downDistanceText": "1st & 10 at SF 33",
+    "distance": 10,
+    "yardLine": 33,
+    "team": {
+     "id": "1"
+    },
+    "down": 1,
+    "yardsToEndzone": 33
+   },
+   "scoringPlay": false,
+   "clock": {
+    "displayValue": "2:11"
+   },
+   "type": {
+    "id": "3",
+    "text": "Pass Incompletion"
+   },
+   "priority": false,
+   "statYardage": -5,
+   "awayScore": 0,
+   "wallclock": "2025-10-20T00:43:12Z",
+   "isTurnover": false,
+   "modified": "2025-10-20T03:48Z",
+   "teamParticipants": [
+    {
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.pvt/v2/sports/football/leagues/nfl/events/401772924/competitions/401772924/plays/401772924669/teams/1/statistics/0?lang=en&region=us"
+     },
+     "team": {
+      "$ref": "http://sports.core.api.espn.pvt/v2/sports/football/leagues/nfl/seasons/2025/teams/1?lang=en&region=us"
+     },
+     "id": "1",
+     "type": "offense",
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.pvt/v2/sports/football/leagues/nfl/events/401772924/competitions/401772924/plays/401772924669/teams/1/statistics/1?lang=en&region=us"
+     },
+     "order": 1
+    },
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.pvt/v2/sports/football/leagues/nfl/seasons/2025/teams/25?lang=en&region=us"
+     },
+     "id": "25",
+     "type": "defense",
+     "order": 2
+    }
+   ],
+   "end": {
+    "shortDownDistanceText": "1st & 15",
+    "possessionText": "SF 38",
+    "downDistanceText": "1st & 15 at SF 38",
+    "distance": 15,
+    "yardLine": 38,
+    "team": {
+     "id": "1"
+    },
+    "down": 1,
+    "yardsToEndzone": 38
+   },
+   "id": "401772924669",
+   "text": "(Shotgun) M.Penix pass incomplete deep left to T.Allgeier.PENALTY on ATL-R.Neuzil, Ineligible Downfield Pass, 5 yards, enforced at SF 33 - No Play.",
+   "isPenalty": true
+  },
+  "drive": {
+   "id": "4017729243",
+   "team": {
+    "id": "1",
+    "abbreviation": "ATL",
+    "display_name": "Atlanta Falcons"
+   },
+   "result": "Field Goal"
+  },
+  "teams": {
+   "home": {
+    "id": "25",
+    "abbreviation": "SF",
+    "color": "aa0000"
+   },
+   "away": {
+    "id": "1",
+    "abbreviation": "ATL",
+    "color": "a71930"
+   }
+  }
+ },
+ "field_goal": {
+  "game": 401671612,
+  "raw": {
+   "sequenceNumber": "233000",
+   "period": {
+    "number": 3
+   },
+   "homeScore": 7,
+   "scoringType": {
+    "displayName": "Field Goal",
+    "name": "field-goal",
+    "abbreviation": "FG"
+   },
+   "start": {
+    "shortDownDistanceText": "4th & 7",
+    "possessionText": "CIN 38",
+    "downDistanceText": "4th & 7 at CIN 38",
+    "distance": 7,
+    "yardLine": 38,
+    "team": {
+     "id": "11"
+    },
+    "down": 4,
+    "yardsToEndzone": 38
+   },
+   "scoringPlay": true,
+   "clock": {
+    "displayValue": "11:15"
+   },
+   "type": {
+    "id": "59",
+    "text": "Field Goal Good",
+    "abbreviation": "FG"
+   },
+   "priority": false,
+   "statYardage": 56,
+   "awayScore": 10,
+   "wallclock": "2024-08-23T01:43:25Z",
+   "isTurnover": false,
+   "modified": "2024-08-28T21:14Z",
+   "teamParticipants": [
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.pvt/v2/sports/football/leagues/nfl/seasons/2024/teams/11?lang=en&region=us"
+     },
+     "id": "11",
+     "type": "offense",
+     "order": 1
+    },
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.pvt/v2/sports/football/leagues/nfl/seasons/2024/teams/4?lang=en&region=us"
+     },
+     "id": "4",
+     "type": "defense",
+     "order": 2
+    }
+   ],
+   "end": {
+    "distance": 3,
+    "yardLine": 0,
+    "team": {
+     "id": "11"
+    },
+    "down": -1,
+    "yardsToEndzone": 65
+   },
+   "id": "4016716122330",
+   "text": "S.Shrader 56 yard field goal is GOOD, Center-L.Rhodes, Holder-R.Sanchez.",
+   "isPenalty": false
+  },
+  "drive": {
+   "id": "40167161213",
+   "team": {
+    "id": "11",
+    "abbreviation": "IND",
+    "display_name": "Indianapolis Colts"
+   },
+   "result": "Field Goal"
+  },
+  "teams": {
+   "home": {
+    "id": "4",
+    "abbreviation": "CIN",
+    "color": "fb4f14"
+   },
+   "away": {
+    "id": "11",
+    "abbreviation": "IND",
+    "color": "003b75"
+   }
+  }
+ },
+ "field_goal_miss": {
+  "game": 401671618,
+  "raw": {
+   "sequenceNumber": "305700",
+   "period": {
+    "number": 4
+   },
+   "homeScore": 14,
+   "start": {
+    "shortDownDistanceText": "4th & 16",
+    "possessionText": "NE 26",
+    "downDistanceText": "4th & 16 at NE 26",
+    "distance": 16,
+    "yardLine": 26,
+    "team": {
+     "id": "20"
+    },
+    "down": 4,
+    "yardsToEndzone": 26
+   },
+   "scoringPlay": false,
+   "clock": {
+    "displayValue": "12:39"
+   },
+   "type": {
+    "id": "60",
+    "text": "Field Goal Missed",
+    "abbreviation": "FGM"
+   },
+   "priority": false,
+   "statYardage": 44,
+   "awayScore": 16,
+   "wallclock": "2024-10-27T19:22:07Z",
+   "isTurnover": false,
+   "modified": "2024-10-30T21:23Z",
+   "teamParticipants": [
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.pvt/v2/sports/football/leagues/nfl/seasons/2024/teams/17?lang=en&region=us"
+     },
+     "id": "17",
+     "type": "defense",
+     "order": 1
+    },
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.pvt/v2/sports/football/leagues/nfl/seasons/2024/teams/20?lang=en&region=us"
+     },
+     "id": "20",
+     "type": "offense",
+     "order": 2
+    }
+   ],
+   "end": {
+    "shortDownDistanceText": "1st & 10",
+    "possessionText": "NE 26",
+    "downDistanceText": "1st & 10 at NE 26",
+    "distance": 10,
+    "yardLine": 26,
+    "team": {
+     "id": "17"
+    },
+    "down": 1,
+    "yardsToEndzone": 66
+   },
+   "id": "4016716183057",
+   "text": "G.Zuerlein 44 yard field goal is No Good, Wide Left, Center-T.Hennessy, Holder-T.Morstead.",
+   "isPenalty": false
+  },
+  "drive": {
+   "id": "40167161816",
+   "team": {
+    "id": "20",
+    "abbreviation": "NYJ",
+    "display_name": "New York Jets"
+   },
+   "result": "Missed FG"
+  },
+  "teams": {
+   "home": {
+    "id": "17",
+    "abbreviation": "NE",
+    "color": "002a5c"
+   },
+   "away": {
+    "id": "20",
+    "abbreviation": "NYJ",
+    "color": "115740"
+   }
+  }
+ },
+ "safety": {
+  "game": 401671750,
+  "raw": {
+   "sequenceNumber": "37000",
+   "period": {
+    "number": 1
+   },
+   "homeScore": 0,
+   "scoringType": {
+    "displayName": "Safety",
+    "name": "safety",
+    "abbreviation": "SF"
+   },
+   "start": {
+    "shortDownDistanceText": "4th & 8",
+    "possessionText": "LAC 5",
+    "downDistanceText": "4th & 8 at LAC 5",
+    "distance": 8,
+    "yardLine": 5,
+    "team": {
+     "id": "24"
+    },
+    "down": 4,
+    "yardsToEndzone": 78
+   },
+   "scoringPlay": true,
+   "clock": {
+    "displayValue": "10:20"
+   },
+   "type": {
+    "id": "20",
+    "text": "Safety",
+    "abbreviation": "SF"
+   },
+   "priority": false,
+   "statYardage": 8,
+   "awayScore": 2,
+   "wallclock": "2024-10-27T20:17:09Z",
+   "isTurnover": false,
+   "modified": "2024-10-30T13:36Z",
+   "teamParticipants": [
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.pvt/v2/sports/football/leagues/nfl/seasons/2024/teams/18?lang=en&region=us"
+     },
+     "id": "18",
+     "type": "defense",
+     "order": 1
+    },
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.pvt/v2/sports/football/leagues/nfl/seasons/2024/teams/24?lang=en&region=us"
+     },
+     "id": "24",
+     "type": "offense",
+     "order": 2
+    }
+   ],
+   "end": {
+    "distance": 10,
+    "yardLine": 0,
+    "team": {
+     "id": "18"
+    },
+    "down": -1,
+    "yardsToEndzone": 80
+   },
+   "id": "401671750370",
+   "text": "(Punt formation) J.Scott Aborted. J.Harris FUMBLES at LAC 7, recovered by LAC-J.Scott at LAC 0. J.Scott to LAC -5 for -5 yards (T.Hill). FUMBLES (T.Hill), ball out of bounds in End Zone, SAFETY.",
+   "isPenalty": false
+  },
+  "drive": {
+   "id": "4016717503",
+   "team": {
+    "id": "24",
+    "abbreviation": "LAC",
+    "display_name": "Los Angeles Chargers"
+   },
+   "result": "Safety"
+  },
+  "teams": {
+   "home": {
+    "id": "24",
+    "abbreviation": "LAC",
+    "color": "0080c6"
+   },
+   "away": {
+    "id": "18",
+    "abbreviation": "NO",
+    "color": "d3bc8d"
+   }
+  }
+ }
+}

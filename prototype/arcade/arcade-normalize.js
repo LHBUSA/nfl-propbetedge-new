@@ -82,6 +82,10 @@ export const PLAY_TYPES = {
   '9':  ['fumble_own', 3],
   '29': ['fumble_lost', 3],
   '20': ['safety', 1],
+  /* observed in the 59-game corpus and previously falling through to unknown */
+  '80': ['sack_fumble_lost', 5],
+  '39': ['fumble_return_td', 2],
+  '38': ['blocked_fg_td', 2],
   '8':  ['penalty', 31],
   '2':  ['period_end', 10],
   '65': ['period_end', 5],
@@ -118,13 +122,14 @@ export const PLAY_TYPES_BY_NAME_UNVERIFIED = {
 const FLIPS_POSSESSION = new Set([
   'punt', 'kickoff', 'kickoff_return', 'kickoff_return_td',
   'interception', 'interception_td', 'fumble_lost',
-  'field_goal_good', 'field_goal_missed', 'punt_return_td', 'safety'
+  'field_goal_good', 'field_goal_missed', 'punt_return_td', 'safety',
+  'sack_fumble_lost', 'fumble_return_td', 'blocked_fg_td'
 ]);
 
 const SCORES = new Set([
   'passing_touchdown', 'rushing_touchdown', 'kickoff_return_td',
   'interception_td', 'punt_return_td', 'field_goal_good', 'extra_point',
-  'two_point', 'safety'
+  'two_point', 'safety', 'fumble_return_td', 'blocked_fg_td'
 ]);
 
 /* Plays with no field action to animate. */
@@ -132,6 +137,7 @@ const NON_PLAYS = new Set(['stoppage', 'period_end']);
 
 const num = v => (Number.isFinite(Number(v)) ? Number(v) : null);
 const str = v => (v === null || v === undefined ? '' : String(v));
+const clampYard = v => Math.max(0, Math.min(100, v));
 
 function classify(play) {
   const id = str(play?.type_id);
@@ -230,71 +236,104 @@ function fieldModel(play, kind, contract) {
   const eYtg = num(play?.end?.yards_to_endzone);
   const startAbs = sYtg === null ? null : 100 - sYtg;
 
+  /* --- possession frame -------------------------------------------------
+     Audited on 10,832 plays: is_turnover TRUE always coincided with a changed
+     frame (122/122) but FALSE did not imply the frame held -- 1,159 plays
+     changed frame without it (529 kickoffs, 433 punts, turnovers on downs,
+     missed field goals). The team ids are the only necessary-and-sufficient
+     test, so they are preferred and everything else is a fallback. */
   let flipped = null, flipSource = 'UNAVAILABLE';
   const sTeam = str(play?.start?.team_id), eTeam = str(play?.end?.team_id);
   if (sTeam && eTeam) {
-    flipped = sTeam !== eTeam;
-    flipSource = 'SOURCE_FACT';
-  } else if (typeof play?.is_turnover === 'boolean' && play.is_turnover) {
+    flipped = sTeam !== eTeam; flipSource = 'SOURCE_FACT';
+  } else if (play?.is_turnover === true) {
     flipped = true; flipSource = 'SOURCE_FACT';
   } else if (kind !== 'unknown') {
-    flipped = FLIPS_POSSESSION.has(kind);
-    flipSource = 'DERIVED';           // from the structured play type, not prose
+    flipped = FLIPS_POSSESSION.has(kind); flipSource = 'DERIVED';
   }
 
-  /* A scoring play's end state is a sentinel (down -1, ytg_ez 0) describing the
-     ensuing kickoff spot, not where the ball finished. The end zone is the
-     honest destination. */
+  /* --- the scoring sentinel ---------------------------------------------
+     On all 515 scoring plays in the sample the end state carried down === -1
+     (and often yards_to_endzone of the ensuing kickoff spot, e.g. 15). It
+     describes the restart, NOT where the ball finished, and must never be read
+     as an ordinary same-possession field transition. */
+  const endDown = num(play?.end?.down);
   const scored = SCORES.has(kind) || play?.scoring_play === true;
-  let endAbs = null, endSource = 'UNAVAILABLE';
-  if (kind === 'passing_touchdown' || kind === 'rushing_touchdown' ||
-      kind === 'kickoff_return_td' || kind === 'interception_td' || kind === 'punt_return_td') {
-    endAbs = 100; endSource = 'SOURCE_FACT';       // scoring_play + type both say so
-  } else if (kind === 'pass_incomplete' || kind === 'spike') {
-    endAbs = startAbs; endSource = 'DERIVED';      // an incompletion gains nothing
-  } else if (eYtg !== null && flipped !== null) {
-    endAbs = flipped ? eYtg : 100 - eYtg;
-    endSource = flipSource === 'SOURCE_FACT' ? 'SOURCE_FACT' : 'DERIVED';
-  } else if (eYtg !== null) {
-    endAbs = 100 - eYtg;
-    endSource = 'DERIVED';                          // frame unknown; see contract
+  /* down === -1 alone is NOT the scoring sentinel. Kickoff returns carry it too
+     (75 in the corpus) while their end.yards_to_endzone is a real return spot,
+     and treating them as sentinels made every one of them fail closed. The
+     sentinel is a SCORING end state: measured, all 515 scoring plays in the
+     corpus carried down === -1 or yards_to_endzone === 0. */
+  const sentinel = scored && (endDown === -1 || eYtg === 0);
+
+  /* --- next snap spot ---------------------------------------------------
+     Where the chains actually go, after any enforcement. Meaningless on a
+     sentinel end state. */
+  let nextSnapAbs = null, nextSnapSource = 'UNAVAILABLE';
+  if (!sentinel && eYtg !== null && flipped !== null) {
+    nextSnapAbs = flipped ? eYtg : 100 - eYtg;
+    nextSnapSource = flipSource === 'SOURCE_FACT' ? 'SOURCE_FACT' : 'DERIVED';
   }
 
-  /* Yards gained. statYardage is the official figure and is preferred whenever
-     the enriched contract supplies it. Otherwise the delta is only meaningful
-     inside one possession frame, and only for a play that actually advances the
-     ball -- a field goal's statYardage is kick distance, and a stoppage has no
-     field result at all. */
   const isKick = kind === 'field_goal_good' || kind === 'field_goal_missed' ||
                  kind === 'extra_point' || kind === 'punt' || kind === 'kickoff';
-  let gained = null, gainedSource = 'UNAVAILABLE';
-  let kickDistance = null, fieldResult = null;
+  const stat = num(play?.stat_yardage);
 
+  /* --- yards gained ------------------------------------------------------ */
+  let gained = null, gainedSource = 'UNAVAILABLE';
+  let kickDistance = null;
   if (isKick) {
-    /* statYardage on a kick is the KICK DISTANCE, not field advance. The real
-       "M.Gay 51 yard field goal is GOOD" carries statYardage 51 while the
-       offense advanced nothing, and the naive delta reported "+33". Neither is
-       yards gained, so yards gained is simply not asserted for a kick. */
-    if (Number.isFinite(num(play?.stat_yardage))) kickDistance = num(play.stat_yardage);
+    /* statYardage on a kick is KICK DISTANCE. Measured: it equalled
+       start.yards_to_endzone + 18 on 212 of 253 field goals. It is never the
+       offence's field advance and is never reported as yards gained. */
+    if (stat !== null) kickDistance = stat;
   } else if (kind === 'pass_incomplete' || kind === 'spike') {
-    /* An incompletion gains nothing. The real play
-       "pass incomplete deep middle to R.Doubs. PENALTY on WAS ... 5 yards"
-       carries statYardage 5, which is the PENALTY's net field result and not
-       the pass. Both are reported, separately, so neither is mistaken for the
-       other and the animation never shows a catch. */
-    gained = 0; gainedSource = 'DERIVED';
-    if (Number.isFinite(num(play?.stat_yardage)) && num(play.stat_yardage) !== 0) {
-      fieldResult = num(play.stat_yardage);
-    }
-  } else if (Number.isFinite(num(play?.stat_yardage)) && !NON_PLAYS.has(kind)) {
-    gained = num(play.stat_yardage); gainedSource = 'SOURCE_FACT';
-  } else if (startAbs !== null && endAbs !== null && flipped === false && !NON_PLAYS.has(kind)) {
-    gained = endAbs - startAbs; gainedSource = 'DERIVED';
+    gained = 0; gainedSource = 'DERIVED';          // the pass itself gains nothing
+  } else if (stat !== null && !NON_PLAYS.has(kind)) {
+    gained = stat; gainedSource = 'SOURCE_FACT';
+  } else if (startAbs !== null && nextSnapAbs !== null && flipped === false && !NON_PLAYS.has(kind)) {
+    gained = nextSnapAbs - startAbs; gainedSource = 'DERIVED';
+  }
+
+  /* --- where the ball finished ------------------------------------------
+     Distinct from the next snap spot. On an incompletion the ball returns to
+     the snap; a penalty may then move the NEXT SNAP without the pass having
+     gained anything. Both are reported so neither can be mistaken for the
+     other, and so an incompletion is never animated as a completion nor
+     falsely pinned when a penalty did move the ball. */
+  let ballEndAbs = null, ballEndSource = 'UNAVAILABLE';
+  if (scored && !isKick) {
+    ballEndAbs = 100; ballEndSource = 'SOURCE_FACT';
+  } else if (kind === 'pass_incomplete' || kind === 'spike') {
+    ballEndAbs = startAbs; ballEndSource = 'DERIVED';
+  } else if (isKick && scored) {
+    /* a made kick finishes through the uprights; its end state is the ensuing
+       kickoff spot (yards_to_endzone 65 on every made field goal in the corpus)
+       and must not be drawn as the ball's destination */
+    ballEndAbs = 100; ballEndSource = 'SOURCE_FACT';
+  } else if (isKick) {
+    ballEndAbs = nextSnapAbs; ballEndSource = nextSnapSource;
+  } else if (startAbs !== null && gained !== null && flipped === false) {
+    ballEndAbs = clampYard(startAbs + gained); ballEndSource = gainedSource;
+  } else if (nextSnapAbs !== null) {
+    ballEndAbs = nextSnapAbs; ballEndSource = nextSnapSource;
+  } else if (startAbs !== null && gained !== null) {
+    ballEndAbs = clampYard(startAbs + gained); ballEndSource = gainedSource;
+  }
+
+  /* --- penalty displacement ---------------------------------------------
+     Only asserted when the feed says a penalty was on the play AND the next
+     snap sits somewhere other than where the ball finished. */
+  let penaltyYards = null;
+  if (play?.is_penalty === true && ballEndAbs !== null && nextSnapAbs !== null &&
+      flipped === false && nextSnapAbs !== ballEndAbs) {
+    penaltyYards = nextSnapAbs - ballEndAbs;
   }
 
   return {
-    startAbs, endAbs, endSource, flipped, flipSource, scored,
-    gained, gainedSource, kickDistance, fieldResult, isKick,
+    startAbs, ballEndAbs, ballEndSource, nextSnapAbs, nextSnapSource,
+    flipped, flipSource, scored, sentinel,
+    gained, gainedSource, kickDistance, penaltyYards, isKick,
     startYtgEz: sYtg, endYtgEz: eYtg
   };
 }
@@ -306,10 +345,10 @@ function fieldModel(play, kind, contract) {
 function confidenceOf(kind, f, contract, names) {
   if (kind === 'unknown') return { level: 'field_state_only', reason: 'play type not in the observed taxonomy' };
   if (NON_PLAYS.has(kind)) return { level: 'no_field_action', reason: 'clock or administrative event' };
-  if (f.startAbs === null || f.endAbs === null) return { level: 'field_state_only', reason: 'published field state incomplete' };
+  if (f.startAbs === null || f.ballEndAbs === null) return { level: 'field_state_only', reason: 'published field state incomplete' };
   if (kind === 'pass_incomplete' || kind === 'spike') return { level: 'exact_endpoints', reason: 'an incompletion returns the ball to the snap spot; no yardage is created' };
-  if (f.endSource === 'SOURCE_FACT' && contract === 'enriched') return { level: 'exact_endpoints', reason: 'start and end spots and possession frame all from structured fields' };
-  if (f.endSource === 'SOURCE_FACT') return { level: 'exact_endpoints', reason: 'start and end spots from structured fields' };
+  if (f.ballEndSource === 'SOURCE_FACT' && contract === 'enriched') return { level: 'exact_endpoints', reason: 'snap spot, ball spot and possession frame all from structured fields' };
+  if (f.ballEndSource === 'SOURCE_FACT') return { level: 'exact_endpoints', reason: 'snap spot and ball spot from structured fields' };
   return { level: 'endpoints_inferred', reason: 'possession frame inferred from play type; /api/nfl-live does not expose start.team_id / end.team_id' };
 }
 
@@ -352,10 +391,14 @@ export function normalizePlayForArcade(play, gameState = {}) {
 
     /* field, in the offense's frame, 0..100 */
     startYard: f.startAbs,
-    endYard: f.endAbs,
+    /* where the ball finished, and separately where the next snap is */
+    endYard: f.ballEndAbs,
+    ballEndYard: f.ballEndAbs,
+    nextSnapYard: f.nextSnapAbs,
+    penaltyYards: f.penaltyYards,
+    scoringSentinel: f.sentinel,
     yardsGained: f.gained,
     kickDistanceYards: f.kickDistance,
-    fieldResultYards: f.fieldResult,
     penaltyOnPlay: typeof play?.is_penalty === 'boolean' ? play.is_penalty : null,
     down: num(play?.start?.down) || null,
     distance: num(play?.start?.distance),
@@ -390,10 +433,13 @@ export function normalizePlayForArcade(play, gameState = {}) {
     offense: offense ? 'SOURCE_FACT' : 'UNAVAILABLE',      // from drives[].team
     defense: defense ? 'DERIVED' : 'UNAVAILABLE',
     startYard: f.startAbs === null ? 'UNAVAILABLE' : 'SOURCE_FACT',
-    endYard: f.endSource,
+    endYard: f.ballEndSource,
+    ballEndYard: f.ballEndSource,
+    nextSnapYard: f.nextSnapSource,
+    penaltyYards: f.penaltyYards === null ? 'UNAVAILABLE' : 'SOURCE_FACT',
+    scoringSentinel: 'SOURCE_FACT',
     yardsGained: f.gainedSource,
     kickDistanceYards: f.kickDistance === null ? 'UNAVAILABLE' : 'SOURCE_FACT',
-    fieldResultYards: f.fieldResult === null ? 'UNAVAILABLE' : 'SOURCE_FACT',
     penaltyOnPlay: typeof play?.is_penalty === 'boolean' ? 'SOURCE_FACT' : 'UNAVAILABLE',
     down: play?.start?.down ? 'SOURCE_FACT' : 'UNAVAILABLE',
     distance: 'SOURCE_FACT',
