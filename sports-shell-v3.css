@@ -622,35 +622,3 @@ h1.pbe-v2-view-name{
   #pbe-sports-shell .pbes-brand-logo{height:34px!important}
   #pbe-sports-shell .pbes-brand-copy{display:none!important}
 }
-
-/* The stadium picker is a personalisation control, not a product surface. It
-   sat over the page's bottom-right corner as a permanently visible labelled
-   chip on every route. stadium-selector-v1.css already collapses it to its
-   icon on phones for exactly this reason; the same treatment now applies at
-   every width, with the label returning on hover, focus and while open. The
-   button keeps its accessible name throughout. */
-.pbe-stadium-toggle{
-  width:44px;
-  padding:0!important;
-  gap:0!important;
-  justify-content:center!important;
-  opacity:.6;
-  overflow:hidden;
-  transition:width .18s ease,opacity .18s ease,gap .18s ease;
-}
-.pbe-stadium-toggle>span,
-.pbe-stadium-toggle .pbe-stadium-current{
-  max-width:0;opacity:0;overflow:hidden;white-space:nowrap;
-  transition:max-width .18s ease,opacity .18s ease;
-}
-.pbe-stadium-control:hover .pbe-stadium-toggle,
-.pbe-stadium-control:focus-within .pbe-stadium-toggle,
-.pbe-stadium-control.open .pbe-stadium-toggle{
-  width:auto;padding:0 14px!important;gap:9px!important;opacity:1;
-}
-.pbe-stadium-control:hover .pbe-stadium-toggle>span,
-.pbe-stadium-control:focus-within .pbe-stadium-toggle>span,
-.pbe-stadium-control.open .pbe-stadium-toggle>span,
-.pbe-stadium-control:hover .pbe-stadium-toggle .pbe-stadium-current,
-.pbe-stadium-control:focus-within .pbe-stadium-toggle .pbe-stadium-current,
-.pbe-stadium-control.open .pbe-stadium-toggle .pbe-stadium-current{max-width:24ch;opacity:1}

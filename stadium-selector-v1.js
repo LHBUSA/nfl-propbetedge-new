@@ -104,10 +104,44 @@
     </div>`;
   }
 
+  /* DOCKING
+     This control used to be position:fixed at right:18px/bottom:18px with
+     z-index 4950, so on every route it floated over whatever happened to be in
+     the lower-right of the page -- the featured game's action buttons on the
+     Dashboard, the majors column and wire rows on News Intelligence, the
+     availability board on Injury Intelligence, and the model output on Model
+     Lab. Nudging it or raising its z-index does not help: a fixed element over
+     a scrolling document overlaps something at some scroll position by
+     definition.
+
+     It is an environment control for the whole product, exactly like the search
+     and account buttons, so it now lives where those live: the shell's top-bar
+     right cluster. There it occupies reserved layout space at every width and
+     can never cover content. The floating position is kept only as a fallback
+     for the case where the shell has not mounted. */
+  function dockTarget(){
+    return document.querySelector('#pbe-sports-shell .pbes-right');
+  }
+  function dock(control){
+    const host=dockTarget();
+    if(!host||!control||control.dataset.pbeDocked==='1')return false;
+    const search=host.querySelector('#pbes-search');
+    if(search)search.insertAdjacentElement('beforebegin',control);
+    else host.insertAdjacentElement('afterbegin',control);
+    control.dataset.pbeDocked='1';
+    return true;
+  }
+
   function install(){
-    if(document.querySelector('.pbe-stadium-control'))return;
+    const existing=document.querySelector('.pbe-stadium-control');
+    if(existing){dock(existing);return}
     document.body.insertAdjacentHTML('beforeend',markup());
     const control=document.querySelector('.pbe-stadium-control');
+    dock(control);
+    /* The shell mounts from its own loader step, which may land after this
+       module. A short bounded retry re-homes the control without an observer. */
+    [120,400,900,1800,3200].forEach(delay=>setTimeout(()=>dock(document.querySelector('.pbe-stadium-control')),delay));
+    window.addEventListener('pbe:upgrades-ready',()=>dock(document.querySelector('.pbe-stadium-control')));
     const toggle=control?.querySelector('.pbe-stadium-toggle');
     const menu=control?.querySelector('.pbe-stadium-menu');
     const setOpen=open=>{
@@ -124,7 +158,7 @@
       if(e.key==='Escape'&&control?.classList.contains('open')){setOpen(false);toggle?.focus()}
     });
     apply(saved());
-    window.PBEStadiums={apply,set:apply,current:saved,stadiums:STADIUMS};
+    window.PBEStadiums={apply,set:apply,current:saved,stadiums:STADIUMS,dock:()=>dock(document.querySelector('.pbe-stadium-control'))};
   }
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});

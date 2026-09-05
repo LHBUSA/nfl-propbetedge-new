@@ -156,3 +156,123 @@ body::before,body::after{content:none!important;display:none!important;backgroun
   .pbe-stadium-toggle{overflow:hidden}
   .pbe-stadium-control.open .pbe-stadium-toggle{opacity:1}
 }
+
+/* ===========================================================================
+   VISUAL FINISH — the stadium control is chrome, not a floating widget
+   ---------------------------------------------------------------------------
+   It was position:fixed at right:18px / bottom:18px with z-index 4950, so on a
+   scrolling document it sat over whatever occupied the lower right: the
+   featured game's action buttons on the Dashboard, the majors column and wire
+   rows on News Intelligence, the availability board on Injury Intelligence,
+   the model output on Model Lab. That is structural overlap -- moving it or
+   raising its z-index cannot fix it, because a fixed element over a scrolling
+   page overlaps something at some scroll position by definition.
+
+   stadium-selector-v1.js now docks it into the shell's top-bar right cluster,
+   beside search and account, where it reserves real layout space at every
+   width. The rules below are split accordingly:
+
+     [data-pbe-docked="1"]   the normal case: in-flow chrome, menu opens down
+     (no attribute)          fallback only, if the shell never mounted
+
+   Selection state, the saved preference, both handlers, the radiogroup
+   semantics and the accessible name are untouched.
+   =========================================================================== */
+
+/* ---- docked: in-flow shell chrome -------------------------------------- */
+.pbe-stadium-control[data-pbe-docked="1"]{
+  position:relative!important;
+  right:auto!important;
+  bottom:auto!important;
+  z-index:60;
+  flex:0 0 auto;
+}
+/* Matches .pbes-head-btn so it reads as a peer of search and account rather
+   than as a primary action. */
+.pbe-stadium-control[data-pbe-docked="1"] .pbe-stadium-toggle{
+  min-height:34px;
+  height:34px;
+  padding:0 11px;
+  gap:7px;
+  border:1px solid var(--pbe-line-strong);
+  border-radius:var(--r-sm);
+  background:transparent;
+  box-shadow:none;
+  backdrop-filter:none;
+  color:var(--pbe-dim);
+  opacity:1;
+  white-space:nowrap;
+}
+.pbe-stadium-control[data-pbe-docked="1"] .pbe-stadium-toggle:hover,
+.pbe-stadium-control[data-pbe-docked="1"] .pbe-stadium-toggle:focus-visible{
+  border-color:var(--pbe-gold);
+  color:var(--pbe-paper);
+}
+.pbe-stadium-control[data-pbe-docked="1"] .pbe-stadium-toggle>span{
+  color:var(--pbe-faint);
+  font-family:var(--pbe-font-data);
+  font-size:var(--fs-micro);
+  font-weight:700;
+  letter-spacing:var(--ls-micro);
+  text-transform:uppercase;
+}
+.pbe-stadium-control[data-pbe-docked="1"] .pbe-stadium-current{
+  max-width:14ch;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-family:var(--pbe-font-ui);
+  font-size:12px;
+  font-weight:650;
+  color:var(--pbe-paper-2);
+}
+/* Docked at the top of the page, the menu opens downward from the button. */
+.pbe-stadium-control[data-pbe-docked="1"] .pbe-stadium-menu{
+  top:calc(100% + 8px);
+  bottom:auto;
+  right:0;
+  width:min(440px,calc(100vw - 24px));
+  max-height:min(70vh,560px);
+  overflow-y:auto;
+  z-index:70;
+}
+
+/* ---- responsive: the label sheds, the control never grows -------------- */
+@media(max-width:1180px){
+  .pbe-stadium-control[data-pbe-docked="1"] .pbe-stadium-current{max-width:10ch}
+}
+@media(max-width:1000px){
+  /* "STADIUM" is redundant next to the venue name once space is short. */
+  .pbe-stadium-control[data-pbe-docked="1"] .pbe-stadium-toggle>span{display:none}
+}
+@media(max-width:820px){
+  /* Icon only. The button keeps its 34px target and its accessible name, and
+     the venue name is still the first thing in the menu it opens. */
+  .pbe-stadium-control[data-pbe-docked="1"] .pbe-stadium-toggle{width:34px;padding:0;justify-content:center}
+  .pbe-stadium-control[data-pbe-docked="1"] .pbe-stadium-current{display:none}
+}
+@media(max-width:620px){
+  .pbe-stadium-control[data-pbe-docked="1"] .pbe-stadium-toggle{width:32px;height:32px;min-height:32px}
+  .pbe-stadium-control[data-pbe-docked="1"] .pbe-stadium-menu{
+    position:fixed;
+    top:auto;
+    bottom:calc(72px + env(safe-area-inset-bottom));
+    left:10px;
+    right:10px;
+    width:auto;
+    max-height:62vh;
+  }
+}
+
+/* ---- fallback: only when the shell never mounted ----------------------- */
+/* Kept so the feature still works on a bare page, collapsed to its icon so it
+   covers as little as possible, and lifted clear of the mobile tab bar. */
+.pbe-stadium-control:not([data-pbe-docked="1"]) .pbe-stadium-toggle{
+  width:44px;
+  padding:0;
+  gap:0;
+  justify-content:center;
+  opacity:.72;
+}
+.pbe-stadium-control:not([data-pbe-docked="1"]) .pbe-stadium-toggle>span,
+.pbe-stadium-control:not([data-pbe-docked="1"]) .pbe-stadium-current{display:none}
