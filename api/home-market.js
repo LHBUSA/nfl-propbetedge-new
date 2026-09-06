@@ -9,7 +9,9 @@ const CORE_MARKETS=['h2h','spreads','totals'];
    required to label it STALE. It is never called LIVE, never used for player
    props, and never served once it is older than this window. */
 const SNAPSHOT_MAX_AGE_MS=72*3600000;
-const SUPABASE_URL=String(process.env.SUPABASE_URL||'').replace(/\/$/,'');
+/* same convention as api/pbe-picks.js and api/_nfl-auth.js: the NFL project is the repo default, the env may override */
+const DEFAULT_SUPABASE_URL='https://tkmlnhmylqnttmnsnief.supabase.co';
+const SUPABASE_URL=String(process.env.SUPABASE_URL||DEFAULT_SUPABASE_URL).replace(/\/$/,'');
 const SUPABASE_KEY=String(process.env.SUPABASE_SERVICE_ROLE_KEY||'').trim();
 
 function send(res,status,body,ttl=0){
