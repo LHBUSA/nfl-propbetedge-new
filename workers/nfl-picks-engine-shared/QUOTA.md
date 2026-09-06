@@ -1,6 +1,40 @@
 # Odds provider quota — NFL Picks Engine
 
-All figures measured live against the deployed stack on **2026-08-30**, not estimated from documentation.
+> **Policy change, 2026-09-06 — USER TRAFFIC MUST NEVER DETERMINE OUR ODDS
+> PROVIDER SPEND.** The `nfl-odds` worker (source: `workers/nfl-odds/`) no
+> longer contacts The Odds API on any GET. It ingests the full slate on a
+> schedule — **08:00, 13:00 and 18:00 America/New_York** (crons at every UTC
+> hour that can be those times; the worker checks the New York hour) — and
+> serves every read (`/api/odds`, `/api/odds/board`, `/api/odds/events`,
+> `/api/odds/props`) from the persisted KV snapshot under
+> `semantics: LAST_VERIFIED_MARKET` with `captured_at`, `batch_id`, `age_seconds`
+> and the status of the newest ingest attempt. A token-protected
+> `POST /api/odds/ingest` exists for exceptional manual refreshes.
+>
+> **How 20,000 credits were spent (Aug 28 → Sep 6).** Cloudflare analytics for
+> `nfl-odds`: 29,004 requests, **15,097 provider subrequests** in 30 days, ~10,000
+> of them on Sep 4–6. Every worker cache miss was a paid provider call, and the
+> cache key was the request URL, so each surface's market combination and each
+> `season_type` variant missed independently: Dashboard `/api/home-market` every
+> 15 s (3 credits per 30 s cache miss), Market Watch 2 board calls per 30 s,
+> PBEcast v6 + v7 board calls every 8–30 s, Model Lab every 60 s, plus 20 other
+> once-per-route-entry board calls and the snapshot cron every 15 min in kickoff
+> windows. With a few open tabs that is thousands of credits per day.
+>
+> **Measured cost of one ingest (Sep 6, batch 20260906T201407Z-manual):**
+> **113 credits** = 3 (featured slate, 272 events) + 110 for 10 in-window events'
+> player markets (the provider bills only the markets it returns; the worst case
+> is 18 per event). At 16 games in an 8-day window: ≤ 3 + 16 × 18 = **291 per
+> ingest**, **≤ 873 per day**, **≈ 26,000 per month worst case** and roughly
+> **10,000 per month at the measured rate** — on a plan of 100,000, independent
+> of user count. Ordinary website traffic now costs **0**.
+>
+> Regression gates: `research/odds-provider-spend.test.mjs` (100 sequential
+> reads → 0 provider requests; cron hour policy in EDT and EST) and
+> `scripts/odds-surface-gate.mjs` (eight surfaces, no odds re-request during a
+> dwell, no browser provider access).
+
+Everything below this line is the **2026-08-30** measurement of the previous, traffic-driven design and is kept for the record.
 
 ## Provider
 

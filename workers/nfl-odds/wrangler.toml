@@ -1,0 +1,33 @@
+# nfl-odds — the single NFL odds provider authority.
+#
+# The provider (The Odds API) is contacted ONLY by the scheduled ingest below
+# and by the token-protected manual ingest route. Every user-facing GET reads
+# the persisted KV snapshot. Crons are UTC; the worker converts each firing
+# to America/New_York and ingests only when the New York hour is 08, 13 or 18
+# (INGEST_HOURS_ET), so the schedule survives daylight-saving changes.
+#
+# Secrets (set with `wrangler secret put`, never in this file):
+#   ODDS_API_KEY      provider key (existing)
+#   ODDS_ADMIN_TOKEN  bearer token for POST /api/odds/ingest
+name = "nfl-odds"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+account_id = "fd3a233edadd0a60916413c1199f71ee"
+workers_dev = true
+
+[vars]
+ENV = "production"
+INGEST_HOURS_ET = "8,13,18"
+INGEST_PROP_WINDOW_DAYS = "8"
+# Player markets captured per in-window event. Cost per event per ingest =
+# number of markets listed here (1 region). Leave unset to capture every
+# market the worker supports (18).
+# INGEST_PLAYER_MARKETS = "player_pass_yds,player_pass_tds,..."
+
+[[kv_namespaces]]
+binding = "NFL_KV"
+id = "71eaad8fad534c419846db4efb321f8f"
+
+[triggers]
+# every UTC hour that can be 08:00, 13:00 or 18:00 in New York (EDT or EST)
+crons = ["0 12,13,17,18,22,23 * * *"]

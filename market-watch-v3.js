@@ -13,7 +13,10 @@
   const API = typeof NFL_API_GATEWAY !== 'undefined' ? NFL_API_GATEWAY : 'https://nfl-api.propbetedge.ai';
   const DEFAULT_EVENT = '8c94552d022acec4a0458d70c19d3da9';
   const BATCH_SIZE = 5;
-  const AUTO_REFRESH_MS = 30000;
+  /* No sportsbook-odds polling: the board is a scheduled market snapshot
+     served by the odds authority, so it is read on route entry, on event
+     change and on an explicit refresh. The 1s clock below only re-renders
+     the "refreshed N s ago" summary; it makes no request. */
   const MARKETS = [
     'player_pass_yds','player_pass_completions','player_pass_attempts','player_pass_tds','player_pass_interceptions',
     'player_reception_yds','player_receptions','player_rush_yds','player_rush_attempts','player_anytime_td'
@@ -239,7 +242,7 @@
     const rows=state.rows,watched=state.watch.size,withSpread=rows.filter(r=>num(r.spread)>0),maxSpread=withSpread.length?Math.max(...withSpread.map(r=>r.spread)):0,markets=[...new Set(rows.map(r=>r.market))].sort();
     const refreshText=state.lastRefresh?`${ageLabel(state.lastRefresh)} AGO`:'NOW';
     return `<section class="pbe22-watch pbe22-watch-v3">
-      <header class="pbe22-hero"><div><div class="pbe22-kicker">NFL PRO · MARKET TERMINAL</div><h1 class="pbe22-title">Watch the market.<br><em>Spot the inefficiency.</em></h1><div class="pbe22-copy">Current cross-book pricing, best executable numbers, dispersion heat and a personal watchlist — structured for rapid line shopping without pretending a browser snapshot is provider history.</div></div><aside class="pbe22-status"><div class="pbe22-status-top"><b>${esc(eventLabel())}</b><span class="pbe22-auto">AUTO 30S</span></div><span id="pbe22-status-meta">${esc(state.board?.source?.semantics||'UNAVAILABLE')} · ${esc(rows.length)} rows · provider ${esc(timeLabel(state.board?.provider_last_update||state.board?.updated_at))} · refreshed ${refreshText}</span></aside></header>
+      <header class="pbe22-hero"><div><div class="pbe22-kicker">NFL PRO · MARKET TERMINAL</div><h1 class="pbe22-title">Watch the market.<br><em>Spot the inefficiency.</em></h1><div class="pbe22-copy">Current cross-book pricing, best executable numbers, dispersion heat and a personal watchlist — structured for line shopping against the scheduled market snapshot, without pretending a browser view is provider history.</div></div><aside class="pbe22-status"><div class="pbe22-status-top"><b>${esc(eventLabel())}</b><span class="pbe22-auto">SNAPSHOT</span></div><span id="pbe22-status-meta">${esc(state.board?.source?.semantics||'UNAVAILABLE')} · ${esc(rows.length)} rows · provider ${esc(timeLabel(state.board?.provider_last_update||state.board?.updated_at))} · refreshed ${refreshText}</span></aside></header>
       <div class="pbe22-contract"><strong>Market contract:</strong> cross-book range and dispersion are current provider data. Local Δ appears only after you explicitly capture a browser baseline. Successive refresh flashes are local comparisons between live provider responses, not a claim of stored 24-hour movement.</div>
       ${!isPro()?lockedShell():`
       <div class="pbe22-summary"><div class="pbe22-stat"><b id="pbe22-stat-rows">${rows.length}</b><span>Player / market rows</span></div><div class="pbe22-stat"><b class="green" id="pbe22-stat-watch">${watched}</b><span>Watched rows</span></div><div class="pbe22-stat"><b id="pbe22-stat-books">${new Set(rows.flatMap(r=>r.books)).size}</b><span>Sportsbooks</span></div><div class="pbe22-stat hot"><b id="pbe22-stat-spread">${esc(fmt(maxSpread,1))}</b><span>Largest line spread</span></div><div class="pbe22-stat"><b class="gold" id="pbe22-stat-baseline">${state.baseline?'SET':'—'}</b><span>Local baseline</span></div></div>
@@ -290,7 +293,7 @@
     const set=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=String(value)};
     set('pbe22-stat-rows',rows.length);set('pbe22-stat-watch',state.watch.size);set('pbe22-stat-books',new Set(rows.flatMap(r=>r.books)).size);set('pbe22-stat-spread',fmt(maxSpread,1));set('pbe22-stat-baseline',state.baseline?'SET':'—');
     const meta=document.getElementById('pbe22-status-meta');
-    if(meta)meta.textContent=`${state.board?.source?.semantics||'UNAVAILABLE'} · ${rows.length} rows · provider ${timeLabel(state.board?.provider_last_update||state.board?.updated_at)} · refreshed ${state.lastRefresh?`${ageLabel(state.lastRefresh)} ago`:'now'}${state.lastRefreshError?' · last refresh degraded':''}`;
+    if(meta){const b=state.board,sem=b?.source?.semantics||'UNAVAILABLE';const label=sem==='MARKET_SNAPSHOT'?`MARKET SNAPSHOT · UPDATED ${b?.captured_at_et||timeLabel(b?.captured_at)}`:sem;meta.textContent=`${label}${b?.ingest?.status==='LATEST_INGEST_UNAVAILABLE'?' · LATEST INGEST UNAVAILABLE':''} · ${rows.length} rows · provider ${timeLabel(b?.provider_last_update||b?.updated_at)} · read ${state.lastRefresh?`${ageLabel(state.lastRefresh)} ago`:'now'}${state.lastRefreshError?' · last read degraded':''}`}
   }
 
   function refreshTable(before=null){
@@ -323,7 +326,7 @@
   async function silentRefresh(force=false){
     if(state.loading||state.refreshing||!isPro())return;
     if(!document.querySelector('.pbe22-watch')||document.visibilityState!=='visible')return;
-    if(!force&&state.lastRefresh&&Date.now()-state.lastRefresh<AUTO_REFRESH_MS-1000)return;
+    if(!force&&state.lastRefresh)return;
     const before=snapshotRows(state.rows);
     state.refreshing=true;state.lastRefreshError=null;
     const button=document.getElementById('pbe22-refresh');if(button)button.classList.add('spinning');
@@ -354,14 +357,12 @@
   }
 
   function startTimers(){
-    if(!autoTimer)autoTimer=setInterval(()=>silentRefresh(false),AUTO_REFRESH_MS);
     if(!clockTimer)clockTimer=setInterval(()=>{if(document.querySelector('.pbe22-watch'))updateSummary();},1000);
   }
 
   window.PBEMarketWatch={render,state,refresh:()=>silentRefresh(true),captureBaseline,clearBaseline};
   install();startTimers();
   document.addEventListener('DOMContentLoaded',()=>{install();startTimers();},{once:true});
-  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&document.querySelector('.pbe22-watch')&&Date.now()-state.lastRefresh>AUTO_REFRESH_MS)silentRefresh(false);});
   window.addEventListener('pbe:event-changed',()=>{state.board=null;state.rows=[];state.watch=new Set();state.baseline=null;state.lastRefresh=0;state.lastRefreshError=null;if(document.querySelector('.pbe22-watch')&&!state.loading)render();});
   window.addEventListener('pbe:pro-state',()=>{if(document.querySelector('.pbe22-watch')&&!state.loading)renderShell();});
 })();

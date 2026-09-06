@@ -6,6 +6,9 @@
   'use strict';
   /* A provider is named for a reader, not echoed as an environment constant:
      THE_ODDS_API is "The Odds API". Unknown providers get words, not underscores. */
+  /* The board is a scheduled market snapshot: name it and date it. Only a
+     genuine live provider payload is ever labelled LIVE. */
+  function marketLabel(board){const sem=board?.source?.semantics||'UNAVAILABLE';if(sem==='MARKET_SNAPSHOT')return `MARKET SNAPSHOT · UPDATED ${board?.captured_at_et||age(board?.captured_at)}`;if(sem==='LIVE'&&board?.captured_at)return `MARKET SNAPSHOT · UPDATED ${board?.captured_at_et||age(board?.captured_at)}`;return `MARKET ${sem}`}
   function providerLabel(p){const raw=String(p||'').trim();if(!raw)return 'Provider';
     const known={THE_ODDS_API:'The Odds API',ODDS_API:'The Odds API'};if(known[raw.toUpperCase()])return known[raw.toUpperCase()];
     return raw.replace(/[_-]+/g,' ').toLowerCase().replace(/\b\w/g,c=>c.toUpperCase()).replace(/\bApi\b/g,'API');}
@@ -370,7 +373,7 @@
     const provider = board?.source?.provider || 'unknown';
     const partial = state.missingMarkets.length > 0;
     return `<div class="pbe3-health-body">
-      <div class="pbe3-health-row"><span>Market semantics</span><strong class="${semantics === 'LIVE' ? 'live' : ''}">${esc(semantics)}</strong></div>
+      <div class="pbe3-health-row"><span>Market semantics</span><strong class="${semantics === 'LIVE' ? 'live' : ''}">${esc(semantics === 'MARKET_SNAPSHOT' ? 'SCHEDULED SNAPSHOT' : semantics)}</strong></div>${board?.captured_at_et?`<div class="pbe3-health-row"><span>Snapshot captured</span><strong>${esc(board.captured_at_et)}</strong></div>`:''}
       <div class="pbe3-health-row"><span>Provider</span><strong>${esc(providerLabel(provider))}</strong></div>
       <div class="pbe3-health-row"><span>Provider freshness</span><strong>${esc(age(board?.provider_last_update || board?.updated_at))}</strong></div>
       <div class="pbe3-health-row"><span>Requested markets</span><strong>${MARKETS.length}</strong></div>
@@ -454,7 +457,7 @@
 
       <section class="pbe3-event-bar">
         <div class="pbe3-event-main"><div class="pbe3-event-shield">NFL</div><div><div class="pbe3-event-label">Current market event</div><div class="pbe3-event-title">${esc(away)} @ ${esc(home)}</div><div class="pbe3-event-meta">${esc(dateTime(kickoff))}</div></div></div>
-        <div class="pbe3-feed-state ${partial?'partial':semantics==='LIVE'?'live':''}">${partial?'LIVE · PARTIAL MARKET':`MARKET ${esc(semantics)}`} · ${esc(providerLabel(provider))} · ${esc(age(board?.provider_last_update || board?.updated_at))}</div>
+        <div class="pbe3-feed-state ${partial?'partial':semantics==='LIVE'?'live':''}">${partial?'PARTIAL MARKET':esc(marketLabel(board))}${board?.ingest?.status==='LATEST_INGEST_UNAVAILABLE'?' · LATEST INGEST UNAVAILABLE':''} · ${esc(providerLabel(provider))} · provider ${esc(age(board?.provider_last_update || board?.updated_at))}</div>
       </section>
 
       <div class="pbe3-kpis">

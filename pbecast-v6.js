@@ -162,7 +162,8 @@
   function oddsRows(payload){if(Array.isArray(payload))return payload;for(const k of ['events','games','data','results','odds'])if(Array.isArray(payload?.[k]))return payload[k];return[]}
   function oddsEvent(raw){return{id:String(raw?.id||raw?.event_id||raw?.eventId||''),away:String(raw?.away_team||raw?.away||raw?.awayTeam||''),home:String(raw?.home_team||raw?.home||raw?.homeTeam||'')}}
   async function loadMarket(force=false){
-    const d=state.detail;if(!d?.game)return;if(!force&&Date.now()-state.lastMarketAt<30000)return;state.lastMarketAt=Date.now();state.market=null;state.marketEvent=null;
+    /* the market is read once per game, not on the play-by-play cadence: it is a scheduled snapshot served by the odds authority */
+    const d=state.detail;if(!d?.game)return;const gameKey=String(d.game.id||d.game.game_id||'');if(!force&&state.marketGameKey===gameKey)return;state.marketGameKey=gameKey;state.lastMarketAt=Date.now();state.market=null;state.marketEvent=null;
     const a=d.game.teams?.away||{},h=d.game.teams?.home||{};
     try{const payload=await getJson(`${NFL_API}/api/odds`);const hit=oddsRows(payload).map(oddsEvent).find(e=>e.id&&((namesMatch(e.away,a.display_name)||namesMatch(e.away,a.abbreviation))&&(namesMatch(e.home,h.display_name)||namesMatch(e.home,h.abbreviation))));if(!hit)return;state.marketEvent=hit;state.market=await getJson(`${NFL_API}/api/odds/board?event_id=${encodeURIComponent(hit.id)}&markets=${MARKETS.join(',')}`)}catch(_){state.market=null;state.marketEvent=null}
   }
@@ -175,7 +176,7 @@
     catch(error){state.error=error instanceof Error?error.message:String(error);patchAll()}
     finally{state.loading=false;schedule()}
   }
-  async function focus(id){state.activeId=String(id);state.detail=null;state.market=null;state.lastMarketAt=0;persist();patchAll();try{await fetchActive();state.error=null}catch(error){state.error=error instanceof Error?error.message:String(error)}patchAll();schedule()}
+  async function focus(id){state.activeId=String(id);state.detail=null;state.market=null;state.lastMarketAt=0;state.marketGameKey=null;persist();patchAll();try{await fetchActive();state.error=null}catch(error){state.error=error instanceof Error?error.message:String(error)}patchAll();schedule()}
   /* GAME BREAK -> PBEcast. The breaking rail leaves a one-shot focus request
      in session storage before navigating here; it is consumed exactly once so
      a later visit to PBEcast is not dragged back to an old touchdown. The play

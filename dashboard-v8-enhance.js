@@ -6,7 +6,11 @@
 (() => {
   'use strict';
 
-  const MARKET_REFRESH_MS=15000;
+  /* The core market is read ONCE per featured event (and again on route
+     entry). There is no odds polling loop: the odds authority serves a
+     scheduled snapshot, so re-reading it every few seconds could only ever
+     return the same batch. Live win probability still comes from the live
+     game feed, which is a different system with its own cadence. */
   const local={eventId:null,market:null,loading:false,marketError:null,lastMarketAt:0,filter:'all',timer:null};
   const esc=v=>String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
   const arr=v=>Array.isArray(v)?v:[];
@@ -21,12 +25,12 @@
   function american(v){const n=num(v);return Number.isFinite(n)?`${n>0?'+':''}${Math.round(n)}`:'—'}
   function fmtLine(v){const n=num(v);if(!Number.isFinite(n))return'—';return`${n>0?'+':''}${n.toFixed(1).replace(/\.0$/,'')}`}
   function latestLiveWp(){const rows=arr(state()?.detail?.win_probability).filter(x=>Number.isFinite(num(x?.home_win_percentage)));if(!rows.length)return null;const home=num(rows.at(-1).home_win_percentage);return{home,away:1-home}}
-  function probabilitySnapshot(market){const live=latestLiveWp();return live?{away:live.away,home:live.home,label:'LIVE WIN PROB'}:{away:num(market?.vig_free_probability?.away),home:num(market?.vig_free_probability?.home),label:(market?.semantics==='LAST_VERIFIED_SNAPSHOT'||market?.stale===true)?'LAST VERIFIED · VIG FREE':'MARKET-IMPLIED · VIG FREE'}}
+  function probabilitySnapshot(market){const live=latestLiveWp();return live?{away:live.away,home:live.home,label:'LIVE WIN PROB'}:{away:num(market?.vig_free_probability?.away),home:num(market?.vig_free_probability?.home),label:(market?.semantics==='LAST_VERIFIED_SNAPSHOT'||market?.semantics==='LAST_VERIFIED_MARKET'||market?.stale===true)?'LAST VERIFIED · VIG FREE':market?.semantics==='MARKET_SNAPSHOT'?'SNAPSHOT-IMPLIED · VIG FREE':'MARKET-IMPLIED · VIG FREE'}}
 
   async function syncMarket(force=false){
     const game=featured();if(!game?.id||local.loading)return;
-    const same=local.eventId===String(game.id),age=Date.now()-local.lastMarketAt;
-    if(!force&&same&&age<MARKET_REFRESH_MS)return;
+    const same=local.eventId===String(game.id);
+    if(!force&&same)return;
     const {awayName,homeName}=featuredTeams();if(!awayName||!homeName)return;
     local.loading=true;local.marketError=null;local.lastMarketAt=Date.now();
     try{
@@ -45,13 +49,20 @@
     const {away,home}=featuredTeams(),p=probabilitySnapshot(m),awayLabel=away.abbreviation||'AWY',homeLabel=home.abbreviation||'HME';
     const updated=m.provider_last_update?new Date(m.provider_last_update):null;
     const time=updated&&!Number.isNaN(updated.getTime())?updated.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'';
-    /* A stored observation is never presented as the live feed. The header
-       names it, dates it, and says the live feed is unavailable. */
-    const stale=m.semantics==='LAST_VERIFIED_SNAPSHOT'||m.stale===true;
-    const when=updated&&!Number.isNaN(updated.getTime())?updated.toLocaleString([],{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'';
+    /* The market is a scheduled snapshot, never "live because the page just
+       loaded". The header says so and dates it. When the newest ingest
+       failed (or the odds authority itself was unreachable and the Supabase
+       last-verified batch stood in), it says LAST VERIFIED MARKET and names
+       the failure. */
+    const stale=m.semantics==='LAST_VERIFIED_SNAPSHOT'||m.semantics==='LAST_VERIFIED_MARKET'||m.stale===true;
+    const captured=m.captured_at?new Date(m.captured_at):updated;
+    const when=m.captured_at_et||(captured&&!Number.isNaN(captured.getTime())?captured.toLocaleString([],{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+(m.captured_at?'':''):'');
+    const snapshot=m.semantics==='MARKET_SNAPSHOT';
     const head=stale
-      ?`<div class="pbe8-market-head is-stale"><span>LAST VERIFIED MARKET${when?` · ${esc(when)}`:''}</span><small><b>STALE · LIVE FEED UNAVAILABLE</b> · ${m.books||0} books${local.loading?' · retrying live':''}</small></div>`
-      :`<div class="pbe8-market-head"><span>CORE MARKET · CURRENT CROSS-BOOK CONSENSUS</span><small>${m.books||0} books · ${m.quote_count||0} quotes${time?` · ${esc(time)}`:''}${local.loading?' · refreshing':''}</small></div>`;
+      ?`<div class="pbe8-market-head is-stale"><span>LAST VERIFIED MARKET${when?` · UPDATED ${esc(when)}`:''}</span><small><b>LATEST INGEST UNAVAILABLE</b> · ${m.books||0} books</small></div>`
+      :snapshot
+        ?`<div class="pbe8-market-head"><span>MARKET SNAPSHOT${when?` · UPDATED ${esc(when)}`:''}</span><small>CROSS-BOOK · ${m.books||0} books · ${m.quote_count||0} quotes</small></div>`
+        :`<div class="pbe8-market-head"><span>CORE MARKET · CURRENT CROSS-BOOK CONSENSUS</span><small>${m.books||0} books · ${m.quote_count||0} quotes${time?` · ${esc(time)}`:''}</small></div>`;
     return head+`<div class="pbe8-market-grid${stale?' is-stale':''}"><div><span>SPREAD</span><strong>${esc(awayLabel)} ${fmtLine(m.spread?.away)}</strong><small>${esc(homeLabel)} ${fmtLine(m.spread?.home)}</small></div><div><span>TOTAL</span><strong>${Number.isFinite(num(m.total?.line))?num(m.total.line).toFixed(1):'—'}</strong><small>O ${american(m.total?.over_price)} · U ${american(m.total?.under_price)}</small></div><div><span>MONEYLINE</span><strong>${esc(awayLabel)} ${american(m.moneyline?.away)}</strong><small>${esc(homeLabel)} ${american(m.moneyline?.home)}</small></div></div><div class="pbe8-prob-grid"><div><span>${esc(awayLabel)} · ${p.label}</span>${probabilityBar(p.away)}</div><div><span>${esc(homeLabel)} · ${p.label}</span>${probabilityBar(p.home)}</div></div>`
   }
   /* The innerHTML write MUST stay conditional. #pbe8-core-market lives inside

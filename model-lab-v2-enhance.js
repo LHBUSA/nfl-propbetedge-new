@@ -67,5 +67,5 @@
   document.addEventListener('input',e=>{const range=e.target.closest('[data-pbemlx-range]');if(!range)return;const row=modelRows().find(r=>r.player===range.dataset.pbemlxRange);if(row){scenario(row).pct=Math.max(-20,Math.min(20,Number(range.value)||0));queue()}});
   const observer=new MutationObserver(()=>{if(window.App?.current!=='picks')return;const needs=[...document.querySelectorAll('.pbe4-model-row')].some(card=>!card.querySelector(':scope > .pbemlx'));if(needs)queue()});
   observer.observe(document.documentElement,{childList:true,subtree:true});
-  window.addEventListener('pbe:route-changed',()=>{queue();setTimeout(poll,100)});window.addEventListener('pbe:event-changed',()=>{latestBoard=null;setTimeout(poll,150)});window.addEventListener('pbe:pro-state',queue);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')poll()});setInterval(poll,60000);setTimeout(queue,100);
+  window.addEventListener('pbe:route-changed',()=>{queue();setTimeout(poll,100)});window.addEventListener('pbe:event-changed',()=>{latestBoard=null;setTimeout(poll,150)});window.addEventListener('pbe:pro-state',queue);setTimeout(queue,100); /* no odds polling loop: the board is a scheduled snapshot, read on route entry and event change only */
 })();

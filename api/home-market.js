@@ -82,7 +82,28 @@ async function loadBoard(eventId){
   }
 }
 function teamQuotes(rows,team){return rows.filter(q=>namesMatch(selectionOf(q),team))}
-function summarize(event,quotes,updated){
+/* Freshness the odds authority attaches to every read: the snapshot batch,
+   its capture time and whether the newest scheduled ingest succeeded. The
+   Dashboard's semantics follow it exactly:
+     MARKET_SNAPSHOT        latest scheduled ingest succeeded (stale:false)
+     LAST_VERIFIED_MARKET   newest ingest attempt failed; this is the last
+                            verified batch (stale:true)
+   A legacy live payload without snapshot metadata keeps the old label. */
+function snapshotFreshness(payload){
+  if(payload?.semantics!=='LAST_VERIFIED_MARKET'||!payload?.captured_at)return null;
+  const failed=payload?.ingest?.status==='LATEST_INGEST_UNAVAILABLE';
+  return{
+    semantics:failed?'LAST_VERIFIED_MARKET':'MARKET_SNAPSHOT',
+    stale:failed,
+    batch_id:payload.batch_id||null,
+    captured_at:payload.captured_at,
+    captured_at_et:payload.captured_at_et||null,
+    age_seconds:num(payload.age_seconds)||Math.max(0,Math.round((Date.now()-Date.parse(payload.captured_at))/1000)),
+    ingest:payload.ingest||null,
+    source:{provider:'the_odds_api',authority:'nfl-odds scheduled ingest',read_path:'kv-snapshot',semantics:'MARKET_SNAPSHOT'}
+  };
+}
+function summarize(event,quotes,updated,fresh=null){
   const h2h=quotes.filter(q=>marketOf(q)==='h2h'||marketOf(q).includes('h2h'));
   const spreads=quotes.filter(q=>marketOf(q)==='spreads'||marketOf(q).includes('spread'));
   const totals=quotes.filter(q=>marketOf(q)==='totals'||marketOf(q).includes('total'));
@@ -93,7 +114,9 @@ function summarize(event,quotes,updated){
   const books=[...new Set(quotes.map(bookOf).filter(Boolean))];
   return{
     ok:true,
-    semantics:'CURRENT_CROSS_BOOK_CONSENSUS',
+    semantics:fresh?fresh.semantics:'CURRENT_CROSS_BOOK_CONSENSUS',
+    stale:fresh?fresh.stale:false,
+    ...(fresh?{batch_id:fresh.batch_id,captured_at:fresh.captured_at,captured_at_et:fresh.captured_at_et,age_seconds:fresh.age_seconds,ingest:fresh.ingest,source:fresh.source}:{}),
     event,
     books:books.length,
     quote_count:quotes.length,
@@ -182,7 +205,9 @@ export default async function handler(req,res){
       const board=await loadBoard(event.id);quotes=arr(board?.quotes);updated=board?.provider_last_update||board?.last_update||board?.updated_at||updated;
     }
     if(!quotes.length)return send(res,404,{ok:false,error:'core_market_quotes_not_found',event});
-    return send(res,200,summarize(event,quotes,updated),8);
+    /* our HTTP cache; its expiry never spends provider credits (the odds
+       authority serves the persisted snapshot) */
+    return send(res,200,summarize(event,quotes,updated,snapshotFreshness(payload)),60);
   }catch(error){
     const detail=error instanceof Error?error.message:String(error);
     /* the live path failed: offer the last verified snapshot, labelled as such */
