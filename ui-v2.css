@@ -559,7 +559,7 @@ body:before {
 
 @media (max-width:1180px) {
   
-  .pbe-v2-network-links a:nth-child(n+4) { display:none; }
+  .pbe-v2-network-links a:nth-child(n+5) { display:none; }
   .pbe-v2-modules { grid-template-columns:repeat(2,minmax(0,1fr)); }
   .pbe-v2-hero { grid-template-columns:1fr; }
   .pbe-v2-market-card { min-height:260px; }

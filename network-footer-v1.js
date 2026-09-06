@@ -48,6 +48,13 @@
             <div class="pbe-network-card-tags"><span>MLB</span><span>Live</span><span>Research</span></div>
             <div class="pbe-network-card-cta">Open MLB Intelligence <strong>→</strong></div>
           </a>
+          <a class="pbe-network-product-card ufc" href="https://ufc.propbetedge.ai" target="_blank" rel="noopener">
+            <div class="pbe-network-card-top"><span class="pbe-network-card-eyebrow">FIGHT INTELLIGENCE</span><span class="pbe-network-card-arrow">↗</span></div>
+            <div class="pbe-network-card-mark">UFC<i class="pbe-network-card-new">New</i></div><h3>PropBetEdge UFC</h3>
+            <p>Fight cards, fighter profiles, rankings, historical results and matchup intelligence built from the PropBetEdge data layer.</p>
+            <div class="pbe-network-card-tags"><span>Fighters</span><span>Cards</span><span>Research</span></div>
+            <div class="pbe-network-card-cta">Open UFC Fight Intelligence <strong>→</strong></div>
+          </a>
           <a class="pbe-network-product-card api" href="https://propsports.proptechusa.ai" target="_blank" rel="noopener">
             <div class="pbe-network-card-top"><span class="pbe-network-card-eyebrow">DEVELOPER INFRASTRUCTURE</span><span class="pbe-network-card-arrow">↗</span></div>
             <div class="pbe-network-card-mark">API</div><h3>PropSports API</h3>
@@ -68,13 +75,13 @@
           </div>
           <div class="pbe-network-link-group">
             <span class="pbe-network-link-label">NETWORK</span>
-            <a href="https://propbetedge.ai">PropBetEdge</a><a href="https://mlb.propbetedge.ai" target="_blank" rel="noopener">MLB Intelligence</a><a href="https://propsports.proptechusa.ai" target="_blank" rel="noopener">PropSports API</a><a href="https://proptechusa.ai" target="_blank" rel="noopener">PropTechUSA.ai</a>
+            <a href="https://propbetedge.ai">PropBetEdge</a><a href="https://mlb.propbetedge.ai" target="_blank" rel="noopener">MLB Intelligence</a><a href="https://ufc.propbetedge.ai" target="_blank" rel="noopener">UFC Fight Intelligence <em class="pbe-network-new">New</em></a><a href="https://propsports.proptechusa.ai" target="_blank" rel="noopener">PropSports API</a><a href="https://proptechusa.ai" target="_blank" rel="noopener">PropTechUSA.ai</a>
           </div>
         </section>
 
         <div class="pbe-network-footer-rail">
           <div><strong>PropBetEdge</strong><span>Independent sports intelligence built from the data layer up.</span></div>
-          <div class="pbe-network-footer-rail-right"><span>© ${year} PropTechUSA.ai</span><span class="pbe-network-footer-dot"></span><a href="${BILLING}" target="_blank" rel="noopener">Billing</a><span class="pbe-network-footer-dot"></span><a href="https://propsports.proptechusa.ai" target="_blank" rel="noopener">Developer API</a><span class="pbe-network-footer-dot"></span><a href="https://mlb.propbetedge.ai" target="_blank" rel="noopener">MLB</a></div>
+          <div class="pbe-network-footer-rail-right"><span>© ${year} PropTechUSA.ai</span><span class="pbe-network-footer-dot"></span><a href="${BILLING}" target="_blank" rel="noopener">Billing</a><span class="pbe-network-footer-dot"></span><a href="https://propsports.proptechusa.ai" target="_blank" rel="noopener">Developer API</a><span class="pbe-network-footer-dot"></span><a href="https://mlb.propbetedge.ai" target="_blank" rel="noopener">MLB</a><span class="pbe-network-footer-dot"></span><a href="https://ufc.propbetedge.ai" target="_blank" rel="noopener">UFC</a></div>
         </div>
       </div>
     </footer>`;

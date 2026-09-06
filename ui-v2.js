@@ -44,6 +44,7 @@
           <a href="https://propbetedge.ai">Home</a>
           <a href="https://propbetedge.ai/news">News</a>
           <a href="https://mlb.propbetedge.ai">MLB</a>
+          <a href="https://ufc.propbetedge.ai">UFC</a>
         </nav>
         <a class="pbe-v2-brand" href="javascript:void(0)" onclick="App.nav('home')" aria-label="PropBetEdge NFL home">
           <svg width="34" height="34" viewBox="0 0 34 34" fill="none" aria-hidden="true">
@@ -241,6 +242,7 @@
             <a class="pbe-v2-news-link" href="https://propbetedge.ai/news/nfl"><span>NFL newsroom and breaking coverage</span><span>NEWS ↗</span></a>
             <a class="pbe-v2-news-link" href="javascript:void(0)" onclick="App.nav('propboard')"><span>Current sportsbook Prop Board</span><span>MARKET</span></a>
             <a class="pbe-v2-news-link" href="https://mlb.propbetedge.ai"><span>PropBetEdge MLB intelligence</span><span>MLB ↗</span></a>
+            <a class="pbe-v2-news-link" href="https://ufc.propbetedge.ai"><span>PropBetEdge UFC fight intelligence <em class="pbe-network-new">New</em></span><span>UFC ↗</span></a>
             <a class="pbe-v2-news-link" href="https://propsports.proptechusa.ai"><span>PropSports data infrastructure</span><span>API ↗</span></a>
           </div>
         </section>

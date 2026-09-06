@@ -41,3 +41,21 @@
   .pbe-network-footer-brand h2{font-size:clamp(28px,8vw,38px)}
   .pbe-network-product-card{min-height:0;padding:18px}
 }
+
+/* ---------------------------------------------------------------------------
+   PropBetEdge UFC joins the network: a fourth product card in the family's
+   own grammar. Combat-sport crimson for its glow, the same gold for its CTA,
+   and one restrained NEW mark for the launch window -- no banner, no motion.
+   --------------------------------------------------------------------------- */
+.pbe-network-footer-products{grid-template-columns:repeat(4,minmax(0,1fr))}
+.pbe-network-product-card.ufc{border-color:rgba(193,39,61,.22)}
+.pbe-network-product-card.ufc:after{content:"";position:absolute;right:-110px;top:-120px;width:300px;height:300px;border-radius:50%;pointer-events:none;background:radial-gradient(circle,rgba(193,39,61,.15),rgba(193,39,61,0) 67%)}
+.pbe-network-product-card.ufc .pbe-network-card-mark{color:rgba(230,57,70,.2);display:flex;align-items:flex-start;gap:10px}
+.pbe-network-card-new,.pbe-network-new{display:inline-block;padding:3px 6px;border-radius:999px;border:1px solid rgba(216,183,91,.45);background:rgba(216,183,91,.10);color:var(--pbe-gold);font:800 9.5px/1 "JetBrains Mono",monospace;letter-spacing:.14em;text-transform:uppercase;font-style:normal;vertical-align:middle}
+.pbe-network-card-new{margin-top:6px}
+.pbe-network-new{margin-left:6px;padding:2px 5px}
+@media(max-width:1180px){
+  .pbe-network-footer-products{grid-template-columns:1fr 1fr}
+  .pbe-network-product-card.api{grid-column:auto;min-height:0}
+}
+@media(max-width:760px){.pbe-network-footer-products{grid-template-columns:1fr}}
