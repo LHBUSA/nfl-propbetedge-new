@@ -485,6 +485,23 @@
     return `<section class="pbe3-propboard"><div class="pbe3-empty"><div><strong>Market desk unavailable</strong><p>${esc(error?.message || 'The live provider did not return a usable Prop Board for this event.')}</p><div style="display:flex;gap:7px;justify-content:center;margin-top:14px;flex-wrap:wrap"><button class="pbe3-button primary" type="button" onclick="App.nav('propboard')">Retry</button><button class="pbe3-button" type="button" onclick="window.PBEPropBoardV3.changeEvent()">Change event</button></div></div></div></section>`;
   }
 
+  /* The one data path. Market truth (provider snapshot) and model truth
+     (server-gated PBE output) are loaded here and only here; whichever
+     presentation layer owns the route paints from `state` afterwards. */
+  async function load() {
+    const board = await loadBoard(state.eventId);
+    let model = null;
+    if (isPro()) model = await loadModel(state.eventId).catch(()=>null);
+    state.board = board;
+    state.model = model;
+    state.rows = buildRows(board,model);
+    return state;
+  }
+
+  /* The registered presentation for this route: Prop Board v5 when it is
+     loaded, this file's own shell otherwise. */
+  const currentView = () => (window.App?.VIEWS?.propboard && window.App.VIEWS.propboard !== render ? window.App.VIEWS.propboard : render)();
+
   async function render() {
     if (state.loading) return;
     state.loading = true;
@@ -493,12 +510,7 @@
     vc.innerHTML = loadingHtml();
 
     try {
-      const board = await loadBoard(state.eventId);
-      let model = null;
-      if (isPro()) model = await loadModel(state.eventId).catch(()=>null);
-      state.board = board;
-      state.model = model;
-      state.rows = buildRows(board,model);
+      const board = (await load()).board;
       vc.innerHTML = shellHtml(board);
       wire();
     } catch (error) {
@@ -554,7 +566,7 @@
       url.searchParams.set('event',state.eventId);
       history.replaceState({},'',url.pathname+url.search+url.hash);
     } catch (_) {}
-    render();
+    currentView();
   }
 
   function quoteRows(row) {
@@ -605,7 +617,13 @@
     return true;
   }
 
-  window.PBEPropBoardV3 = { render,changeEvent,openDrawer,closeDrawer,state };
+  window.PBEPropBoardV3 = {
+    render,load,changeEvent,openDrawer,closeDrawer,state,
+    /* truth helpers shared with the presentation layer so every surface
+       reads a quote, a line, a book and a model field the same way */
+    MARKETS:[...MARKETS],marketMeta,
+    helpers:{ modelGap,modelFair,modelProb,pointOf,priceOf,bookOf,sideOf,updatedOf,playerOf,bestQuote,median,isPro }
+  };
 
   install();
   document.addEventListener('DOMContentLoaded',install,{once:true});
@@ -614,7 +632,7 @@
     if (!document.querySelector('.pbe3-propboard')) return;
     const becamePro = Boolean(event.detail?.pro);
     const hasModel = Boolean(state.model);
-    if (becamePro && !hasModel && !state.loading) render();
-    else if (!becamePro && hasModel && !state.loading) { state.model=null; state.rows=buildRows(state.board,null); render(); }
+    if (becamePro && !hasModel && !state.loading) currentView();
+    else if (!becamePro && hasModel && !state.loading) { state.model=null; state.rows=buildRows(state.board,null); currentView(); }
   });
 })();

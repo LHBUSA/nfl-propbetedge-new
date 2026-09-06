@@ -89,10 +89,12 @@
     {css:'./games-command-v4.css',js:'./games-command-v4.js'},
     {css:'./games-intel-v5.css',js:'./games-intel-v5.js'},
 
-    /* Prop Board: v3 remains data authority, v4 owns the signal workflow, and
-       responsive v5 removes the old 1220px table assumption instead of hiding overflow. */
-    {css:'./prop-board-v4.css',js:'./prop-board-v4.js'},
-    {css:'./prop-board-responsive-v5.css'},
+    /* Prop Board: v3 remains the data authority (PBEPropBoardV3.load), and
+       v5 is the ONE presentation authority for the route. The v4 signal
+       layer and the responsive-v5 patch are superseded and deliberately
+       NOT loaded: they mutated v3's table after render and repaired each
+       other's layout, which is the layering this replaces. */
+    {css:'./prop-board-v5.css',js:'./prop-board-v5.js'},
 
     /* PBE Picks + Verified Track Record v2 is the sole UI authority. */
     {css:'./pbe-picks-v2.css',js:'./pbe-picks-v2.js'},
