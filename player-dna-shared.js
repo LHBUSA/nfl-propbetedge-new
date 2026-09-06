@@ -466,11 +466,13 @@
     return `${g('weekday')} · ${g('hour')}:${g('minute')} ${g('dayPeriod')} ET`;
   }
   /* ---- limited history in rare conditions ------------------------------
-     What a surface prints for conditions that fall under the signal floor.
-     Quiet by design: the label and the N, nothing else prominent. The
-     movement is real and is available on hover, but a -37% built on one game
-     must not be the thing the eye lands on. The headline never says the
-     PLAYER has too few games — his baseline N is printed a few lines up. */
+     NOT PART OF THE DEFAULT HISTORICAL DNA SURFACE. Almost every player has
+     at least one condition under the signal floor, so appending this to every
+     page made it a permanent disclaimer — the thing it replaced, reworded.
+     Rare-sample information appears where it is contextually relevant: a
+     rare window today's game falls into (rareTodayWindow, in Today's Test),
+     and the Conditions matrix, which already prints N and the sample label
+     for every window. This renderer is kept for a surface that opts in. */
   function limitedHistoryHtml(g) {
     const rows = (g && g.limited_history && g.limited_history.rows) || (g && g.insufficient) || [];
     if (!rows.length) return '';

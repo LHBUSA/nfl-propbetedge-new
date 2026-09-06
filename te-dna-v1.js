@@ -262,7 +262,6 @@
           <div class="q2-sigrow-k">Signal <em>small sample</em></div>
           <div class="q2-sigs">${g.signals.map(x => sigCard(x, 'sig')).join('')}</div></div>` : ''}`
         : `<div class="q2-empty">${esc(PD.NO_PATTERN)}</div>`}
-      ${PD.limitedHistoryHtml(g)}
     </section>`;
   }
 

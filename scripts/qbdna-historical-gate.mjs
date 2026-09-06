@@ -5,8 +5,10 @@
  * presented as evidence that the QUARTERBACK lacks history:
  *
  *   1. real veterans (Mahomes, Allen, Jackson, Burrow, Herbert) never render
- *      "Too few games to call either way"; their rare conditions sit under
- *      "Limited history in rare conditions" as "label · N=n" with no %
+ *      "Too few games to call either way" — and never a standing
+ *      "Limited history in rare conditions" block either. Historical DNA is
+ *      Strength / Watchout / Signal, or the one-line empty state. Rare-sample
+ *      information appears only where it is contextually relevant.
  *   2. N<5 never renders as Strength / Watchout / Signal
  *   3. N=5 renders as Signal; N=10 with a clearing move as Strength/Watchout
  *   4. a rare window TODAY'S game falls into is surfaced in Today's Test as
@@ -103,6 +105,9 @@ const READ = `(() => {
     limitedNote: txt(lim && lim.querySelector('p')),
     todayFacts: today ? [...today.querySelectorAll('.q2-today-fact')].map(f => ({ k: txt(f.querySelector('.q2-today-fact-k')), v: txt(f.querySelector('.q2-today-fact-v')), s: txt(f.querySelector('.q2-today-fact-s')), rare: f.classList.contains('is-rare') })) : [],
     baselineN: window.PBEQBDna && PBEQBDna.state.dna && PBEQBDna.state.dna.dna_signals ? PBEQBDna.state.dna.dna_signals.baseline_n : null,
+    limitedBlocks: document.querySelectorAll('[data-limited-history]').length,
+    phraseCount: (document.body.textContent.match(/Limited history in rare conditions/gi) || []).length,
+    policyParagraph: /however large the number looks/i.test(document.body.textContent),
     flag: txt(document.querySelector('.q2-hero-flag')),
     name: txt(document.querySelector('.q2-hero-name'))
   };
@@ -123,13 +128,11 @@ for (const [name, gid] of VETS) {
   const m = await evalIn(READ);
   const counts = await evalIn(`(()=>{const g=PBEQBDna.state.dna&&PBEQBDna.state.dna.dna_signals; return g?{s:g.strengths.length,w:g.watchouts.length,sig:g.signals.length,ins:g.insufficient.length,base:g.baseline_n}:null;})()`);
   audit.push({ name, ...counts });
-  check(`${name}: never "Too few games to call either way"`, !/Too few games/i.test(m.histText), `baseline N=${m.baselineN}`);
-  if (counts && counts.ins) {
-    check(`  rare conditions sit under "Limited history in rare conditions"`, /Limited history in rare conditions/.test(m.limitedHead), m.limitedHead);
-    check(`  chips are "label · N=n" with NO percentage`, m.limitedChips.length === counts.ins && m.limitedChips.every(c => /· N=\d+$/.test(c) && !/%/.test(c)), m.limitedChips.join(' | '));
-    check(`  one short disclosure, not the policy paragraph`, /fewer than 5 qualifying games/.test(m.limitedNote) && m.limitedNote.length < 140, m.limitedNote);
-  }
-  check(`  the panel leads with promoted tiers only`, m.rows.every(r => /^(Strength|Watchout|Signal)/.test(r)), m.rows.join(' | '));
+  check(`${name}: never "Too few games to call either way"`, !/Too few games/i.test(m.histText), `baseline N=${m.baselineN} · N<5 conditions ${counts ? counts.ins : '?'}`);
+  check(`  "Limited history in rare conditions" appears ZERO times in the rendered DOM`, m.phraseCount === 0 && m.limitedBlocks === 0, `phrase ${m.phraseCount} · blocks ${m.limitedBlocks}`);
+  check(`  no policy paragraph on the page`, !m.policyParagraph);
+  check(`  Historical DNA is Strength / Watchout / Signal only`, m.rows.length > 0 && m.rows.every(r => /^(Strength|Watchout|Signal)/.test(r)), m.rows.join(' | '));
+  check(`  no rare-condition chip anywhere in Historical DNA`, !/· N=[1-4]\b/.test(m.histText) || m.cards.every(c => !/N=[1-4]\b/.test(c.n)), '');
   if (name === 'Patrick Mahomes') await shot(`mahomes-${WIDTH}`);
   if (name === 'Josh Allen') await shot(`allen-${WIDTH}`);
   if (name === 'Drake Maye') await shot(`maye-${WIDTH}`);
@@ -182,7 +185,7 @@ check('  Historical DNA leads with Strength / Watchout / Signal', m.rows.length 
 check('  N=10 renders as Strength and Watchout', m.cards.some(c => c.label === 'Dome / closed roof' && /t-up/.test(c.tier)) && m.cards.some(c => c.label === '33-50 F' && /t-down/.test(c.tier)), JSON.stringify(m.cards));
 check('  N=5 renders as Signal', m.cards.some(c => c.label === 'Rain' && /t-sig/.test(c.tier)));
 check('  N=2 is NOT a card in any tier', !m.cards.some(c => c.label === 'Wind 20+ mph'));
-check('  N=2 sits under Limited history as "Wind 20+ mph · N=2", no percentage', m.limitedChips.includes('Wind 20+ mph · N=2') && !m.limitedChips.some(c => /%/.test(c)), m.limitedChips.join(' | '));
+check('  N=2 appears NOWHERE on Historical DNA — no block, no chip, no phrase', m.limitedBlocks === 0 && m.phraseCount === 0 && !/Wind 20\+ mph · N=2/.test(m.histText), `phrase ${m.phraseCount}`);
 const rare = m.todayFacts.find(f => f.rare);
 check("  Today's Test surfaces the rare window today's game falls into", Boolean(rare) && rare.k === 'Wind 20+ mph', JSON.stringify(rare));
 check('  … as "Career history · N=2"', rare && rare.v === 'Career history · N=2', rare && rare.v);
@@ -196,7 +199,8 @@ await evalIn(`(()=>{const g=PBEQBDna.state.dna.dna_signals; g.strengths=[]; g.wa
 await sleep(400);
 m = await evalIn(READ);
 check('EMPTY: with nothing promoted the wording is about the pattern, not the man', /No repeatable condition pattern clears the current Player DNA sample threshold/.test(m.empty), m.empty);
-check('  and the rare condition still sits quietly beneath it', m.limitedChips.includes('Wind 20+ mph · N=2'));
+check('  and no rare-condition block is appended beneath it', m.limitedBlocks === 0 && m.phraseCount === 0);
+check("  while Today's Test still carries the rare window today's game falls into", m.todayFacts.some(f => f.rare && /N=2/.test(f.v) && /VERY SMALL SAMPLE/.test(f.s)));
 check('  and never "Too few games"', !/Too few games/i.test(m.histText));
 await shot(`fixture-empty-${WIDTH}`);
 
@@ -210,6 +214,26 @@ else {
   check(`ZERO HISTORY (${zero.name}): the honest sample flag still renders`, /No NFL game sample yet/i.test(m.flag), m.flag);
   check('  and never "Too few games"', !/Too few games/i.test(m.histText));
   await shot(`zero-history-${WIDTH}`);
+}
+
+/* ---------- 6. THE REST OF THE FAMILY: WR / RB / TE --------------------- */
+for (const [route, label] of [['wrdna', 'WR DNA'], ['rbdna', 'RB DNA'], ['tedna', 'TE DNA']]) {
+  await evalIn(`window.App && App.nav(${JSON.stringify(route)})`);
+  await sleep(12000);
+  const fam = await evalIn(`(()=>{
+    const hist=[...document.querySelectorAll('.q2-panel')].find(p=>/^(Historical|Receiver|Back|Tight end) DNA$/.test(((p.querySelector('h2')||{}).textContent||'').trim()));
+    const txt=el=>el?el.textContent.replace(/\\s+/g,' ').trim():'';
+    return { hist: Boolean(hist), rows: hist?[...hist.querySelectorAll('.q2-sigrow-k')].map(txt):[],
+      empty: txt(hist&&hist.querySelector('.q2-empty')),
+      phraseCount:(document.body.textContent.match(/Limited history in rare conditions/gi)||[]).length,
+      tooFew:/Too few games/i.test(document.body.textContent),
+      blocks:document.querySelectorAll('[data-limited-history]').length,
+      name: txt(document.querySelector('.q2-hero-name')) };})()`);
+  check(`${label} (${fam.name}): Historical DNA panel renders`, fam.hist);
+  check(`  "Limited history in rare conditions" appears ZERO times`, fam.phraseCount === 0 && fam.blocks === 0, `phrase ${fam.phraseCount}`);
+  check(`  never "Too few games"`, !fam.tooFew);
+  check(`  Strength / Watchout / Signal, or the one-line empty state`, (fam.rows.length > 0 && fam.rows.every(r => /^(Strength|Watchout|Signal)/.test(r))) || /No repeatable condition pattern/.test(fam.empty), fam.rows.join(' | ') || fam.empty);
+  await shot(`${route}-${WIDTH}`);
 }
 
 writeFileSync(join(OUT, 'report.json'), JSON.stringify({ results, audit, errors }, null, 2));
