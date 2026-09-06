@@ -1,5 +1,16 @@
+import { TEAM_NAME_TO_CODE } from '../workers/nfl-picks-engine-shared/odds-normalize.mjs';
+
 const NFL_GATEWAY=process.env.NFL_GATEWAY||'https://nfl-api.propbetedge.ai';
 const CORE_MARKETS=['h2h','spreads','totals'];
+/* LAST VERIFIED MARKET. When the live provider path is down, the Dashboard's
+   core market (spread / total / moneyline ONLY) may fall back to the most
+   recent snapshot the nfl-odds-snapshot pipeline verified and stored. It is
+   returned under its own semantics, with its capture time, and the UI is
+   required to label it STALE. It is never called LIVE, never used for player
+   props, and never served once it is older than this window. */
+const SNAPSHOT_MAX_AGE_MS=72*3600000;
+const SUPABASE_URL=String(process.env.SUPABASE_URL||'').replace(/\/$/,'');
+const SUPABASE_KEY=String(process.env.SUPABASE_SERVICE_ROLE_KEY||'').trim();
 
 function send(res,status,body,ttl=0){
   res.statusCode=status;
@@ -93,6 +104,68 @@ function summarize(event,quotes,updated){
   };
 }
 
+/* ---- last verified snapshot ------------------------------------------- */
+function supabaseHeaders(){const h={apikey:SUPABASE_KEY,accept:'application/json'};if(SUPABASE_KEY.startsWith('eyJ'))h.authorization=`Bearer ${SUPABASE_KEY}`;return h}
+async function scheduleGame(awayCode,homeCode,now=Date.now()){
+  const sched=await upstream('/api/schedule');
+  const games=arr(sched?.games).filter(g=>g?.away_team===awayCode&&g?.home_team===homeCode&&g?.gameday);
+  if(!games.length)return null;
+  /* the game nearest to now that has not been over for more than a day */
+  const scored=games.map(g=>{const t=Date.parse(`${g.gameday}T${g.gametime||'00:00'}:00Z`);return{g,t,dist:Math.abs(t-now)}}).filter(x=>Number.isFinite(x.t)&&now-x.t<86400000).sort((a,b)=>a.dist-b.dist);
+  return scored.length?scored[0].g:null;
+}
+async function latestSnapshotRows(gameId){
+  if(!SUPABASE_URL||!SUPABASE_KEY)throw new Error('snapshot_store_not_configured');
+  const q=`nfl_odds_snapshots?game_id=eq.${encodeURIComponent(gameId)}&select=market,side,team,over_under,is_home,line,price,book,captured_at,is_closing&order=captured_at.desc&limit=120`;
+  const r=await fetch(`${SUPABASE_URL}/rest/v1/${q}`,{headers:supabaseHeaders(),cache:'no-store'});
+  if(!r.ok)throw new Error(`snapshot_store_${r.status}`);
+  const rows=await r.json();
+  if(!Array.isArray(rows)||!rows.length)return [];
+  const latest=rows[0].captured_at;
+  return rows.filter(x=>x.captured_at===latest);
+}
+/** The Dashboard summary built from ONE captured batch of snapshot rows. Pure. */
+export function summarizeSnapshot(rows,event,liveError){
+  const batch=arr(rows);if(!batch.length)return null;
+  const capturedAt=batch[0].captured_at;
+  const by=(market,pick)=>batch.filter(x=>x.market===market&&pick(x));
+  const val=(list,f)=>{const v=list.map(f).map(num).filter(Number.isFinite);return v.length?median(v):null};
+  const awaySp=by('spread',x=>x.is_home===false),homeSp=by('spread',x=>x.is_home===true);
+  const awayMl=by('moneyline',x=>x.is_home===false),homeMl=by('moneyline',x=>x.is_home===true);
+  const over=by('total',x=>String(x.over_under||'').toLowerCase()==='over'),under=by('total',x=>String(x.over_under||'').toLowerCase()==='under');
+  const awayPrice=val(awayMl,x=>x.price),homePrice=val(homeMl,x=>x.price);
+  const rawAway=implied(awayPrice),rawHome=implied(homePrice),sum=(rawAway??0)+(rawHome??0);
+  const books=Math.max(0,...batch.map(x=>{const m=/^consensus:(\d+)$/.exec(String(x.book||''));return m?Number(m[1]):(x.book?1:0)}));
+  return{
+    ok:true,
+    semantics:'LAST_VERIFIED_SNAPSHOT',
+    stale:true,
+    live_feed:{status:'UNAVAILABLE',error:String(liveError||'').slice(0,160)},
+    captured_at:capturedAt,
+    age_minutes:Math.max(0,Math.round((Date.now()-Date.parse(capturedAt))/60000)),
+    event,
+    books,
+    quote_count:batch.length,
+    provider_last_update:capturedAt,
+    spread:{away:val(awaySp,x=>x.line),home:val(homeSp,x=>x.line)},
+    total:{line:val([...over,...under],x=>x.line),over_price:val(over,x=>x.price),under_price:val(under,x=>x.price)},
+    moneyline:{away:awayPrice,home:homePrice},
+    vig_free_probability:{away:sum>0&&rawAway!==null?rawAway/sum:null,home:sum>0&&rawHome!==null?rawHome/sum:null},
+    coverage:{h2h_quotes:awayMl.length+homeMl.length,spread_quotes:awaySp.length+homeSp.length,total_quotes:over.length+under.length},
+    source:{provider:'nfl-odds-snapshot',store:'nfl_odds_snapshots',semantics:'LAST VERIFIED MARKET — a stored observation, not the live feed'}
+  };
+}
+async function lastVerified(away,home,liveError){
+  const awayCode=TEAM_NAME_TO_CODE[away],homeCode=TEAM_NAME_TO_CODE[home];
+  if(!awayCode||!homeCode)return null;                         // no guessing at identity
+  const game=await scheduleGame(awayCode,homeCode);
+  if(!game)return null;
+  const rows=await latestSnapshotRows(game.game_id);
+  if(!rows.length)return null;
+  if(Date.now()-Date.parse(rows[0].captured_at)>SNAPSHOT_MAX_AGE_MS)return null;   // too old to stand in
+  return summarizeSnapshot(rows,{id:game.game_id,away,home,away_code:awayCode,home_code:homeCode},liveError);
+}
+
 export default async function handler(req,res){
   if(req.method!=='GET')return send(res,405,{ok:false,error:'method_not_allowed'});
   const away=String(req.query?.away||'').trim(),home=String(req.query?.home||'').trim();
@@ -109,6 +182,14 @@ export default async function handler(req,res){
     if(!quotes.length)return send(res,404,{ok:false,error:'core_market_quotes_not_found',event});
     return send(res,200,summarize(event,quotes,updated),8);
   }catch(error){
-    return send(res,503,{ok:false,error:'core_market_unavailable',detail:error instanceof Error?error.message:String(error)});
+    const detail=error instanceof Error?error.message:String(error);
+    /* the live path failed: offer the last verified snapshot, labelled as such */
+    try{
+      const stale=await lastVerified(away,home,detail);
+      if(stale){res.setHeader('x-pbe-market-semantics','LAST_VERIFIED_SNAPSHOT');return send(res,200,stale,0)}
+    }catch(fallbackError){
+      return send(res,503,{ok:false,error:'core_market_unavailable',detail,fallback:fallbackError instanceof Error?fallbackError.message:String(fallbackError)});
+    }
+    return send(res,503,{ok:false,error:'core_market_unavailable',detail,fallback:'no_verified_snapshot'});
   }
 }

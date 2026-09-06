@@ -56,6 +56,15 @@ html[data-pbe-home="1"] .pbe7-panel{background:linear-gradient(145deg,rgba(17,15
 .pbe8-market-head span{color:var(--pbe-gold);font:800 11px/1 'JetBrains Mono',monospace;letter-spacing:.1em;text-transform:uppercase}
 .pbe8-market-head small{color:var(--pbe-dim);font:700 11px/1 'JetBrains Mono',monospace;text-transform:uppercase}
 .pbe8-market-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:9px}
+/* LAST VERIFIED MARKET: a stored observation shown during a live-feed outage.
+   Amber head, muted numbers, dashed cells and a plain STALE statement so it is
+   never read as the live board. */
+.pbe8-market-head.is-stale{border-bottom-color:rgba(232,168,56,.28)}
+.pbe8-market-head.is-stale span{color:#e8a838}
+.pbe8-market-head.is-stale small{color:var(--pbe-paper-2)}
+.pbe8-market-head.is-stale small b{color:#e8a838;font-weight:800}
+.pbe8-market-grid.is-stale>div{border-style:dashed;border-color:rgba(232,168,56,.22)}
+.pbe8-market-grid.is-stale strong{color:rgba(255,255,255,.78)}
 .pbe8-market-grid>div{padding:10px 11px;border:1px solid rgba(255,255,255,.065);border-radius:9px;background:rgba(255,255,255,.018);text-align:left}
 .pbe8-market-grid span{display:block;color:var(--pbe-dim);font:800 11px/1 'JetBrains Mono',monospace;letter-spacing:.08em;text-transform:uppercase}
 .pbe8-market-grid strong{display:block;margin-top:6px;color:#fff;font:900 21px/1 'Inter',sans-serif;text-transform:uppercase}

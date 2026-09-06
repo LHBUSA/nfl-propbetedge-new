@@ -21,7 +21,7 @@
   function american(v){const n=num(v);return Number.isFinite(n)?`${n>0?'+':''}${Math.round(n)}`:'—'}
   function fmtLine(v){const n=num(v);if(!Number.isFinite(n))return'—';return`${n>0?'+':''}${n.toFixed(1).replace(/\.0$/,'')}`}
   function latestLiveWp(){const rows=arr(state()?.detail?.win_probability).filter(x=>Number.isFinite(num(x?.home_win_percentage)));if(!rows.length)return null;const home=num(rows.at(-1).home_win_percentage);return{home,away:1-home}}
-  function probabilitySnapshot(market){const live=latestLiveWp();return live?{away:live.away,home:live.home,label:'LIVE WIN PROB'}:{away:num(market?.vig_free_probability?.away),home:num(market?.vig_free_probability?.home),label:'MARKET-IMPLIED · VIG FREE'}}
+  function probabilitySnapshot(market){const live=latestLiveWp();return live?{away:live.away,home:live.home,label:'LIVE WIN PROB'}:{away:num(market?.vig_free_probability?.away),home:num(market?.vig_free_probability?.home),label:(market?.semantics==='LAST_VERIFIED_SNAPSHOT'||market?.stale===true)?'LAST VERIFIED · VIG FREE':'MARKET-IMPLIED · VIG FREE'}}
 
   async function syncMarket(force=false){
     const game=featured();if(!game?.id||local.loading)return;
@@ -45,7 +45,14 @@
     const {away,home}=featuredTeams(),p=probabilitySnapshot(m),awayLabel=away.abbreviation||'AWY',homeLabel=home.abbreviation||'HME';
     const updated=m.provider_last_update?new Date(m.provider_last_update):null;
     const time=updated&&!Number.isNaN(updated.getTime())?updated.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'';
-    return`<div class="pbe8-market-head"><span>CORE MARKET · CURRENT CROSS-BOOK CONSENSUS</span><small>${m.books||0} books · ${m.quote_count||0} quotes${time?` · ${esc(time)}`:''}${local.loading?' · refreshing':''}</small></div><div class="pbe8-market-grid"><div><span>SPREAD</span><strong>${esc(awayLabel)} ${fmtLine(m.spread?.away)}</strong><small>${esc(homeLabel)} ${fmtLine(m.spread?.home)}</small></div><div><span>TOTAL</span><strong>${Number.isFinite(num(m.total?.line))?num(m.total.line).toFixed(1):'—'}</strong><small>O ${american(m.total?.over_price)} · U ${american(m.total?.under_price)}</small></div><div><span>MONEYLINE</span><strong>${esc(awayLabel)} ${american(m.moneyline?.away)}</strong><small>${esc(homeLabel)} ${american(m.moneyline?.home)}</small></div></div><div class="pbe8-prob-grid"><div><span>${esc(awayLabel)} · ${p.label}</span>${probabilityBar(p.away)}</div><div><span>${esc(homeLabel)} · ${p.label}</span>${probabilityBar(p.home)}</div></div>`
+    /* A stored observation is never presented as the live feed. The header
+       names it, dates it, and says the live feed is unavailable. */
+    const stale=m.semantics==='LAST_VERIFIED_SNAPSHOT'||m.stale===true;
+    const when=updated&&!Number.isNaN(updated.getTime())?updated.toLocaleString([],{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'';
+    const head=stale
+      ?`<div class="pbe8-market-head is-stale"><span>LAST VERIFIED MARKET${when?` · ${esc(when)}`:''}</span><small><b>STALE · LIVE FEED UNAVAILABLE</b> · ${m.books||0} books${local.loading?' · retrying live':''}</small></div>`
+      :`<div class="pbe8-market-head"><span>CORE MARKET · CURRENT CROSS-BOOK CONSENSUS</span><small>${m.books||0} books · ${m.quote_count||0} quotes${time?` · ${esc(time)}`:''}${local.loading?' · refreshing':''}</small></div>`;
+    return head+`<div class="pbe8-market-grid${stale?' is-stale':''}"><div><span>SPREAD</span><strong>${esc(awayLabel)} ${fmtLine(m.spread?.away)}</strong><small>${esc(homeLabel)} ${fmtLine(m.spread?.home)}</small></div><div><span>TOTAL</span><strong>${Number.isFinite(num(m.total?.line))?num(m.total.line).toFixed(1):'—'}</strong><small>O ${american(m.total?.over_price)} · U ${american(m.total?.under_price)}</small></div><div><span>MONEYLINE</span><strong>${esc(awayLabel)} ${american(m.moneyline?.away)}</strong><small>${esc(homeLabel)} ${american(m.moneyline?.home)}</small></div></div><div class="pbe8-prob-grid"><div><span>${esc(awayLabel)} · ${p.label}</span>${probabilityBar(p.away)}</div><div><span>${esc(homeLabel)} · ${p.label}</span>${probabilityBar(p.home)}</div></div>`
   }
   /* The innerHTML write MUST stay conditional. #pbe8-core-market lives inside
    * document.body, and the observer below watches body with subtree:true, so
