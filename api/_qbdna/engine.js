@@ -334,6 +334,18 @@ export function dnaSignals(profile, opts = {}) {
     signals: scored.filter(x => x.tier === 'SIGNAL'),
     // reported, never promoted
     insufficient: scored.filter(x => x.tier === 'INSUFFICIENT'),
+    /* The same rows under their accurate name. A condition with N<5 has
+       LIMITED HISTORY; the player does not. A veteran with 120 games still has
+       one wind-20+ game, and that is a fact about the weather, not about him.
+       Additive: `insufficient` is unchanged for existing consumers. */
+    limited_history: {
+      label: 'Limited history in rare conditions',
+      disclosure: `Not used as Player DNA signals because fewer than ${sigN} qualifying games are available.`,
+      rows: scored.filter(x => x.tier === 'INSUFFICIENT').map(x => ({
+        key: x.key, label: x.label, games: x.games, sample_label: x.sample_label,
+        classified: false
+      }))
+    },
     neutral_count: scored.filter(x => x.tier === 'NEUTRAL').length
   };
 }

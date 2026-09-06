@@ -256,12 +256,8 @@
         ${g.signals.length ? `<div class="q2-sigrow">
           <div class="q2-sigrow-k">Signal <em>small sample</em></div>
           <div class="q2-sigs">${g.signals.map(x => sigCard(x, 'sig')).join('')}</div></div>` : ''}`
-        : '<div class="q2-empty">No condition moves this receiver far enough from his own baseline to report.</div>'}
-      ${g.insufficient.length ? `<div class="q2-insuf">
-        <div class="q2-insuf-k">Too few games to call either way</div>
-        <div class="q2-insuf-list">${g.insufficient.map(x =>
-          `<span>${esc(x.label)} <b>${esc(pctSigned(x.baseline_delta_pct))}</b> N=${esc(x.games)}</span>`).join('')}</div>
-        <p>${esc(g.policy.rule)}</p></div>` : ''}
+        : `<div class="q2-empty">${esc(PD.NO_PATTERN)}</div>`}
+      ${PD.limitedHistoryHtml(g)}
     </section>`;
   }
 

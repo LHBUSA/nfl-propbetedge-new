@@ -522,13 +522,8 @@
           <div class="q2-sigrow-k">Signal <em>small sample</em></div>
           <div class="q2-sigs">${g.signals.map(x => signalCard(x, 'sig')).join('')}</div>
         </div>` : ''}`
-      : '<div class="q2-empty">No condition moves this quarterback far enough from his own baseline to report.</div>'}
-      ${g.insufficient.length ? `<div class="q2-insuf">
-        <div class="q2-insuf-k">Too few games to call either way</div>
-        <div class="q2-insuf-list">${g.insufficient.map(x =>
-          `<span>${esc(x.label)} <b>${esc(pctSigned(x.baseline_delta_pct))}</b> N=${esc(x.games)}</span>`).join('')}</div>
-        <p>${esc(g.policy.rule)}</p>
-      </div>` : ''}
+      : `<div class="q2-empty">${esc(PD.NO_PATTERN)}</div>`}
+      ${PD.limitedHistoryHtml(g)}
     </section>`;
   }
 
@@ -551,6 +546,10 @@
        cards on this panel are talking about the same set of games. */
     const key = similarCondition();
     const lead = key ? w.windows[key] : null;
+    /* Today's game may also fall into a window with fewer than 5 games. That
+       history is shown as what it is: a very small sample with no directional
+       conclusion. It is never promoted, and its average is not the headline. */
+    const rare = PD.rareTodayWindow(w, 5);
     const lab = state.lab && state.lab.history_available
       ? (state.lab.markets || []).find(m => m.market === 'passing_yards' && m.available) : null;
     const sim = lab && lab.windows.similar_conditions;
@@ -559,6 +558,8 @@
       ['Current pass line', typeof line === 'number' ? line : null,
         typeof line === 'number' ? 'current market' : MARKET_UNAVAILABLE],
       ['Career baseline', w.baseline.passing_yards_avg, `N=${w.baseline.games} games`],
+      rare ? [rare.label, `Career history · N=${rare.games}`,
+        'VERY SMALL SAMPLE · no directional conclusion', 'rare'] : null,
       lead ? [lead.label, lead.passing_yards_avg,
         `${pctSigned(lead.vs_baseline.pct)} vs baseline · N=${lead.games}`] : null,
       sim && sim.available ? ['Cleared in similar conditions', `${sim.over}/${sim.total}`,
@@ -583,7 +584,8 @@
                 .find(u => u.field === 'weather') || {}).reason) || 'no forecast')}</div>`}
         </div>
         <div class="q2-today-facts">
-          ${facts.map(([k, v, sub]) => `<div class="q2-today-fact${v === null ? ' is-empty' : ''}">
+          ${facts.map(([k, v, sub, kind]) => `<div class="q2-today-fact${v === null ? ' is-empty' : ''}${
+            kind === 'rare' ? ' is-rare' : ''}">
             <div class="q2-today-fact-k">${esc(k)}</div>
             <div class="q2-today-fact-v">${v === null ? '—' : esc(n1(v))}</div>
             <div class="q2-today-fact-s">${esc(sub)}</div>

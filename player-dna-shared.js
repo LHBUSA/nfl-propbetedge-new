@@ -465,6 +465,48 @@
     const g = t => (parts.find(x => x.type === t) || {}).value || '';
     return `${g('weekday')} · ${g('hour')}:${g('minute')} ${g('dayPeriod')} ET`;
   }
+  /* ---- limited history in rare conditions ------------------------------
+     What a surface prints for conditions that fall under the signal floor.
+     Quiet by design: the label and the N, nothing else prominent. The
+     movement is real and is available on hover, but a -37% built on one game
+     must not be the thing the eye lands on. The headline never says the
+     PLAYER has too few games — his baseline N is printed a few lines up. */
+  function limitedHistoryHtml(g) {
+    const rows = (g && g.limited_history && g.limited_history.rows) || (g && g.insufficient) || [];
+    if (!rows.length) return '';
+    const label = (g.limited_history && g.limited_history.label) || 'Limited history in rare conditions';
+    const disclosure = (g.limited_history && g.limited_history.disclosure)
+      || `Not used as Player DNA signals because fewer than ${(g.policy && g.policy.signal_n) || 5} qualifying games are available.`;
+    return `<div class="q2-insuf" data-limited-history>
+      <div class="q2-insuf-k">${esc(label)}</div>
+      <div class="q2-insuf-list">${rows.map(x => {
+        const full = (g.insufficient || []).find(y => y.key === x.key) || x;
+        const tip = typeof full.baseline_delta_pct === 'number'
+          ? `${full.baseline_delta_pct > 0 ? '+' : ''}${full.baseline_delta_pct}% vs his baseline on ${x.games} game${x.games === 1 ? '' : 's'} — not classified`
+          : `${x.games} game${x.games === 1 ? '' : 's'} — not classified`;
+        return `<span title="${esc(tip)}">${esc(x.label)} · N=${esc(x.games)}</span>`;
+      }).join('')}</div>
+      <p>${esc(disclosure)}</p>
+    </div>`;
+  }
+  /** The empty state when nothing is promoted: about the pattern, not the man. */
+  const NO_PATTERN = 'No repeatable condition pattern clears the current Player DNA sample threshold.';
+
+  /* ---- a rare condition that TODAY'S game falls into -------------------
+     similarCondition() refuses windows under 5 games, correctly: a clear rate
+     over two games is not a clear rate. But when today's forecast actually
+     matches a rare window, the reader deserves to see that the history exists
+     and how thin it is — stated as VERY SMALL SAMPLE with no direction. */
+  function rareTodayWindow(ctxCmp, minGames) {
+    if (!ctxCmp || !ctxCmp.windows) return null;
+    const min = minGames || 5;
+    const k = SPECIFIC_CONDITIONS.find(key => {
+      const x = ctxCmp.windows[key];
+      return x && x.available && x.games > 0 && x.games < min;
+    });
+    return k ? { key: k, ...ctxCmp.windows[k] } : null;
+  }
+
   /** A specific condition window, in order of how much it narrows the field. */
   const SPECIFIC_CONDITIONS = ['snow', 'rain', 'wind_20_plus', 'wind_15_plus', 'arctic_sub20',
     'freezing_20_32', 'warm_70_plus', 'cold_33_50', 'wind_10_plus', 'mild_51_70',
@@ -484,6 +526,6 @@
     FAMILY, familySwitch, wireFamily,
     paintCharts, drawSeries, drawDistribution,
     n1, pctSigned, samp, den, priceLabel, longDate, kickoffLabel,
-    SPECIFIC_CONDITIONS, similarCondition
+    SPECIFIC_CONDITIONS, similarCondition, limitedHistoryHtml, rareTodayWindow, NO_PATTERN
   };
 })();
