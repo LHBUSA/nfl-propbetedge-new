@@ -171,11 +171,27 @@
     finally{state.loading=false;schedule()}
   }
   async function focus(id){state.activeId=String(id);state.detail=null;state.market=null;state.lastMarketAt=0;persist();patchAll();try{await fetchActive();state.error=null}catch(error){state.error=error instanceof Error?error.message:String(error)}patchAll();schedule()}
+  /* GAME BREAK -> PBEcast. The breaking rail leaves a one-shot focus request
+     in session storage before navigating here; it is consumed exactly once so
+     a later visit to PBEcast is not dragged back to an old touchdown. The play
+     id travels with it for a future play-level focus; today the GAME is
+     focused, which is the correct game rather than whatever chooseActive would
+     otherwise pick. */
+  const FOCUS_KEY='pbe.pbecast.focus';
+  function takeFocus(){
+    try{
+      const raw=sessionStorage.getItem(FOCUS_KEY);if(!raw)return null;
+      sessionStorage.removeItem(FOCUS_KEY);
+      const f=JSON.parse(raw);if(!f||!f.game_id)return null;
+      state.activeId=String(f.game_id);state.focusPlayId=f.play_id?String(f.play_id):null;persist();
+      return state.activeId;
+    }catch(_){return null}
+  }
   async function load(){
-    clearTimeout(window.PBEcastV4?.state?.poll);clearTimeout(state.poll);state.date=sportsDay();restore();ensureRoot();patchAll();await refresh(true)
+    clearTimeout(window.PBEcastV4?.state?.poll);clearTimeout(state.poll);state.date=sportsDay();restore();takeFocus();ensureRoot();patchAll();await refresh(true)
   }
   function install(){if(!window.App?.VIEWS)return false;clearTimeout(window.PBEcastV4?.state?.poll);App.VIEWS.pbecast=load;state.installed=true;if(document.querySelector('.pbecast4,.pbecast6'))setTimeout(load,20);return true}
 
-  window.PBEcastV6={state,load,refresh,focus,toggleSound};
+  window.PBEcastV6={state,load,refresh,focus,toggleSound,takeFocus};
   if(!install())document.addEventListener('DOMContentLoaded',install,{once:true});
 })();

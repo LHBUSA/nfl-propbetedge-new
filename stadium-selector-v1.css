@@ -253,16 +253,41 @@ body::before,body::after{content:none!important;display:none!important;backgroun
 }
 @media(max-width:620px){
   .pbe-stadium-control[data-pbe-docked="1"] .pbe-stadium-toggle{width:32px;height:32px;min-height:32px}
-  .pbe-stadium-control[data-pbe-docked="1"] .pbe-stadium-menu{
-    position:fixed;
-    top:auto;
-    bottom:calc(72px + env(safe-area-inset-bottom));
-    left:10px;
-    right:10px;
-    width:auto;
-    max-height:62vh;
-  }
 }
+
+/* ---- open: portalled to BODY ------------------------------------------- */
+/* While open the menu is a child of document.body (see the DOCKING note in
+   stadium-selector-v1.js): fixed coordinates computed from the toggle, clamped
+   and flipped to stay inside the viewport, internally scrollable when the room
+   is short. None of the descendant selectors above match it here, which is
+   deliberate -- this block is the whole of its open-state styling. The old
+   phone rule that fixed the menu above the tab bar is gone: inside the shell,
+   position:fixed resolved against the shell's backdrop-filter containing block
+   and put the menu at y = -482. */
+.pbe-stadium-menu[data-pbe-portal="1"]{
+  position:fixed!important;
+  /* top and left are set inline by place(); the base rule's right/bottom
+     anchors are neutralised here WITHOUT !important so the inline values win */
+  top:0;
+  left:0;
+  right:auto;
+  bottom:auto;
+  z-index:4950;
+  margin:0;
+  width:min(440px,calc(100vw - 16px));
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  opacity:1;
+  transform:none;
+  pointer-events:auto;
+  transition:none;
+  font-family:'Inter',system-ui,sans-serif;
+}
+@media (prefers-reduced-motion: no-preference){
+  .pbe-stadium-menu[data-pbe-portal="1"].is-open{animation:pbe-stadium-in .16s ease-out}
+  @keyframes pbe-stadium-in{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+}
+.pbe-stadium-menu[data-pbe-portal="1"] .pbe-stadium-option:focus-visible{outline:2px solid var(--pbe-gold);outline-offset:1px}
 
 /* ---- fallback: only when the shell never mounted ----------------------- */
 /* Kept so the feature still works on a bare page, collapsed to its icon so it

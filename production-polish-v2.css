@@ -4,7 +4,15 @@
 #pbe-sports-shell .pbes-news{overflow:hidden!important;contain:paint!important}
 #pbe-sports-shell .pbes-news-vp{min-width:0!important;overflow:hidden!important;clip-path:inset(0)!important;padding-right:18px!important}
 #pbe-sports-shell .pbes-news-track{max-width:none!important;padding-right:96px!important;will-change:transform}
-#pbe-sports-shell .pbes-top{overflow:hidden!important}
+/* The top bar does NOT clip. It once did (overflow:hidden), which silently
+   swallowed anything that did not fit -- and clipped the stadium menu that
+   opens from its right cluster to nothing at every width. The brand block
+   already clips its own copy (sports-shell-v3.css), the centre pill clips
+   itself below, and the right cluster is sized to fit; the shell containment
+   gate (scripts/shell-containment-gate.mjs) asserts zero document overflow
+   and every control inside the viewport at nine widths, so an overflow here
+   fails loudly instead of disappearing. */
+#pbe-sports-shell .pbes-top{overflow:visible!important}
 #pbe-sports-shell .pbes-right{position:relative;z-index:3;flex:0 0 auto;background:linear-gradient(90deg,rgba(12,11,9,0),rgba(12,11,9,.96) 18%)!important;padding-left:12px!important}
 #pbe-sports-shell .pbes-center{min-width:0!important;overflow:hidden!important}
 

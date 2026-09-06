@@ -154,13 +154,54 @@
     if (h < 24) return `${h}h ago`;
     return `${Math.round(h / 24)}d ago`;
   }
-  function kickoffLabel(iso) {
+  function kickoffLabel(iso, withDay = false) {
     try {
       const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York',
+        weekday: 'short', month: 'short', day: 'numeric',
         hour: 'numeric', minute: '2-digit', hour12: true }).formatToParts(new Date(iso));
       const g = t => (parts.find(x => x.type === t) || {}).value || '';
-      return `${g('hour')}:${g('minute')} ${g('dayPeriod')} ET`;
+      const time = `${g('hour')}:${g('minute')} ${g('dayPeriod')} ET`;
+      return withDay ? `${g('weekday')}, ${g('month')} ${g('day')} · ${time}` : time;
     } catch { return ''; }
+  }
+  /* '2026-01-11T19:00' (venue local) -> 'Jan 11 · 7 PM'. The raw stamp is a
+     machine token; a reader who asked WHEN deserves a clock. */
+  const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  function localStamp(stamp, withDate = true) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(String(stamp || ''));
+    if (!m) return String(stamp || '');
+    const h = Number(m[4]), mm = m[5];
+    const clock = `${h % 12 || 12}${mm !== '00' ? ':' + mm : ''} ${h < 12 ? 'AM' : 'PM'}`;
+    return withDate ? `${MON[Number(m[2]) - 1]} ${Number(m[3])} · ${clock}` : clock;
+  }
+  function windowLabel(w) {
+    if (!w || !Array.isArray(w.window_local) || w.window_local.length < 2) return '';
+    const [a, b] = w.window_local;
+    const sameDay = String(a).slice(0, 10) === String(b).slice(0, 10);
+    return `${localStamp(a)} – ${localStamp(b, !sameDay)} local`;
+  }
+  /* A change is a BEFORE and an AFTER. The unit decides how the pair reads:
+     a probability is two percentages, a temperature two degrees, wind two
+     numbers sharing one unit, and a band transition two words. */
+  function deltaParts(c) {
+    const f = c.from, t = c.to;
+    const numeric = Number.isFinite(Number(f)) && Number.isFinite(Number(t));
+    if (c.field === 'precip_probability' || c.unit === 'percentage points') {
+      return { from: `${f}%`, to: `${t}%`, unit: '' };
+    }
+    if (c.unit === '°F' || c.field === 'temp') {
+      return { from: `${Math.round(f)}°F`, to: `${Math.round(t)}°F`, unit: '' };
+    }
+    if (numeric) return { from: String(Math.round(f)), to: String(Math.round(t)), unit: c.unit || '' };
+    return { from: String(f).replace(/_/g, ' '), to: String(t).replace(/_/g, ' '), unit: '' };
+  }
+  const DELTA_LABEL = { wind: 'Wind', gust: 'Gusts', precip_probability: 'Precip chance',
+    temp: 'Temperature', snow: 'Snow', rain: 'Rain', cold: 'Cold', weather_family: 'Conditions' };
+  function shiftHtml(c, cls = 'pbeb-shift') {
+    if (!c || c.from === undefined || c.to === undefined) return '';
+    const d = deltaParts(c);
+    return `<span class="${cls}"><b>${esc(d.from)}</b><i aria-hidden="true">→</i>
+      <b>${esc(d.to)}</b>${d.unit ? `<u>${esc(d.unit)}</u>` : ''}</span>`;
   }
 
   /* ---- identity media ---------------------------------------------------
@@ -283,37 +324,70 @@
 
   /* Player DNA identity resolution. Populated lazily from the four product
      lists; until they load, no hand-off is offered rather than a guess. */
-  const DNA_INDEX = { byName: new Map(), loaded: false };
+  const DNA_INDEX = { byName: new Map(), rows: new Map(), loaded: false, ready: null };
   const DNA_PRODUCTS = [
-    { route: 'qbdna', short: 'QB', api: '/api/qb-dna?list=1' },
-    { route: 'wrdna', short: 'WR', api: '/api/wr-dna?list=1' },
-    { route: 'rbdna', short: 'RB', api: '/api/rb-dna?list=1' },
-    { route: 'tedna', short: 'TE', api: '/api/te-dna?list=1' }
+    { route: 'qbdna', short: 'QB', noun: 'quarterback', api: '/api/qb-dna?list=1' },
+    { route: 'wrdna', short: 'WR', noun: 'receiver', api: '/api/wr-dna?list=1' },
+    { route: 'rbdna', short: 'RB', noun: 'running back', api: '/api/rb-dna?list=1' },
+    { route: 'tedna', short: 'TE', noun: 'tight end', api: '/api/te-dna?list=1' }
   ];
-  async function loadDnaIndex() {
-    if (DNA_INDEX.loaded) return;
-    DNA_INDEX.loaded = true;
-    for (const p of DNA_PRODUCTS) {
-      try {
-        const r = await fetch(p.api, { headers: { accept: 'application/json' } });
-        if (!r.ok) continue;
-        const j = await r.json();
-        for (const pl of (j.players || [])) {
-          if (!pl.gsis_id || !pl.name) continue;
-          const k = String(pl.name).toLowerCase().trim();
-          /* An exact full-name key only. A surname key would collide across
-             real players and send a reader to the wrong athlete, which is
-             worse than offering nothing. Collisions are dropped entirely. */
-          if (DNA_INDEX.byName.has(k)) { DNA_INDEX.byName.set(k, null); continue; }
-          DNA_INDEX.byName.set(k, { route: p.route, short: p.short,
-                                    gsis_id: pl.gsis_id, name: pl.name });
-        }
-      } catch { /* a product list that will not load simply offers no hand-off */ }
-    }
+  function loadDnaIndex() {
+    if (DNA_INDEX.ready) return DNA_INDEX.ready;
+    DNA_INDEX.ready = (async () => {
+      for (const p of DNA_PRODUCTS) {
+        try {
+          const r = await fetch(p.api, { headers: { accept: 'application/json' } });
+          if (!r.ok) continue;
+          const j = await r.json();
+          const rows = [];
+          for (const pl of (j.players || [])) {
+            if (!pl.gsis_id || !pl.name) continue;
+            rows.push({
+              route: p.route, short: p.short, gsis_id: pl.gsis_id, name: pl.name,
+              team: pl.team_2026 || null, market: pl.market_priced_2026 === true,
+              games: Number(pl.games) || 0,
+              headshot: (pl.media && pl.media.headshot_url) || null
+            });
+            const k = String(pl.name).toLowerCase().trim();
+            /* An exact full-name key only. A surname key would collide across
+               real players and send a reader to the wrong athlete, which is
+               worse than offering nothing. Collisions are dropped entirely. */
+            if (DNA_INDEX.byName.has(k)) { DNA_INDEX.byName.set(k, null); continue; }
+            DNA_INDEX.byName.set(k, { route: p.route, short: p.short,
+                                      gsis_id: pl.gsis_id, name: pl.name });
+          }
+          DNA_INDEX.rows.set(p.route, rows);
+        } catch { /* a product list that will not load simply offers no hand-off */ }
+      }
+      DNA_INDEX.loaded = true;
+    })();
+    return DNA_INDEX.ready;
   }
   function resolvePlayerDna(name) {
     const k = String(name || '').toLowerCase().trim();
     return DNA_INDEX.byName.get(k) || null;
+  }
+  /* MATCHUP RESOLUTION. Given the two clubs in a game, the players each
+     Player DNA product can answer for on those rosters — the ones the market
+     is pricing this season, the same first group the switcher shows. This is
+     a roster fact read from the product's own index, not a guess: a club with
+     no priced player at a position contributes nothing, and a position with
+     nothing on either side is omitted rather than filled with an arbitrary
+     name. */
+  const DNA_PER_TEAM = 2;
+  function resolveMatchupDna(away, home) {
+    const sides = [away, home].map(t => String(t || '').toUpperCase()).filter(Boolean);
+    return DNA_PRODUCTS.map(p => {
+      const rows = DNA_INDEX.rows.get(p.route) || [];
+      const players = []; let more = 0;
+      for (const side of sides) {
+        const mine = rows.filter(r => r.market && r.team === side)
+          .sort((a, b) => b.games - a.games || a.name.localeCompare(b.name));
+        players.push(...mine.slice(0, DNA_PER_TEAM));
+        more += Math.max(0, mine.length - DNA_PER_TEAM);
+      }
+      return { route: p.route, short: p.short, noun: p.noun, players, more };
+    });
   }
 
   async function pollNews() {
@@ -484,6 +558,8 @@
       label: official ? 'NWS WEATHER ALERT'
         : kind === 'WEATHER_SHIFT' ? 'WEATHER SHIFT' : 'WEATHER WATCH',
       official, severity: e.severity || null,
+      certainty: e.certainty || null, urgency: e.urgency || null,
+      effective: e.effective || null, expires: e.expires || null,
       headline: e.headline,
       detail: e.detail || null,
       changes: e.changes || null,
@@ -692,39 +768,48 @@
     return WX_ICON.wind;
   }
 
-  function weatherBody(ev) {
-    const g = ev.game, w = ev.window;
+  /* The key label, with a compact form for a phone. Only the official alert
+     needs one: 'NWS WEATHER ALERT' plus its severity plus 'VIEW OFFICIAL
+     ALERT' cannot share a 390px row, and the severity is repeated in full
+     inside the drawer. The accessible name of the rail is unaffected — it is
+     set from ev.label on the rail itself. */
+  function keyLabel(long, short) {
+    if (!short || short === long) return esc(long);
+    return `<span class="pbeb-kl">${esc(long)}</span><span class="pbeb-ks" aria-hidden="true">${esc(short)}</span>`;
+  }
+
+  function weatherFacts(w) {
     const facts = [];
-    if (w) {
-      if (w.temp_f !== null && w.temp_f !== undefined) facts.push(`${Math.round(w.temp_f)}°F`);
-      if (w.precip_probability_pct !== null && w.precip_probability_pct !== undefined) {
-        facts.push(`${w.precip_probability_pct}% precip`);
-      }
-      if (w.wind_mph !== null && w.wind_mph !== undefined) facts.push(`${Math.round(w.wind_mph)} mph wind`);
-      if (w.gust_mph !== null && w.gust_mph !== undefined) facts.push(`gusts ${Math.round(w.gust_mph)}`);
+    if (!w) return facts;
+    if (w.temp_f !== null && w.temp_f !== undefined) facts.push(`${Math.round(w.temp_f)}°F`);
+    if (w.precip_probability_pct !== null && w.precip_probability_pct !== undefined) {
+      facts.push(`${w.precip_probability_pct}% precip`);
     }
-    /* A shift's whole value is the BEFORE and AFTER, so it is shown as a
-       transition rather than as a single current number. */
-    const change = (ev.changes || [])[0];
-    const shift = change && change.from !== undefined && change.to !== undefined
-      ? `<span class="pbeb-shift"><b>${esc(change.from)}</b><i aria-hidden="true">→</i>
-         <b>${esc(change.to)}</b>${change.unit ? `<u>${esc(change.unit)}</u>` : ''}</span>` : '';
+    if (w.wind_mph !== null && w.wind_mph !== undefined) facts.push(`${Math.round(w.wind_mph)} mph wind`);
+    if (w.gust_mph !== null && w.gust_mph !== undefined) facts.push(`gusts ${Math.round(w.gust_mph)}`);
+    return facts;
+  }
+
+  function weatherBody(ev) {
+    const g = ev.game;
+    const facts = weatherFacts(ev.window);
+    /* A shift's whole value is the BEFORE and AFTER, so it travels with the
+       headline rather than being buried in the metadata. */
+    const shift = shiftHtml((ev.changes || [])[0]);
+    const short = ev.official ? 'NWS ALERT' : null;
 
     return `
-      <div class="pbeb-key">${wxIcon(ev)}${esc(ev.label)}${
+      <div class="pbeb-key">${wxIcon(ev)}${keyLabel(ev.label, short)}${
         ev.severity ? `<span>${esc(ev.severity)}</span>` : ''}</div>
       <div class="pbeb-main">
-        <div class="pbeb-wxtop">
-          ${crest(g.away_team, 20)}<b>${esc(g.away_team)} @ ${esc(g.home_team)}</b>${crest(g.home_team, 20)}
-          <span class="pbeb-tag">${esc(ev.headline)}</span>
-          ${shift}
-        </div>
+        <div class="pbeb-headline pbeb-wxh"><span class="pbeb-tag">${esc(ev.headline)}</span>${shift}</div>
         <div class="pbeb-meta">
+          <span class="pbeb-match">${crest(g.away_team, 16)}<b>${esc(g.away_team)} @ ${esc(g.home_team)}</b>${crest(g.home_team, 16)}</span>
           ${facts.length ? `<span class="pbeb-facts">${facts.map(f => `<i>${esc(f)}</i>`).join('')}</span>` : ''}
-          ${g.kickoff_utc ? `<span class="pbeb-time">Kickoff · ${esc(kickoffLabel(g.kickoff_utc))}</span>` : ''}
+          ${g.kickoff_utc ? `<span class="pbeb-time pbeb-kick">Kickoff · ${esc(kickoffLabel(g.kickoff_utc, true))}</span>` : ''}
           ${ev.official
-            ? `<span class="pbeb-src">National Weather Service</span>`
-            : `<span class="pbeb-src">Forecast · Open-Meteo</span>`}
+            ? `<span class="pbeb-src pbeb-wxsrc">National Weather Service</span>`
+            : `<span class="pbeb-src pbeb-wxsrc">Forecast · Open-Meteo</span>`}
         </div>
         ${ev.detail ? `<div class="pbeb-nws">${esc(ev.detail)}</div>` : ''}
       </div>
@@ -778,8 +863,8 @@
     }
   }
 
-  function runCta(c, ev) {
-    if (c.kind === 'weather-detail') return openWeatherDetail(ev);
+  function runCta(c, ev, opener) {
+    if (c.kind === 'weather-detail') return openWeatherDetail(ev, opener);
     if (c.route) {
       /* PBEcast deep-link: focus the game, and carry the play id so an Arcade
          replay can target it later. Not a dependency now — the current cast
@@ -791,7 +876,8 @@
       }
       if (c.player_id) {
         try { sessionStorage.setItem('pbe.playerdna.focus',
-          JSON.stringify({ route: c.route, player_id: c.player_id })); } catch {}
+          JSON.stringify({ route: c.route, player_id: c.player_id,
+                           event_id: c.event_id || null, source: ev.kind })); } catch {}
       }
       if (window.App && typeof App.nav === 'function') App.nav(c.route);
       else location.hash = c.route;
@@ -805,7 +891,7 @@
     slot.querySelectorAll('[data-cta]').forEach(b =>
       b.addEventListener('click', e => {
         e.stopPropagation();
-        runCta(ev.cta[Number(b.dataset.cta)], ev);
+        runCta(ev.cta[Number(b.dataset.cta)], ev, b);
       }));
     /* Tapping the rail runs the primary action — the whole surface is the
        target on a phone, where a 13px link is not. */
@@ -813,7 +899,7 @@
     inner?.addEventListener('click', () => {
       const primary = ev.cta[0];
       if (primary && primary.href) window.open(primary.href, '_blank', 'noopener');
-      else if (primary) runCta(primary, ev);
+      else if (primary) runCta(primary, ev, inner);
     });
     inner?.addEventListener('keydown', e => {
       if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); inner.click(); }
@@ -823,8 +909,74 @@
   /* ---- WEATHER DETAIL DRAWER --------------------------------------------
      A compact surface, not another product page. It uses the same body-level
      modal root as the Player DNA switcher, so exactly one element in the
-     document owns "above everything" and the two can never fight. */
-  async function openWeatherDetail(ev) {
+     document owns "above everything" and the two can never fight.
+
+     It answers five questions, in this order, because that is the order a
+     reader asks them: WHY did this fire (the lead), WHAT GAME and WHEN (the
+     head), WHAT IS FORECAST (the grid), WHO does it touch (Player DNA for the
+     two clubs), and WHAT SOURCE (the foot). */
+  let drawerState = null;
+  function closeWeatherDetail() {
+    if (!drawerState) return;
+    const d = drawerState; drawerState = null;
+    document.removeEventListener('keydown', d.onKey, true);
+    d.root.innerHTML = '';
+    document.body.style.overflow = d.prevOverflow;
+    document.body.style.paddingRight = d.prevPad;
+    document.body.classList.remove('pdna-modal-open');
+    if (d.returnFocusTo && document.body.contains(d.returnFocusTo)) {
+      try { d.returnFocusTo.focus({ preventScroll: true }); } catch { d.returnFocusTo.focus(); }
+    }
+  }
+
+  function officialHtml(alerts) {
+    const when = iso => { try { return kickoffLabel(iso, true); } catch { return ''; } };
+    return alerts.map(a => `<div class="pbeb-dalert">
+      <div class="pbeb-dalert-k">${esc(a.event || 'Official alert')}</div>
+      ${a.headline ? `<div class="pbeb-dalert-h">${esc(a.headline)}</div>` : ''}
+      <div class="pbeb-dnws-grid">
+        ${[['Severity', a.severity], ['Certainty', a.certainty], ['Urgency', a.urgency],
+           ['Effective', a.effective ? when(a.effective) : null],
+           ['Expires', (a.ends || a.expires) ? when(a.ends || a.expires) : null],
+           ['Issued by', a.sender || 'National Weather Service']]
+          .filter(([, v]) => v).map(([k, v]) => `<div class="pbeb-dnws-cell">
+            <div class="pbeb-dk">${esc(k)}</div><div class="pbeb-dnws-v">${esc(v)}</div></div>`).join('')}
+      </div>
+      ${a.area ? `<div class="pbeb-dalert-s">${esc(a.area)}</div>` : ''}
+      ${a.url ? `<div class="pbeb-dlinks"><a class="pbeb-cta is-primary" href="${esc(a.url)}" target="_blank"
+        rel="noopener noreferrer">VIEW OFFICIAL ALERT <em aria-hidden="true">↗</em></a></div>` : ''}
+    </div>`).join('');
+  }
+
+  function dnaSectionHtml(g) {
+    const groups = resolveMatchupDna(g.away_team, g.home_team).filter(x => x.players.length);
+    if (!groups.length) {
+      /* Nothing resolved for either club. The products are still one tap
+         away, but no name is offered that the index did not supply. */
+      return `<p class="pbeb-dnote">${DNA_INDEX.loaded
+        ? 'No market-priced player on either roster resolves in the Player DNA index for this game.'
+        : 'The Player DNA index has not loaded yet.'}</p>
+        <div class="pbeb-dlinks">${DNA_PRODUCTS.map(p =>
+          `<button type="button" class="pbeb-cta" data-dna="${p.route}">${p.short} DNA <em aria-hidden="true">→</em></button>`).join('')}</div>`;
+    }
+    return groups.map(x => `<div class="pbeb-dpos">
+      <div class="pbeb-dpos-k">${esc(x.short)} DNA</div>
+      <div class="pbeb-dchips">
+        ${x.players.map(p => `<button type="button" class="pbeb-chip" data-dna="${esc(x.route)}"
+            data-player="${esc(p.gsis_id)}" title="Open ${esc(x.short)} DNA for ${esc(p.name)}">
+          ${p.headshot ? `<img class="pbeb-chip-face" src="${esc(p.headshot)}" alt="" width="30" height="30"
+            loading="lazy" decoding="async" onerror="${IMG_FAIL}">` : ''}
+          <span class="pbeb-chip-copy"><b>${esc(p.name)}</b>
+            <em>${esc(p.team || '')}${p.games ? ` · ${p.games} games` : ' · no NFL history'}</em></span>
+          <i aria-hidden="true">→</i></button>`).join('')}
+        ${x.more ? `<button type="button" class="pbeb-chip is-more" data-dna="${esc(x.route)}">
+          +${x.more} more ${esc(x.short)} <em aria-hidden="true">→</em></button>` : ''}
+      </div></div>`).join('');
+  }
+
+  async function openWeatherDetail(ev, opener) {
+    closeWeatherDetail();
+    if (window.PBEPlayerDNA && window.PBEPlayerDNA.closePicker) window.PBEPlayerDNA.closePicker();
     const root = (window.PBEPlayerDNA && window.PBEPlayerDNA.modalRoot)
       ? window.PBEPlayerDNA.modalRoot()
       : (() => {
@@ -841,40 +993,66 @@
         { headers: { accept: 'application/json' } });
       if (r.ok) detail = ((await r.json()).games || [])[0] || null;
     } catch { /* the drawer degrades to the event's own snapshot */ }
+    /* The hand-off needs the index; wait for it briefly rather than render a
+       drawer that offers nobody and fills in a second later. */
+    try { await Promise.race([loadDnaIndex(), new Promise(r => setTimeout(r, 1500))]); } catch {}
 
     const w = (detail && detail.window) || ev.window || null;
     const roof = (detail && detail.roof) || (g.roof || null);
-    const nws = (detail && detail.nws) || [];
+    const nws = (detail && detail.nws && detail.nws.length) ? detail.nws
+      : ev.official ? [{
+          event: ev.headline, headline: ev.detail, severity: ev.severity,
+          certainty: ev.certainty, urgency: ev.urgency, effective: ev.effective,
+          expires: ev.expires,
+          url: ((ev.cta || []).find(c => c.kind === 'external') || {}).href || null
+        }] : [];
+    const tone = ev.official ? 'nws' : ev.kind === 'WEATHER_SHIFT' ? 'shift' : 'watch';
+    const fetchedAt = (detail && detail.forecast_fetched_at)
+      || (ev.provenance && ev.provenance.fetched_at) || null;
+
     const row = (k, v, sub) => `<div class="pbeb-drow${v === null || v === undefined ? ' is-empty' : ''}">
       <div class="pbeb-dk">${esc(k)}</div>
       <div class="pbeb-dv">${v === null || v === undefined ? 'Not available' : esc(v)}</div>
       ${sub ? `<div class="pbeb-ds">${esc(sub)}</div>` : ''}</div>`;
 
+    /* THE LEAD — why this alert exists, before anything else. */
+    const changes = ev.changes || [];
+    const lead = ev.official
+      ? `<section class="pbeb-dlead">
+          <div class="pbeb-dlead-k">Official warning · carried verbatim</div>
+          ${officialHtml(nws)}
+        </section>`
+      : `<section class="pbeb-dlead">
+          <div class="pbeb-dlead-k">${changes.length ? 'What changed' : 'Forecast condition'}</div>
+          <div class="pbeb-dlead-h">${esc(ev.headline)}</div>
+          <div class="pbeb-dlead-s">${changes.length
+            ? 'since the last accepted forecast for the kickoff window'
+            : 'across the kickoff window · a forecast, not an observation'}</div>
+          ${changes.length ? `<div class="pbeb-ddeltas">${changes.map(c => `<div class="pbeb-ddelta">
+              <span class="pbeb-ddelta-f">${esc(DELTA_LABEL[c.field] || String(c.field).replace(/_/g, ' '))}</span>
+              ${shiftHtml(c, 'pbeb-ddelta-v')}
+              ${Number.isFinite(Number(c.delta)) ? `<em>${c.field === 'temp' ? '−' : '+'}${esc(c.delta)}${
+                c.unit === 'percentage points' ? ' pts' : c.unit === '°F' ? '°F' : c.unit ? ' ' + esc(c.unit) : ''}</em>` : ''}
+            </div>`).join('')}</div>` : ''}
+        </section>`;
+
     root.innerHTML = `<div class="pdna-modal pbeb-modal" role="dialog" aria-modal="true"
-      aria-label="Game weather detail">
-      <div class="pdna-modal-panel pbeb-panel">
+      aria-label="${esc(ev.label)}: ${esc(g.away_team)} at ${esc(g.home_team)}">
+      <div class="pdna-modal-panel pbeb-panel" data-tone="${tone}">
         <header class="pbeb-dhead">
-          <div class="pbeb-dmatch">${crest(g.away_team, 26)}
-            <b>${esc(g.away_team)} @ ${esc(g.home_team)}</b>${crest(g.home_team, 26)}</div>
+          <div class="pbeb-dmatch">${crest(g.away_team, 28)}
+            <b>${esc(g.away_team)} @ ${esc(g.home_team)}</b>${crest(g.home_team, 28)}</div>
           <button type="button" class="pbeb-dx" data-close aria-label="Close">✕</button>
         </header>
         <div class="pbeb-dsub">
+          <span class="pbeb-dpill">${wxIcon(ev)}${esc(ev.label)}${ev.severity ? ` · ${esc(ev.severity)}` : ''}</span>
           ${g.venue ? `<span>${esc(g.venue)}</span>` : ''}
-          ${g.kickoff_utc ? `<span>Kickoff · ${esc(kickoffLabel(g.kickoff_utc))}</span>` : ''}
+          ${g.kickoff_utc ? `<span>Kickoff · ${esc(kickoffLabel(g.kickoff_utc, true))}</span>` : ''}
           ${roof ? `<span class="pbeb-roof" data-state="${esc(roof.state)}">${esc(roof.label)}</span>` : ''}
         </div>
-        ${roof && roof.reason ? `<p class="pbeb-dnote">${esc(roof.reason)}</p>` : ''}
-
-        ${nws.length ? `<section class="pbeb-dsec pbeb-dnws">
-          <h4>Official alert</h4>
-          ${nws.map(a => `<div class="pbeb-dalert">
-            <div class="pbeb-dalert-k">${esc(a.event)} · ${esc(a.severity)}</div>
-            <div class="pbeb-dalert-h">${esc(a.headline || '')}</div>
-            <div class="pbeb-dalert-s">National Weather Service${
-              a.expires ? ` · through ${esc(new Date(a.expires).toLocaleString())}` : ''}</div>
-            ${a.url ? `<a class="pbeb-cta is-primary" href="${esc(a.url)}" target="_blank"
-              rel="noopener noreferrer">VIEW OFFICIAL ALERT ↗</a>` : ''}
-          </div>`).join('')}</section>` : ''}
+        ${roof && roof.reason ? `<p class="pbeb-dnote pbeb-droof">${esc(roof.reason)}</p>` : ''}
+        <div class="pbeb-dbody">
+        ${lead}
 
         <section class="pbeb-dsec">
           <h4>Forecast for the kickoff window</h4>
@@ -888,55 +1066,58 @@
             ${row('Wind', w.wind_mph === null ? null : `${Math.round(w.wind_mph)} mph`, 'worst hour')}
             ${row('Gusts', w.gust_mph === null ? null : `${Math.round(w.gust_mph)} mph`, 'worst hour')}
           </div>
-          <p class="pbeb-dnote">Window ${esc((w.window_local || []).join(' → '))} ·
-            ${esc(w.hours_resolved)}/${esc(w.hours_requested)} hours resolved.</p>`
+          <p class="pbeb-dnote">${esc(windowLabel(w))} · kickoff −1h to +3h ·
+            ${esc(w.hours_resolved)} of ${esc(w.hours_requested)} forecast hours resolved${
+            w.hours_resolved < w.hours_requested ? ' — the window is incomplete' : ''}.</p>`
           : `<p class="pbeb-dnote">${esc((detail && (detail.unresolved || [])[0]
               && detail.unresolved[0].reason) || 'no forecast resolved for this game')}</p>`}
         </section>
 
-        ${ev.changes && ev.changes.length ? `<section class="pbeb-dsec">
-          <h4>What changed</h4>
-          <div class="pbeb-dtrend">${ev.changes.map(c => `<div class="pbeb-dtrow">
-            <span>${esc(String(c.field).replace(/_/g, ' '))}</span>
-            <b>${esc(c.from)}</b><i aria-hidden="true">→</i><b>${esc(c.to)}</b>
-            ${c.unit ? `<u>${esc(c.unit)}</u>` : ''}</div>`).join('')}</div>
-        </section>` : ''}
-
         <section class="pbeb-dsec pbeb-ddna">
-          <h4>Historical context</h4>
+          <h4>Player DNA for this game</h4>
           <p class="pbeb-dnote">These are the conditions. Player DNA holds what each
-            player has actually done in them — with the sample size attached.</p>
-          <div class="pbeb-dlinks">
-            ${['qbdna:QB', 'wrdna:WR', 'rbdna:RB', 'tedna:TE'].map(x => {
-              const [route, short] = x.split(':');
-              return `<button type="button" class="pbeb-cta" data-dna="${route}">${short} DNA →</button>`;
-            }).join('')}
-          </div>
+            player has actually done in them, with the sample size attached.</p>
+          ${dnaSectionHtml(g)}
         </section>
+        </div>
 
         <footer class="pbeb-dfoot">
+          ${fetchedAt ? `<span>Forecast fetched ${esc(agoLabel(fetchedAt))}</span>` : ''}
           <span>Weather data by Open-Meteo.com, licensed CC BY 4.0</span>
-          <span>Official alerts from the National Weather Service</span>
+          <span>Official alerts from the National Weather Service, carried verbatim</span>
           <span>FORECAST — modelled values for the kickoff window, not an observation
-            of conditions at the stadium.</span>
+            of conditions at the stadium. No market movement is attributed to weather.</span>
         </footer>
       </div>
     </div>`;
 
-    const close = () => { root.innerHTML = ''; document.body.classList.remove('pdna-modal-open'); };
+    /* The page behind a modal must not scroll, and must not jump when the
+       scrollbar disappears — the same discipline as the player switcher. */
+    const sbw = window.innerWidth - document.documentElement.clientWidth;
+    const prevOverflow = document.body.style.overflow;
+    const prevPad = document.body.style.paddingRight;
+    document.body.style.overflow = 'hidden';
+    if (sbw > 0) document.body.style.paddingRight = `${sbw}px`;
     document.body.classList.add('pdna-modal-open');
-    root.querySelector('[data-close]')?.addEventListener('click', close);
-    root.querySelector('.pbeb-modal')?.addEventListener('click', e => {
-      if (e.target === e.currentTarget) close();
+    const onKey = e => { if (e.key === 'Escape') { e.preventDefault(); closeWeatherDetail(); } };
+    document.addEventListener('keydown', onKey, true);
+    drawerState = { root, onKey, prevOverflow, prevPad,
+                    returnFocusTo: opener || document.querySelector('#pbe-breaking-slot .pbeb-cta') };
+
+    root.querySelector('[data-close]')?.addEventListener('click', closeWeatherDetail);
+    root.querySelector('.pbeb-modal')?.addEventListener('mousedown', e => {
+      if (e.target === e.currentTarget) closeWeatherDetail();
     });
     root.querySelectorAll('[data-dna]').forEach(b => b.addEventListener('click', () => {
-      close();
-      const r = b.dataset.dna;
+      const r = b.dataset.dna, pid = b.dataset.player || null;
+      closeWeatherDetail();
+      try {
+        if (pid) sessionStorage.setItem('pbe.playerdna.focus',
+          JSON.stringify({ route: r, player_id: pid, event_id: g.event_id || null, source: ev.kind }));
+        else sessionStorage.removeItem('pbe.playerdna.focus');
+      } catch {}
       if (window.App && typeof App.nav === 'function') App.nav(r); else location.hash = r;
     }));
-    document.addEventListener('keydown', function onKey(e) {
-      if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onKey); }
-    });
     root.querySelector('[data-close]')?.focus();
   }
 
@@ -971,8 +1152,10 @@
 
   /* The rail is GLOBAL. It lives in the shell, not in a view, so a route
      change re-renders nothing and restarts no timer — which is exactly why
-     moving QB DNA -> WR DNA -> Props cannot replay an alert. */
-  window.addEventListener('pbe:route', () => { if (state.mounted) render(); });
+     moving QB DNA -> WR DNA -> Props cannot replay an alert. (An earlier
+     listener here re-rendered on a route event the router never dispatches;
+     it was dead, and had it been live it would have replayed the entrance
+     transition on every navigation.) */
 
   window.PBEBreaking = {
     start, stop, state, offer, dismiss, next,
@@ -981,7 +1164,8 @@
        without a live slate, a live wire or a live storm. */
     _test: { qualifyNews, newsEvent, classifyPlay, gameEvent, finalEvent,
              ingestScoreboard, weatherEventToRail, render, openWeatherDetail,
-             agoLabel, resolvePlayerDna, DNA_INDEX }
+             closeWeatherDetail, agoLabel, resolvePlayerDna, resolveMatchupDna,
+             loadDnaIndex, deltaParts, windowLabel, DNA_INDEX }
   };
 
   if (document.readyState === 'loading') {

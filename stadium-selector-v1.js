@@ -144,21 +144,108 @@
     window.addEventListener('pbe:upgrades-ready',()=>dock(document.querySelector('.pbe-stadium-control')));
     const toggle=control?.querySelector('.pbe-stadium-toggle');
     const menu=control?.querySelector('.pbe-stadium-menu');
+
+    /* THE MENU IS PORTALLED WHILE OPEN.
+       Measured on the docked control: .pbes-top carries overflow:hidden from a
+       later polish sheet, so a menu positioned absolutely inside the control
+       was clipped to nothing at every width -- nine of nine hit-test points
+       over the "open" menu answered with the scoreboard or the hero. Below
+       620px it was position:fixed, but the shell's backdrop-filter makes the
+       shell the containing block for fixed descendants, so the menu resolved
+       against the shell and rendered at y = -482.
+
+       Neither is fixable from inside the shell: a stacking context or a
+       clipping ancestor cannot be escaped by a descendant however it is
+       styled. This is the same lesson as the Player DNA switcher, and the same
+       answer: while open the menu is a child of BODY, positioned with fixed
+       coordinates computed from the toggle, flipped or clamped to stay inside
+       the viewport, and scrollable internally when the room is short. It is
+       returned to the control on close so the markup and the radiogroup stay
+       exactly where the rest of this module expects them.
+
+       It does not use the Player DNA modal root: that root is rewritten with
+       innerHTML whenever a modal opens and would destroy a menu parked in it.
+       z-index 4950 is the control's documented place in the product ladder --
+       above the shell (2500), the drawer (2700), every research panel and the
+       command palette (4900); below the switcher (4980) and the paywall
+       (5000), both of which are modal and close this menu on the way in. */
+    const home=document.createComment('pbe-stadium-menu-home');
+    const EDGE=8, GAP=8;
+    function bottomReserve(){
+      /* the phone tab bar is fixed chrome; the menu must not open under it */
+      const bar=document.querySelector('.mobile-bottom-nav');
+      if(!bar)return 0;
+      const cs=getComputedStyle(bar);if(cs.display==='none'||cs.visibility==='hidden')return 0;
+      const r=bar.getBoundingClientRect();return r.height>0?Math.max(0,innerHeight-r.top):0;
+    }
+    function place(){
+      if(!menu||menu.dataset.pbePortal!=='1'||!toggle)return;
+      const vw=innerWidth,vh=innerHeight,r=toggle.getBoundingClientRect();
+      const width=Math.min(440,vw-EDGE*2);
+      let left=Math.round(r.right-width);
+      if(left<EDGE)left=EDGE;
+      if(left+width>vw-EDGE)left=Math.max(EDGE,vw-EDGE-width);
+      const reserve=bottomReserve();
+      const below=vh-reserve-EDGE-(r.bottom+GAP);
+      const above=r.top-GAP-EDGE;
+      const want=menu.scrollHeight||420;
+      let top,room;
+      if(below>=Math.min(want,320)||below>=above){top=Math.round(r.bottom+GAP);room=below}
+      else{room=above;top=Math.round(Math.max(EDGE,r.top-GAP-Math.min(want,above)))}
+      menu.style.left=left+'px';
+      menu.style.top=top+'px';
+      menu.style.width=width+'px';
+      menu.style.maxHeight=Math.max(160,Math.floor(room))+'px';
+    }
+    let raf=0;
+    const onMove=()=>{if(raf)return;raf=requestAnimationFrame(()=>{raf=0;place()})};
+    function portalOut(){
+      if(!menu||menu.dataset.pbePortal==='1')return;
+      menu.parentNode.insertBefore(home,menu);
+      document.body.appendChild(menu);
+      menu.dataset.pbePortal='1';
+      place();
+      addEventListener('resize',onMove);
+      addEventListener('scroll',onMove,{passive:true});
+      window.visualViewport?.addEventListener('resize',onMove);
+    }
+    function portalBack(){
+      if(!menu||menu.dataset.pbePortal!=='1')return;
+      removeEventListener('resize',onMove);
+      removeEventListener('scroll',onMove);
+      window.visualViewport?.removeEventListener('resize',onMove);
+      menu.removeAttribute('style');
+      delete menu.dataset.pbePortal;
+      if(home.parentNode)home.parentNode.replaceChild(menu,home);else control.appendChild(menu);
+    }
+    const isOpen=()=>control.classList.contains('open');
     const setOpen=open=>{
       control.classList.toggle('open',open);
       toggle?.setAttribute('aria-expanded',open?'true':'false');
       menu?.setAttribute('aria-hidden',open?'false':'true');
+      if(open){portalOut();menu?.classList.add('is-open');
+        /* keyboard users land on the current choice, not on nothing */
+        setTimeout(()=>{try{(menu.querySelector('[aria-checked="true"]')||menu.querySelector('[data-stadium-choice]'))?.focus({preventScroll:true})}catch(_){}},0);}
+      else{menu?.classList.remove('is-open');portalBack()}
     };
-    toggle?.addEventListener('click',()=>setOpen(!control.classList.contains('open')));
+    toggle?.addEventListener('click',()=>setOpen(!isOpen()));
     control?.querySelectorAll('[data-stadium-choice]').forEach(btn=>{
-      btn.addEventListener('click',()=>{apply(btn.dataset.stadiumChoice);setOpen(false)});
+      btn.addEventListener('click',()=>{apply(btn.dataset.stadiumChoice);setOpen(false);toggle?.focus()});
     });
-    document.addEventListener('click',e=>{if(control&&!control.contains(e.target))setOpen(false)});
+    document.addEventListener('click',e=>{
+      if(!control||!isOpen())return;
+      if(control.contains(e.target)||(menu&&menu.contains(e.target)))return;
+      setOpen(false);
+    });
     document.addEventListener('keydown',e=>{
-      if(e.key==='Escape'&&control?.classList.contains('open')){setOpen(false);toggle?.focus()}
+      if(e.key==='Escape'&&isOpen()){setOpen(false);toggle?.focus()}
     });
+    /* a modal surface (the Player DNA switcher, the weather drawer, the
+       paywall) takes the page; a popover has no business staying open under it */
+    new MutationObserver(()=>{if(isOpen()&&document.body.classList.contains('pdna-modal-open'))setOpen(false)})
+      .observe(document.body,{attributes:true,attributeFilter:['class']});
     apply(saved());
-    window.PBEStadiums={apply,set:apply,current:saved,stadiums:STADIUMS,dock:()=>dock(document.querySelector('.pbe-stadium-control'))};
+    window.PBEStadiums={apply,set:apply,current:saved,stadiums:STADIUMS,open:()=>setOpen(true),close:()=>setOpen(false),isOpen,place,dock:()=>dock(document.querySelector('.pbe-stadium-control'))};
   }
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});

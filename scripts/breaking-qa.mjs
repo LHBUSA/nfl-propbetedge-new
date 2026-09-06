@@ -103,7 +103,7 @@ const MEASURE = `(() => {
   const score = painted(document.querySelector('.pbes-scorebar'));
   const drawerBtn = painted(document.querySelector('.mobile-menu-btn, .hamburger, [data-drawer], #pbes-menu'));
   const stadium = painted(document.querySelector('[class*="stadium-control"], .pbe-stadium-control, #pbe-stadium-control'));
-  const tabbar = painted(document.querySelector('.bottom-tabs, .mobile-tabbar, .pbe-tabbar'));
+  const tabbar = painted(document.querySelector('.mobile-bottom-nav, .bottom-tabs, .mobile-tabbar, .pbe-tabbar'));
   const view = painted(document.getElementById('view-container'));
 
   /* Is the rail DOCKED? A docked band is in normal flow: no fixed/sticky

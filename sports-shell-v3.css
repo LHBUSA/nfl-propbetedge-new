@@ -169,9 +169,24 @@
 #pbe-sports-shell .pbes-primary{min-height:46px!important}
 #pbe-sports-shell .pbes-research{min-height:38px!important;background:rgba(13,12,9,.98)!important}
 
+/* The right cluster reflows in steps instead of squeezing:
+     wide        date | stadium | search | NFL Pro
+     <= 1180     the date drops to one line (SUN · SEP 6)
+     <= 1050     the centre pill and the date leave together; stadium | search | NFL Pro
+     <= 820      stadium collapses to its icon (stadium-selector-v1.css)
+     <= 900      the phone header and tab bar take over the navigation
+   Measured at 987 the date sat 16px from the stadium control with the
+   cluster's gradient fading over it; that is the width the two rules below
+   are for. */
+@media(max-width:1180px){
+  #pbe-sports-shell .pbes-date{display:flex!important;align-items:baseline!important;gap:6px!important;margin-right:4px!important}
+  #pbe-sports-shell .pbes-date span{margin-top:0!important}
+  #pbe-sports-shell .pbes-date span::before{content:'· ';color:var(--pbe-faint-text)}
+}
 @media(max-width:1050px){
   #pbe-sports-shell .pbes-top{grid-template-columns:1fr auto!important;min-height:68px!important}
   #pbe-sports-shell .pbes-center{display:none!important}
+  #pbe-sports-shell .pbes-date{display:none!important}
   #pbe-sports-shell .pbes-brand-logo{width:142px!important;height:50px!important}
   #pbe-sports-shell .pbes-brand-name{font-size:21px!important}
   #pbe-sports-shell[data-shell-version="2"] .pbes-score{flex-basis:220px!important;width:220px!important;min-width:220px!important}

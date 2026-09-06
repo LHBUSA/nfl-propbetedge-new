@@ -632,6 +632,123 @@ for (const width of WIDTHS) {
   await shot(`07-weather-drawer-${width}`);
   await evalIn(`document.querySelector('.pbeb-dx')?.click()`);
   await sleep(600);
+  check('  closing the drawer releases the scroll lock',
+    await evalIn(`document.body.style.overflow !== 'hidden' && !document.body.classList.contains('pdna-modal-open')`));
+
+  /* ---------- THE DRAWER ANSWERS WHY / WHAT CHANGED / WHEN / WHO --------- */
+  await evalIn(RESET);
+  await evalIn(`(()=>{const B=window.PBEBreaking;
+    B.offer(B._test.weatherEventToRail(window.FX.windShift));
+    return B._test.openWeatherDetail(B.state.current);})()`, 30000);
+  await sleep(2000);
+  const shiftDrawer = await evalIn(`(()=>{const p=document.querySelector('.pbeb-panel'); if(!p) return {open:false};
+    const lead=p.querySelector('.pbeb-dlead'), grid=p.querySelector('.pbeb-dgrid');
+    const lr=lead&&lead.getBoundingClientRect(), gr=grid&&grid.getBoundingClientRect();
+    return {open:true, tone:p.dataset.tone,
+      leadText:lead?lead.textContent.replace(/\\s+/g,' ').trim():'',
+      leadAboveGrid:Boolean(lr&&gr&&lr.top<gr.top),
+      deltas:[...p.querySelectorAll('.pbeb-ddelta-v')].map(x=>x.textContent.replace(/\\s+/g,' ').trim()),
+      sub:(p.querySelector('.pbeb-dsub')||{}).textContent?.replace(/\\s+/g,' ').trim()||'',
+      text:p.textContent.replace(/\\s+/g,' ').trim()};})()`);
+  check('the SHIFT drawer opens with the shift tone', shiftDrawer.open && shiftDrawer.tone === 'shift');
+  check('  it leads with WHAT CHANGED, above the forecast grid',
+    /what changed/i.test(shiftDrawer.leadText) && shiftDrawer.leadAboveGrid, shiftDrawer.leadText.slice(0, 70));
+  check('  the wind delta reads 13 → 22 mph', shiftDrawer.deltas.some(d => /13\s*→\s*22\s*mph/.test(d)), shiftDrawer.deltas.join(' | '));
+  check('  the gust delta reads 18 → 34 mph', shiftDrawer.deltas.some(d => /18\s*→\s*34\s*mph/.test(d)));
+  check('  it names the game, the stadium and the kickoff DAY',
+    /GB @ CHI/.test(shiftDrawer.text) && /Soldier Field/.test(shiftDrawer.sub) && /Kickoff · \w{3}, \w{3} \d+ · /.test(shiftDrawer.sub), shiftDrawer.sub.slice(0, 90));
+  check('  the window is a clock, not a raw ISO stamp',
+    /Jan 11 · 12 PM – 4 PM local/.test(shiftDrawer.text) && !/T12:00/.test(shiftDrawer.text));
+  await shot(`09-shift-drawer-${width}`);
+  await evalIn(`window.PBEBreaking._test.closeWeatherDetail()`); await sleep(400);
+
+  await evalIn(RESET);
+  await evalIn(`(()=>{const B=window.PBEBreaking;
+    B.offer(B._test.weatherEventToRail(window.FX.nwsWarning));
+    return B._test.openWeatherDetail(B.state.current);})()`, 30000);
+  await sleep(2000);
+  const nwsDrawer = await evalIn(`(()=>{const p=document.querySelector('.pbeb-panel'); if(!p) return {open:false};
+    return {open:true, tone:p.dataset.tone, text:p.textContent.replace(/\\s+/g,' ').trim(),
+      cells:[...p.querySelectorAll('.pbeb-dnws-cell')].map(c=>c.textContent.replace(/\\s+/g,' ').trim())};})()`);
+  check('the NWS drawer opens with the official tone', nwsDrawer.open && nwsDrawer.tone === 'nws');
+  check('  it carries event, severity, certainty and urgency as published',
+    /Winter Storm Warning/.test(nwsDrawer.text) && nwsDrawer.cells.some(c => /Severity\s*Severe/.test(c))
+      && nwsDrawer.cells.some(c => /Certainty\s*Likely/.test(c)) && nwsDrawer.cells.some(c => /Urgency\s*Expected/.test(c)),
+    nwsDrawer.cells.join(' | '));
+  check('  the official wording is verbatim and the action is the official alert',
+    /issued January 11 at 3:04AM MST/.test(nwsDrawer.text) && /VIEW OFFICIAL ALERT/.test(nwsDrawer.text));
+  await shot(`10-nws-drawer-${width}`);
+  await evalIn(`window.PBEBreaking._test.closeWeatherDetail()`); await sleep(400);
+
+  /* ---------- WEATHER -> PLAYER DNA: real players for THIS game ---------- */
+  await evalIn(RESET);
+  await evalIn(`(()=>{const B=window.PBEBreaking;
+    B.offer(B._test.weatherEventToRail(window.FX.snowWatch));
+    return B._test.openWeatherDetail(B.state.current);})()`, 30000);
+  await sleep(2000);
+  const who = await evalIn(`(()=>{const p=document.querySelector('.pbeb-panel'); if(!p) return {open:false, chips:[]};
+    const chips=[...p.querySelectorAll('.pbeb-chip[data-player]')].map(c=>({route:c.dataset.dna, id:c.dataset.player,
+      text:c.textContent.replace(/\\s+/g,' ').trim(), face:Boolean(c.querySelector('img'))}));
+    return {open:true, chips, lead:(p.querySelector('.pbeb-dlead-h')||{}).textContent||''};})()`);
+  check('the WATCH drawer leads with the condition', /SNOW FORECAST/.test(who.lead), who.lead);
+  check('  it resolves market-priced players for BUF and NE at all four positions',
+    who.chips.length >= 4 && ['qbdna', 'wrdna', 'rbdna', 'tedna'].every(r => who.chips.some(c => c.route === r)),
+    who.chips.map(c => `${c.route}:${c.text.slice(0, 16)}`).join(' | '));
+  check('  every chip is a BUF or NE player with a real headshot',
+    who.chips.length > 0 && who.chips.every(c => /(BUF|NE) ·/.test(c.text) && c.face));
+  check('  the QB chip is Josh Allen — the one priced quarterback on that roster',
+    who.chips.some(c => c.route === 'qbdna' && /Josh Allen/.test(c.text) && c.id === '00-0034857'));
+  await evalIn(`document.querySelector('.pbeb-chip[data-player="00-0034857"]')?.click()`);
+  await sleep(12000);
+  const landed = await evalIn(`(()=>({route:location.hash, player:window.PBEQBDna&&PBEQBDna.state.playerId,
+    drawerOpen:Boolean(document.querySelector('.pbeb-panel')), scrollLocked:document.body.style.overflow==='hidden',
+    token:sessionStorage.getItem('pbe.playerdna.focus')}))()`);
+  check('  the QB chip lands on QB DNA with Josh Allen selected',
+    /qbdna/.test(landed.route) && landed.player === '00-0034857', `${landed.route} ${landed.player}`);
+  check('  the drawer closed, the scroll lock released, the one-shot token consumed',
+    !landed.drawerOpen && !landed.scrollLocked && !landed.token);
+  await shot(`11-qbdna-from-weather-${width}`);
+
+  /* ---------- GAME BREAK -> PBECAST focuses THAT game -------------------- */
+  await evalIn(`window.App && App.nav('home')`); await sleep(3000);
+  await evalIn(RESET);
+  const cast = await evalIn(`(async()=>{
+    const j=await (await fetch('/api/nfl-live')).json(); const games=j.games||[];
+    if(games.length<2) return {skip:true, n:games.length};
+    const g=games[games.length-1];
+    const fx=JSON.parse(JSON.stringify(window.FX.touchdown)); fx.games[0].id=String(g.id);
+    fx.games[0].teams.home.abbreviation=g.teams.home.abbreviation;
+    fx.games[0].teams.away.abbreviation=g.teams.away.abbreviation;
+    window.PBEBreaking._test.ingestScoreboard(fx);
+    const cta=document.querySelector('#pbe-breaking-slot .pbeb-cta'); if(cta) cta.click();
+    return {skip:false, id:String(g.id)};})()`, 20000);
+  await sleep(9000);
+  const castState = await evalIn(`(()=>({route:location.hash, active:window.PBEcastV6&&PBEcastV6.state.activeId,
+    token:sessionStorage.getItem('pbe.pbecast.focus'),
+    activeCard:(document.querySelector('.cast6-rail button.active')||{}).textContent?.replace(/\\s+/g,' ').trim()||''}))()`);
+  if (cast.skip) console.log(`  (PBEcast focus check skipped: ${cast.n} games on the slate)`);
+  else {
+    check('GAME BREAK -> WATCH IN PBECAST lands on PBEcast', /pbecast/.test(castState.route), castState.route);
+    check('  and focuses THAT game, not the default pick',
+      castState.active === cast.id, `active ${castState.active}, expected ${cast.id} · ${castState.activeCard.slice(0, 40)}`);
+    check('  the one-shot focus token was consumed', !castState.token);
+  }
+  await shot(`12-pbecast-from-gamebreak-${width}`);
+
+  /* ---------- RB DNA and TE DNA under an active alert -------------------- */
+  if (width >= 1280) {
+    for (const [route, name] of [['rbdna', '13-rbdna-with-breaking'], ['tedna', '14-tedna-with-breaking']]) {
+      await evalIn(`window.App && App.nav('${route}')`); await sleep(12000);
+      await evalIn(`(()=>{const B=window.PBEBreaking; B.state.queue.length=0; B.state.current=null;
+        B.state.seen.clear(); B.state.dismissed.clear();
+        return B.offer(B._test.weatherEventToRail(window.FX.windShift));})()`);
+      await evalIn(SETTLE, 15000);
+      m = await evalIn(READ);
+      check(`${route} + active WEATHER SHIFT: the rail renders and covers nothing`,
+        m.visible && !m.overlapsNav && !m.overlapsScore && !m.docOverflowX, `h=${m.height}px`);
+      await shot(`${name}-${width}`);
+    }
+  }
 
   /* ---------- THE COEXISTENCE PROOF ------------------------------------ */
   await evalIn(`window.App && App.nav('qbdna')`);

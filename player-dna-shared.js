@@ -224,6 +224,46 @@
 
   const isPickerOpen = () => Boolean(openState);
 
+  /* ---- cross-product focus hand-off --------------------------------------
+     PBE BREAKING (a corroborated name in a headline, or a club in a weather
+     alert) can ask a product to open on a specific player and game. The
+     request is a one-shot token in session storage, consumed by the product
+     it names and by nobody else, so a stale request can never redirect a
+     later, unrelated visit. */
+  const FOCUS_KEY = 'pbe.playerdna.focus';
+  function takeFocus(route) {
+    try {
+      const raw = sessionStorage.getItem(FOCUS_KEY);
+      if (!raw) return null;
+      const f = JSON.parse(raw);
+      if (!f || f.route !== route) return null;
+      sessionStorage.removeItem(FOCUS_KEY);
+      return (f.player_id || f.event_id) ? f : null;
+    } catch { return null; }
+  }
+  /**
+   * Apply a focus request to a product's state and say whether a reload is
+   * needed. Every product keeps the same derived-state fields, so the reset
+   * lives here once rather than four times.
+   */
+  function applyFocus(state, route) {
+    const f = takeFocus(route);
+    if (!f) return false;
+    let changed = false;
+    if (f.player_id && f.player_id !== state.playerId) {
+      state.playerId = f.player_id;
+      state.dna = null; state.lab = null; state.cmp = null;
+      state.ctxCmp = null; state.ctx = null; state.eventId = null;
+      changed = true;
+    }
+    if (f.event_id && f.event_id !== state.eventId) {
+      state.eventId = f.event_id;
+      state.ctx = null; state.ctxCmp = null; state.lab = null;
+      changed = true;
+    }
+    return changed;
+  }
+
   /* ---- the product family ------------------------------------------------ */
   const FAMILY = [
     { route: 'qbdna', short: 'QB', label: 'QB DNA' },
@@ -426,7 +466,7 @@
 
   window.PBEPlayerDNA = {
     esc, headshot, crest, matchupLine, SEARCH_ICON, IMG_FAIL,
-    modalRoot, openPicker, closePicker, isPickerOpen,
+    modalRoot, openPicker, closePicker, isPickerOpen, takeFocus, applyFocus,
     FAMILY, familySwitch, wireFamily,
     paintCharts, drawSeries, drawDistribution,
     n1, pctSigned, samp, den, priceLabel, longDate, kickoffLabel,

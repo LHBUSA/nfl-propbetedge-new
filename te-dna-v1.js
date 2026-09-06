@@ -941,7 +941,12 @@
     }
   }
 
-  function view() { if (!state.dna) load(); else render(); }
+  /* A hand-off from PBE BREAKING may name a player and a game; it is applied
+     before the first paint so the reader lands on the right athlete. */
+  function view() {
+    if (PD.applyFocus) PD.applyFocus(state, 'tedna');
+    if (!state.dna) load(); else render();
+  }
 
   function install() {
     if (!window.App || !window.App.VIEWS) return false;
