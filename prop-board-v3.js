@@ -4,6 +4,11 @@
  */
 (() => {
   'use strict';
+  /* A provider is named for a reader, not echoed as an environment constant:
+     THE_ODDS_API is "The Odds API". Unknown providers get words, not underscores. */
+  function providerLabel(p){const raw=String(p||'').trim();if(!raw)return 'Provider';
+    const known={THE_ODDS_API:'The Odds API',ODDS_API:'The Odds API'};if(known[raw.toUpperCase()])return known[raw.toUpperCase()];
+    return raw.replace(/[_-]+/g,' ').toLowerCase().replace(/\b\w/g,c=>c.toUpperCase()).replace(/\bApi\b/g,'API');}
 
   const API = typeof NFL_API_GATEWAY !== 'undefined' ? NFL_API_GATEWAY : 'https://nfl-api.propbetedge.ai';
   const DEFAULT_EVENT = '8c94552d022acec4a0458d70c19d3da9';
@@ -366,7 +371,7 @@
     const partial = state.missingMarkets.length > 0;
     return `<div class="pbe3-health-body">
       <div class="pbe3-health-row"><span>Market semantics</span><strong class="${semantics === 'LIVE' ? 'live' : ''}">${esc(semantics)}</strong></div>
-      <div class="pbe3-health-row"><span>Provider</span><strong>${esc(provider)}</strong></div>
+      <div class="pbe3-health-row"><span>Provider</span><strong>${esc(providerLabel(provider))}</strong></div>
       <div class="pbe3-health-row"><span>Provider freshness</span><strong>${esc(age(board?.provider_last_update || board?.updated_at))}</strong></div>
       <div class="pbe3-health-row"><span>Requested markets</span><strong>${MARKETS.length}</strong></div>
       <div class="pbe3-health-row"><span>Unavailable markets</span><strong class="${partial ? 'partial' : 'live'}">${partial ? state.missingMarkets.length : 0}</strong></div>
@@ -448,8 +453,8 @@
       </header>
 
       <section class="pbe3-event-bar">
-        <div class="pbe3-event-main"><div class="pbe3-event-shield">NFL</div><div><div class="pbe3-event-label">Current market event</div><div class="pbe3-event-title">${esc(away)} @ ${esc(home)}</div><div class="pbe3-event-meta">${esc(dateTime(kickoff))} · Event ${esc(state.eventId.slice(0,12))}…</div></div></div>
-        <div class="pbe3-feed-state ${partial?'partial':semantics==='LIVE'?'live':''}">${partial?'LIVE · PARTIAL MARKET':`MARKET ${esc(semantics)}`} · ${esc(provider)} · ${esc(age(board?.provider_last_update || board?.updated_at))}</div>
+        <div class="pbe3-event-main"><div class="pbe3-event-shield">NFL</div><div><div class="pbe3-event-label">Current market event</div><div class="pbe3-event-title">${esc(away)} @ ${esc(home)}</div><div class="pbe3-event-meta">${esc(dateTime(kickoff))}</div></div></div>
+        <div class="pbe3-feed-state ${partial?'partial':semantics==='LIVE'?'live':''}">${partial?'LIVE · PARTIAL MARKET':`MARKET ${esc(semantics)}`} · ${esc(providerLabel(provider))} · ${esc(age(board?.provider_last_update || board?.updated_at))}</div>
       </section>
 
       <div class="pbe3-kpis">

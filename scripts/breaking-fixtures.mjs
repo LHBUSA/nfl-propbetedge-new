@@ -647,13 +647,14 @@ for (const width of WIDTHS) {
     return {open:true, tone:p.dataset.tone,
       leadText:lead?lead.textContent.replace(/\\s+/g,' ').trim():'',
       leadAboveGrid:Boolean(lr&&gr&&lr.top<gr.top),
-      deltas:[...p.querySelectorAll('.pbeb-ddelta-v')].map(x=>x.textContent.replace(/\\s+/g,' ').trim()),
+      /* the first change is the drawer's hero fact; the rest are listed below it */
+      deltas:[...p.querySelectorAll('.pbeb-dhero, .pbeb-ddelta-v')].map(x=>x.textContent.replace(/\\s+/g,' ').trim()),
       sub:(p.querySelector('.pbeb-dsub')||{}).textContent?.replace(/\\s+/g,' ').trim()||'',
       text:p.textContent.replace(/\\s+/g,' ').trim()};})()`);
   check('the SHIFT drawer opens with the shift tone', shiftDrawer.open && shiftDrawer.tone === 'shift');
   check('  it leads with WHAT CHANGED, above the forecast grid',
     /what changed/i.test(shiftDrawer.leadText) && shiftDrawer.leadAboveGrid, shiftDrawer.leadText.slice(0, 70));
-  check('  the wind delta reads 13 → 22 mph', shiftDrawer.deltas.some(d => /13\s*→\s*22\s*mph/.test(d)), shiftDrawer.deltas.join(' | '));
+  check('  the wind delta 13 → 22 mph is the hero fact', shiftDrawer.deltas.length > 0 && /13\s*→\s*22\s*mph/.test(shiftDrawer.deltas[0]), shiftDrawer.deltas.join(' | '));
   check('  the gust delta reads 18 → 34 mph', shiftDrawer.deltas.some(d => /18\s*→\s*34\s*mph/.test(d)));
   check('  it names the game, the stadium and the kickoff DAY',
     /GB @ CHI/.test(shiftDrawer.text) && /Soldier Field/.test(shiftDrawer.sub) && /Kickoff · \w{3}, \w{3} \d+ · /.test(shiftDrawer.sub), shiftDrawer.sub.slice(0, 90));

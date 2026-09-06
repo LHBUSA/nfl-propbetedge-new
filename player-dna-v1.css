@@ -180,12 +180,16 @@
   font-variant-numeric: tabular-nums;
 }
 .q2-hero-line em {
-  font-style: normal; font: 500 9px/1 var(--pbe-font-data);
-  letter-spacing: .08em; color: var(--pbe-subtle);
+  font-style: normal; font: 500 10px/1 var(--pbe-font-data);
+  letter-spacing: .06em; color: var(--pbe-faint-text);
 }
+/* An absence, stated once and quietly. It used to shout in tracked uppercase
+   mono, which made "nothing is priced" the loudest thing in the hero. */
 .q2-hero-lines.is-none {
-  font: 500 var(--fs-micro)/1.6 var(--pbe-font-data); letter-spacing: .08em;
-  color: var(--pbe-unavailable); text-transform: uppercase;
+  display: inline-block; padding: 8px 12px;
+  border: 1px dashed var(--pbe-line-strong); border-radius: var(--r-sm);
+  font: 500 12px/1.5 var(--pbe-font-ui); letter-spacing: 0;
+  color: var(--pbe-unavailable); text-transform: none;
 }
 
 /* ============================ STATUS RAIL =============================== */
@@ -780,6 +784,15 @@
   font: 500 var(--fs-micro)/1 var(--pbe-font-data); letter-spacing: .06em;
   color: var(--pbe-faint-text);
 }
+/* the player who is already open: a reader should never pick him again by
+   mistake, or wonder which row they came from */
+.q2-picker-row.is-current { background: rgba(212,175,55,.06); box-shadow: inset 3px 0 0 var(--pbe-gold); }
+.q2-picker-now {
+  display: inline-block; margin-left: 8px; padding: 2px 6px; vertical-align: 1px;
+  border-radius: var(--r-pill); border: 1px solid rgba(212,175,55,.45);
+  font: 700 9.5px/1 var(--pbe-font-data); letter-spacing: .12em; text-transform: uppercase;
+  color: var(--pbe-gold); font-style: normal;
+}
 
 /* ============================ SOURCES =================================== */
 .q2-sources {
@@ -869,16 +882,29 @@
 
 @media (max-width: 620px) {
   .q2-body { padding-top: var(--s-4); }
+  /* Measured at 390 the hero ran to ~600px before the first number: a club
+     chip that repeats the meta line, a full-width control, and a four-line
+     NEXT block. The club chip stands down (the meta line names the club), the
+     NEXT block folds to two lines, and the hero tightens its own padding. */
+  .q2-hero { padding-top: var(--s-3); padding-bottom: var(--s-3); }
+  .q2-hero-top { margin-bottom: var(--s-3); }
+  .q2-hero-club { display: none; }
   .q2-hero-body { align-items: flex-start; }
-  .q2-hero-face .q2-face, .q2-hero-face .q2-face-none { --face: 92px !important; }
+  .q2-hero-face .q2-face, .q2-hero-face .q2-face-none { --face: 84px !important; }
   .q2-hero-name { font-size: 27px; }
-  .q2-hero-next { grid-template-columns: 1fr; width: 100%; }
-  .q2-hero-next-k {
-    grid-row: auto; border-right: 0; padding-right: 0; height: auto;
-    padding-bottom: 6px;
+  .q2-hero-meta { margin-top: 6px; gap: 7px; }
+  .q2-hero-next {
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: 3px 10px;
+    width: 100%; margin-top: var(--s-3); padding-top: var(--s-3);
   }
+  .q2-hero-next-k { border-right: 0; padding: 0; height: auto; display: inline; }
+  .q2-hero-next-m { font-size: var(--fs-h3); }
   .q2-hero-next-w { justify-self: start; }
-  .q2-hero-next-v, .q2-hero-next-e { grid-column: 1; }
+  .q2-hero-next-v { flex-basis: 100%; }
+  .q2-hero-next-e { flex-basis: auto; column-gap: 12px; row-gap: 2px; }
+  /* a separator dot that lands at the start of a wrapped line reads as debris */
+  .q2-hero-next-e span::before { content: ''; }
+  .q2-rail { padding: 7px var(--q2-gut); gap: 4px 12px; }
   /* the line cards become a snap rail rather than a wrap-around block */
   .q2-hero-lines {
     flex-wrap: nowrap; overflow-x: auto; scroll-snap-type: x mandatory;
@@ -979,8 +1005,8 @@
 }
 
 @media (max-width: 620px) {
-  /* a phone needs the biggest, most obvious version of this control */
-  .q2-change { width: 100%; justify-content: center; margin-top: var(--s-3); }
+  /* obvious, full touch height, but not a banner across the hero */
+  .q2-change { width: auto; justify-content: center; margin-top: var(--s-3); padding: 10px 14px; }
   .q2-change.sm { width: auto; }
 }
 

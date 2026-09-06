@@ -68,7 +68,7 @@
 }
 .pbeb-key svg { width: 13px; height: 13px; flex: none; }
 .pbeb-key span {
-  padding: 2px 5px; border-radius: 2px; letter-spacing: .12em; font-size: 8px;
+  padding: 2px 5px; border-radius: 2px; letter-spacing: .12em; font-size: 10px;
   background: color-mix(in srgb, var(--pbeb-accent) 22%, transparent);
   color: var(--pbeb-ink);
 }
@@ -155,7 +155,7 @@
   color: var(--pbe-paper, #f4efe4); font-variant-numeric: tabular-nums;
 }
 .pbeb-shift i { font-style: normal; color: var(--pbeb-ink); }
-.pbeb-shift u { text-decoration: none; font-size: 9px; color: var(--pbe-faint-text, #8e8a80); }
+.pbeb-shift u { text-decoration: none; font-size: 10px; color: var(--pbe-faint-text, #8e8a80); }
 .pbeb-facts { display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .pbeb-facts i { font-style: normal; color: var(--pbe-paper-2, #d8d1c4); white-space: nowrap; }
 .pbeb-nws {
@@ -207,7 +207,7 @@
   position: absolute; right: 44px; top: 6px;
   padding: 2px 6px; border-radius: 2px;
   background: var(--pbeb-wash); color: var(--pbeb-ink);
-  font: 700 9px/1 var(--pbe-font-data, ui-monospace, monospace); letter-spacing: .1em;
+  font: 700 10px/1 var(--pbe-font-data, ui-monospace, monospace); letter-spacing: .1em;
 }
 
 /* ---------------------------------------------------------------------------
@@ -246,6 +246,24 @@
   font: 800 22px/1.05 var(--pbe-font-data, ui-monospace, monospace);
   letter-spacing: .06em; color: var(--pbeb-ink);
 }
+/* THE TRIGGER IS THE HERO FACT. For a shift the first change is the reason
+   the reader is here, so it is the largest thing in the drawer: 13 -> 22 mph,
+   then the copy that names it, then the rest of the changes at a step down. */
+.pbeb-dhero {
+  margin-top: 10px; display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 12px;
+  font: 300 40px/1 var(--pbe-font-data, ui-monospace, monospace);
+  color: var(--pbe-paper, #f4efe4); font-variant-numeric: tabular-nums;
+}
+.pbeb-dhero b { font-weight: 300; }
+.pbeb-dhero b:first-child { color: var(--pbe-dim, #b8b3a8); }
+.pbeb-dhero i { font-style: normal; color: var(--pbeb-ink); font-size: 26px; }
+.pbeb-dhero u { text-decoration: none; font-size: 14px; color: var(--pbe-faint-text, #8e8a80); }
+.pbeb-dhero em {
+  font-style: normal; align-self: center; padding: 3px 7px; border-radius: 2px;
+  background: var(--pbeb-wash); color: var(--pbeb-ink);
+  font: 700 11px/1.2 var(--pbe-font-data, ui-monospace, monospace); letter-spacing: .06em;
+}
+.pbeb-dhero + .pbeb-dlead-h { margin-top: 10px; font-size: 16px; }
 .pbeb-dlead-s {
   margin-top: 6px; font: 400 12px/1.5 var(--pbe-font-ui, system-ui, sans-serif);
   color: var(--pbe-dim, #b8b3a8);
@@ -310,7 +328,7 @@
 .pbeb-chip-copy { display: grid; gap: 2px; min-width: 0; }
 .pbeb-chip-copy b { font: 600 12px/1.1 var(--pbe-font-ui, system-ui, sans-serif); color: var(--pbe-paper, #f4efe4); }
 .pbeb-chip-copy em {
-  font: 500 9px/1 var(--pbe-font-data, ui-monospace, monospace);
+  font: 500 10px/1 var(--pbe-font-data, ui-monospace, monospace);
   letter-spacing: .08em; text-transform: uppercase; color: var(--pbe-faint-text, #8e8a80);
 }
 .pbeb-chip > i { font-style: normal; color: var(--pbe-gold, #d4af37); margin-left: 2px; }
@@ -352,7 +370,7 @@
 }
 .pbeb-dgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
 .pbeb-dk {
-  font: 600 9px/1 var(--pbe-font-data, ui-monospace, monospace);
+  font: 600 10px/1 var(--pbe-font-data, ui-monospace, monospace);
   letter-spacing: .12em; text-transform: uppercase; color: var(--pbe-faint-text, #8e8a80);
 }
 .pbeb-dv {
@@ -361,7 +379,7 @@
 }
 .pbeb-drow.is-empty .pbeb-dv { font-size: 12px; font-style: italic; color: var(--pbe-faint-text, #8e8a80); }
 .pbeb-ds {
-  margin-top: 4px; font: 500 9px/1.3 var(--pbe-font-data, ui-monospace, monospace);
+  margin-top: 4px; font: 500 10px/1.3 var(--pbe-font-data, ui-monospace, monospace);
   color: var(--pbe-faint-text, #8e8a80);
 }
 .pbeb-dnote {
@@ -376,7 +394,7 @@
 }
 .pbeb-dtrow b { color: var(--pbe-paper, #f4efe4); font-size: 15px; font-weight: 400; }
 .pbeb-dtrow i { font-style: normal; color: var(--pbe-gold, #d4af37); }
-.pbeb-dtrow u { text-decoration: none; font-size: 9px; color: var(--pbe-faint-text, #8e8a80); }
+.pbeb-dtrow u { text-decoration: none; font-size: 10px; color: var(--pbe-faint-text, #8e8a80); }
 .pbeb-dalert { display: grid; gap: 6px; }
 .pbeb-dalert-k {
   margin-top: 8px;
@@ -384,7 +402,7 @@
   letter-spacing: .06em; text-transform: uppercase; color: var(--pbeb-ink, #ff8a8a);
 }
 .pbeb-dalert-h { font: 400 13px/1.5 var(--pbe-font-ui, system-ui, sans-serif); color: var(--pbe-paper-2, #d8d1c4); }
-.pbeb-dalert-s { font: 500 9px/1 var(--pbe-font-data, ui-monospace, monospace); letter-spacing: .1em; text-transform: uppercase; color: var(--pbe-faint-text, #8e8a80); }
+.pbeb-dalert-s { font: 500 10px/1 var(--pbe-font-data, ui-monospace, monospace); letter-spacing: .1em; text-transform: uppercase; color: var(--pbe-faint-text, #8e8a80); }
 .pbeb-dlinks { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .pbeb-dfoot {
   display: grid; gap: 5px; padding: 13px 18px 16px;
@@ -413,7 +431,7 @@
     align-items: center;
     gap: 5px 10px; padding: 7px 12px 8px 15px;
   }
-  .pbeb-key { grid-area: key; align-self: center; font-size: 9px; padding: 4px 7px; min-width: 0; }
+  .pbeb-key { grid-area: key; align-self: center; font-size: 10px; padding: 4px 7px; min-width: 0; }
   /* the compact label replaces the long one; the severity chip is repeated
      in full inside the drawer and is dropped here so the key and the action
      can share the row without colliding */
@@ -439,7 +457,7 @@
   }
   /* the metadata row must stay ONE line high: a 18px crest inside a 10px text
      row was silently setting the row height and costing the rail 8px */
-  .pbeb-meta { gap: 7px; font-size: 9px; row-gap: 3px; flex-wrap: nowrap; overflow: hidden; }
+  .pbeb-meta { gap: 7px; font-size: 10px; row-gap: 3px; flex-wrap: nowrap; overflow: hidden; }
   .pbeb-meta .pbeb-crest { width: 13px; height: 13px; }
   /* one line of metadata on a phone; the rest is in the drawer */
   .pbeb-meta .pbeb-who { display: none; }
@@ -448,7 +466,7 @@
   .pbeb-side em { font-size: 17px; }
   .pbeb-score { gap: 10px; }
   .pbeb-ctas { flex-wrap: wrap; gap: 6px; }
-  .pbeb-cta { padding: 5px 8px; min-height: 26px; font-size: 9px; }
+  .pbeb-cta { padding: 5px 8px; min-height: 26px; font-size: 10px; }
   /* only the primary action survives on a phone; the rail itself is the tap
      target for everything else */
   .pbeb-ctas .pbeb-cta:not(.is-primary) { display: none; }
@@ -459,6 +477,7 @@
   .pbeb-panel { width: 100vw; max-width: none; }
   .pbeb-dnws-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .pbeb-dlead-h { font-size: 19px; }
+  .pbeb-dhero { font-size: 32px; }
   .pbeb-ddelta-f { flex-basis: 100%; }
 }
 

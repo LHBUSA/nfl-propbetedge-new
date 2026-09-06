@@ -28,8 +28,8 @@
   const esc = v => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;')
     .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
-  const MARKET_UNAVAILABLE = 'CURRENT MARKET UNAVAILABLE';
-  const SAMPLE_UNAVAILABLE = 'NFL SAMPLE UNAVAILABLE';
+  const MARKET_UNAVAILABLE = 'Market unavailable';
+  const SAMPLE_UNAVAILABLE = 'No NFL game sample yet';
   const REDUCED = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   const state = {
@@ -321,8 +321,7 @@
     }
     const mine = c.markets.players.find(p => p.gsis_id === state.playerId);
     if (!mine) {
-      return `<div class="q2-hero-lines is-none">${esc(MARKET_UNAVAILABLE)} — this
-        quarterback is not priced for this game</div>`;
+      return `<div class="q2-hero-lines is-none">${esc(MARKET_UNAVAILABLE)} · no current market prices this quarterback for this game</div>`;
     }
     const order = ['passing_yards', 'completions', 'passing_touchdowns',
                    'passing_attempts', 'interceptions'];
@@ -358,7 +357,7 @@
       <div class="q2-hero-next-w">${esc(kickoffLabel(g.kickoff_utc))}</div>
       ${venue ? `<div class="q2-hero-next-v">${esc(venue)}</div>` : ''}
       ${env.length ? `<div class="q2-hero-next-e">${env.map(e => `<span>${esc(e)}</span>`).join('')}</div>`
-        : `<div class="q2-hero-next-e is-none">${esc(((c.unresolved || [])[0] || {}).reason
+        : `<div class="q2-hero-next-e is-none">${esc(PD.softReason(((c.unresolved || [])[0] || {}).reason)
             || 'conditions not resolved')}</div>`}
     </div>`;
   }
@@ -580,8 +579,8 @@
               <span>${esc(c.context.precip === 'none' ? 'Dry' : c.context.precip)}</span>
               <span>${esc(c.context.roof === 'closed' ? 'Roof closed' : 'Outdoor')}</span>
             </div>`
-            : `<div class="q2-today-env is-none">${esc(((c.unresolved || [])
-                .find(u => u.field === 'weather') || {}).reason || 'no forecast')}</div>`}
+            : `<div class="q2-today-env is-none">${esc(PD.softReason(((c.unresolved || [])
+                .find(u => u.field === 'weather') || {}).reason) || 'no forecast')}</div>`}
         </div>
         <div class="q2-today-facts">
           ${facts.map(([k, v, sub]) => `<div class="q2-today-fact${v === null ? ' is-empty' : ''}">
@@ -1108,6 +1107,7 @@
           players: (state.players && state.players.players) || [],
           positionNoun: 'quarterback',
           returnFocusTo: b,
+          currentId: target === 'comparePlayerId' ? state.comparePlayerId : state.playerId,
           onPick: id => {
             if (target === 'comparePlayerId') { state.comparePlayerId = id; state.cmp = null; }
             else {

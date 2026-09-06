@@ -96,14 +96,17 @@
     ].filter(([, rows]) => rows.length);
   }
 
-  function listHtml(players, query, positionNoun) {
+  function listHtml(players, query, positionNoun, currentId) {
     const groups = groupsFor(players, query);
     if (!groups.length) return `<div class="q2-empty">No ${esc(positionNoun)} matches that search.</div>`;
     return groups.map(([label, rows]) => `<div class="q2-picker-group">
       <div class="q2-picker-glabel">${esc(label)} <em>${rows.length}</em></div>
-      ${rows.slice(0, 140).map(p => `<button type="button" class="q2-picker-row" data-pick="${esc(p.gsis_id)}">
+      ${rows.slice(0, 140).map(p => `<button type="button" class="q2-picker-row${
+          p.gsis_id === currentId ? ' is-current' : ''}" data-pick="${esc(p.gsis_id)}"${
+          p.gsis_id === currentId ? ' aria-current="true"' : ''}>
         ${headshot(p, 40, positionNoun)}
-        <span class="q2-picker-copy"><b>${esc(p.name)}</b>
+        <span class="q2-picker-copy"><b>${esc(p.name)}${
+          p.gsis_id === currentId ? '<i class="q2-picker-now">Open now</i>' : ''}</b>
           <em>${esc(p.team_2026 || p.team || '')}${p.position ? ' · ' + esc(p.position) : ''}
             · ${p.history_available ? esc(p.games) + ' games' : 'no NFL history'}</em></span>
         ${crest(p.team_media, 20)}
@@ -135,7 +138,7 @@
             aria-label="Search ${esc(noun)}s">
           <button type="button" class="q2-picker-x" data-close aria-label="Close">&times;</button>
         </div>
-        <div class="q2-picker-body" id="pdna-picker-body">${listHtml(players, '', noun)}</div>
+        <div class="q2-picker-body" id="pdna-picker-body">${listHtml(players, '', noun, o.currentId || null)}</div>
       </div>
     </div>`;
 
@@ -164,7 +167,7 @@
 
     input.addEventListener('input', () => {
       query = input.value;
-      body.innerHTML = listHtml(players, query, noun);
+      body.innerHTML = listHtml(players, query, noun, o.currentId || null);
       body.scrollTop = 0;
       wireRows();
     });
@@ -223,6 +226,17 @@
   }
 
   const isPickerOpen = () => Boolean(openState);
+
+  /* A source's failure detail belongs in the methodology panel, not in the
+     hero: "forecast unavailable: This operation was aborted" is a transport
+     error, and a reader only needs the first clause. Any other reason (a
+     roof, a neutral site, no hour in the window) is product truth and stays. */
+  const softReason = r => {
+    const s = String(r || '').trim();
+    if (!s) return '';
+    const m = /^(forecast unavailable|weather unavailable|nws unavailable)\s*:/i.exec(s);
+    return m ? m[1].charAt(0).toUpperCase() + m[1].slice(1) + ' for this game' : s;
+  };
 
   /* ---- cross-product focus hand-off --------------------------------------
      PBE BREAKING (a corroborated name in a headline, or a club in a weather
@@ -466,7 +480,7 @@
 
   window.PBEPlayerDNA = {
     esc, headshot, crest, matchupLine, SEARCH_ICON, IMG_FAIL,
-    modalRoot, openPicker, closePicker, isPickerOpen, takeFocus, applyFocus,
+    modalRoot, openPicker, closePicker, isPickerOpen, takeFocus, applyFocus, softReason,
     FAMILY, familySwitch, wireFamily,
     paintCharts, drawSeries, drawDistribution,
     n1, pctSigned, samp, den, priceLabel, longDate, kickoffLabel,

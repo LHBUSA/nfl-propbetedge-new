@@ -1024,11 +1024,17 @@
         </section>`
       : `<section class="pbeb-dlead">
           <div class="pbeb-dlead-k">${changes.length ? 'What changed' : 'Forecast condition'}</div>
+          ${changes.length && changes[0].from !== undefined ? (() => {
+            const c = changes[0], d = deltaParts(c);
+            return `<div class="pbeb-dhero"><b>${esc(d.from)}</b><i aria-hidden="true">→</i><b>${esc(d.to)}</b>${
+              d.unit ? `<u>${esc(d.unit)}</u>` : ''}${Number.isFinite(Number(c.delta))
+              ? `<em>${c.field === 'temp' ? '−' : '+'}${esc(c.delta)}${c.unit === 'percentage points' ? ' pts'
+                : c.unit === '°F' ? '°F' : c.unit ? ' ' + esc(c.unit) : ''}</em>` : ''}</div>`; })() : ''}
           <div class="pbeb-dlead-h">${esc(ev.headline)}</div>
           <div class="pbeb-dlead-s">${changes.length
             ? 'since the last accepted forecast for the kickoff window'
             : 'across the kickoff window · a forecast, not an observation'}</div>
-          ${changes.length ? `<div class="pbeb-ddeltas">${changes.map(c => `<div class="pbeb-ddelta">
+          ${changes.length > 1 ? `<div class="pbeb-ddeltas">${changes.slice(1).map(c => `<div class="pbeb-ddelta">
               <span class="pbeb-ddelta-f">${esc(DELTA_LABEL[c.field] || String(c.field).replace(/_/g, ' '))}</span>
               ${shiftHtml(c, 'pbeb-ddelta-v')}
               ${Number.isFinite(Number(c.delta)) ? `<em>${c.field === 'temp' ? '−' : '+'}${esc(c.delta)}${

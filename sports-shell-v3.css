@@ -580,7 +580,8 @@
 #pbe-sports-shell .pbes-research{
   min-height:30px!important;
   background:var(--pbe-ink)!important;
-  border-bottom:1px solid var(--pbe-line)!important;
+  /* the research row is the quietest band: a faint rule, not another border */
+  border-bottom:1px solid var(--pbe-line-faint)!important;
 }
 #pbe-sports-shell .pbes-research .pbes-nav-btn{
   padding:5px 10px!important;
@@ -595,7 +596,7 @@
 /* Reduced to the one thing nothing else on the page states -- which view you
    are in -- plus the event selector that event-selector-v2.js appends. */
 .pbe-v2-commandbar{
-  min-height:44px!important;
+  min-height:40px!important;
   /* It used a -24px inline margin to bleed past .main-content's padding, but
      the padding is not 24px at every width, so the bar hung 6px past the
      viewport on both sides -- the document's only horizontal overflow, present
@@ -603,7 +604,7 @@
      rule up with the content below it. */
   margin-inline:0!important;
   padding-inline:0!important;
-  border-bottom:1px solid var(--pbe-line)!important;
+  border-bottom:1px solid var(--pbe-line-faint)!important;
   background:var(--pbe-ink)!important;
   backdrop-filter:none!important;
   box-shadow:none!important;
@@ -658,9 +659,14 @@ h1.pbe-v2-view-name{
       cost to leaving it on at every desktop width, and any destination added
       later drops to a second line instead of disappearing.
    -------------------------------------------------------------------------- */
-@media (min-width:1051px){
+/* Wrap applies at every width where the desktop rails are the navigation
+   authority (>= 901px), not only above 1050: measured at 1024 the primary row
+   still ran nowrap and clipped MATCHUPS and the research row past the edge,
+   scrollable with no affordance. A destination that is not visible is dead. */
+@media (min-width:901px){
   #pbe-sports-shell .pbes-nav-btn{padding:8px 7px}
-  #pbe-sports-shell .pbes-nav-group{gap:2px;flex-wrap:wrap}
-  #pbe-sports-shell .pbes-primary,#pbe-sports-shell .pbes-research{gap:14px}
-  #pbe-sports-shell .pbes-primary{flex-wrap:wrap;row-gap:2px}
+  /* groups wrap as WHOLE groups: a row breaks between TOOLS and ARCHIVE, never
+     inside a group, so PROPCHAIN cannot end up orphaned under TOOLS */
+  #pbe-sports-shell .pbes-nav-group{gap:2px;flex-wrap:nowrap}
+  #pbe-sports-shell .pbes-primary,#pbe-sports-shell .pbes-research{gap:14px;flex-wrap:wrap;row-gap:2px}
 }

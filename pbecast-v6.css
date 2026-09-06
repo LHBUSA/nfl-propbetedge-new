@@ -36,3 +36,18 @@
 @media(max-width:1120px){.cast6-score{grid-template-columns:1fr minmax(230px,330px) 1fr;gap:10px}.cast6-team>img{width:60px;height:60px}.cast6-action-grid,.cast6-workspace{grid-template-columns:1fr}.cast6-stat-scroll{max-height:540px}}
 @media(max-width:760px){.pbecast6{padding-bottom:86px}.cast6-top{align-items:flex-start;flex-direction:column}.cast6-actions{width:100%;justify-content:stretch}.cast6-actions button{flex:1}.cast6-score{grid-template-columns:1fr 132px 1fr;gap:5px}.cast6-team{display:block;text-align:center}.cast6-team.home{display:block;text-align:center}.cast6-team>img{width:48px;height:48px}.cast6-team>span>b{font-size:33px}.cast6-team>span>small{display:none}.cast6-score-center>strong{font-size:49px}.cast6-score-center>span{font-size:12px}.cast6-score-center>small{display:none}.cast6-facts{grid-template-columns:1fr 1fr}.cast6-action-grid{grid-template-columns:1fr}.cast6-telemetry-head{align-items:flex-start;flex-direction:column}.cast6-play{grid-template-columns:1fr auto}.cast6-play-meta{grid-column:1/-1}.cast6-stat-row{grid-template-columns:1fr}.cast6-stat-values{justify-content:start}.cast6-module>header{align-items:flex-start;flex-direction:column}.cast6-filters{justify-content:flex-start}.cast6-field{padding:10px}.cast6-field-surface{height:46px}}
 @media(max-width:480px){.cast6-rail button{flex-basis:185px}.cast6-score{grid-template-columns:1fr 108px 1fr}.cast6-score-center>strong{font-size:42px}.cast6-team>span>b{font-size:29px}.cast6-facts{grid-template-columns:1fr}.cast6-actors{display:grid;grid-template-columns:1fr 1fr}.cast6-actor{min-width:0;width:100%}.cast6-telemetry-grid{grid-template-columns:1fr 1fr}.cast6-play{grid-template-columns:1fr}.cast6-play>strong{grid-column:1}.cast6-stat-values{min-width:0}}
+
+/* ---- release-candidate finish ------------------------------------------ */
+/* the rail label is one line; a wrapped "EDT" on its own line read as a fault */
+.cast6-rail button>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* a scheduled game shows its kickoff where a score will be, sized as a fact
+   rather than as a 84px placeholder */
+.cast6-score-center>strong.is-kickoff{font-size:clamp(30px,2.8vw,46px);letter-spacing:-.01em;line-height:1;gap:8px;align-items:baseline}
+.cast6-score-center>strong.is-kickoff small{font:700 12px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:var(--pbe-dim)}
+.cast6-rail button.is-scheduled>div{grid-template-columns:1fr 24px 1fr}
+.cast6-rail button.is-scheduled>div strong{display:none}
+.cast6-actions button{white-space:nowrap}
+.cast6-hero-head small{white-space:nowrap}
+@media(max-width:760px){.cast6-score-center>strong.is-kickoff{font-size:26px}.cast6-hero-head{flex-wrap:wrap}}
+.cast6-kick-k{font-style:normal}
+@media(max-width:480px){.cast6-score-center>strong.is-kickoff{font-size:21px;white-space:nowrap;gap:5px}.cast6-score-center>strong.is-kickoff small{font-size:10px}.cast6-score-center>span{white-space:nowrap;font-size:10px}.cast6-kick-k{display:none}}

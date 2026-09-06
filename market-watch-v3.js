@@ -172,7 +172,7 @@
     return `<tr data-row-key="${esc(r.key)}" class="pbe22-heat-${heat}">
       <td><button class="pbe22-star ${state.watch.has(r.key)?'on':''}" data-watch="${esc(r.key)}" aria-label="${state.watch.has(r.key)?'Remove from':'Add to'} watchlist">${state.watch.has(r.key)?'★':'☆'}</button></td>
       <td><div class="pbe22-player" data-player="${esc(r.player)}">${esc(r.player)}</div><div class="pbe22-sub">${esc(r.books.length)} books</div></td>
-      <td><div class="pbe22-market">${esc(marketLabel(r.market))}</div><div class="pbe22-sub">${esc(r.market)}</div></td>
+      <td><div class="pbe22-market">${esc(marketLabel(r.market))}</div></td>
       <td class="pbe22-num" data-field="consensus"><span class="pbe22-line">${esc(fmt(r.consensus,1))}</span></td>
       <td class="pbe22-num" data-field="range"><span class="pbe22-range">${esc(Number.isFinite(r.lo)&&Number.isFinite(r.hi)?`${fmt(r.lo,1)} – ${fmt(r.hi,1)}`:'—')}</span></td>
       <td class="pbe22-num" data-field="dispersion"><div class="pbe22-dispersion ${heat}"><b>${esc(fmt(r.spread,1))}</b><span class="pbe22-meter"><span style="width:${pct.toFixed(0)}%"></span></span></div></td>
@@ -192,7 +192,7 @@
     return `<tr data-row-key="${esc(r.key)}">
       <td><span class="pbe22-star locked" aria-hidden="true">☆</span></td>
       <td><div class="pbe22-player" data-player="${esc(r.player)}">${esc(r.player)}</div><div class="pbe22-sub">${esc(r.books.length)} books</div></td>
-      <td><div class="pbe22-market">${esc(marketLabel(r.market))}</div><div class="pbe22-sub">${esc(r.market)}</div></td>
+      <td><div class="pbe22-market">${esc(marketLabel(r.market))}</div></td>
       <td class="pbe22-num"><span class="pbe22-line">${esc(fmt(r.consensus,1))}</span></td>
       <td class="pbe22-num"><span class="pbe22-range">${esc(Number.isFinite(r.lo)&&Number.isFinite(r.hi)?`${fmt(r.lo,1)} – ${fmt(r.hi,1)}`:'—')}</span></td>
       <td class="pbe22-num pbe22-locked-cell"><span class="pbe-locked-value" aria-label="NFL Pro"></span></td>

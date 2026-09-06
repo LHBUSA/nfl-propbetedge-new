@@ -4,6 +4,17 @@
 
   const META = {
     home:['Dashboard','Market pulse · products · research'],
+    /* The four Player DNA products are named views, not route ids. Left
+       unmapped, the bar fell through to the raw hash ("qbdna") -- a developer
+       token in the one line whose whole job is to say where you are. */
+    qbdna:['QB DNA','Quarterback intelligence · props · history · conditions'],
+    'qb-dna':['QB DNA','Quarterback intelligence · props · history · conditions'],
+    wrdna:['WR DNA','Receiver usage · QB connection · props · conditions'],
+    'wr-dna':['WR DNA','Receiver usage · QB connection · props · conditions'],
+    rbdna:['RB DNA','Workload · run/receive mix · props · conditions'],
+    'rb-dna':['RB DNA','Workload · run/receive mix · props · conditions'],
+    tedna:['TE DNA','Red zone role · QB connection · props · conditions'],
+    'te-dna':['TE DNA','Red zone role · QB connection · props · conditions'],
     games:['Games & Schedule','2026 factual schedule · event handoff · score semantics'],
     propboard:['Prop Board','Current sportsbook pricing · free market layer'],
     marketwatch:['Market Watch','Cross-book dispersion · local baseline movement · NFL Pro'],

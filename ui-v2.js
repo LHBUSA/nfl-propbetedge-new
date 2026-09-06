@@ -85,6 +85,10 @@
 
   const viewMeta = {
     home: ['Dashboard','Market pulse · tools · research'],
+    qbdna: ['QB DNA','Quarterback intelligence · props · history · conditions'],
+    wrdna: ['WR DNA','Receiver usage · QB connection · props · conditions'],
+    rbdna: ['RB DNA','Workload · run/receive mix · props · conditions'],
+    tedna: ['TE DNA','Red zone role · QB connection · props · conditions'],
     propboard: ['Prop Board','Live sportsbook prices + PBE model context'],
     picks: ['Model Lab','PBE model workspace'],
     propchain: ['PropChain','Prop intelligence workflow'],
