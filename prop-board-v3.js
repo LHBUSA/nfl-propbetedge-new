@@ -166,13 +166,36 @@
     }
   }
 
+  /* Availability is a claim about the snapshot, so the strongest truthful claim
+     across the batches wins. A market present in one batch is IN_SNAPSHOT even
+     if another batch, or a per-market retry, never described it. */
+  const AVAILABILITY_RANK = { IN_SNAPSHOT:3, NOT_OFFERED_AT_INGEST:2, NOT_REQUESTED_BY_INGEST:1 };
+  const strongerAvailability = (a,b) => ((AVAILABILITY_RANK[b] || 0) > (AVAILABILITY_RANK[a] || 0) ? b : a);
+
   function mergeBoards(parts) {
     if (!parts.length) throw new Error('No supported live player markets returned for this event.');
-    const merged = {...parts[0],quotes:[],market_summary:[]};
+    /* The board is requested in batches, so no single response describes the
+       whole board. Seeding metadata from parts[0] made Feed Health speak for
+       the first batch alone -- with the current 10-market request that is the
+       five passing markets, and a receiving/rushing/TD batch could vanish from
+       the reported state while its rows rendered fine. Metadata is a union. */
+    const merged = {...parts[0],quotes:[],market_summary:[],markets:[],market_availability:{}};
     const qSeen = new Set();
     const sSeen = new Set();
+    const marketsSeen = new Set();
 
     parts.forEach(part => {
+      (Array.isArray(part?.markets) ? part.markets : []).forEach(m => {
+        if (m && !marketsSeen.has(m)) { marketsSeen.add(m); merged.markets.push(m); }
+      });
+      const availability = part?.market_availability;
+      if (availability && typeof availability === 'object') {
+        Object.entries(availability).forEach(([market,status]) => {
+          merged.market_availability[market] = merged.market_availability[market]
+            ? strongerAvailability(merged.market_availability[market],status)
+            : status;
+        });
+      }
       (Array.isArray(part?.quotes) ? part.quotes : []).forEach(q => {
         const key = [bookOf(q),q.market,playerOf(q),sideOf(q),q.point ?? q.line,q.price ?? q.american_odds ?? q.odds].join('|');
         if (!qSeen.has(key)) { qSeen.add(key); merged.quotes.push(q); }
@@ -190,6 +213,24 @@
     });
     merged.quote_count = merged.quotes.length;
     merged.player_market_count = playerMarkets.size;
+
+    /* Snapshot-level truth (freshness, batch, provider semantics) is the same
+       for every batch because they all read one KV snapshot. Take it from the
+       first part that actually carries it, so a thin response -- a per-market
+       retry, say -- cannot leave the board unable to state its own freshness. */
+    ['captured_at','captured_at_et','batch_id','semantics','age_seconds','age_hours','source','ingest','cache','event']
+      .forEach(key => {
+        if (merged[key] === undefined || merged[key] === null) {
+          const part = parts.find(p => p?.[key] !== undefined && p?.[key] !== null);
+          if (part) merged[key] = part[key];
+        }
+      });
+
+    /* Not offered at ingest is a fact about the market; unreachable is a fact
+       about our fetch. Feed Health needs both, over the whole request. */
+    merged.markets_not_in_snapshot = Object.entries(merged.market_availability)
+      .filter(([,status]) => status !== 'IN_SNAPSHOT')
+      .map(([market]) => market);
 
     const updates = parts
       .map(p => p.provider_last_update || p.last_update || p.updated_at)
@@ -372,12 +413,19 @@
     const semantics = board?.source?.semantics || 'UNAVAILABLE';
     const provider = board?.source?.provider || 'unknown';
     const partial = state.missingMarkets.length > 0;
+    /* Availability is reported over every requested market, not over whichever
+       batch happened to answer first. */
+    const availability = board?.market_availability || {};
+    const inSnapshot = MARKETS.filter(m => availability[m] === 'IN_SNAPSHOT').length;
+    const notOffered = MARKETS.filter(m => availability[m] && availability[m] !== 'IN_SNAPSHOT');
     return `<div class="pbe3-health-body">
       <div class="pbe3-health-row"><span>Market semantics</span><strong class="${semantics === 'LIVE' ? 'live' : ''}">${esc(semantics === 'MARKET_SNAPSHOT' ? 'SCHEDULED SNAPSHOT' : semantics)}</strong></div>${board?.captured_at_et?`<div class="pbe3-health-row"><span>Snapshot captured</span><strong>${esc(board.captured_at_et)}</strong></div>`:''}
       <div class="pbe3-health-row"><span>Provider</span><strong>${esc(providerLabel(provider))}</strong></div>
       <div class="pbe3-health-row"><span>Provider freshness</span><strong>${esc(age(board?.provider_last_update || board?.updated_at))}</strong></div>
       <div class="pbe3-health-row"><span>Requested markets</span><strong>${MARKETS.length}</strong></div>
-      <div class="pbe3-health-row"><span>Unavailable markets</span><strong class="${partial ? 'partial' : 'live'}">${partial ? state.missingMarkets.length : 0}</strong></div>
+      <div class="pbe3-health-row"><span>Markets in snapshot</span><strong class="${inSnapshot === MARKETS.length ? 'live' : 'partial'}">${inSnapshot} of ${MARKETS.length}</strong></div>
+      <div class="pbe3-health-row"><span>Not offered at ingest</span><strong class="${notOffered.length ? 'partial' : 'live'}">${notOffered.length ? esc(notOffered.map(m => marketMeta(m).short || m).join(', ')) : '0'}</strong></div>
+      <div class="pbe3-health-row"><span>Markets unreachable</span><strong class="${partial ? 'partial' : 'live'}">${partial ? state.missingMarkets.length : 0}</strong></div>
     </div>`;
   }
 
@@ -606,6 +654,10 @@
   }
 
   window.PBEPropBoardV3 = { render,changeEvent,openDrawer,closeDrawer,state };
+
+  /* Exposed so research/prop-board-merge.test.mjs exercises the shipped merge
+     rather than a copy of it. Read-only surface; the board owns its own state. */
+  window.PBEPropBoardV3 = Object.assign(window.PBEPropBoardV3 || {}, { mergeBoards, MARKETS, BATCH_SIZE });
 
   install();
   document.addEventListener('DOMContentLoaded',install,{once:true});
