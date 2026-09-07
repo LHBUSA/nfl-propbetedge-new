@@ -7,6 +7,24 @@
 
   function esc(v){return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
 
+  function ensureNetworkStyles(){
+    if(document.getElementById('pbe-network-ufc-v1'))return;
+    const style=document.createElement('style');
+    style.id='pbe-network-ufc-v1';
+    style.textContent=`
+      .pbe-network-footer-products{grid-template-columns:repeat(4,minmax(0,1fr))}
+      .pbe-network-product-card.ufc{border-color:rgba(239,120,128,.18)}
+      .pbe-network-product-card.ufc:after{content:"";position:absolute;right:-110px;top:-120px;width:300px;height:300px;border-radius:50%;pointer-events:none;background:radial-gradient(circle,rgba(239,120,128,.14),rgba(239,120,128,0) 67%)}
+      .pbe-network-product-card.ufc .pbe-network-card-mark{color:rgba(239,120,128,.20)}
+      @media(max-width:1180px){
+        .pbe-network-footer-products{grid-template-columns:repeat(2,minmax(0,1fr))}
+        .pbe-network-product-card.api{grid-column:auto}
+      }
+      @media(max-width:760px){.pbe-network-footer-products{grid-template-columns:1fr}}
+    `;
+    document.head.appendChild(style);
+  }
+
   function html(){
     const year=new Date().getFullYear();
     return `<footer id="${FOOTER_ID}" class="pbe-network-footer" aria-label="PropBetEdge sports network and NFL account management">
@@ -48,6 +66,13 @@
             <div class="pbe-network-card-tags"><span>MLB</span><span>Live</span><span>Research</span></div>
             <div class="pbe-network-card-cta">Open MLB Intelligence <strong>→</strong></div>
           </a>
+          <a class="pbe-network-product-card ufc" href="https://ufc.propbetedge.ai" target="_blank" rel="noopener">
+            <div class="pbe-network-card-top"><span class="pbe-network-card-eyebrow">FIGHT INTELLIGENCE OS</span><span class="pbe-network-card-arrow">↗</span></div>
+            <div class="pbe-network-card-mark">UFC</div><h3>PropBetEdge UFC</h3>
+            <p>Fight cards, fighter intelligence, matchup research and betting-market context built for combat sports decision workflows.</p>
+            <div class="pbe-network-card-tags"><span>UFC</span><span>Fight Data</span><span>Research</span></div>
+            <div class="pbe-network-card-cta">Open UFC Intelligence <strong>→</strong></div>
+          </a>
           <a class="pbe-network-product-card api" href="https://propsports.proptechusa.ai" target="_blank" rel="noopener">
             <div class="pbe-network-card-top"><span class="pbe-network-card-eyebrow">DEVELOPER INFRASTRUCTURE</span><span class="pbe-network-card-arrow">↗</span></div>
             <div class="pbe-network-card-mark">API</div><h3>PropSports API</h3>
@@ -68,13 +93,13 @@
           </div>
           <div class="pbe-network-link-group">
             <span class="pbe-network-link-label">NETWORK</span>
-            <a href="https://propbetedge.ai">PropBetEdge</a><a href="https://mlb.propbetedge.ai" target="_blank" rel="noopener">MLB Intelligence</a><a href="https://propsports.proptechusa.ai" target="_blank" rel="noopener">PropSports API</a><a href="https://proptechusa.ai" target="_blank" rel="noopener">PropTechUSA.ai</a>
+            <a href="https://propbetedge.ai">PropBetEdge</a><a href="https://mlb.propbetedge.ai" target="_blank" rel="noopener">MLB Intelligence</a><a href="https://ufc.propbetedge.ai" target="_blank" rel="noopener">UFC Intelligence</a><a href="https://propsports.proptechusa.ai" target="_blank" rel="noopener">PropSports API</a><a href="https://proptechusa.ai" target="_blank" rel="noopener">PropTechUSA.ai</a>
           </div>
         </section>
 
         <div class="pbe-network-footer-rail">
           <div><strong>PropBetEdge</strong><span>Independent sports intelligence built from the data layer up.</span></div>
-          <div class="pbe-network-footer-rail-right"><span>© ${year} PropTechUSA.ai</span><span class="pbe-network-footer-dot"></span><a href="${BILLING}" target="_blank" rel="noopener">Billing</a><span class="pbe-network-footer-dot"></span><a href="https://propsports.proptechusa.ai" target="_blank" rel="noopener">Developer API</a><span class="pbe-network-footer-dot"></span><a href="https://mlb.propbetedge.ai" target="_blank" rel="noopener">MLB</a></div>
+          <div class="pbe-network-footer-rail-right"><span>© ${year} PropTechUSA.ai</span><span class="pbe-network-footer-dot"></span><a href="${BILLING}" target="_blank" rel="noopener">Billing</a><span class="pbe-network-footer-dot"></span><a href="https://propsports.proptechusa.ai" target="_blank" rel="noopener">Developer API</a><span class="pbe-network-footer-dot"></span><a href="https://mlb.propbetedge.ai" target="_blank" rel="noopener">MLB</a><span class="pbe-network-footer-dot"></span><a href="https://ufc.propbetedge.ai" target="_blank" rel="noopener">UFC</a></div>
         </div>
       </div>
     </footer>`;
@@ -112,6 +137,7 @@
   }
 
   function ensure(){
+    ensureNetworkStyles();
     if(document.getElementById(FOOTER_ID))return;
     const main=document.getElementById('main-content'),view=document.getElementById('view-container');
     if(!main||!view)return;
