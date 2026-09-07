@@ -1,0 +1,38 @@
+name: Release Module Gate
+
+# Guards the lineage of production. A push to `main` deploys to
+# nfl.propbetedge.ai automatically, so `main` moving backwards moves the
+# product backwards — which is exactly what happened on 2026-09-07, when a
+# one-file footer commit on a stale `main` replaced the Player DNA release.
+# This job fails that push instead of letting it ship.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  release-lineage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        # Full history: the gate walks ancestry and delete provenance, both of
+        # which are wrong under a shallow clone.
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Use Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Fetch the authoritative release lineage
+        run: git fetch --no-tags origin '+refs/heads/*:refs/remotes/origin/*'
+
+      - name: No shipped module may vanish from production
+        run: node scripts/release-module-gate.mjs HEAD

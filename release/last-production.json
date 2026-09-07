@@ -1,0 +1,8 @@
+{
+  "ref": "prototype/nfl-data-harvest",
+  "sha": "d16b35caba4474d5430cc9b54c443776e2b784ff",
+  "deployment": "dpl_8vaxXLEpzr8ivYnwj4TEdgUixtWv",
+  "url": "https://nfl.propbetedge.ai",
+  "released_at": "2026-09-06T20:19:18Z",
+  "note": "The last production tree that contained the full Player DNA suite. scripts/release-module-gate.mjs judges every release candidate against this commit. Update this file as part of shipping a release, never as a way to make the gate pass."
+}
