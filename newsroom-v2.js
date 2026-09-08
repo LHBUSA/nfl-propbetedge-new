@@ -6,6 +6,7 @@
 
   const API = typeof NFL_API_GATEWAY !== 'undefined' ? NFL_API_GATEWAY : 'https://nfl-api.propbetedge.ai';
   const DEFAULT_EVENT = '8c94552d022acec4a0458d70c19d3da9';
+  const TRANSACTION_STYLE = './transactions-production-v1.css?v=20260908c';
   const state = {
     articles: [],
     fetchedAt: null,
@@ -23,6 +24,15 @@
 
   const currentEventId = () => new URLSearchParams(location.search).get('event') || localStorage.getItem('pbe_nfl_event') || DEFAULT_EVENT;
 
+  function ensureTransactionStyles() {
+    if (document.querySelector('link[data-pbe-transactions-v1]')) return;
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = TRANSACTION_STYLE;
+    link.dataset.pbeTransactionsV1 = '1';
+    document.head.appendChild(link);
+  }
+
   function timeAgo(value) {
     if (!value) return 'time unavailable';
     const d = new Date(value);
@@ -34,6 +44,19 @@
     const hours = Math.floor(minutes/60);
     if (hours < 48) return `${hours}h ago`;
     return `${Math.floor(hours/24)}d ago`;
+  }
+
+  function dateStamp(value) {
+    if (!value) return 'Not reported';
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return 'Not reported';
+    try {
+      return new Intl.DateTimeFormat('en-US',{
+        month:'short',day:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short'
+      }).format(d);
+    } catch (_) {
+      return d.toLocaleString();
+    }
   }
 
   async function fetchJson(url) {
@@ -53,6 +76,7 @@
   const safeSummary = a => (trustOf(a) ? trustOf(a).summary : (a?.summary || '')) || '';
   const safePlayers = a => (trustOf(a) ? trustOf(a).players : (Array.isArray(a?.players) ? a.players : [])) || [];
   let TEAM_TERMS = null;
+
   function teamTerms() {
     if (TEAM_TERMS && TEAM_TERMS.length) return TEAM_TERMS;
     const map = (typeof window !== 'undefined' && window.NFL_TEAMS) || {};
@@ -65,6 +89,7 @@
     });
     return TEAM_TERMS;
   }
+
   function safeTeams(a) {
     const declared = (Array.isArray(a?.teams) ? a.teams : []).map(x => String(x).toUpperCase());
     if (!declared.length) return [];
@@ -79,6 +104,40 @@
         ? new RegExp(`(^| )${term}( |$)`).test(hay)
         : hay.includes(term));
     });
+  }
+
+  function teamRecord(code) {
+    return ((typeof window !== 'undefined' && window.NFL_TEAMS) || {})[String(code || '').toUpperCase()] || null;
+  }
+
+  function teamLogo(code) {
+    const raw = String(code || '').toUpperCase();
+    const key = raw === 'WAS' || raw === 'WSH' ? 'wsh' : raw.toLowerCase();
+    return /^[a-z]{2,3}$/.test(key) ? `https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/${encodeURIComponent(key)}.png` : '';
+  }
+
+  function teamChip(code) {
+    const team = teamRecord(code);
+    const src = teamLogo(code);
+    if (!team) return `<span class="pbe13-tag">${esc(code)}</span>`;
+    return `<span class="pbe13-tag pbe26-team-tag" style="--team-accent:${esc(team.color || '#d4af37')}">${src?`<img class="pbe26-team-crest" src="${esc(src)}" alt="" aria-hidden="true" loading="lazy" decoding="async">`:''}<span>${esc(code)}</span></span>`;
+  }
+
+  function teamIdentity(code) {
+    const team = teamRecord(code);
+    const src = teamLogo(code);
+    if (!team) return esc(code);
+    return `<span class="pbe26-team-identity">${src?`<img class="pbe26-team-crest" src="${esc(src)}" alt="" aria-hidden="true" loading="lazy" decoding="async">`:''}<span><strong>${esc(team.name)}</strong><small>${esc(code)} · ${esc(team.conf)} ${esc(team.div)}</small></span></span>`;
+  }
+
+  function transactionPhoto(a,{lead=false}={}) {
+    const src = String(a?.image_url || '').trim();
+    if (!src) return '';
+    const alt = String(a?.image_alt || a?.title || 'NFL transaction story').trim();
+    const credit = String(a?.image_credit || '').trim();
+    const width = lead ? 176 : 76;
+    const height = lead ? 110 : 56;
+    return `<figure class="pbe26-photo${lead?' is-lead-photo':''}"><img src="${esc(src)}" alt="${esc(alt)}" loading="${lead?'eager':'lazy'}" decoding="async" width="${width}" height="${height}">${lead&&credit?`<figcaption>${esc(credit)}</figcaption>`:''}</figure>`;
   }
 
   function injuryArticle(a) {
@@ -98,6 +157,17 @@
   function impact(a) {
     const n = Number(a.impact_score);
     return Number.isFinite(n) ? n : 0;
+  }
+
+  function impactBand(a) {
+    const explicit = String(a?.market_impact?.band || '').toUpperCase();
+    if (explicit) return explicit;
+    const n = Number(a?.impact_score);
+    if (!Number.isFinite(n) || n <= 0) return 'CONTEXT';
+    if (n >= 80) return 'HIGH';
+    if (n >= 55) return 'ELEVATED';
+    if (n >= 30) return 'MONITOR';
+    return 'CONTEXT';
   }
 
   function currentEventHit(a) {
@@ -136,7 +206,7 @@
   function visible(mode) {
     const q = state.search.trim().toLowerCase();
     let rows = baseList(mode).filter(a => {
-      const searchOk = !q || [a.title,safeSummary(a),a.source,...safePlayers(a),...safeTeams(a)].some(v=>String(v||'').toLowerCase().includes(q));
+      const searchOk = !q || [a.title,safeSummary(a),a.source,a.author,a.topic_kind,...safePlayers(a),...safeTeams(a)].some(v=>String(v||'').toLowerCase().includes(q));
       const teamOk = state.team === 'all' || safeTeams(a).includes(state.team);
       return searchOk && teamOk;
     });
@@ -148,18 +218,54 @@
 
   function tags(a,mode) {
     const values = [];
-    safeTeams(a).slice(0,4).forEach(team => values.push(`<span class="pbe13-tag">${esc(team)}</span>`));
-    safePlayers(a).slice(0,3).forEach(player => values.push(`<span class="pbe13-tag accent">${esc(player)}</span>`));
+    safeTeams(a).slice(0,4).forEach(team => values.push(mode === 'transactions' ? teamChip(team) : `<span class="pbe13-tag">${esc(team)}</span>`));
+    safePlayers(a).slice(0,3).forEach(player => values.push(mode === 'transactions'
+      ? `<span class="pbe13-tag pbe26-player-tag">${esc(player)}</span>`
+      : `<span class="pbe13-tag accent">${esc(player)}</span>`));
     if (mode === 'injuries' && a.topic_kind) values.push(`<span class="pbe13-tag">${esc(String(a.topic_kind).toUpperCase())}</span>`);
     return values.join('');
+  }
+
+  function transactionKind(a) {
+    const topic = String(a?.topic_kind || '').toLowerCase();
+    const map = {
+      trade:'Trade', signing:'Signing', transaction:'Transaction', lineup:'Lineup',
+      discipline:'Discipline', frontoffice:'Front office', front_office:'Front office',
+      release:'Release', waiver:'Waiver'
+    };
+    return map[topic] || 'Transaction news';
+  }
+
+  function transactionBreakdown(list) {
+    const counts = {trade:0,signing:0,release:0,waiver:0,lineup:0,other:0};
+    list.forEach(a => {
+      const topic = String(a?.topic_kind || '').toLowerCase();
+      if (topic === 'trade') counts.trade += 1;
+      else if (topic === 'signing') counts.signing += 1;
+      else if (topic === 'release') counts.release += 1;
+      else if (topic === 'waiver') counts.waiver += 1;
+      else if (topic === 'lineup') counts.lineup += 1;
+      else counts.other += 1;
+    });
+    return counts;
   }
 
   function summary(mode,list) {
     const teams = uniqueTeams(list);
     const players = uniquePlayers(list);
-    const highImpact = list.filter(a=>impact(a)>=4).length;
     const current = list.filter(currentEventHit).length;
-    const newest = list[0];
+    if (mode === 'transactions') {
+      const high = list.filter(a=>impactBand(a)==='HIGH').length;
+      const breaking = list.filter(a=>Boolean(a?.is_breaking)).length;
+      return `<div class="pbe13-summary">
+        <div class="pbe13-stat"><b>${list.length}</b><span>Stories in view</span></div>
+        <div class="pbe13-stat"><b>${teams.length}</b><span>Corroborated teams</span></div>
+        <div class="pbe13-stat"><b>${players.length}</b><span>Corroborated players</span></div>
+        <div class="pbe13-stat"><b class="accent">${high}</b><span>High market-context impact</span></div>
+        <div class="pbe13-stat"><b>${breaking}</b><span>Breaking flags</span></div>
+      </div>`;
+    }
+    const highImpact = list.filter(a=>impact(a)>=4).length;
     return `<div class="pbe13-summary">
       <div class="pbe13-stat"><b>${list.length}</b><span>Current matching stories</span></div>
       <div class="pbe13-stat"><b>${teams.length}</b><span>Teams affected</span></div>
@@ -176,6 +282,14 @@
     return `<aside class="pbe13-side"><div class="pbe13-side-head"><strong>${mode==='injuries'?'Affected Players':'Affected Teams / Players'}</strong><span>News frequency + max impact</span></div><div class="pbe13-affected">${chosen.length ? chosen.map(item=>`<div class="pbe13-aff-row"><div><div class="pbe13-aff-name">${esc(item.name)}</div><div class="pbe13-aff-meta">${item.count} current stor${item.count===1?'y':'ies'}</div></div><div class="pbe13-impact">${item.maxImpact || '—'}</div></div>`).join('') : '<div class="pbe13-empty-side">No affected entities are available in the current filtered news set.</div>'}</div></aside>`;
   }
 
+  function transactionActivityPanel(list) {
+    const teams = frequency(list,'teams').slice(0,8);
+    return `<aside class="pbe26-activity"><div class="pbe26-panel-head"><div><span>TEAM ACTIVITY</span><strong>Most-mentioned clubs</strong></div><small>Stories · max context score</small></div><div class="pbe26-team-list">${teams.length ? teams.map(item=>{
+      const team = teamRecord(item.name);
+      return `<div class="pbe26-team-row" style="--team-accent:${esc(team?.color || '#d4af37')}"><div>${teamIdentity(item.name)}</div><div class="pbe26-team-numbers"><b>${item.count}</b><span>${item.maxImpact || '—'}</span></div></div>`;
+    }).join('') : '<div class="pbe13-empty-side">No corroborated team activity is available in the current filtered set.</div>'}</div></aside>`;
+  }
+
   function leadCard(mode,a) {
     if (!a) return `<article class="pbe13-lead"><div class="pbe13-lead-topic">NEWS UNAVAILABLE</div><h2>No current ${mode==='injuries'?'injury':'transaction'} stories match this view.</h2><p>PropBetEdge will not substitute old hardcoded rows when the real current feed is empty.</p></article>`;
     return `<article class="pbe13-lead"><div class="pbe13-lead-topic">${esc(String(a.topic_kind||mode).toUpperCase())}${currentEventHit(a)?'<span class="pbe13-current">CURRENT EVENT</span>':''}</div><h2>${esc(a.title)}</h2>${safeSummary(a)?`<p>${esc(safeSummary(a))}</p>`:''}<div class="pbe13-source">${esc(a.source || 'source unavailable')} · ${esc(timeAgo(a.published_at))} · impact ${esc(impact(a)||'—')}</div><div class="pbe13-tags">${tags(a,mode)}</div><div class="pbe13-lead-actions">${a.url?`<a class="pbe13-action primary" href="${esc(a.url)}">Read full story ↗</a>`:''}<button class="pbe13-action" onclick="App.nav('propboard')">Open Prop Board</button></div></article>`;
@@ -185,23 +299,103 @@
     return `<article class="pbe13-card"><div class="pbe13-card-top"><span class="pbe13-card-topic">${esc(String(a.topic_kind||mode).toUpperCase())}${currentEventHit(a)?'<span class="pbe13-current">CURRENT EVENT</span>':''}</span><span class="pbe13-card-time">${esc(timeAgo(a.published_at))}</span></div><h3>${esc(a.title)}</h3>${safeSummary(a)?`<p>${esc(safeSummary(a))}</p>`:''}<div class="pbe13-tags">${tags(a,mode)}</div><div class="pbe13-card-foot"><span class="pbe13-card-source">${esc(a.source || 'source unavailable')} · impact ${esc(impact(a)||'—')}</span>${a.url?`<a class="pbe13-card-link" href="${esc(a.url)}">Open ↗</a>`:''}</div></article>`;
   }
 
+  function transactionSummaryBlock(a) {
+    const summary = safeSummary(a);
+    if (summary) return `<p class="pbe26-story-summary">${esc(summary)}</p>`;
+    if (trustOf(a)?.summarySuppressed) {
+      return `<div class="pbe26-trust-note"><strong>Article-specific summary withheld.</strong><span>The upstream feed repeated fallback copy across multiple stories, so this row keeps only corroborated fields.</span></div>`;
+    }
+    return `<div class="pbe26-trust-note"><strong>No article-specific summary supplied.</strong><span>Headline, source, timing and corroborated entities remain available below.</span></div>`;
+  }
+
+  function marketContext(a) {
+    const text = String(a?.market_impact?.text || '').trim();
+    const semantics = String(a?.market_impact?.semantics || '');
+    if (!text || (semantics && semantics !== 'CONTEXT_NOT_PRICE_MOVE')) return '';
+    return `<div class="pbe26-market-context"><span>MARKET CONTEXT · NOT A PRICE MOVE</span><p>${esc(text)}</p></div>`;
+  }
+
+  function storyByline(a) {
+    const parts = [a?.source, a?.author].map(v=>String(v||'').trim()).filter(Boolean);
+    return parts.length ? parts.join(' · ') : 'Source unavailable';
+  }
+
+  function updateLine(a) {
+    const p = new Date(a?.published_at || 0).getTime();
+    const u = new Date(a?.updated_at || 0).getTime();
+    if (!Number.isFinite(u) || u <= 0 || !Number.isFinite(p) || u <= p + 60000) return '';
+    return `<div><span>UPDATED</span><strong>${esc(dateStamp(a.updated_at))}</strong></div>`;
+  }
+
+  function transactionMetaGrid(a) {
+    const players = safePlayers(a);
+    const teams = safeTeams(a);
+    const score = Number(a?.impact_score);
+    return `<div class="pbe26-meta-grid">
+      <div><span>SOURCE</span><strong>${esc(storyByline(a))}</strong></div>
+      <div><span>PUBLISHED</span><strong>${esc(dateStamp(a?.published_at))}</strong></div>
+      ${updateLine(a)}
+      <div><span>IMPACT</span><strong>${esc(impactBand(a))}${Number.isFinite(score)?` · ${esc(score)}`:''}</strong></div>
+      <div><span>TEAMS</span><strong>${teams.length?esc(teams.join(', ')):'None corroborated'}</strong></div>
+      <div><span>PLAYERS</span><strong>${players.length?esc(players.join(', ')):'None corroborated'}</strong></div>
+    </div>`;
+  }
+
+  function transactionStory(a,{lead=false,index=0}={}) {
+    if (!a) return `<article class="pbe26-story pbe26-story-empty"><strong>No current transaction story matches this view.</strong><span>The live newsroom returned no corroborated transaction item for these filters.</span></article>`;
+    const breaking = a?.is_breaking ? '<span class="pbe26-flag breaking">BREAKING</span>' : '';
+    const event = currentEventHit(a) ? '<span class="pbe26-flag event">SELECTED EVENT</span>' : '';
+    const photo = transactionPhoto(a,{lead});
+    return `<article class="pbe26-story${lead?' is-lead':''}" data-ledger-index="${index}">
+      <div class="pbe26-story-head"><div class="pbe26-story-labels"><span class="pbe26-kind">${esc(transactionKind(a)).toUpperCase()}</span>${breaking}${event}</div><span class="pbe26-age">${esc(timeAgo(a?.published_at))}</span></div>
+      <div class="pbe26-story-primary${photo?' has-photo':''}">${photo}<div class="pbe26-story-copy">
+        <h${lead?'2':'3'}>${esc(a?.title || 'Untitled transaction story')}</h${lead?'2':'3'}>
+        ${transactionSummaryBlock(a)}
+        <div class="pbe13-tags">${tags(a,'transactions')}</div>
+        ${marketContext(a)}
+      </div></div>
+      ${transactionMetaGrid(a)}
+      <div class="pbe26-story-actions"><span>NEWS · SOURCE ATTRIBUTED</span>${a?.url?`<a href="${esc(a.url)}">Open canonical story ↗</a>`:'<span>Canonical story unavailable</span>'}</div>
+    </article>`;
+  }
+
   function feed(mode,list) {
     if (!list.length) return `<div class="pbe13-empty"><div><strong>No current matching news</strong><p>The newsroom is connected, but the current filters produced no factual ${mode==='injuries'?'injury':'transaction'} stories. No synthetic fallback is used.</p></div></div>`;
     return `<div class="pbe13-feed">${list.slice(1).map(a=>card(mode,a)).join('')}</div>`;
+  }
+
+  function transactionFeed(list) {
+    const rows = list.slice(1);
+    if (!rows.length) return `<div class="pbe26-feed-head"><strong>Transaction ledger</strong><span>No additional corroborated stories in this filtered view.</span></div>`;
+    return `<div class="pbe26-feed-head"><strong>Transaction ledger</strong><span>${rows.length} additional stor${rows.length===1?'y':'ies'} · newest first unless sort changed</span></div><div class="pbe26-ledger">${rows.map((a,i)=>transactionStory(a,{index:i+2})).join('')}</div>`;
+  }
+
+  function transactionDesk(list) {
+    const c = transactionBreakdown(list);
+    return `<div class="pbe26-deskbar"><span class="pbe26-desk-name">Transaction desk</span><div class="pbe26-desk-counts"><span><b>${c.trade}</b> trades</span><span><b>${c.signing}</b> signings</span><span><b>${c.release}</b> releases</span><span><b>${c.waiver}</b> waivers</span><span><b>${c.lineup}</b> lineup</span><span><b>${c.other}</b> other</span></div></div>`;
   }
 
   function shell(mode) {
     const all = visible(mode);
     const teams = uniqueTeams(baseList(mode));
     const lead = all[0] || null;
-    const accent = mode === 'injuries' ? '#f16b78' : '#7da7ff';
-    const soft = mode === 'injuries' ? 'rgba(241,107,120,.10)' : 'rgba(125,167,255,.10)';
-    const title = mode === 'injuries' ? 'Injury intelligence' : 'Roster movement';
-    const emphasis = mode === 'injuries' ? 'without fake status.' : 'without rumor theater.';
+    const isTransactions = mode === 'transactions';
+    const accent = mode === 'injuries' ? '#f16b78' : '#e9c75a';
+    const soft = mode === 'injuries' ? 'rgba(241,107,120,.10)' : 'rgba(212,175,55,.10)';
+    const title = mode === 'injuries' ? 'Injury intelligence' : 'NFL transactions';
+    const emphasis = mode === 'injuries' ? 'without fake status.' : 'current movement, full context.';
     const copy = mode === 'injuries'
       ? 'Current NFL injury developments from the real PropBetEdge newsroom, including affected players, teams, source, publish time and impact. This page uses NEWS semantics until a structured official practice/game-status feed is attached.'
-      : 'Current trades, signings, roster changes, lineup decisions and other transaction-related developments from the real PropBetEdge newsroom. Articles retain their NEWS provenance and canonical source path.';
-    return `<section class="pbe13-news" style="--accent:${accent};--accent-soft:${soft}"><header class="pbe13-hero"><div><div class="pbe13-kicker">PROPBETEDGE NFL · CURRENT NEWS INTELLIGENCE</div><h1 class="pbe13-title">${title}.<br><em>${emphasis}</em></h1><div class="pbe13-copy">${copy}</div><span class="pbe13-semantic">NEWS · PROPBET-NEWS-API</span></div><aside class="pbe13-statusbox"><b>${state.error?'UNAVAILABLE':'CURRENT NEWS'}</b><span>${state.error?'The newsroom adapter did not return a usable response.':`${all.length} matching stories · fetched ${timeAgo(state.fetchedAt)}${state.currentEventLabel?` · selected ${state.currentEventLabel}`:''}`}</span></aside></header>${mode==='injuries'?`<div class="pbe13-note"><strong>Important:</strong> these are news-confirmed injury developments. They are not yet the official NFL practice/game injury report, and the UI does not infer Questionable / Doubtful / Out status unless an attached source explicitly provides it.</div>`:''}<div id="pbe13-summary">${summary(mode,all)}</div><section class="pbe13-controls"><input id="pbe13-search" class="pbe13-input" type="search" placeholder="Search player, team, source or headline…" value="${esc(state.search)}"><select id="pbe13-team" class="pbe13-select"><option value="all">All affected teams</option>${teams.map(team=>`<option value="${esc(team)}" ${state.team===team?'selected':''}>${esc(team)}</option>`).join('')}</select><select id="pbe13-sort" class="pbe13-select"><option value="latest" ${state.sort==='latest'?'selected':''}>Latest first</option><option value="impact" ${state.sort==='impact'?'selected':''}>Highest impact</option><option value="current" ${state.sort==='current'?'selected':''}>Selected event first</option></select></section>${state.error?`<div class="pbe13-empty"><div><strong>News intelligence unavailable</strong><p>${esc(state.error)}</p></div></div>`:`<div class="pbe13-featured">${leadCard(mode,lead)}${affectedPanel(mode,all)}</div><div id="pbe13-feed">${feed(mode,all)}</div>`}</section>`;
+      : 'A source-attributed transaction terminal for trades, signings, releases, waivers, lineup decisions and roster movement. Each row exposes timing, corroborated teams and players, impact context and canonical source without inventing transaction details.';
+    const semantic = isTransactions ? 'NEWS · CURRENT FEED · CONTEXT ≠ PRICE MOVE' : 'NEWS · PROPBET-NEWS-API';
+    const status = state.error ? 'UNAVAILABLE' : (isTransactions ? 'CURRENT FEED' : 'CURRENT NEWS');
+    const sectionClass = `pbe13-news${isTransactions?' pbe13-transactions':''}`;
+    const content = state.error
+      ? `<div class="pbe13-empty"><div><strong>News intelligence unavailable</strong><p>${esc(state.error)}</p></div></div>`
+      : (isTransactions
+        ? `<div class="pbe26-command"><div>${transactionStory(lead,{lead:true,index:1})}</div>${transactionActivityPanel(all)}</div><div id="pbe13-feed">${transactionFeed(all)}</div>`
+        : `<div class="pbe13-featured">${leadCard(mode,lead)}${affectedPanel(mode,all)}</div><div id="pbe13-feed">${feed(mode,all)}</div>`);
+    return `<section class="${sectionClass}" style="--accent:${accent};--accent-soft:${soft}"><header class="pbe13-hero"><div><div class="pbe13-kicker">PROPBETEDGE NFL · ${isTransactions?'TRANSACTION INTELLIGENCE':'CURRENT NEWS INTELLIGENCE'}</div><h1 class="pbe13-title">${title}.<br><em>${emphasis}</em></h1><div class="pbe13-copy">${copy}</div><span class="pbe13-semantic">${semantic}</span></div><aside class="pbe13-statusbox"><b>${status}</b><span>${state.error?'The newsroom adapter did not return a usable response.':`${all.length} matching stories · fetched ${timeAgo(state.fetchedAt)}${state.currentEventLabel?` · selected ${state.currentEventLabel}`:''}`}</span></aside></header>${mode==='injuries'?`<div class="pbe13-note"><strong>Important:</strong> these are news-confirmed injury developments. They are not yet the official NFL practice/game injury report, and the UI does not infer Questionable / Doubtful / Out status unless an attached source explicitly provides it.</div>`:(isTransactions?transactionDesk(all):'')}<div id="pbe13-summary">${summary(mode,all)}</div><section class="pbe13-controls"><input id="pbe13-search" class="pbe13-input" type="search" placeholder="${isTransactions?'Search transaction, player, team, source or headline…':'Search player, team, source or headline…'}" value="${esc(state.search)}"><select id="pbe13-team" class="pbe13-select"><option value="all">${isTransactions?'All corroborated teams':'All affected teams'}</option>${teams.map(team=>`<option value="${esc(team)}" ${state.team===team?'selected':''}>${esc(team)}</option>`).join('')}</select><select id="pbe13-sort" class="pbe13-select"><option value="latest" ${state.sort==='latest'?'selected':''}>Latest first</option><option value="impact" ${state.sort==='impact'?'selected':''}>Highest impact</option><option value="current" ${state.sort==='current'?'selected':''}>Selected event first</option></select></section>${content}</section>`;
   }
 
   async function ensureData() {
@@ -240,6 +434,7 @@
   }
 
   async function renderMode(mode) {
+    if (mode === 'transactions') ensureTransactionStyles();
     const vc = document.getElementById('view-container');
     if (!vc) return;
     if (!state.articles.length && !state.error) vc.innerHTML = `<section class="pbe13-news"><div class="pbe13-empty"><div><strong>Connecting current NFL newsroom</strong><p>Loading factual current stories from the PropBetEdge newsroom adapter.</p></div></div></section>`;
@@ -259,6 +454,13 @@
     document.getElementById('pbe13-search')?.addEventListener('input',e=>{state.search=e.currentTarget.value||'';refresh(mode)});
     document.getElementById('pbe13-team')?.addEventListener('change',e=>{state.team=e.currentTarget.value||'all';refresh(mode)});
     document.getElementById('pbe13-sort')?.addEventListener('change',e=>{state.sort=e.currentTarget.value||'latest';refresh(mode)});
+    if (mode === 'transactions') {
+      document.querySelectorAll('.pbe26-photo img').forEach(img=>{
+        const drop=()=>img.closest('.pbe26-photo')?.remove();
+        if (img.complete && !img.naturalWidth) drop();
+        else img.addEventListener('error',drop,{once:true});
+      });
+    }
   }
 
   function install() {
@@ -268,7 +470,7 @@
     const inj = document.getElementById('nav-injuries');
     const trades = document.getElementById('nav-trades');
     if (inj) inj.innerHTML = '<span class="ni-icon">＋</span> Injury Intelligence <span class="nav-badge" style="color:#f16b78;background:rgba(241,107,120,.07)">NEWS</span>';
-    if (trades) trades.innerHTML = '<span class="ni-icon">⇄</span> Transactions <span class="nav-badge" style="color:#7da7ff;background:rgba(125,167,255,.07)">NEWS</span>';
+    if (trades) trades.innerHTML = '<span class="ni-icon">⇄</span> Transactions <span class="nav-badge" style="color:#e9c75a;background:rgba(212,175,55,.07)">NEWS</span>';
     return true;
   }
 
