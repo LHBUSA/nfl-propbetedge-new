@@ -6,7 +6,7 @@
 
   const API = typeof NFL_API_GATEWAY !== 'undefined' ? NFL_API_GATEWAY : 'https://nfl-api.propbetedge.ai';
   const DEFAULT_EVENT = '8c94552d022acec4a0458d70c19d3da9';
-  const TRANSACTION_STYLE = './transactions-production-v1.css?v=20260908b';
+  const TRANSACTION_STYLE = './transactions-production-v1.css?v=20260908c';
   const state = {
     articles: [],
     fetchedAt: null,
@@ -128,6 +128,16 @@
     const src = teamLogo(code);
     if (!team) return esc(code);
     return `<span class="pbe26-team-identity">${src?`<img class="pbe26-team-crest" src="${esc(src)}" alt="" aria-hidden="true" loading="lazy" decoding="async">`:''}<span><strong>${esc(team.name)}</strong><small>${esc(code)} · ${esc(team.conf)} ${esc(team.div)}</small></span></span>`;
+  }
+
+  function transactionPhoto(a,{lead=false}={}) {
+    const src = String(a?.image_url || '').trim();
+    if (!src) return '';
+    const alt = String(a?.image_alt || a?.title || 'NFL transaction story').trim();
+    const credit = String(a?.image_credit || '').trim();
+    const width = lead ? 176 : 76;
+    const height = lead ? 110 : 56;
+    return `<figure class="pbe26-photo${lead?' is-lead-photo':''}"><img src="${esc(src)}" alt="${esc(alt)}" loading="${lead?'eager':'lazy'}" decoding="async" width="${width}" height="${height}">${lead&&credit?`<figcaption>${esc(credit)}</figcaption>`:''}</figure>`;
   }
 
   function injuryArticle(a) {
@@ -335,12 +345,15 @@
     if (!a) return `<article class="pbe26-story pbe26-story-empty"><strong>No current transaction story matches this view.</strong><span>The live newsroom returned no corroborated transaction item for these filters.</span></article>`;
     const breaking = a?.is_breaking ? '<span class="pbe26-flag breaking">BREAKING</span>' : '';
     const event = currentEventHit(a) ? '<span class="pbe26-flag event">SELECTED EVENT</span>' : '';
+    const photo = transactionPhoto(a,{lead});
     return `<article class="pbe26-story${lead?' is-lead':''}" data-ledger-index="${index}">
       <div class="pbe26-story-head"><div class="pbe26-story-labels"><span class="pbe26-kind">${esc(transactionKind(a)).toUpperCase()}</span>${breaking}${event}</div><span class="pbe26-age">${esc(timeAgo(a?.published_at))}</span></div>
-      <h${lead?'2':'3'}>${esc(a?.title || 'Untitled transaction story')}</h${lead?'2':'3'}>
-      ${transactionSummaryBlock(a)}
-      <div class="pbe13-tags">${tags(a,'transactions')}</div>
-      ${marketContext(a)}
+      <div class="pbe26-story-primary${photo?' has-photo':''}">${photo}<div class="pbe26-story-copy">
+        <h${lead?'2':'3'}>${esc(a?.title || 'Untitled transaction story')}</h${lead?'2':'3'}>
+        ${transactionSummaryBlock(a)}
+        <div class="pbe13-tags">${tags(a,'transactions')}</div>
+        ${marketContext(a)}
+      </div></div>
       ${transactionMetaGrid(a)}
       <div class="pbe26-story-actions"><span>NEWS · SOURCE ATTRIBUTED</span>${a?.url?`<a href="${esc(a.url)}">Open canonical story ↗</a>`:'<span>Canonical story unavailable</span>'}</div>
     </article>`;
@@ -441,6 +454,13 @@
     document.getElementById('pbe13-search')?.addEventListener('input',e=>{state.search=e.currentTarget.value||'';refresh(mode)});
     document.getElementById('pbe13-team')?.addEventListener('change',e=>{state.team=e.currentTarget.value||'all';refresh(mode)});
     document.getElementById('pbe13-sort')?.addEventListener('change',e=>{state.sort=e.currentTarget.value||'latest';refresh(mode)});
+    if (mode === 'transactions') {
+      document.querySelectorAll('.pbe26-photo img').forEach(img=>{
+        const drop=()=>img.closest('.pbe26-photo')?.remove();
+        if (img.complete && !img.naturalWidth) drop();
+        else img.addEventListener('error',drop,{once:true});
+      });
+    }
   }
 
   function install() {
