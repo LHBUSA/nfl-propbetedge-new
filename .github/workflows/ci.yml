@@ -30,7 +30,7 @@ jobs:
           set -euo pipefail
           node scripts/check-syntax.mjs \
             app-core-v3.js page-loader.js paywall.js ui-v2.js \
-            prop-board-v3.js model-lab.js api/*.js
+            prop-board-v3.js prop-board-v5.js model-lab.js api/*.js
 
       - name: Syntax gate self-test
         shell: bash

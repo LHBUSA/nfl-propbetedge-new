@@ -57,7 +57,7 @@ jobs:
             dashboard-v5.js dashboard-v6.js dashboard-v7.js dashboard-v8-enhance.js
             sports-shell-v2.js sports-shell-auth-state.js
             games-v2.js games-command-v4.js games-intel-v5.js
-            prop-board-v3.js prop-board-v4.js market-watch-v3.js matchups-v2.js
+            prop-board-v3.js prop-board-v5.js market-watch-v3.js matchups-v2.js
             model-lab.js model-lab-v2-enhance.js simulator-v2.js simulator-v3-enhance.js
             sgp-lab-v2.js usage-v2.js propchain-v2.js
             pbecast-v6.js pbecast-v7-enhance.js
@@ -94,7 +94,7 @@ jobs:
           const at=f=>src.indexOf(`'./${f}'`);
           const world=at('world-class-v1.css');
           const foundations=['dashboard-v7.css','dashboard-v8-enhance.css','games-v2.css','model-lab-v2-enhance.css','simulator-v3-enhance.css','usage-v2.css'];
-          const terminal=['pbecast-v6.css','pbecast-v7-enhance.css','games-command-v4.css','games-intel-v5.css','prop-board-v4.css','prop-board-responsive-v5.css','pbe-picks-v2.css'];
+          const terminal=['pbecast-v6.css','pbecast-v7-enhance.css','games-command-v4.css','games-intel-v5.css','prop-board-v5.css','pbe-picks-v2.css'];
           if(world<0) throw new Error('world-class visual layer missing');
           for(const f of foundations) if(at(f)<0||at(f)>world) throw new Error(`${f} must load before world-class-v1.css`);
           for(const f of terminal) if(at(f)<world) throw new Error(`${f} must load after world-class-v1.css`);
