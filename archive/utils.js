@@ -43,25 +43,29 @@ var TEAM_VISUALS = {
   SD: { c1:'#0080C6', c2:'#FFC20E', name:'Chargers'    },
 };
 
+function teamLogoUrl(abbr, scoreboard) {
+  var raw = String(abbr || '').replace(/[^A-Za-z]/g, '').toUpperCase();
+  if (!raw) return '';
+  var slug = raw === 'WAS' ? 'wsh' : raw.toLowerCase();
+  return scoreboard === false
+    ? 'https://a.espncdn.com/i/teamlogos/nfl/500/' + slug + '.png'
+    : 'https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/' + slug + '.png';
+}
+
 /**
- * Build an SVG shield/crest for any team
+ * Build a real NFL team crest image for any team. Synthetic shields and
+ * abbreviation marks are intentionally not used as fallbacks.
  * @param {string} abbr - team abbreviation
  * @param {number} size - pixel size (default 48)
  * @returns {string} HTML string
  */
 function teamCrest(abbr, size) {
-  size = size || 48;
-  var tv = TEAM_VISUALS[abbr] || { c1:'#166534', c2:'#22c55e', name:abbr };
-  return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 48 48" fill="none">' +
-    '<defs>' +
-      '<clipPath id="cp' + abbr + size + '">' +
-        '<path d="M24 2 L44 10 L44 30 Q44 42 24 46 Q4 42 4 30 L4 10 Z"/>' +
-      '</clipPath>' +
-    '</defs>' +
-    '<path d="M24 2 L44 10 L44 30 Q44 42 24 46 Q4 42 4 30 L4 10 Z" fill="' + tv.c1 + '"/>' +
-    '<path d="M24 4 L42 11.5 L42 29.5 Q42 40 24 44 Q6 40 6 29.5 L6 11.5 Z" fill="none" stroke="' + tv.c2 + '" stroke-width="1.5" opacity=".6"/>' +
-    '<text x="24" y="29" text-anchor="middle" fill="' + tv.c2 + '" font-size="14" font-weight="900" font-family="Barlow Condensed,sans-serif" letter-spacing="-0.5">' + abbr + '</text>' +
-  '</svg>';
+  size = Math.max(18, Math.min(96, Number(size) || 48));
+  var tv = TEAM_VISUALS[abbr] || { name:abbr };
+  var primary = teamLogoUrl(abbr, true);
+  var alternate = teamLogoUrl(abbr, false);
+  if (!primary) return '';
+  return '<img class="team-crest pbe-official-team-logo" src="' + primary + '" data-alt-src="' + alternate + '" data-team-abbr="' + String(abbr || '') + '" alt="' + String(tv.name || abbr || 'NFL') + ' logo" width="' + size + '" height="' + size + '" loading="lazy" decoding="async">';
 }
 
 /**
