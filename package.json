@@ -10,6 +10,9 @@
     "node": ">=18"
   },
   "scripts": {
-    "test": "node --test tests/nfl-auth.test.mjs"
+    "test": "node --test tests/nfl-auth.test.mjs",
+    "test:research": "node --test research/*.test.mjs",
+    "verify-deploy-target": "node scripts/verify-deploy-target.mjs",
+    "deploy:preview": "node scripts/verify-deploy-target.mjs && vercel deploy --scope justins-projects-ad4f4bb7"
   }
 }

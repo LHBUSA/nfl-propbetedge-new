@@ -1,6 +1,5 @@
 {
   "cleanUrls": true,
-  "alias": ["nfl.propbetedge.ai"],
   "headers": [
     {
       "source": "/(.*)",

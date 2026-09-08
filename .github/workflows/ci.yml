@@ -49,8 +49,21 @@ jobs:
       - name: NFL auth regression suite
         run: node --test tests/nfl-auth*.test.mjs
 
+      # research/ holds the contract suites -- odds provider spend, the
+      # home-market fallback, and the Prop Board batch merge. No workflow ran
+      # them, so a failing case there stayed invisible while every check was
+      # green. They run here now.
+      - name: Research contract suites
+        run: node --test research/*.test.mjs
+
       - name: Validate Vercel config JSON
         run: node -e "JSON.parse(require('fs').readFileSync('vercel.json','utf8')); console.log('vercel.json OK')"
+
+      # vercel.json must never regain a directive that can move a production
+      # hostname on its own; an "alias" entry here is what let a CLI deploy
+      # hand nfl.propbetedge.ai to a project nobody meant to create.
+      - name: Deploy target guard
+        run: node scripts/verify-deploy-target.mjs --config-only
 
       - name: Enforce live Prop Board contract
         shell: bash

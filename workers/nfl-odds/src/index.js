@@ -230,6 +230,9 @@ export async function ingest(env, { trigger = 'cron', now = new Date() } = {}) {
     const capturedAt = new Date().toISOString();
     const meta = {
       batch_id: batchId(now, trigger), version: VERSION, trigger, captured_at: capturedAt, captured_at_et: etLabel(new Date(capturedAt)),
+      /* the trigger time of the attempt that produced this batch; freshness()
+         compares a later failed attempt against this, not against captured_at */
+      attempt_started_at: attempt.started_at,
       provider: 'the_odds_api', provider_last_update: latestBookUpdate(events), sport_key: sport,
       counts: { events: events.length, boards: index.length, boards_failed: boardFailures.length, board_quotes: index.reduce((n, x) => n + x.quote_count, 0) },
       window: { prop_window_days: p.prop_window_days, from: new Date(nowMs - 6 * 3600000).toISOString(), to: new Date(windowEnd).toISOString() },
@@ -258,7 +261,17 @@ async function freshness(env, now = new Date()) {
   const [meta, attempt] = await Promise.all([kvJson(env, KV.meta), kvJson(env, KV.attempt)]);
   if (!meta) return null;
   const ageSeconds = Math.max(0, Math.round((now.getTime() - Date.parse(meta.captured_at)) / 1000));
-  const latestFailed = attempt && attempt.status === 'failed' && Date.parse(attempt.started_at) > Date.parse(meta.captured_at);
+  /* Is the newest attempt a failure that came after the batch we are serving?
+     Compare attempt start against attempt start. captured_at is stamped from
+     the wall clock when the batch finished writing, while started_at comes from
+     the trigger's `now`, so comparing the two mixed those clocks and a failed
+     attempt could read as OK -- the batch stayed correct, the reporting did
+     not. meta.attempt_started_at is written by the successful ingest from the
+     same `now`, so both sides of this comparison share one source. Batches
+     written before that field existed fall back to the old basis. */
+  const lastSuccessStartedAt = meta.attempt_started_at || meta.captured_at;
+  const latestFailed = Boolean(attempt) && attempt.status === 'failed'
+    && Date.parse(attempt.started_at) >= Date.parse(lastSuccessStartedAt);
   return {
     semantics: 'LAST_VERIFIED_MARKET',
     batch_id: meta.batch_id, captured_at: meta.captured_at, captured_at_et: meta.captured_at_et,
