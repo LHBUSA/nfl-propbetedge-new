@@ -1,5 +1,6 @@
-/* PropBetEdge NFL — Transactions production authority v2
- * Route-scoped only. Dense source-attributed transaction terminal.
+/* PropBetEdge NFL — Transactions production authority v2.1
+ * Route-scoped only. Dense source-attributed transaction terminal with
+ * restrained article photography and micro team identity.
  */
 .pbe13-news.pbe13-transactions{
   --accent:var(--pbe-gold-bright,#e9c75a)!important;
@@ -9,8 +10,8 @@
   padding:8px 0 64px!important;
 }
 
-/* Transactions is an information terminal, not a photo surface. Player-media
-   enhancers are intentionally suppressed here and team crests stay micro. */
+/* Prevent universal player-headshot hydration from turning story chips into
+   giant media. The route still uses real article photography plus micro team crests. */
 .pbe13-news.pbe13-transactions .pbe-player-headshot-v3,
 .pbe13-news.pbe13-transactions .pbe-player-headshot{display:none!important}
 .pbe13-news.pbe13-transactions .pbe26-team-crest{
@@ -212,10 +213,58 @@
 .pbe13-news.pbe13-transactions .pbe26-flag.breaking{border-color:rgba(230,57,70,.28);color:#f16b78;background:rgba(230,57,70,.045)}
 .pbe13-news.pbe13-transactions .pbe26-flag.event{border-color:rgba(212,175,55,.20);color:var(--pbe-gold-bright,#e9c75a);background:rgba(212,175,55,.035)}
 .pbe13-news.pbe13-transactions .pbe26-age{color:var(--pbe-faint,#7e7a72);white-space:nowrap}
+
+/* Real article photography is intentionally modest. It gives the page visual
+   texture without sacrificing the terminal's information density. */
+.pbe13-news.pbe13-transactions .pbe26-story-primary{margin-top:7px;min-width:0}
+.pbe13-news.pbe13-transactions .pbe26-story-primary.has-photo{
+  display:grid;
+  grid-template-columns:76px minmax(0,1fr);
+  gap:10px;
+  align-items:start;
+}
+.pbe13-news.pbe13-transactions .pbe26-story.is-lead .pbe26-story-primary.has-photo{
+  grid-template-columns:144px minmax(0,1fr);
+  gap:13px;
+}
+.pbe13-news.pbe13-transactions .pbe26-story-copy{min-width:0}
+.pbe13-news.pbe13-transactions .pbe26-photo{
+  width:76px;
+  margin:0;
+  overflow:hidden;
+  border:1px solid var(--pbe-line,rgba(255,245,220,.10));
+  border-radius:5px;
+  background:var(--pbe-ink-4,#0d0b08);
+  align-self:start;
+}
+.pbe13-news.pbe13-transactions .pbe26-photo img{
+  display:block!important;
+  width:76px!important;
+  height:56px!important;
+  max-width:76px!important;
+  object-fit:cover!important;
+  object-position:center 35%;
+}
+.pbe13-news.pbe13-transactions .pbe26-photo.is-lead-photo{width:144px;border-radius:6px}
+.pbe13-news.pbe13-transactions .pbe26-photo.is-lead-photo img{
+  width:144px!important;
+  height:90px!important;
+  max-width:144px!important;
+}
+.pbe13-news.pbe13-transactions .pbe26-photo figcaption{
+  padding:4px 5px;
+  border-top:1px solid var(--pbe-line-faint,rgba(255,245,220,.055));
+  color:var(--pbe-faint,#7e7a72);
+  font:700 8px/1.25 var(--pbe-font-data,"JetBrains Mono",monospace);
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
 .pbe13-news.pbe13-transactions .pbe26-story h2,
 .pbe13-news.pbe13-transactions .pbe26-story h3{
   max-width:1080px;
-  margin:7px 0 0;
+  margin:0;
   color:var(--pbe-paper,#f5f1eb);
   font-family:var(--pbe-font-ui,"Inter",sans-serif);
   font-weight:800;
@@ -357,14 +406,10 @@
 }
 .pbe13-news.pbe13-transactions .pbe26-ledger .pbe26-story-head,
 .pbe13-news.pbe13-transactions .pbe26-ledger .pbe26-story-actions{grid-column:1/-1}
-.pbe13-news.pbe13-transactions .pbe26-ledger .pbe26-story h3,
-.pbe13-news.pbe13-transactions .pbe26-ledger .pbe26-story-summary,
-.pbe13-news.pbe13-transactions .pbe26-ledger .pbe26-trust-note,
-.pbe13-news.pbe13-transactions .pbe26-ledger .pbe13-tags,
-.pbe13-news.pbe13-transactions .pbe26-ledger .pbe26-market-context{grid-column:1}
+.pbe13-news.pbe13-transactions .pbe26-ledger .pbe26-story-primary{grid-column:1}
 .pbe13-news.pbe13-transactions .pbe26-ledger .pbe26-meta-grid{
   grid-column:2;
-  grid-row:2 / span 5;
+  grid-row:2;
   grid-template-columns:1fr;
   margin-top:7px;
 }
@@ -389,6 +434,9 @@
   .pbe13-news.pbe13-transactions .pbe13-input{grid-column:auto!important}
   .pbe13-news.pbe13-transactions .pbe26-meta-grid,
   .pbe13-news.pbe13-transactions .pbe26-ledger .pbe26-meta-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .pbe13-news.pbe13-transactions .pbe26-story.is-lead .pbe26-story-primary.has-photo{grid-template-columns:112px minmax(0,1fr)}
+  .pbe13-news.pbe13-transactions .pbe26-photo.is-lead-photo{width:112px}
+  .pbe13-news.pbe13-transactions .pbe26-photo.is-lead-photo img{width:112px!important;height:74px!important;max-width:112px!important}
 }
 @media(max-width:560px){
   .pbe13-news.pbe13-transactions{padding-top:4px!important}
@@ -409,4 +457,11 @@
   .pbe13-news.pbe13-transactions .pbe26-trust-note span{display:block;margin-top:3px}
   .pbe13-news.pbe13-transactions .pbe26-story-actions{align-items:flex-start;flex-direction:column}
   .pbe13-news.pbe13-transactions .pbe26-feed-head{align-items:flex-start;flex-direction:column}
+  .pbe13-news.pbe13-transactions .pbe26-story-primary.has-photo,
+  .pbe13-news.pbe13-transactions .pbe26-story.is-lead .pbe26-story-primary.has-photo{grid-template-columns:70px minmax(0,1fr);gap:8px}
+  .pbe13-news.pbe13-transactions .pbe26-photo,
+  .pbe13-news.pbe13-transactions .pbe26-photo.is-lead-photo{width:70px}
+  .pbe13-news.pbe13-transactions .pbe26-photo img,
+  .pbe13-news.pbe13-transactions .pbe26-photo.is-lead-photo img{width:70px!important;height:52px!important;max-width:70px!important}
+  .pbe13-news.pbe13-transactions .pbe26-photo figcaption{display:none}
 }
