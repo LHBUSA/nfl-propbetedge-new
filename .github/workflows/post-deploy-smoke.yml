@@ -64,6 +64,12 @@ jobs:
           PBE_CHROME: /usr/bin/google-chrome
         run: node scripts/recovery-browser-smoke.mjs
 
+      - name: Real logo audit across every live route
+        env:
+          PBE_URL: ${{ steps.target.outputs.url }}
+          PBE_CHROME: /usr/bin/google-chrome
+        run: node scripts/real-logo-browser-gate.mjs
+
       - name: Observer loop alarm must be silent
         env:
           PBE_URL: ${{ steps.target.outputs.url }}
@@ -77,6 +83,8 @@ jobs:
           name: post-deploy-smoke
           path: |
             recovery-smoke.log
+            real-logo-audit.log
             observer-alarm.log
             recovery-*.png
+            real-logo-*.png
           if-no-files-found: ignore
