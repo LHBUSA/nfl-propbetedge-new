@@ -10,6 +10,9 @@
  * - receipt hashes are an INTERNAL SHA-256 chained tamper-evidence system,
  *   explicitly not represented as independent third-party notarization.
  * - model/backtest comparison renders only fields the backend actually has.
+ * - engine HEALTH is separate from publication. It comes from the durable run
+ *   ledger (engine_runtime); a stale or unknown engine renders DEGRADED, never
+ *   as a healthy validation page.
  */
 (() => {
   'use strict';
@@ -158,7 +161,59 @@
   }
   function topline(active, data) {
     const gated = data?.champion_trained !== true;
-    return `<div class="pbe2-topline"><div class="pbe2-eyebrow"><i class="pbe2-live-dot ${gated ? 'gated' : ''}"></i>${gated ? 'Validation mode' : 'Production champion'} · v${esc(data?.champion_version ?? '—')} · official publication only</div>${switcher(active)}</div>`;
+    const degraded = healthOf(data) !== 'HEALTHY';
+    const mode = degraded ? 'Engine degraded' : gated ? 'Validation mode' : 'Production champion';
+    return `<div class="pbe2-topline"><div class="pbe2-eyebrow"><i class="pbe2-live-dot ${degraded ? 'degraded' : gated ? 'gated' : ''}"></i>${mode} · v${esc(data?.champion_version ?? '—')} · official publication only</div>${switcher(active)}</div>`;
+  }
+
+  /* ---- engine runtime (durable run ledger) ---------------------------- */
+  const LANE_ORDER = ['nfl-game-picks-orchestrator', 'nfl-odds-snapshot', 'nfl-game-grader', 'nfl-weight-tuner'];
+  function healthOf(data) { return String(data?.engine_health || 'UNKNOWN').toUpperCase(); }
+  function lane(data, key) { return data?.engine_runtime?.lanes?.[key] || null; }
+  function ago(value) {
+    const t = Date.parse(value || ''); if (!Number.isFinite(t)) return 'never';
+    const s = Math.max(0, Math.round((Date.now() - t) / 1000));
+    if (s < 90) return `${s}s ago`;
+    if (s < 5400) return `${Math.round(s / 60)}m ago`;
+    if (s < 129600) return `${(s / 3600).toFixed(1)}h ago`;
+    return `${Math.round(s / 86400)}d ago`;
+  }
+  function laneStateLabel(state) {
+    return ({ HEALTHY: 'Healthy', DEGRADED: 'Degraded', STALE: 'Stale', UNKNOWN: 'No run recorded' }[state] || state || '—');
+  }
+  function lanes(data) {
+    const all = data?.engine_runtime?.lanes || {};
+    return LANE_ORDER.map(key => all[key]).filter(Boolean);
+  }
+  function degradedBanner(data) {
+    const bad = lanes(data).filter(l => l.state !== 'HEALTHY');
+    const reason = data?.engine_runtime?.unavailable_reason;
+    return `<section class="pbe2-degraded"><span>ENGINE DEGRADED</span><h2>The Picks Engine is not running normally</h2><p>This state comes from the engine's own persisted run records, not from this page. Nothing below should be read as a live evaluation until every critical lane reports healthy.</p><ul>${bad.length ? bad.map(l => `<li><b>${esc(l.label || l.lane)}</b> — ${esc(laneStateLabel(l.state))}${l.reason ? ` · ${esc(l.reason)}` : ''} · last run ${esc(ago(l.last_tick_at))}</li>`).join('') : `<li>${esc(reason || 'Run ledger unavailable')}</li>`}</ul></section>`;
+  }
+  function engineProgress(data) {
+    const d = data?.decisions || {};
+    const tr = d.tracking || {};
+    const orch = lane(data, 'nfl-game-picks-orchestrator');
+    const detail = orch?.detail || {};
+    const c = orch?.counts || {};
+    const next = detail.next_game
+      ? `${detail.next_game.matchup} · ${dateTime(detail.next_game.kickoff_ts)}`
+      : data?.current?.next_game ? `${data.current.next_game.name} · ${dateTime(data.current.next_game.kickoff)}` : '—';
+    const evaluated = orch?.last_work_at
+      ? `${ago(orch.last_work_at)} · ${num(c.evaluated_games) ?? 0} game${num(c.evaluated_games) === 1 ? '' : 's'} evaluated`
+      : 'No evaluation recorded';
+    const outcome = orch?.last_work_at
+      ? `${num(c.emitted) ?? 0} new · ${num(c.kept) ?? 0} held · ${num(c.pass) ?? 0} passed · ${num(c.killed) ?? 0} killed`
+      : '';
+    const final = data?.current?.latest_final;
+    const tiles = [
+      ['Tracking decisions', `${num(tr.total) ?? 0}`, `${num(tr.open) ?? 0} open · ${num(tr.graded) ?? 0} graded · ${num(tr.superseded) ?? 0} superseded`],
+      ['Finalized', `${num(data?.graded_sample) ?? 0}`, `of ${num(data?.graded_sample_required) ?? 100} needed · ${num(data?.distinct_weeks) ?? 0}/${num(data?.distinct_weeks_required) ?? 4} weeks`],
+      ['Last engine evaluation', evaluated, outcome],
+      ['Next eligible game', next, final ? `Latest final: ${final.away} ${final.away_score}–${final.home_score} ${final.home}` : ''],
+    ];
+    const laneRows = lanes(data).map(l => `<div class="pbe2-lane" data-state="${esc(l.state)}"><i></i><div><strong>${esc(l.label || l.lane)}</strong><span>${esc(laneStateLabel(l.state))} · last run ${esc(ago(l.last_tick_at))}</span></div></div>`).join('');
+    return `<section class="pbe2-engine" aria-label="Picks Engine live progress"><div class="pbe2-engine-head"><span>Live engine · ${esc(data?.current?.season ?? d.season ?? '')} ${esc(data?.current?.season_type || '')} week ${esc(data?.current?.week ?? '—')}</span><b data-state="${esc(healthOf(data))}">${esc(laneStateLabel(healthOf(data)))}</b></div><div class="pbe2-engine-grid">${tiles.map(([label, value, sub]) => `<div class="pbe2-engine-tile"><span>${esc(label)}</span><strong>${esc(value)}</strong>${sub ? `<small>${esc(sub)}</small>` : ''}</div>`).join('')}</div><div class="pbe2-lanes">${laneRows || '<div class="pbe2-lane" data-state="UNKNOWN"><i></i><div><strong>Run ledger</strong><span>unavailable</span></div></div>'}</div><p class="pbe2-engine-note">Tracking decisions are real pregame decisions, frozen before kickoff and graded from the official final. They are never shown as picks and never enter the public record.</p></section>`;
   }
 
   function validation(data, active = 'pbepicks') {
@@ -169,7 +224,7 @@
     return `${topline(active, data)}<section class="pbe2-stage gated"><div class="pbe2-gridwash"></div><div class="pbe2-validation">
       <div><div class="pbe2-kicker">PBE Picks Engine</div><h1>Earn the edge.<br><em>Then publish it.</em></h1><p class="pbe2-validation-copy">The production model is evaluating real NFL slates in bootstrap tracking mode. Those decisions can build the learning sample, but they cannot appear as customer picks and can never be retroactively converted into the public record.</p><div class="pbe2-validation-proof"><span>100 finalized decisions</span><span>4 distinct weeks</span><span>champion-only publication</span><span>no backfilled picks</span></div></div>
       <div class="pbe2-gates"><div class="pbe2-ring" style="--p:${gradePct.toFixed(1)}"><div><strong>${grades}</strong><span>of ${gradeReq} grades</span></div></div><div class="pbe2-ring" style="--p:${weekPct.toFixed(1)}"><div><strong>${weeks}</strong><span>of ${weekReq} weeks</span></div></div><div class="pbe2-gate-caption">Official publication remains closed until both gates are satisfied and a trained champion is promoted.</div></div>
-    </div></section><div class="pbe2-pipeline"><div class="active"><span>01</span><strong>Track live</strong></div><div><span>02</span><strong>Grade final</strong></div><div><span>03</span><strong>Validate</strong></div><div><span>04</span><strong>Publish</strong></div></div>`;
+    </div></section><div class="pbe2-pipeline"><div class="${healthOf(data) === 'HEALTHY' ? 'active' : ''}"><span>01</span><strong>Track live</strong></div><div class="${grades > 0 ? 'active' : ''}"><span>02</span><strong>Grade final</strong></div><div><span>03</span><strong>Validate</strong></div><div><span>04</span><strong>Publish</strong></div></div>${engineProgress(data)}`;
   }
 
   function freeLive(data) {
@@ -205,7 +260,11 @@
       if (run !== state.loadId || window.App?.current !== 'pbepicks') return;
       state.governance = governance;
       let body;
-      if (governance.champion_trained !== true) body = validation(governance, 'pbepicks');
+      /* Health first: a degraded engine is never presented as a healthy
+       * validation page or an honest PASS. */
+      const banner = healthOf(governance) !== 'HEALTHY' ? degradedBanner(governance) : '';
+      if (governance.champion_trained !== true) body = banner + validation(governance, 'pbepicks');
+      else if (banner) body = `${topline('pbepicks', governance)}${banner}${engineProgress(governance)}`;
       else if (!isPro()) body = freeLive(governance);
       else {
         const current = await json(`${API}?view=current`);
@@ -446,7 +505,7 @@
     [120, 420, 1100].forEach(delay => setTimeout(() => { installViews(); installNav(); }, delay));
   }
 
-  window.PBEPicksV2 = { version: 2, renderPicks, renderTrackRecord: renderTrack, state, installNav };
+  window.PBEPicksV2 = { version: 2, renderPicks, renderTrackRecord: renderTrack, state, installNav, engineProgress, degradedBanner };
   init();
   document.addEventListener('DOMContentLoaded', init, { once: true });
   window.addEventListener('pbe:upgrades-ready', init);

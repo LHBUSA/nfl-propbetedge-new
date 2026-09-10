@@ -1,10 +1,12 @@
 import { getNflSession, verifiedEmail, supabaseAdminHeaders } from './_nfl-auth.js';
+import { currentSeason, engineRuntime } from './_pbe-engine-runtime.js';
 
 const DEFAULT_SUPABASE_URL = 'https://tkmlnhmylqnttmnsnief.supabase.co';
 const OFFICIAL = 'official';
 const MARKET = 'player_pass_yds';
 const MIN_FINALIZED = 100;
 const MIN_WEEKS = 4;
+const PROP_LANES = ['nfl-prop-picks-orchestrator', 'nfl-odds-snapshot', 'nfl-prop-picks-grader', 'nfl-prop-picks-tuner'];
 
 function send(res, status, body, cacheControl = 'private, no-store, max-age=0') {
   res.statusCode = status;
@@ -33,12 +35,23 @@ function chunks(values, size = 100) {
 function inList(values) { return values.map(value => `"${String(value).replace(/"/g, '')}"`).join(','); }
 
 async function governance(secret) {
-  const [models, observations, latestPick, latestAudit] = await Promise.all([
+  const [models, observations, latestPick, latestAudit, runtime, current, decisionRows] = await Promise.all([
     sb('nfl_prop_selector_models', `market=eq.${MARKET}&promoted=is.true&select=version,market,projection_model,config,trained,promoted,training_rows,trained_through_week,backtest_clv_beat_pct,backtest_brier,backtest_units,notes,created_at,promoted_at&order=version.desc&limit=1`, secret),
     sb('nfl_prop_learning_observations', `market=eq.${MARKET}&is_final=eq.true&select=season,week,publication_scope,clv_beat,units_delta,brier,finalized_at&order=finalized_at.desc&limit=5000`, secret),
     sb('nfl_prop_picks', `market=eq.${MARKET}&select=id,created_at,publication_scope,status&order=created_at.desc&limit=1`, secret),
-    sb('nfl_prop_pick_audit_events', 'select=event_type,occurred_at&order=occurred_at.desc&limit=1', secret)
+    sb('nfl_prop_pick_audit_events', 'select=event_type,occurred_at&order=occurred_at.desc&limit=1', secret),
+    engineRuntime(PROP_LANES),
+    currentSeason().catch(() => null),
+    sb('nfl_prop_picks', `market=eq.${MARKET}&select=season,status,publication_scope&limit=5000`, secret)
   ]);
+  /* Counts only: a tracking decision's player, side or edge never leaves the server. */
+  const counts = { tracking: { total: 0, open: 0, graded: 0, killed: 0, superseded: 0 }, official: { total: 0, open: 0, graded: 0, killed: 0, superseded: 0 } };
+  for (const row of Array.isArray(decisionRows) ? decisionRows : []) {
+    if (current?.season && Number(row.season) !== Number(current.season)) continue;
+    const bucket = row.publication_scope === OFFICIAL ? counts.official : counts.tracking;
+    bucket.total += 1;
+    if (bucket[row.status] !== undefined) bucket[row.status] += 1;
+  }
   const selector = Array.isArray(models) ? models[0] : null;
   const obs = Array.isArray(observations) ? observations : [];
   const weeks = new Set(obs.map(row => `${row.season}-${row.week}`));
@@ -79,6 +92,10 @@ async function governance(secret) {
       units_delta: units === null ? null : Number(units.toFixed(4)),
       brier: briers.length ? Number((briers.reduce((a, b) => a + b, 0) / briers.length).toFixed(6)) : null
     },
+    engine_health: runtime.health,
+    engine_runtime: runtime,
+    current,
+    decisions: { season: current?.season ?? null, ...counts },
     runtime_evidence: {
       first_decision_seen: Array.isArray(latestPick) && latestPick.length > 0,
       latest_decision_at: latestPick?.[0]?.created_at ?? null,

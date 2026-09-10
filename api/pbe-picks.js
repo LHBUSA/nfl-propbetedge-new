@@ -1,9 +1,13 @@
 import { getNflSession, verifiedEmail, supabaseAdminHeaders } from './_nfl-auth.js';
+import {
+  currentSeason, matchupFromGameId, engineRuntime, composeEngineState,
+} from './_pbe-engine-runtime.js';
 
 const DEFAULT_SUPABASE_URL = 'https://tkmlnhmylqnttmnsnief.supabase.co';
-const DEFAULT_NFL_GATEWAY = 'https://nfl-api.propbetedge.ai';
 const OFFICIAL = 'official';
 const UNTRAINED_STATE = 'ENGINE GATED — MODEL VALIDATION IN PROGRESS';
+/* The lanes that make the game engine a closed loop. */
+const GAME_LANES = ['nfl-game-picks-orchestrator', 'nfl-odds-snapshot', 'nfl-game-grader', 'nfl-weight-tuner'];
 
 const DIVISION = Object.freeze({
   BUF:'AFC East',MIA:'AFC East',NE:'AFC East',NYJ:'AFC East',
@@ -49,10 +53,28 @@ function isTrained(champion) {
   return value === true || value === 'true';
 }
 
+/* Decision counts by publication class and lifecycle status. Counts only — a
+ * tracking decision's side, line or edge never leaves the server. */
+function decisionCounts(rows, season) {
+  const blank = () => ({ total: 0, open: 0, graded: 0, killed: 0, superseded: 0 });
+  const out = { season, tracking: blank(), official: blank(), latest_issued_at: null };
+  for (const row of Array.isArray(rows) ? rows : []) {
+    if (season && Number(row.season) !== Number(season)) continue;
+    const bucket = row.publication_scope === OFFICIAL ? out.official : out.tracking;
+    bucket.total += 1;
+    if (bucket[row.status] !== undefined) bucket[row.status] += 1;
+    if (!out.latest_issued_at || row.created_at > out.latest_issued_at) out.latest_issued_at = row.created_at;
+  }
+  return out;
+}
+
 async function governance(secret) {
-  const [weights, observations] = await Promise.all([
+  const [weights, observations, current, runtime, decisionRows] = await Promise.all([
     sb('nfl_model_weights', 'promoted=eq.true&select=version,weights,notes,created_at,promoted_at,backtest_clv_beat_pct,backtest_brier,backtest_units&order=version.desc&limit=1', secret),
-    sb('nfl_learning_observations', 'select=season,week,publication_scope&order=finalized_at.desc&limit=5000', secret)
+    sb('nfl_learning_observations', 'select=season,week,publication_scope&order=finalized_at.desc&limit=5000', secret),
+    currentSeason().catch(() => null),
+    engineRuntime(GAME_LANES),
+    sb('nfl_game_picks', 'select=season,status,publication_scope,created_at&order=created_at.desc&limit=5000', secret)
   ]);
   const champion = Array.isArray(weights) && weights.length ? weights[0] : null;
   const trained = isTrained(champion);
@@ -80,7 +102,11 @@ async function governance(secret) {
     distinct_weeks_required: 4,
     auto_tuner: gateOpen ? 'ELIGIBLE' : 'GATED',
     issuance_mode: trained ? 'OFFICIAL' : 'TRACKING_BOOTSTRAP',
-    engine_state: trained ? 'ENGINE LIVE' : UNTRAINED_STATE,
+    engine_state: composeEngineState({ health: runtime.health, trained, hasPicks: false, gatedState: UNTRAINED_STATE }),
+    engine_health: runtime.health,
+    engine_runtime: runtime,
+    current: current,
+    decisions: decisionCounts(decisionRows, current?.season ?? null),
     truth: 'verified_live_official_only',
     verification: {
       receipt_scheme: 'pbe-issuance-v1',
@@ -92,39 +118,10 @@ async function governance(secret) {
   };
 }
 
-async function scheduleContext() {
-  const base = String(process.env.NFL_GATEWAY || DEFAULT_NFL_GATEWAY).replace(/\/$/, '');
-  const response = await fetch(`${base}/api/schedule`, { cache: 'no-store', headers: { accept: 'application/json' } });
-  if (!response.ok) throw new Error(`gateway_${response.status}`);
-  const body = await response.json();
-  const games = Array.isArray(body?.games) ? body.games : [];
-  const now = Date.now();
-  const next = games
-    .map(game => ({ ...game, ts: Date.parse(`${game.gameday}T${game.gametime || '00:00'}:00Z`) }))
-    .filter(game => Number.isFinite(game.ts) && game.ts >= now)
-    .sort((a, b) => a.ts - b.ts)[0];
-  return {
-    season: Number(body?.season || next?.season || new Date().getUTCFullYear()),
-    week: Number(next?.week || 1),
-    games
-  };
-}
-
-function gameMap(games) {
-  const map = new Map();
-  for (const game of Array.isArray(games) ? games : []) {
-    if (!game?.game_id) continue;
-    map.set(String(game.game_id), {
-      game_id: game.game_id,
-      away_team: game.away_team || null,
-      home_team: game.home_team || null,
-      gameday: game.gameday || null,
-      gametime: game.gametime || null,
-      week: game.week ?? null,
-      season: game.season ?? null
-    });
-  }
-  return map;
+/* Season and week come from nfl-current; nothing here computes them. */
+async function seasonContext() {
+  const current = await currentSeason();
+  return { season: current.season, week: current.week };
 }
 
 function chunks(values, size = 100) {
@@ -257,10 +254,9 @@ function contextFor(pick, matchup) {
   };
 }
 
-function decorate(picks, grades, receipts, paths, games, includeContext = false) {
-  const byGame = gameMap(games);
+function decorate(picks, grades, receipts, paths, includeContext = false) {
   return (Array.isArray(picks) ? picks : []).map(pick => {
-    const matchup = byGame.get(String(pick.game_id)) || null;
+    const matchup = matchupFromGameId(pick.game_id);
     const row = {
       ...pick,
       grade: grades.get(pick.id) || null,
@@ -312,7 +308,7 @@ async function currentView(req, res, secret) {
   if (auth.degraded) return send(res, 503, { error: 'entitlement_unavailable', stage: auth.stage });
   if (auth.pro !== true) return send(res, 403, { error: 'nfl_pro_required', entitlement: 'nfl_pro' });
 
-  const [state, schedule] = await Promise.all([governance(secret), scheduleContext()]);
+  const [state, schedule] = await Promise.all([governance(secret), seasonContext()]);
   const select = [
     'id','game_id','season','week','kickoff_ts','market','side','market_line','market_price',
     'model_line','model_prob','market_prob','edge_pct','stake_units','confidence_bucket','model_version',
@@ -324,12 +320,10 @@ async function currentView(req, res, secret) {
   const picks = await sb('nfl_game_picks', query, secret);
   const ids = (picks || []).map(row => row.id);
   const [grades, receipts] = await Promise.all([gradesFor(secret, ids), receiptsFor(secret, ids)]);
-  const rows = decorate(picks, grades, receipts, null, schedule.games);
-  const engineState = !state.champion_trained
-    ? UNTRAINED_STATE
-    : rows.length
-      ? 'ENGINE LIVE — PICKS AVAILABLE'
-      : 'ENGINE LIVE — NO QUALIFIED PBE PICKS';
+  const rows = decorate(picks, grades, receipts, null);
+  const engineState = composeEngineState({
+    health: state.engine_health, trained: state.champion_trained, hasPicks: rows.length > 0, gatedState: UNTRAINED_STATE,
+  });
 
   return send(res, 200, {
     ...state,
@@ -344,7 +338,7 @@ async function currentView(req, res, secret) {
 }
 
 async function trackRecordView(req, res, secret) {
-  const [state, schedule] = await Promise.all([governance(secret), scheduleContext()]);
+  const state = await governance(secret);
   const before = encodeURIComponent(new Date().toISOString());
   const select = [
     'id','game_id','season','week','kickoff_ts','market','side','market_line','market_price',
@@ -360,7 +354,7 @@ async function trackRecordView(req, res, secret) {
     receiptsFor(secret, ids),
     marketPathsFor(secret, picks || [])
   ]);
-  const rows = decorate(picks, grades, receipts, paths, schedule.games, true);
+  const rows = decorate(picks, grades, receipts, paths, true);
   const filtered = applyTrackFilters(rows, req.query || {});
 
   const availableFilters = {
