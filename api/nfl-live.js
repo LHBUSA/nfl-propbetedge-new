@@ -1,11 +1,44 @@
 const CDN = 'https://cdn.espn.com/core/nfl';
+const SITE = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl';
 
-function send(res,status,body,ttl=0){
+/* ---- Which ESPN surface owns live truth ---------------------------------
+   Measured against the live NE @ SEA game on 2026-09-09 (see
+   scripts/nfl-live-upstream-bench.mjs). The CDN gamepackage this file used to
+   read freezes for minutes at a time: at 01:33:33Z its newest play was from
+   01:29:18Z — 4m15s old — while the site summary for the same event was
+   already publishing 01:33:33Z. Our own responses were freshly generated with
+   a cache MISS the whole time, so the delay was never ours.
+
+   The site summary is also a strict superset of the gamepackage: same header,
+   drives, boxscore, leaders, winprobability and scoringPlays, plus odds and
+   injuries. There is no fast-versus-rich tradeoff to split, so there is no
+   hybrid here: the summary is the source, and the gamepackage remains only as
+   a fallback for when the summary itself fails. */
+const LIVE_SOURCES=[
+  {provider:'espn_site_summary',   url:event=>`${SITE}/summary?event=${encodeURIComponent(event)}`},
+  {provider:'espn_cdn_gamepackage',url:event=>`${CDN}/game?xhr=1&gameId=${encodeURIComponent(event)}`}
+];
+/* The rail is the day's slate, and the two scoreboards disagree about both
+   things that matter. Asked for a specific date the site scoreboard returns
+   only that date's games (1, not the 16-game week the rail shows), but asked
+   for nothing it returns the current week AND the freshest live state — during
+   the same NE @ SEA window it was on Q2 0:00 while both dated scoreboards were
+   still on Q2 0:24. So: today reads the undated site board, any other date
+   reads a dated one, and the CDN remains the fallback. */
+const BOARD_SOURCES=[
+  {provider:'espn_site_scoreboard',url:(date,isToday)=>isToday?`${SITE}/scoreboard?limit=100`:`${SITE}/scoreboard?limit=100&dates=${encodeURIComponent(date)}`},
+  {provider:'espn_cdn_scoreboard', url:date=>`${CDN}/scoreboard?xhr=1&limit=100&dates=${encodeURIComponent(date)}`}
+];
+
+/* A live command center must not be served stale edge data, so the LIVE paths
+   carry no cache at all and nothing anywhere carries stale-while-revalidate on
+   live play data. Pregame and final keep ordinary caching. */
+function send(res,status,body,cache='no-store'){
   res.statusCode=status;
   res.setHeader('content-type','application/json; charset=utf-8');
   res.setHeader('access-control-allow-origin','*');
   res.setHeader('x-content-type-options','nosniff');
-  res.setHeader('cache-control',status===200&&ttl>0?`public, s-maxage=${ttl}, stale-while-revalidate=${Math.max(10,ttl*2)}`:'no-store');
+  res.setHeader('cache-control',status===200?cache:'no-store');
   res.end(JSON.stringify(body));
 }
 const A=v=>Array.isArray(v)?v:[];
@@ -102,7 +135,19 @@ function leaders(pkg,playerStats){
   A(pkg?.leaders).forEach(cat=>A(cat?.leaders).forEach(l=>{const a=l?.athlete||{};const row={category:F(cat?.name,cat?.displayName),display_name:F(cat?.displayName,cat?.name),value:F(l?.displayValue,l?.value),athlete:{id:F(a?.id),name:F(a?.displayName,a?.fullName,a?.shortName),short_name:F(a?.shortName),headshot:headshot(a),position:F(a?.position?.abbreviation),team:F(a?.team?.abbreviation,a?.team?.displayName)}};if(row.athlete.name&&row.value!=null)out.push(row)}));
   return out.length?out:derivedLeaders(playerStats);
 }
-function detail(pkg,eventId){
+/* How old is the newest football event this payload actually contains?
+   source.fetched_at only says when we called ESPN, which is exactly the number
+   that hid a four-minute upstream lag. This says when the game last moved. */
+function freshness(plays,currentPlay,now){
+  const walls=[...A(plays),currentPlay].filter(Boolean)
+    .map(p=>p?.wallclock).filter(Boolean).map(w=>Date.parse(w)).filter(Number.isFinite);
+  if(!walls.length)return {latest_play_wallclock:null,play_age_seconds:null};
+  const newest=Math.max(...walls);
+  return {latest_play_wallclock:new Date(newest).toISOString(),
+    play_age_seconds:Math.max(0,Math.round((now-newest)/100)/10)};
+}
+
+function detail(pkg,eventId,provider='espn_site_summary'){
   const hc=A(pkg?.header?.competitions)[0]||{};
   const headerEvent={id:eventId,date:F(hc?.date),name:F(pkg?.header?.shortName,pkg?.header?.name),shortName:F(pkg?.header?.shortName),season:pkg?.header?.season||{},week:pkg?.header?.week,competitions:A(pkg?.header?.competitions)};
   const g=game(headerEvent);
@@ -118,17 +163,63 @@ function detail(pkg,eventId){
   const plays=[...playMap.values()];
   const currentPlay=current?.plays?.at(-1)||g?.situation?.last_play||plays.at(-1)||null;
   const playerStats=stats(pkg);
-  return {ok:true,source:{provider:'espn_cdn_gamepackage',semantics:g.status.semantics,fetched_at:new Date().toISOString(),transport:'poll'},game:g,current_drive:current,current_play:currentPlay,drives,plays,last_five_plays:plays.slice(-5).reverse(),leaders:leaders(pkg,playerStats),player_stats:playerStats,win_probability:A(pkg?.winprobability).slice(-80).map(x=>({play_id:F(x?.playId,x?.play?.id),home_win_percentage:N(x?.homeWinPercentage),tie_percentage:N(x?.tiePercentage)})),play_count:plays.length,drive_count:drives.length};
+  const now=Date.now();
+  const fresh=freshness(plays,currentPlay,now);
+  return {ok:true,source:{provider,semantics:g.status.semantics,fetched_at:new Date(now).toISOString(),transport:'poll',...fresh},game:g,current_drive:current,current_play:currentPlay,drives,plays,last_five_plays:plays.slice(-5).reverse(),leaders:leaders(pkg,playerStats),player_stats:playerStats,win_probability:A(pkg?.winprobability).slice(-80).map(x=>({play_id:F(x?.playId,x?.play?.id),home_win_percentage:N(x?.homeWinPercentage),tie_percentage:N(x?.tiePercentage)})),play_count:plays.length,drive_count:drives.length};
 }
+
+/* The fast lane. PBEcast polls live state every couple of seconds; it must not
+   drag a full box score and eighty win-probability points along for the ride.
+   Same shape as the full payload, minus the slow-changing enrichment, so the
+   client merges it without a second code path. */
+function liveLayer(full){
+  const drive=full.current_drive?{...full.current_drive,plays:A(full.current_drive.plays).slice(-8)}:null;
+  return {ok:true,layer:'live',source:full.source,game:full.game,
+    current_drive:drive,current_play:full.current_play,
+    last_five_plays:full.last_five_plays,
+    play_count:full.play_count,drive_count:full.drive_count};
+}
+
+/* Try each source in order and accept the first that both answers and answers
+   usefully — a 200 carrying no game is a failed source, not a valid empty. */
+async function firstUpstream(sources,arg,arg2,valid){
+  const errors=[];
+  for(const src of sources){
+    try{
+      const raw=await upstream(src.url(arg,arg2));
+      if(valid&&!valid(raw)){errors.push(`${src.provider}:empty_payload`);continue}
+      return {raw,provider:src.provider};
+    }catch(error){errors.push(`${src.provider}:${error instanceof Error?error.message:String(error)}`)}
+  }
+  throw new Error(errors.join(' | ')||'no_upstream');
+}
+const hasCompetition=raw=>A(packageOf(raw)?.header?.competitions).length>0;
+const hasEvents=raw=>findEvents(raw).length>0;
 async function scoreboard(date){
-  const raw=await upstream(`${CDN}/scoreboard?xhr=1&limit=100&dates=${encodeURIComponent(date)}`);const games=findEvents(raw).map(game);return {ok:true,source:{provider:'espn_cdn_scoreboard',semantics:'SCOREBOARD',fetched_at:new Date().toISOString(),transport:'poll'},date,count:games.length,games};
+  const {raw,provider}=await firstUpstream(BOARD_SOURCES,date,date===todayET(),hasEvents);
+  const games=findEvents(raw).map(game);
+  return {ok:true,source:{provider,semantics:'SCOREBOARD',fetched_at:new Date().toISOString(),transport:'poll'},date,count:games.length,games};
 }
 export default async function handler(req,res){
   if(req.method==='OPTIONS'){res.statusCode=204;res.setHeader('access-control-allow-origin','*');res.setHeader('access-control-allow-methods','GET,OPTIONS');return res.end()}
   if(req.method!=='GET')return send(res,405,{ok:false,error:'method_not_allowed'});
-  const event=S(req.query?.event).trim(),date=todayET(req.query?.date);
+  const event=S(req.query?.event).trim(),date=todayET(req.query?.date),layer=S(req.query?.layer).trim().toLowerCase();
   try{
-    if(event){if(!/^\d+$/.test(event))return send(res,400,{ok:false,error:'invalid_event'});const raw=await upstream(`${CDN}/game?xhr=1&gameId=${encodeURIComponent(event)}`);const out=detail(packageOf(raw),event);const ttl=out.source.semantics==='LIVE'?2:out.source.semantics==='FINAL'?30:10;return send(res,200,out,ttl)}
-    const out=await scoreboard(date);return send(res,200,out,out.games.some(g=>g.status.semantics==='LIVE')?3:15);
+    if(event){
+      if(!/^\d+$/.test(event))return send(res,400,{ok:false,error:'invalid_event'});
+      const {raw,provider}=await firstUpstream(LIVE_SOURCES,event,null,hasCompetition);
+      const full=detail(packageOf(raw),event,provider);
+      const out=layer==='live'?liveLayer(full):full;
+      /* LIVE never caches: no s-maxage, no stale-while-revalidate. */
+      const cache=full.source.semantics==='LIVE'?'no-store'
+        :full.source.semantics==='FINAL'?'public, s-maxage=30, stale-while-revalidate=60'
+        :'public, s-maxage=10, stale-while-revalidate=20';
+      return send(res,200,out,cache);
+    }
+    const out=await scoreboard(date);
+    const anyLive=out.games.some(g=>g.status.semantics==='LIVE');
+    /* The rail is not the play feed, but it still must not serve stale live
+       scores, so it gets a short hard TTL rather than revalidate-in-background. */
+    return send(res,200,out,anyLive?'public, s-maxage=3':'public, s-maxage=15, stale-while-revalidate=30');
   }catch(error){return send(res,503,{ok:false,error:'nfl_live_unavailable',detail:error instanceof Error?error.message:String(error),semantics:'UNAVAILABLE',fetched_at:new Date().toISOString()})}
 }

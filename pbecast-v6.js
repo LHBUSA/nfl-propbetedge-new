@@ -13,7 +13,9 @@
 
   const state={
     date:'',scoreboard:null,activeId:null,detail:null,market:null,marketEvent:null,error:null,
-    loading:false,poll:null,lastPlayId:null,lastMarketAt:0,sound:false,audioCtx:null,statFilter:'all',installed:false
+    loading:false,poll:null,lastPlayId:null,lastMarketAt:0,sound:false,audioCtx:null,statFilter:'all',installed:false,
+    /* live-sync bookkeeping: see the synchronisation block below */
+    syncing:false,lastSyncAt:0,playAnchor:null,rejected:0
   };
 
   const esc=v=>String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
@@ -22,7 +24,7 @@
   const num=v=>v===null||v===undefined||v===''?null:(Number.isFinite(Number(v))?Number(v):null);
 
   function sportsDay(){const d=new Date(Date.now()-3*3600000);return d.toLocaleDateString('en-CA',{timeZone:'America/New_York'}).replaceAll('-','')}
-  async function getJson(url){const r=await fetch(url,{cache:'no-store',headers:{accept:'application/json'}});const text=await r.text();if(!r.ok)throw new Error(`${r.status} ${text.slice(0,140)}`);try{return JSON.parse(text)}catch{throw new Error('non_json_response')}}
+  async function getJson(url,signal){const r=await fetch(url,{cache:'no-store',headers:{accept:'application/json'},signal});const text=await r.text();if(!r.ok)throw new Error(`${r.status} ${text.slice(0,140)}`);try{return JSON.parse(text)}catch{throw new Error('non_json_response')}}
   function games(){return arr(state.scoreboard?.games)}
   function semantics(d=state.detail){return String(d?.source?.semantics||d?.game?.status?.semantics||'UNAVAILABLE').toUpperCase()}
   function isLive(d=state.detail){return semantics(d)==='LIVE'}
@@ -98,9 +100,35 @@
     return `<div class="cast6-field"><div class="cast6-field-top"><span>${esc(clean(s?.possession_text)||'FIELD POSITION')}</span>${clean(s?.down_distance_text)?`<b>${esc(s.down_distance_text)}</b>`:''}</div><div class="cast6-field-surface"><i class="cast6-drive-fill" style="width:${pos}%"></i><i class="cast6-redzone"></i>${fd!==null?`<i class="cast6-first" style="left:${fd}%"></i>`:''}<i class="cast6-ball" style="left:${pos}%"></i></div></div>`;
   }
 
+  /* Freshness is reported, never hidden. But play age on its own cannot tell a
+     slow feed from a stopped game: a timeout, the two-minute warning or a
+     replay review legitimately leaves the newest play minutes old with nothing
+     wrong upstream. So we only call it a source delay when the game clock has
+     moved on since that play landed — proof the game continued without the
+     feed telling us. */
+  function freshnessBadge(){
+    const sem=semantics(state.detail);
+    if(sem!=='LIVE')return {label:`${sem} · PBECAST`,cls:''};
+    const age=num(state.detail?.source?.play_age_seconds);
+    if(age==null||!clockMovedSincePlay())return {label:'LIVE · PBECAST',cls:'on'};
+    if(age<=FRESH_OK)return {label:'LIVE · LOW LATENCY',cls:'on is-fresh'};
+    if(age<=FRESH_BAD)return {label:`LIVE · SOURCE DELAY ${Math.round(age)}s`,cls:'on is-lagging'};
+    return {label:'LIVE · FEED DELAYED',cls:'on is-delayed'};
+  }
+  function syncNote(){
+    const d=state.detail;
+    const stamp=clean(d?.source?.fetched_at)?`UPDATED ${new Date(d.source.fetched_at).toLocaleTimeString([],{hour:'numeric',minute:'2-digit',second:'2-digit'})}`:'';
+    if(state.error){
+      const age=state.lastSyncAt?Math.round((Date.now()-state.lastSyncAt)/1000):null;
+      return `${stamp}${stamp?' · ':''}STALE${age!=null?` ${age}s`:''}`;
+    }
+    return `${stamp}${state.syncing?' · SYNCING':''}`;
+  }
+
   function heroHtml(){
     const d=state.detail,g=d?.game||{},a=g?.teams?.away||{},h=g?.teams?.home||{},sem=semantics(d),facts=situationFacts(d);
-    return `<section class="cast6-hero"><div class="cast6-hero-head"><div><span class="cast6-live ${sem==='LIVE'?'on':''}">${sem==='LIVE'?'<i></i>':''}${esc(sem)} · PBECAST</span><b>${esc(sourceLabel(d))}</b></div><small>${esc(clean(d?.source?.fetched_at)?`UPDATED ${new Date(d.source.fetched_at).toLocaleTimeString([],{hour:'numeric',minute:'2-digit',second:'2-digit'})}`:'')}</small></div><div class="cast6-score"><div class="cast6-team">${teamLogo(a)}<span><b>${esc(a.abbreviation||'AWY')}</b><small>${esc(a.display_name||'Away')}${teamRecord(a)?` · ${esc(teamRecord(a))}`:''}</small></span></div><div class="cast6-score-center">${sem==='SCHEDULE'&&kickoffParts(g?.date)?`<strong class="is-kickoff">${esc(kickoffParts(g.date).time)}<small>ET</small></strong><span><em class="cast6-kick-k">Kickoff · </em>${esc(kickoffParts(g.date).day)}</span>`:`<strong>${esc(score(a,sem))}<i>:</i>${esc(score(h,sem))}</strong><span>${esc(statusLabel(g))}</span>`}<small>${esc([g?.venue?.name,[g?.venue?.city,g?.venue?.state].filter(Boolean).join(', ')].filter(Boolean).join(' · '))}</small></div><div class="cast6-team home"><span><b>${esc(h.abbreviation||'HME')}</b><small>${esc(h.display_name||'Home')}${teamRecord(h)?` · ${esc(teamRecord(h))}`:''}</small></span>${teamLogo(h)}</div></div>${facts.length?`<div class="cast6-facts">${facts.map(([k,v])=>`<div><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}</div>`:''}</section>`;
+    const fresh=freshnessBadge();
+    return `<section class="cast6-hero"><div class="cast6-hero-head"><div><span class="cast6-live ${fresh.cls}">${sem==='LIVE'?'<i></i>':''}${esc(fresh.label)}</span><b>${esc(sourceLabel(d))}</b></div><small class="${state.error?'is-stale':''}${state.syncing?' is-syncing':''}">${esc(syncNote())}</small></div><div class="cast6-score"><div class="cast6-team">${teamLogo(a)}<span><b>${esc(a.abbreviation||'AWY')}</b><small>${esc(a.display_name||'Away')}${teamRecord(a)?` · ${esc(teamRecord(a))}`:''}</small></span></div><div class="cast6-score-center">${sem==='SCHEDULE'&&kickoffParts(g?.date)?`<strong class="is-kickoff">${esc(kickoffParts(g.date).time)}<small>ET</small></strong><span><em class="cast6-kick-k">Kickoff · </em>${esc(kickoffParts(g.date).day)}</span>`:`<strong>${esc(score(a,sem))}<i>:</i>${esc(score(h,sem))}</strong><span>${esc(statusLabel(g))}</span>`}<small>${esc([g?.venue?.name,[g?.venue?.city,g?.venue?.state].filter(Boolean).join(', ')].filter(Boolean).join(' · '))}</small></div><div class="cast6-team home"><span><b>${esc(h.abbreviation||'HME')}</b><small>${esc(h.display_name||'Home')}${teamRecord(h)?` · ${esc(teamRecord(h))}`:''}</small></span>${teamLogo(h)}</div></div>${facts.length?`<div class="cast6-facts">${facts.map(([k,v])=>`<div><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}</div>`:''}</section>`;
   }
 
   function currentActionHtml(){
@@ -146,6 +174,22 @@
   }
   function patch(root,selector,html){const host=root?.querySelector(selector);if(!host)return;const sig=String(html);if(host.dataset.sig===sig)return;const scroll=host.scrollTop;host.innerHTML=html;host.dataset.sig=sig;if(scroll)host.scrollTop=scroll}
   function patchToolbar(){const root=document.querySelector('.pbecast6');if(root)patch(root,'[data-cast6-toolbar]',toolbarHtml())}
+  /* Targeted patches for the fast lane: the sections a live frame can actually
+     change, and nothing else. patch() already no-ops on an identical
+     signature, so an unchanged play does not touch the DOM at all. */
+  function patchLive(){
+    const root=document.querySelector('.pbecast6');if(!root||!state.detail)return;
+    root.dataset.stale=state.error?'true':'false';
+    patch(root,'[data-cast6-hero]',heroHtml());
+    patch(root,'[data-cast6-action]',currentActionHtml());
+    patch(root,'[data-cast6-workspace]',workspaceHtml());
+  }
+  function patchRail(){const root=document.querySelector('.pbecast6');if(root)patch(root,'[data-cast6-rail]',railHtml())}
+  function patchFreshness(){
+    const root=document.querySelector('.pbecast6');if(!root||!state.detail)return;
+    root.dataset.stale=state.error?'true':'false';
+    patch(root,'[data-cast6-hero]',heroHtml());
+  }
   function patchAll(){const root=ensureRoot();if(!root)return;root.dataset.stale=state.error?'true':'false';patch(root,'[data-cast6-toolbar]',toolbarHtml());patch(root,'[data-cast6-rail]',railHtml());if(state.detail){patch(root,'[data-cast6-hero]',heroHtml());patch(root,'[data-cast6-action]',currentActionHtml());patch(root,'[data-cast6-telemetry]',coverageHtml());patch(root,'[data-cast6-workspace]',workspaceHtml())}else{patch(root,'[data-cast6-hero]',`<div class="cast6-empty"><b>Loading game package</b><span>Connecting to live drives, player output and play-by-play.</span></div>`);patch(root,'[data-cast6-action]','');patch(root,'[data-cast6-telemetry]','');patch(root,'[data-cast6-workspace]','')}}
   function patchStats(){const root=document.querySelector('.pbecast6');if(!root)return;const host=root.querySelector('[data-cast6-workspace]');if(host)patch(root,'[data-cast6-workspace]',workspaceHtml())}
 
@@ -168,15 +212,198 @@
     try{const payload=await getJson(`${NFL_API}/api/odds`);const hit=oddsRows(payload).map(oddsEvent).find(e=>e.id&&((namesMatch(e.away,a.display_name)||namesMatch(e.away,a.abbreviation))&&(namesMatch(e.home,h.display_name)||namesMatch(e.home,h.abbreviation))));if(!hit)return;state.marketEvent=hit;state.market=await getJson(`${NFL_API}/api/odds/board?event_id=${encodeURIComponent(hit.id)}&markets=${MARKETS.join(',')}`)}catch(_){state.market=null;state.marketEvent=null}
   }
 
-  async function fetchActive(){if(!state.activeId){state.detail=null;return}const d=await getJson(`${LIVE_API}?event=${encodeURIComponent(state.activeId)}`);const before=state.lastPlayId,after=d?.current_play?.id||null;state.detail=d;state.lastPlayId=after;if(before&&after&&before!==after&&state.sound)playCue(cueFor(d.current_play));await loadMarket(false)}
-  function schedule(){clearTimeout(state.poll);const delay=isLive()?5000:15000;state.poll=setTimeout(()=>{if(document.querySelector('.pbecast6'))refresh(false)},delay)}
-  async function refresh(manual=false){
-    if(state.loading)return;state.loading=true;
-    try{const scoreboard=await getJson(`${LIVE_API}?date=${encodeURIComponent(state.date||sportsDay())}`);state.scoreboard=scoreboard;state.activeId=chooseActive();persist();await fetchActive();state.error=null;patchAll()}
-    catch(error){state.error=error instanceof Error?error.message:String(error);patchAll()}
-    finally{state.loading=false;schedule()}
+  /* ---- Live synchronisation -----------------------------------------------
+     Three independent lanes, because they change at three different speeds and
+     nothing here should wait on anything slower than itself. The old loop
+     fetched the whole day's scoreboard, then serially the active game, then
+     scheduled the next round — so the active game could only ever be as fresh
+     as a scoreboard request it did not need.
+
+       live    the active game's state and current play   ~2.5s while LIVE
+       detail  box score, leaders, win probability, log     ~12s while LIVE
+       board   the day's game rail                          ~12s while LIVE
+
+     Every lane is background work: it patches values in place and never
+     clears .pbecast6, never nulls state.detail, and never re-mounts the route.
+     Only the first visit to an unpainted game shows a skeleton. */
+  const CADENCE={live:{on:2500,off:15000},detail:{on:12000,off:30000},board:{on:12000,off:30000}};
+  const FRESH_OK=30,FRESH_BAD=120;
+  const lanes={live:{gen:0,timer:null,busy:false,ctrl:null},detail:{gen:0,timer:null,busy:false,ctrl:null},board:{gen:0,timer:null,busy:false,ctrl:null}};
+
+  const mounted=()=>!!document.querySelector('.pbecast6');
+  const visible=()=>document.visibilityState!=='hidden';
+
+  function clockSeconds(v){const m=/^(\d+):(\d{2})$/.exec(String(v??'').trim());return m?Number(m[1])*60+Number(m[2]):null}
+  function playStamp(d){const w=Date.parse(d?.source?.latest_play_wallclock||d?.current_play?.wallclock||'');return Number.isFinite(w)?w:null}
+  function totalScore(d){return (num(d?.game?.teams?.away?.score)??0)+(num(d?.game?.teams?.home?.score)??0)}
+
+  /* A response describing an earlier moment than what is already on screen must
+     never pull the display backwards. Out-of-order HTTP responses and an
+     upstream falling back to a slower provider both produce exactly that. */
+  function regresses(next){
+    const cur=state.detail;
+    if(!cur||!next?.game)return false;
+    if(String(next.game.id||'')!==String(cur?.game?.id||''))return false;   // different game entirely
+    const nw=playStamp(next),cw=playStamp(cur);
+    if(nw!=null&&cw!=null&&nw<cw)return true;
+    const np=num(next?.game?.status?.period),cp=num(cur?.game?.status?.period);
+    if(np!=null&&cp!=null){
+      if(np<cp)return true;
+      if(np===cp){
+        const nl=clockSeconds(next?.game?.status?.clock),cl=clockSeconds(cur?.game?.status?.clock);
+        if(nl!=null&&cl!=null&&nl>cl)return true;                            // more time left = earlier
+      }
+    }
+    if(totalScore(next)<totalScore(cur))return true;
+    return false;
   }
-  async function focus(id){state.activeId=String(id);state.detail=null;state.market=null;state.lastMarketAt=0;state.marketGameKey=null;persist();patchAll();try{await fetchActive();state.error=null}catch(error){state.error=error instanceof Error?error.message:String(error)}patchAll();schedule()}
+
+  function mergePlays(...groups){
+    const map=new Map(arr(state.detail?.plays).map(p=>[String(p.id),p]));
+    groups.forEach(g=>arr(g).forEach(p=>{if(p?.id)map.set(String(p.id),p)}));
+    return [...map.values()].sort((a,b)=>(num(a.sequence)??0)-(num(b.sequence)??0));
+  }
+
+  /* Remember where the game clock stood when the newest play landed, so the
+     freshness badge can tell a slow feed from a stopped game. */
+  function anchorPlay(d){
+    const id=d?.current_play?.id||null;
+    if(!id||state.playAnchor?.id===id)return;
+    const st=d?.game?.status||{};
+    state.playAnchor={id,period:num(st.period),left:clockSeconds(st.clock)};
+  }
+  function clockMovedSincePlay(){
+    const a=state.playAnchor;if(!a||a.period==null||a.left==null)return false;
+    const st=state.detail?.game?.status||{};
+    const p=num(st.period),l=clockSeconds(st.clock);
+    if(p==null||l==null)return false;
+    /* A period boundary is not evidence of a slow feed — halftime leaves the
+       last Q2 play ten minutes old with nothing wrong. Only game time actually
+       running on within the same period counts. */
+    if(p!==a.period)return false;
+    return (a.left-l)>=20;
+  }
+
+  function applyLive(d,{sound=true}={}){
+    if(!d?.game){state.rejected=(state.rejected||0)+1;return false}
+    /* A response for a game we have since navigated away from must never land:
+       switching games leaves the previous game's requests in flight, and they
+       resolve after the new game's have already painted. */
+    if(state.activeId&&String(d.game.id||'')!==String(state.activeId)){state.rejected=(state.rejected||0)+1;return false}
+    if(regresses(d)){state.rejected=(state.rejected||0)+1;return false}
+    const before=state.lastPlayId,after=d?.current_play?.id||null;
+    const base=state.detail||{};
+    state.detail={...base,
+      source:d.source||base.source,
+      game:d.game,
+      current_play:d.current_play??base.current_play,
+      current_drive:d.current_drive||base.current_drive,
+      last_five_plays:d.last_five_plays||base.last_five_plays,
+      plays:mergePlays(d.last_five_plays,d.current_drive?.plays,d.plays),
+      /* the slow lane owns these; a live frame must not blank them */
+      player_stats:d.player_stats||base.player_stats,
+      leaders:d.leaders||base.leaders,
+      win_probability:d.win_probability||base.win_probability,
+      drives:d.drives||base.drives};
+    state.lastPlayId=after;
+    anchorPlay(state.detail);
+    state.lastSyncAt=Date.now();
+    state.error=null;
+    if(sound&&before&&after&&before!==after&&state.sound)playCue(cueFor(d.current_play));
+    return true;
+  }
+
+  async function laneJson(name,url){
+    const l=lanes[name];
+    const gen=++l.gen;
+    try{l.ctrl?.abort()}catch(_){}
+    const ctrl=typeof AbortController==='function'?new AbortController():null;
+    l.ctrl=ctrl;
+    const body=await getJson(url,ctrl?.signal);
+    if(gen!==l.gen)return null;                 // a newer request for this lane already went out
+    return body;
+  }
+
+  function scheduleLane(name,fn){
+    const l=lanes[name];
+    clearTimeout(l.timer);
+    if(!mounted())return;
+    const on=isLive()&&visible();
+    l.timer=setTimeout(()=>{if(mounted())fn()},on?CADENCE[name].on:CADENCE[name].off);
+  }
+
+  async function syncLive(){
+    const l=lanes.live;
+    if(l.busy||!state.activeId){scheduleLane('live',syncLive);return}
+    l.busy=true;state.syncing=true;patchFreshness();
+    try{
+      const d=await laneJson('live',`${LIVE_API}?event=${encodeURIComponent(state.activeId)}&layer=live`);
+      if(d){applyLive(d);patchLive()}
+    }catch(error){
+      if(error?.name!=='AbortError'){state.error=error instanceof Error?error.message:String(error);patchFreshness()}
+    }finally{l.busy=false;state.syncing=false;patchFreshness();scheduleLane('live',syncLive)}
+  }
+
+  async function syncDetail(){
+    const l=lanes.detail;
+    if(l.busy||!state.activeId){scheduleLane('detail',syncDetail);return}
+    l.busy=true;
+    try{
+      const d=await laneJson('detail',`${LIVE_API}?event=${encodeURIComponent(state.activeId)}`);
+      if(d){applyLive(d,{sound:false});await loadMarket(false);patchAll()}
+    }catch(error){
+      if(error?.name!=='AbortError')state.error=error instanceof Error?error.message:String(error);
+    }finally{l.busy=false;scheduleLane('detail',syncDetail)}
+  }
+
+  async function syncBoard(){
+    const l=lanes.board;
+    if(l.busy){scheduleLane('board',syncBoard);return}
+    l.busy=true;
+    try{
+      const board=await laneJson('board',`${LIVE_API}?date=${encodeURIComponent(state.date||sportsDay())}`);
+      if(board){
+        state.scoreboard=board;
+        const next=chooseActive();
+        if(next&&next!==state.activeId){state.activeId=next;persist();resetGame();syncLive();syncDetail()}
+        else{state.activeId=next||state.activeId;persist()}
+        patchRail();
+      }
+    }catch(error){
+      if(error?.name!=='AbortError')state.error=error instanceof Error?error.message:String(error);
+    }finally{l.busy=false;scheduleLane('board',syncBoard)}
+  }
+
+  function stopLanes(){Object.values(lanes).forEach(l=>{clearTimeout(l.timer);l.timer=null;try{l.ctrl?.abort()}catch(_){}})}
+
+  /* Manual refresh and first mount both want everything now, in parallel. */
+  async function refresh(manual=false){
+    state.date=state.date||sportsDay();
+    await Promise.all([syncBoard(),state.activeId?syncLive():Promise.resolve(),state.activeId?syncDetail():Promise.resolve()]);
+    if(!state.activeId&&state.scoreboard){state.activeId=chooseActive();persist();if(state.activeId)await Promise.all([syncLive(),syncDetail()])}
+    patchAll();
+    return manual;
+  }
+
+  function resetGame(){
+    state.detail=null;state.market=null;state.marketEvent=null;state.lastMarketAt=0;state.marketGameKey=null;
+    state.lastPlayId=null;state.playAnchor=null;state.error=null;
+  }
+
+  /* Switching games is a deliberate act, not background polling: the previous
+     game's score must not sit under the new game's name while it loads. */
+  async function focus(id){
+    if(String(id)===String(state.activeId))return;
+    stopLanes();                       // drop the previous game's in-flight work
+    state.activeId=String(id);
+    resetGame();persist();patchAll();
+    /* Restart every lane, the board included — it is what keeps the rail and
+       the active-game choice in step, and dropping it here used to leave it
+       stopped for the rest of the session. */
+    await Promise.all([syncLive(),syncDetail()]);
+    syncBoard();
+    patchAll();
+  }
   /* GAME BREAK -> PBEcast. The breaking rail leaves a one-shot focus request
      in session storage before navigating here; it is consumed exactly once so
      a later visit to PBEcast is not dragged back to an old touchdown. The play
@@ -193,9 +420,24 @@
       return state.activeId;
     }catch(_){return null}
   }
+  /* Mounting the route. state.detail survives a trip to another route, so
+     returning to PBEcast repaints the last known game immediately and the
+     lanes update it in place — the skeleton is only ever for a game we have
+     never painted. */
   async function load(){
-    stopLegacyTransports();clearTimeout(state.poll);state.date=sportsDay();restore();takeFocus();ensureRoot();patchAll();await refresh(true)
+    stopLegacyTransports();stopLanes();
+    state.date=sportsDay();restore();takeFocus();ensureRoot();patchAll();
+    await refresh(true);
   }
+
+  /* A hidden tab should not hold a 2.5s loop open against the live feed, and a
+     tab coming back must not show a minutes-old score while it waits for the
+     next tick. Sync once, immediately, on the way back in. */
+  document.addEventListener('visibilitychange',()=>{
+    if(!mounted())return;
+    if(!visible()){stopLanes();return}
+    syncLive();syncDetail();syncBoard();
+  });
 
   /* v4 and v5 are out of the production runtime. If a stale cached copy of
      either is still executing in someone's tab, silence its transport and its

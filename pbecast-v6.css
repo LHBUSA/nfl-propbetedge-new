@@ -51,3 +51,19 @@
 @media(max-width:760px){.cast6-score-center>strong.is-kickoff{font-size:26px}.cast6-hero-head{flex-wrap:wrap}}
 .cast6-kick-k{font-style:normal}
 @media(max-width:480px){.cast6-score-center>strong.is-kickoff{font-size:21px;white-space:nowrap;gap:5px}.cast6-score-center>strong.is-kickoff small{font-size:10px}.cast6-score-center>span{white-space:nowrap;font-size:10px}.cast6-kick-k{display:none}}
+
+/* ---- Live freshness -------------------------------------------------------
+   PBEcast reports how old the newest published play actually is. LOW LATENCY
+   is the normal live state; the amber and red states mean the upstream feed
+   fell behind the game and are deliberately visible rather than smoothed over.
+   SYNCING/STALE annotate the header without moving anything: background
+   synchronisation must never reflow the surface. */
+.cast6-live.is-fresh{color:#7ce4a7;border-color:rgba(98,220,150,.34);background:rgba(98,220,150,.09)}
+.cast6-live.is-lagging{color:#f0c45b;border-color:rgba(240,196,91,.34);background:rgba(240,196,91,.09)}
+.cast6-live.is-lagging i{background:#f0c45b;box-shadow:0 0 13px rgba(240,196,91,.7)}
+.cast6-live.is-delayed{color:#ff9a86;border-color:rgba(255,138,110,.36);background:rgba(255,138,110,.10)}
+.cast6-live.is-delayed i{background:#ff9a86;box-shadow:0 0 13px rgba(255,138,110,.7);animation:cast6-delay-pulse 1.6s ease-in-out infinite}
+@keyframes cast6-delay-pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.cast6-hero-head>small.is-syncing{color:var(--pbe-paper-2);opacity:.85}
+.cast6-hero-head>small.is-stale{color:#f0c45b}
+@media(prefers-reduced-motion:reduce){.cast6-live.is-delayed i{animation:none}}
