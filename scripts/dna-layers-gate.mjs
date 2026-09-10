@@ -141,7 +141,7 @@ const checks=[
   ['layers are separate cards',rows.filter(r=>r.present).every(r=>r.current&&r.baseline&&r.current!==r.baseline)],
   ['no horizontal overflow',rows.every(r=>(r.overflow||0)<=0)],
   ['rookie baseline says sample unavailable',ROOKIE.baselineIsNone&&/Historical sample unavailable/i.test(ROOKIE.baseline)],
-  ['rookie baseline manufactures nothing',!/STRONG SAMPLE|Sample \d+games/i.test(ROOKIE.baseline)],
+  ['rookie baseline manufactures nothing',!/STRONG SAMPLE|Sample \d+\s*games/i.test(ROOKIE.baseline)],
   ['a finished game is never shown as Next',rows.every(r=>!/FINAL|POST/i.test(String(r.nextStatus||'')))],
   ['played-team players say no upcoming game',played.filter(r=>/\((SEA|NE)\)/.test(r.label)).every(r=>/no upcoming game on this slate/i.test(r.nextText))],
   ['no uncaught exceptions',rows.every(r=>!r.exceptions.length)]

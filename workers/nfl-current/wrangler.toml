@@ -10,6 +10,12 @@ ENV = "production"
 binding = "NFL_KV"
 id = "71eaad8fad534c419846db4efb321f8f"
 
+# Past seasons are the archive worker's to answer; this worker only decides
+# which season is current and serves that one from observed box scores.
+[[services]]
+binding = "NFL_STATS"
+service = "nfl-stats"
+
 # Fires every two minutes; the handler itself decides whether an upstream call
 # is warranted. Live games refresh at ~60s, a kickoff window at ~120s, and an
 # idle league at ~15 minutes. Cadence is game-driven, and no refresh is ever

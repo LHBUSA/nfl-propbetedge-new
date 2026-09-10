@@ -116,7 +116,17 @@ const facts=await evalIn(`(async()=>{
     next:A&&A.next_game&&A.next_game.name, sea:find('SEA')&&find('SEA').record, ne:find('NE')&&find('NE').record,
     completed:st&&st.completed_games, statsAvail:sx&&sx.available, statsGames:sx&&sx.completed_games,
     topPass:sx&&sx.categories&&sx.categories.passing.leaders[0]&&(sx.categories.passing.leaders[0].player+' '+sx.categories.passing.leaders[0].yards+'yd'),
-    storedEvent:localStorage.getItem('pbe_nfl_event')};
+    storedEvent:localStorage.getItem('pbe_nfl_event'),
+    /* the scores feed Games & Schedule reads must carry the final, not a
+       scheduled row with null scores */
+    scoresFinal:await fetch(g+'/api/scores').then(r=>r.json()).then(d=>{const x=(d.games||[]).find(z=>/NE/.test(z.away_team)&&/SEA/.test(z.home_team));return x?(x.status+' '+x.away_score+'-'+x.home_score):null}).catch(()=>null),
+    /* the Games page's own "next kickoff" must be the season contract's next
+       game: both answer the same question and they must not disagree */
+    gamesNext:(function(){const gs=(window.PBEGamesV2&&PBEGamesV2.state&&PBEGamesV2.state.games)||[];const now=Date.now();
+      const up=gs.filter(x=>{const t=Date.parse(x.start);return Number.isFinite(t)&&t>=now}).sort((a,b)=>Date.parse(a.start)-Date.parse(b.start))[0];
+      return up?(String(up.away)+'@'+String(up.home)):null})(),
+    contractNext:A&&A.next_game&&(A.next_game.away.abbreviation+'@'+A.next_game.home.abbreviation),
+    statsCurrentTop:await fetch(g+'/api/stats?season='+(A&&A.season)).then(r=>r.json()).then(d=>d.leaders&&d.leaders[0]?(d.leaders[0].player+' '+d.leaders[0].yards):null).catch(()=>null)};
 })()`,45000);
 const checks=[
   ['season is 2026',facts.season===2026],
@@ -130,7 +140,10 @@ const checks=[
   ['current stats available',facts.statsAvail===true],
   ['current stats from 1 game',facts.statsGames===1],
   ['top passer is a week-1 line (<400 yds)',/(\d+)yd/.test(String(facts.topPass))&&Number(String(facts.topPass).match(/(\d+)yd/)[1])<400],
-  ['default event repointed off the dead id',facts.storedEvent&&facts.storedEvent!=='8c94552d022acec4a0458d70c19d3da9']
+  ['default event repointed off the dead id',facts.storedEvent&&facts.storedEvent!=='8c94552d022acec4a0458d70c19d3da9'],
+  ['/api/scores carries NE @ SEA as final 10-13',facts.scoresFinal==='final 10-13'],
+  ['/api/stats current season is not a 2025 table',!/4306/.test(String(facts.statsCurrentTop))],
+  ['Games next kickoff agrees with the season contract',(()=>{const t=x=>String(x||'').toUpperCase().replace(/\bLA\b/g,'LAR');return !!facts.gamesNext&&t(facts.gamesNext)===t(facts.contractNext)})()]
 ];
 let failed=0;
 for(const [n,ok] of checks){if(!ok)failed++;console.log(`  ${ok?'PASS':'FAIL'}  ${n}`)}

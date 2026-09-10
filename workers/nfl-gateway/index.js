@@ -38,8 +38,13 @@ export default {
 
     try {
       // Route to correct service binding
-      if (path.startsWith('/api/scores'))     return await env.NFL_SCORES.fetch(req);
-      if (path.startsWith('/api/stats'))      return await env.NFL_STATS.fetch(req);
+      // Scores and stats now go through the current-season authority. nfl-scores
+      // served a hardcoded array (every score null, every status "scheduled") and
+      // nfl-stats answered ?season=2026 with 2025 finals. nfl-current knows which
+      // season is current; it serves that one from observed results and hands
+      // past seasons to the archive worker itself.
+      if (path.startsWith('/api/scores'))     return await env.NFL_CURRENT.fetch(req);
+      if (path.startsWith('/api/stats'))      return await env.NFL_CURRENT.fetch(req);
       if (path.startsWith('/api/picks'))      return await env.NFL_PICKS.fetch(req);
       if (path.startsWith('/api/odds'))       return await env.NFL_ODDS.fetch(req);
       if (path.startsWith('/api/injuries'))   return await env.NFL_INJURIES.fetch(req);
