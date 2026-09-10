@@ -163,29 +163,35 @@ while(Date.now()<until){
 
 /* tab hidden -> visible must pause and then resync immediately */
 console.log('\n--- tab visibility ---');
-const beforeHide=await evalIn('window.__cast.reqs.length');
+const castReqs="(window.__cast.reqs||[]).filter(r=>r.owner==='v6').length";
+const beforeHide=await evalIn(castReqs);
 await send('Emulation.setPageScaleFactor',{pageScaleFactor:1}).catch(()=>{});
 await evalIn(`(()=>{Object.defineProperty(document,'visibilityState',{configurable:true,get:()=>'hidden'});document.dispatchEvent(new Event('visibilitychange'));return true})()`);
 await sleep(15000);
-const duringHide=await evalIn('window.__cast.reqs.length');
+const duringHide=await evalIn(castReqs);
 await evalIn(`(()=>{Object.defineProperty(document,'visibilityState',{configurable:true,get:()=>'visible'});document.dispatchEvent(new Event('visibilitychange'));return true})()`);
 await sleep(2500);
-const afterShow=await evalIn('window.__cast.reqs.length');
-console.log(`requests while hidden for 15s: ${duringHide-beforeHide} (expected ~0)`);
-console.log(`requests within 2.5s of becoming visible: ${afterShow-duringHide} (expected >=1 immediate resync)`);
+const afterShow=await evalIn(castReqs);
+console.log(`PBEcast requests while hidden for 15s: ${duringHide-beforeHide} (expected 0; the global shell and breaking rail poll independently of this route)`);
+console.log(`PBEcast requests within 2.5s of becoming visible: ${afterShow-duringHide} (expected >=1 immediate resync)`);
 
 const T=await evalIn('JSON.stringify({plays:window.__cast.plays,reqs:window.__cast.reqs,samples:window.__cast.samples,rootSwaps:window.__cast.rootSwaps,loaderAfterMount:window.__cast.loaderAfterMount,regressions:window.__cast.regressions})');
 const data=JSON.parse(T);
 const pctl=(a,p)=>{if(!a.length)return null;const s=a.slice().sort((x,y)=>x-y);return Math.round(s[Math.min(s.length-1,Math.ceil(p/100*s.length)-1)]*10)/10};
 
-const lat=data.plays.map(p=>p.latency).filter(x=>typeof x==='number'&&x>=0);
+/* The play already on screen at mount was published before we started
+   watching, so its "latency" is just how long ago it happened. Drop it, the
+   same way the upstream benchmark drops everything in flight at start-up. */
+const scored=data.plays.slice(1);
+const lat=scored.map(p=>p.latency).filter(x=>typeof x==='number'&&x>=0);
 const ages=data.samples.map(s=>s.age).filter(x=>typeof x==='number');
 const lanes={};data.reqs.forEach(r=>{if(r.owner==='v6')lanes[r.lane]=(lanes[r.lane]||0)+1});
 const legacy=data.reqs.filter(r=>r.owner==='v4'||r.owner==='v5').length;
 const mins=MINUTES;
 
 console.log('\n=== END-TO-END PLAY LATENCY (screen first showed the play, minus its wallclock) ===');
-console.log(`plays observed=${lat.length}  median=${pctl(lat,50)}s  p95=${pctl(lat,95)}s  min=${lat.length?Math.min(...lat):null}s  max=${lat.length?Math.max(...lat):null}s`);
+console.log(`plays scored=${lat.length} (of ${data.plays.length} seen; the one current at mount is excluded)`);
+console.log(`    median=${pctl(lat,50)}s  p95=${pctl(lat,95)}s  min=${lat.length?Math.min(...lat):null}s  max=${lat.length?Math.max(...lat):null}s`);
 console.log('\n=== raw newest-play age (includes stoppages; not the pass/fail metric) ===');
 console.log(`samples=${ages.length}  median=${pctl(ages,50)}s  p95=${pctl(ages,95)}s  max=${ages.length?Math.max(...ages):null}s`);
 console.log('\n=== poll shape (PBEcast-owned /api/nfl-live over the run) ===');
