@@ -5,8 +5,12 @@
 .pbe-season-strip{
   display:flex;align-items:center;gap:14px;flex-wrap:wrap;
   margin:0 0 16px;padding:11px 14px;
-  border:1px solid rgba(255,255,255,.09);border-radius:12px;
-  background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.015));
+  border:1px solid rgba(255,255,255,.10);border-radius:12px;
+  /* The dashboard sits on stadium photography, so a low-alpha wash leaves this
+     unreadable. It carries its own dark ground and a blur behind it. */
+  background:rgba(9,12,17,.88);
+  -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+  box-shadow:0 6px 22px rgba(0,0,0,.34);
 }
 .pbe-season-badge{
   display:inline-flex;align-items:center;gap:7px;flex:0 0 auto;
