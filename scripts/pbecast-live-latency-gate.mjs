@@ -137,6 +137,17 @@ await send('Runtime.enable');
 await send('Page.enable');
 await send('Fetch.enable',{patterns:[{urlPattern:`${ORIGIN}/*`,requestStage:'Request'}]});
 await send('Page.addScriptToEvaluateOnNewDocument',{source:PROBE});
+/* A protected Vercel preview hands out its auth by cookie, so visit the
+   share URL once before the run and the rest of the session is authorised. */
+const BOOTSTRAP=process.env.PBE_GATE_BOOTSTRAP||'';
+if(BOOTSTRAP){
+  await send('Page.navigate',{url:BOOTSTRAP});await sleep(4000);
+  /* Park on a blank page afterwards. The share URL redirects to '/', so
+     navigating straight from there to '/#pbecast' is only a hash change —
+     a same-document navigation that never reloads, which would make the
+     first pass record an in-app route change instead of a cold load. */
+  await send('Page.navigate',{url:'about:blank'});await sleep(500);
+}
 await send('Emulation.setDeviceMetricsOverride',{width:WIDTH,height:WIDTH<600?844:900,deviceScaleFactor:1,mobile:WIDTH<600});
 
 const evalIn=async(expr,ms=25000)=>{
@@ -189,6 +200,12 @@ const lanes={};data.reqs.forEach(r=>{if(r.owner==='v6')lanes[r.lane]=(lanes[r.la
 const legacy=data.reqs.filter(r=>r.owner==='v4'||r.owner==='v5').length;
 const mins=MINUTES;
 
+const stateRows=data.states||[];
+const stateAges=stateRows.map(x=>x.age).filter(x=>typeof x==='number'&&x>=0);
+const aheadPct=stateRows.length?Math.round(100*stateRows.filter(x=>x.ahead).length/stateRows.length):0;
+console.log('\n=== FAST GAME STATE LATENCY (age of the play behind each score/clock/possession change) ===');
+console.log(`state changes=${stateRows.length}  dated=${stateAges.length}  median=${pctl(stateAges,50)}s  p95=${pctl(stateAges,95)}s  min=${stateAges.length?Math.min(...stateAges):null}s  max=${stateAges.length?Math.max(...stateAges):null}s`);
+console.log(`  fast lane ahead of the datable play log on ${aheadPct}% of changes`);
 console.log('\n=== END-TO-END PLAY LATENCY (screen first showed the play, minus its wallclock) ===');
 console.log(`plays scored=${lat.length} (of ${data.plays.length} seen; the one current at mount is excluded)`);
 console.log(`    median=${pctl(lat,50)}s  p95=${pctl(lat,95)}s  min=${lat.length?Math.min(...lat):null}s  max=${lat.length?Math.max(...lat):null}s`);
@@ -205,7 +222,7 @@ if(data.regressions.length)console.log('   '+JSON.stringify(data.regressions.sli
 console.log(`  uncaught exceptions:               ${exceptions.length}`);
 console.log(`  console errors:                    ${consoleErrors.length}`);
 
-writeFileSync(join(OUT,`${LABEL}-${WIDTH}px.json`),JSON.stringify({target:TARGET,minutes:MINUTES,boot,latency:{n:lat.length,median:pctl(lat,50),p95:pctl(lat,95),max:lat.length?Math.max(...lat):null},rawAge:{median:pctl(ages,50),p95:pctl(ages,95)},lanes,legacy,rootSwaps:data.rootSwaps,loaderAfterMount:data.loaderAfterMount,regressions:data.regressions,exceptions,consoleErrors,plays:data.plays,reqs:data.reqs},null,2));
+writeFileSync(join(OUT,`${LABEL}-${WIDTH}px.json`),JSON.stringify({target:TARGET,minutes:MINUTES,boot,latency:{n:lat.length,median:pctl(lat,50),p95:pctl(lat,95),max:lat.length?Math.max(...lat):null},rawAge:{median:pctl(ages,50),p95:pctl(ages,95)},lanes,legacy,fastState:{n:stateRows.length,median:pctl(stateAges,50),p95:pctl(stateAges,95)},states:stateRows,tele:(data.tele||[]).slice(-60),rootSwaps:data.rootSwaps,loaderAfterMount:data.loaderAfterMount,regressions:data.regressions,exceptions,consoleErrors,plays:data.plays,reqs:data.reqs},null,2));
 console.log(`\nreport: ${join(OUT,`${LABEL}-${WIDTH}px.json`)}`);
 const pass=data.rootSwaps===0&&data.loaderAfterMount===0&&data.regressions.length===0&&legacy===0&&!exceptions.length;
 finish(pass?0:1);

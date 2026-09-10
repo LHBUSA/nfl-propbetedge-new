@@ -135,6 +135,17 @@ await send('Runtime.enable');
 await send('Page.enable');
 await send('Fetch.enable',{patterns:[{urlPattern:`${ORIGIN}/*`,requestStage:'Request'}]});
 await send('Page.addScriptToEvaluateOnNewDocument',{source:PROBE});
+/* A protected Vercel preview hands out its auth by cookie, so visit the
+   share URL once before the run and the rest of the session is authorised. */
+const BOOTSTRAP=process.env.PBE_GATE_BOOTSTRAP||'';
+if(BOOTSTRAP){
+  await send('Page.navigate',{url:BOOTSTRAP});await sleep(4000);
+  /* Park on a blank page afterwards. The share URL redirects to '/', so
+     navigating straight from there to '/#pbecast' is only a hash change —
+     a same-document navigation that never reloads, which would make the
+     first pass record an in-app route change instead of a cold load. */
+  await send('Page.navigate',{url:'about:blank'});await sleep(500);
+}
 await send('Emulation.setDeviceMetricsOverride',{width:WIDTH,height:HEIGHT,deviceScaleFactor:1,mobile:WIDTH<600});
 
 const evalIn=async(expr,ms=25000)=>{
