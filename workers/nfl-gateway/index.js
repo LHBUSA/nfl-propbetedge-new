@@ -53,7 +53,8 @@ export default {
       // page traffic and never from another season's numbers.
       if (path.startsWith('/api/season'))        return await env.NFL_CURRENT.fetch(req);
       if (path.startsWith('/api/standings'))     return await env.NFL_CURRENT.fetch(req);
-      if (path.startsWith('/api/current-stats')) return await env.NFL_CURRENT.fetch(req);
+      if (path.startsWith('/api/current-stats'))  return await env.NFL_CURRENT.fetch(req);
+      if (path.startsWith('/api/current-player')) return await env.NFL_CURRENT.fetch(req);
       if (path.startsWith('/api/current/'))      return await env.NFL_CURRENT.fetch(req);
 
       return json({ error: 'Unknown route', path }, cors, 404);

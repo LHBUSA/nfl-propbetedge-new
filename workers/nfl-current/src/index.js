@@ -221,7 +221,8 @@ const STAT_GROUPS = {
   receiving: { label: 'Receiving', sort: 'yards', fields: { REC: 'rec', YDS: 'yards', TD: 'tds', TGTS: 'targets' } }
 };
 
-function addStats(acc, gameId, summary) {
+function addStats(acc, game, summary) {
+  const gameId = game.id;
   /* Our adapter hands back player_stats already grouped by team and category,
      with the provider's own column labels preserved, so nothing here has to
      guess at a stat line's meaning. */
@@ -242,6 +243,26 @@ function addStats(acc, gameId, summary) {
         rec.team = team;
         if (!rec.player) rec.player = S(ath.name);
         rec.games += 1;
+
+        /* Per-game lines, so "last game" is a real observation rather than a
+           total divided by a count. Capped: DNA shows recent form, not a log. */
+        acc.__log = acc.__log || {};
+        const log = (acc.__log[id] = acc.__log[id] || []);
+        let entry = log.find(e => e.game_id === gameId);
+        if (!entry) {
+          const home = S(game.home && game.home.abbreviation) === team;
+          entry = {
+            game_id: gameId, date: game.kickoff, week: game.week, team,
+            opponent: home ? S(game.away && game.away.abbreviation) : S(game.home && game.home.abbreviation),
+            at_home: home,
+            result: `${S(game.away && game.away.abbreviation)} ${game.away && game.away.score}-${game.home && game.home.score} ${S(game.home && game.home.abbreviation)}`
+          };
+          log.push(entry);
+          log.sort((a, b) => Date.parse(b.date || 0) - Date.parse(a.date || 0));
+          if (log.length > 6) log.length = 6;
+        }
+        const line = (entry[key] = entry[key] || {});
+
         const vals = A(row?.stats).map(S);
         labels.forEach((lab, i) => {
           const field = spec.fields[lab];
@@ -249,14 +270,26 @@ function addStats(acc, gameId, summary) {
           const raw = vals[i];
           if (field === 'comp_att') {
             const m = /^(\d+)\s*\/\s*(\d+)$/.exec(S(raw).trim());
-            if (m) { rec.completions += Number(m[1]); rec.attempts += Number(m[2]); }
+            if (m) {
+              rec.completions += Number(m[1]); rec.attempts += Number(m[2]);
+              line.completions = Number(m[1]); line.attempts = Number(m[2]);
+            }
             return;
           }
           const n = Number(S(raw).replace(/[^0-9.-]/g, ''));
-          if (Number.isFinite(n)) rec[field] = (rec[field] || 0) + n;
+          if (Number.isFinite(n)) { rec[field] = (rec[field] || 0) + n; line[field] = n; }
         });
       }
     }
+  }
+  /* A ledger of which teams have actually completed a game. Without it a
+     player whose team has not kicked off is indistinguishable from a player who
+     played and did nothing, and the product would print zeroes for both.
+     Missing sample is not zero performance. */
+  acc.__teams = acc.__teams || {};
+  for (const abbr of [game.away && game.away.abbreviation, game.home && game.home.abbreviation].filter(Boolean)) {
+    const t = (acc.__teams[abbr] = acc.__teams[abbr] || { completed: 0, games: [] });
+    if (!t.games.includes(gameId)) { t.games.push(gameId); t.completed = t.games.length; }
   }
   acc.__processed = Array.from(new Set([...(acc.__processed || []), gameId]));
 }
@@ -275,7 +308,7 @@ async function buildStats(env, season, prior) {
   for (const g of pending.slice(0, 12)) {
     try {
       const summary = await pbe(`event=${encodeURIComponent(g.id)}`);
-      addStats(acc, g.id, summary);
+      addStats(acc, g, summary);
     } catch (_) { /* leave it unprocessed; a later tick retries it */ }
   }
   acc.__updated = new Date().toISOString();
@@ -305,6 +338,89 @@ function statsPayload(acc, season, meta) {
     categories,
     last_updated: acc?.__updated || new Date().toISOString(),
     source: { provider: 'espn_site_summary', via: 'nfl.propbetedge.ai/api/nfl-live?event', derived_from: 'published box scores of completed regular-season games' }
+  };
+}
+
+
+/* ---- one player's current-season observations -------------------------------
+   The rule this function exists to enforce: a missing sample is not a zero.
+
+   Three outcomes, and they are genuinely different things:
+     no_completed_team_game   this player's team has not finished a 2026 game,
+                              so there is nothing to observe. Never render 0.
+     no_recorded_participation the team played and the box score does not list
+                              this player — inactive, injured, or did not appear.
+     available                the player has observed production.
+
+   Rates are only computed where the denominator actually exists, so a QB with
+   no attempts has no completion percentage rather than 0%. */
+function currentPlayer(acc, espnId, teamHint, season, meta) {
+  const id = S(espnId);
+  const totals = {};
+  for (const key of Object.keys(STAT_GROUPS)) {
+    const hit = acc && acc[key] && acc[key][id];
+    if (hit) totals[key] = hit;
+  }
+  const log = A(acc && acc.__log && acc.__log[id]);
+  const known = Object.values(totals)[0] || null;
+  const team = S(known && known.team) || S(teamHint).toUpperCase();
+  const teams = (acc && acc.__teams) || {};
+  const teamRow = team ? teams[team] : null;
+  const teamCompleted = teamRow ? teamRow.completed : 0;
+
+  const base = {
+    ok: true,
+    season: Number(season),
+    season_type: 'REG',
+    espn_id: id || null,
+    team: { abbreviation: team || null, completed_games: teamCompleted },
+    league: { completed_games: meta.finalsCount, teams_with_a_completed_game: Object.keys(teams).length },
+    source: { provider: 'espn_site_summary', via: 'nfl.propbetedge.ai/api/nfl-live?event', derived_from: 'published box scores of completed regular-season games' },
+    last_updated: (acc && acc.__updated) || new Date().toISOString()
+  };
+
+  if (!teamCompleted) {
+    return { ...base, available: false, reason: 'no_completed_team_game',
+      unavailable_reason: team ? `${team} has not completed a ${season} regular-season game yet` : 'team unknown and no completed game found',
+      games_played: null, stats: null, last_game: null, sample: { games: null, basis: 'no completed team game' } };
+  }
+  if (!known) {
+    return { ...base, available: false, reason: 'no_recorded_participation',
+      unavailable_reason: `${team} has completed ${teamCompleted} game${teamCompleted === 1 ? '' : 's'} and this player does not appear in the published box score`,
+      games_played: 0, stats: null, last_game: null, sample: { games: 0, basis: 'team played; no recorded participation' } };
+  }
+
+  /* Only where the denominator exists. */
+  const rate = (num, den, digits) => (Number.isFinite(num) && Number.isFinite(den) && den > 0 ? Number((num / den).toFixed(digits)) : null);
+  const stats = {};
+  if (totals.passing) {
+    const t = totals.passing;
+    stats.passing = { games: t.games, yards: t.yards, tds: t.tds, ints: t.ints, completions: t.completions, attempts: t.attempts,
+      completion_pct: rate(t.completions * 100, t.attempts, 1), yards_per_attempt: rate(t.yards, t.attempts, 2), yards_per_game: rate(t.yards, t.games, 1) };
+  }
+  if (totals.rushing) {
+    const t = totals.rushing;
+    stats.rushing = { games: t.games, yards: t.yards, tds: t.tds, carries: t.carries,
+      yards_per_carry: rate(t.yards, t.carries, 2), yards_per_game: rate(t.yards, t.games, 1) };
+  }
+  if (totals.receiving) {
+    const t = totals.receiving;
+    stats.receiving = { games: t.games, yards: t.yards, tds: t.tds, receptions: t.rec, targets: t.targets,
+      yards_per_reception: rate(t.yards, t.rec, 2), catch_rate: rate(t.rec * 100, t.targets, 1), yards_per_game: rate(t.yards, t.games, 1) };
+  }
+
+  const games = Math.max(...Object.values(totals).map(t => Number(t.games) || 0));
+  return {
+    ...base,
+    available: true,
+    reason: null,
+    player: { espn_id: id, name: S(known.player), team, position: S(known.position || '') },
+    games_played: games,
+    stats,
+    last_game: log[0] || null,
+    recent_games: log,
+    sample: { games, basis: 'published box scores of completed regular-season games',
+      thin: games <= 2, note: games <= 2 ? `current-season sample is ${games} game${games === 1 ? '' : 's'}` : null }
   };
 }
 
@@ -393,8 +509,16 @@ export default {
     try {
       if (path.endsWith('/current/health') || path.endsWith('/current/refresh')) {
         const tick = await env.NFL_KV.get(KEY.tick, { type: 'json' });
+        /* Totals accumulate per game and never reprocess, which is the point —
+           but a change to what we record per game needs the ledger rebuilt from
+           the completed games rather than carried forward. */
+        if (path.endsWith('/refresh') && p.get('rebuild') === '1') {
+          const sc = await env.NFL_KV.get(KEY.season('current'), { type: 'json' });
+          if (sc?.season) await env.NFL_KV.delete(KEY.stats(sc.season));
+          return json({ status: 'ok', rebuilt: true, refreshed: await refreshAll(env, 'rebuild') });
+        }
         if (path.endsWith('/refresh') && force) return json({ status: 'ok', refreshed: await refreshAll(env, 'manual') });
-        return json({ status: 'ok', service: 'nfl-current', last_tick: tick, routes: ['/api/season', '/api/standings', '/api/current-stats'], generated_at: new Date().toISOString() });
+        return json({ status: 'ok', service: 'nfl-current', last_tick: tick, routes: ['/api/season', '/api/standings', '/api/current-stats', '/api/current-player'], generated_at: new Date().toISOString() });
       }
 
       if (path.endsWith('/current/diag')) {
@@ -434,6 +558,22 @@ export default {
         }
         const sc = await cached(KEY.season('current'));
         return json(withFreshness(st, (sc?.live_games || 0) > 0));
+      }
+
+      if (path.startsWith('/api/current-player')) {
+        const season = Number(p.get('season')) || (await cached(KEY.season('current')))?.season;
+        if (!season) return json({ ok: false, available: false, error: 'season_unresolved' }, 503);
+        const espnId = S(p.get('espn_id')).trim();
+        const teamHint = S(p.get('team')).trim();
+        if (!espnId && !teamHint) return json({ ok: false, available: false, error: 'espn_id_or_team_required' }, 400);
+        const acc = await cached(KEY.stats(season));
+        if (!acc) {
+          return json({ ok: false, available: false, season, error: 'current_stats_unavailable',
+            unavailable_reason: 'current-season accumulator has not been built yet' }, 503);
+        }
+        const sc = await cached(KEY.season('current'));
+        const meta = { finalsCount: sc?.completed_games_in_window ?? A(acc.__processed).length };
+        return json(withFreshness(currentPlayer(acc, espnId, teamHint, season, meta), (sc?.live_games || 0) > 0));
       }
 
       if (path.startsWith('/api/current-stats')) {

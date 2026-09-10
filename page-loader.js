@@ -146,7 +146,12 @@
     {css:'./wr-dna-v1.css',js:'./wr-dna-v1.js'},
     {css:'./rb-dna-v1.css',js:'./rb-dna-v1.js'},
     /* TE reuses the receiver layer above it, then adds only the red zone. */
-    {css:'./te-dna-v1.css',js:'./te-dna-v1.js'}
+    {css:'./te-dna-v1.css',js:'./te-dna-v1.js'},
+
+    /* The two intelligence layers, shared by all four DNA products. Loaded
+       after them because it attaches to whichever one is on screen and reads
+       its state; it edits none of them. */
+    {css:'./player-current-layer-v1.css',js:'./player-current-layer-v1.js'}
   ];
 
   /* ---- Terminal route authorities ----------------------------------------

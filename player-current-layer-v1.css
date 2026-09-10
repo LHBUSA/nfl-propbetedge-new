@@ -1,0 +1,56 @@
+/* Two intelligence layers on the Player DNA products.
+
+   The visual job here is separation. Current-season observations and the
+   historical baseline sit in two cards that never share a row of numbers, so
+   a one-game 2026 sample can never be read as a career rate — or the reverse.
+   Additive only: this restyles nothing the DNA pages already own. */
+
+.pbe-cl-band{margin:14px 0 18px}
+.pbe-cl-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:0 0 9px;padding:0 2px}
+.pbe-cl-head>span{color:var(--pbe-paper-2,#d8dee9);font:800 11px/1 'JetBrains Mono',ui-monospace,monospace;letter-spacing:.11em;text-transform:uppercase}
+.pbe-cl-head>small{color:var(--pbe-dim,#8b95a5);font:600 11.5px/1.4 system-ui,sans-serif}
+
+.pbe-cl-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.pbe-cl-card{
+  border:1px solid rgba(255,255,255,.09);border-radius:12px;padding:13px 14px;
+  background:rgba(9,12,17,.86);
+  -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+  display:flex;flex-direction:column;gap:10px;min-width:0;
+}
+/* The current layer is the live one and reads as such; the baseline is
+   deliberately quieter so it cannot be mistaken for today's production. */
+.pbe-cl-card.is-current{border-color:rgba(98,220,150,.24)}
+.pbe-cl-card.is-baseline{background:rgba(9,12,17,.62)}
+
+.pbe-cl-card>header{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.pbe-cl-tag{
+  display:inline-flex;align-items:center;min-height:22px;padding:0 9px;border-radius:999px;
+  border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.05);
+  color:var(--pbe-paper-2,#d8dee9);font:800 10px/1 'JetBrains Mono',ui-monospace,monospace;letter-spacing:.10em;white-space:nowrap;
+}
+.pbe-cl-tag.live{color:#7ce4a7;border-color:rgba(98,220,150,.32);background:rgba(98,220,150,.09)}
+.pbe-cl-tag.warn{color:#f0c45b;border-color:rgba(240,196,91,.30);background:rgba(240,196,91,.08)}
+.pbe-cl-sub{color:var(--pbe-dim,#8b95a5);font:700 10.5px/1.3 'JetBrains Mono',ui-monospace,monospace;letter-spacing:.05em}
+
+.pbe-cl-lines{display:flex;flex-direction:column;gap:8px}
+.pbe-cl-line{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.pbe-cl-line-k{flex:0 0 74px;color:var(--pbe-dim,#8b95a5);font:700 10px/1.2 'JetBrains Mono',ui-monospace,monospace;letter-spacing:.09em;text-transform:uppercase}
+.pbe-cl-line-v{display:flex;gap:14px;flex-wrap:wrap;min-width:0}
+.pbe-cl-line-v>span{display:inline-flex;align-items:baseline;gap:4px;color:var(--pbe-dim,#8b95a5);font:600 10.5px/1.2 'JetBrains Mono',ui-monospace,monospace;letter-spacing:.04em;white-space:nowrap}
+.pbe-cl-line-v>span b{color:var(--pbe-paper,#eef2f7);font:800 15px/1 'JetBrains Mono',ui-monospace,monospace}
+
+.pbe-cl-last{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;padding-top:9px;border-top:1px solid rgba(255,255,255,.06)}
+.pbe-cl-last-k{color:var(--pbe-dim,#8b95a5);font:700 10px/1.2 'JetBrains Mono',ui-monospace,monospace;letter-spacing:.09em;text-transform:uppercase}
+.pbe-cl-last-v{color:var(--pbe-paper-2,#d8dee9);font:700 12px/1.3 'JetBrains Mono',ui-monospace,monospace}
+
+.pbe-cl-none{display:flex;flex-direction:column;gap:5px}
+.pbe-cl-none b{color:var(--pbe-paper,#eef2f7);font:800 13.5px/1.3 system-ui,sans-serif}
+.pbe-cl-none span{color:var(--pbe-dim,#8b95a5);font:600 12px/1.45 system-ui,sans-serif}
+.pbe-cl-none em{color:var(--pbe-dim,#8b95a5);font:600 11px/1.45 system-ui,sans-serif;font-style:normal;opacity:.82}
+
+.pbe-cl-foot{color:var(--pbe-dim,#8b95a5);font:600 10.5px/1.45 system-ui,sans-serif;opacity:.85;margin-top:auto;padding-top:2px}
+
+@media(max-width:900px){
+  .pbe-cl-grid{grid-template-columns:1fr}
+  .pbe-cl-line-k{flex-basis:100%}
+}
