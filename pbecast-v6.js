@@ -128,7 +128,7 @@
   function heroHtml(){
     const d=state.detail,g=d?.game||{},a=g?.teams?.away||{},h=g?.teams?.home||{},sem=semantics(d),facts=situationFacts(d);
     const fresh=freshnessBadge();
-    return `<section class="cast6-hero"><div class="cast6-hero-head"><div><span class="cast6-live ${fresh.cls}">${sem==='LIVE'?'<i></i>':''}${esc(fresh.label)}</span><b>${esc(sourceLabel(d))}</b></div><small class="${state.error?'is-stale':''}${state.syncing?' is-syncing':''}">${esc(syncNote())}</small></div><div class="cast6-score"><div class="cast6-team">${teamLogo(a)}<span><b>${esc(a.abbreviation||'AWY')}</b><small>${esc(a.display_name||'Away')}${teamRecord(a)?` · ${esc(teamRecord(a))}`:''}</small></span></div><div class="cast6-score-center">${sem==='SCHEDULE'&&kickoffParts(g?.date)?`<strong class="is-kickoff">${esc(kickoffParts(g.date).time)}<small>ET</small></strong><span><em class="cast6-kick-k">Kickoff · </em>${esc(kickoffParts(g.date).day)}</span>`:`<strong>${esc(score(a,sem))}<i>:</i>${esc(score(h,sem))}</strong><span>${esc(statusLabel(g))}</span>`}<small>${esc([g?.venue?.name,[g?.venue?.city,g?.venue?.state].filter(Boolean).join(', ')].filter(Boolean).join(' · '))}</small></div><div class="cast6-team home"><span><b>${esc(h.abbreviation||'HME')}</b><small>${esc(h.display_name||'Home')}${teamRecord(h)?` · ${esc(teamRecord(h))}`:''}</small></span>${teamLogo(h)}</div></div>${facts.length?`<div class="cast6-facts">${facts.map(([k,v])=>`<div><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}</div>`:''}</section>`;
+    return `<section class="cast6-hero"><div class="cast6-hero-head"><div><span class="cast6-live ${fresh.cls}">${sem==='LIVE'?'<i></i>':''}${esc(fresh.label)}</span><b>${esc(sourceLabel(d))}</b></div><small data-cast6-stamp></small></div><div class="cast6-score"><div class="cast6-team">${teamLogo(a)}<span><b>${esc(a.abbreviation||'AWY')}</b><small>${esc(a.display_name||'Away')}${teamRecord(a)?` · ${esc(teamRecord(a))}`:''}</small></span></div><div class="cast6-score-center">${sem==='SCHEDULE'&&kickoffParts(g?.date)?`<strong class="is-kickoff">${esc(kickoffParts(g.date).time)}<small>ET</small></strong><span><em class="cast6-kick-k">Kickoff · </em>${esc(kickoffParts(g.date).day)}</span>`:`<strong>${esc(score(a,sem))}<i>:</i>${esc(score(h,sem))}</strong><span>${esc(statusLabel(g))}</span>`}<small>${esc([g?.venue?.name,[g?.venue?.city,g?.venue?.state].filter(Boolean).join(', ')].filter(Boolean).join(' · '))}</small></div><div class="cast6-team home"><span><b>${esc(h.abbreviation||'HME')}</b><small>${esc(h.display_name||'Home')}${teamRecord(h)?` · ${esc(teamRecord(h))}`:''}</small></span>${teamLogo(h)}</div></div>${facts.length?`<div class="cast6-facts">${facts.map(([k,v])=>`<div><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}</div>`:''}</section>`;
   }
 
   function currentActionHtml(){
@@ -183,14 +183,28 @@
     patch(root,'[data-cast6-hero]',heroHtml());
     patch(root,'[data-cast6-action]',currentActionHtml());
     patch(root,'[data-cast6-workspace]',workspaceHtml());
+    patchStamp();
   }
   function patchRail(){const root=document.querySelector('.pbecast6');if(root)patch(root,'[data-cast6-rail]',railHtml())}
+  /* The "updated at" stamp and the SYNCING flag change on every tick. Left
+     inside the hero's markup they would rewrite the whole hero — team logos
+     included — twice a cycle, which is the flicker this work exists to remove.
+     They live in their own node and are written as text, never innerHTML, so a
+     background sync touches one text node and nothing else. */
+  function patchStamp(){
+    const el=document.querySelector('.pbecast6 [data-cast6-stamp]');if(!el)return;
+    const next=syncNote();
+    if(el.textContent!==next)el.textContent=next;
+    el.classList.toggle('is-stale',!!state.error);
+    el.classList.toggle('is-syncing',!!state.syncing&&!state.error);
+  }
   function patchFreshness(){
     const root=document.querySelector('.pbecast6');if(!root||!state.detail)return;
     root.dataset.stale=state.error?'true':'false';
     patch(root,'[data-cast6-hero]',heroHtml());
+    patchStamp();
   }
-  function patchAll(){const root=ensureRoot();if(!root)return;root.dataset.stale=state.error?'true':'false';patch(root,'[data-cast6-toolbar]',toolbarHtml());patch(root,'[data-cast6-rail]',railHtml());if(state.detail){patch(root,'[data-cast6-hero]',heroHtml());patch(root,'[data-cast6-action]',currentActionHtml());patch(root,'[data-cast6-telemetry]',coverageHtml());patch(root,'[data-cast6-workspace]',workspaceHtml())}else{patch(root,'[data-cast6-hero]',`<div class="cast6-empty"><b>Loading game package</b><span>Connecting to live drives, player output and play-by-play.</span></div>`);patch(root,'[data-cast6-action]','');patch(root,'[data-cast6-telemetry]','');patch(root,'[data-cast6-workspace]','')}}
+  function patchAll(){const root=ensureRoot();if(!root)return;root.dataset.stale=state.error?'true':'false';patch(root,'[data-cast6-toolbar]',toolbarHtml());patch(root,'[data-cast6-rail]',railHtml());if(state.detail){patch(root,'[data-cast6-hero]',heroHtml());patch(root,'[data-cast6-action]',currentActionHtml());patch(root,'[data-cast6-telemetry]',coverageHtml());patch(root,'[data-cast6-workspace]',workspaceHtml())}else{patch(root,'[data-cast6-hero]',`<div class="cast6-empty"><b>Loading game package</b><span>Connecting to live drives, player output and play-by-play.</span></div>`);patch(root,'[data-cast6-action]','');patch(root,'[data-cast6-telemetry]','');patch(root,'[data-cast6-workspace]','')}patchStamp()}
   function patchStats(){const root=document.querySelector('.pbecast6');if(!root)return;const host=root.querySelector('[data-cast6-workspace]');if(host)patch(root,'[data-cast6-workspace]',workspaceHtml())}
 
   function wireRoot(root){
@@ -258,9 +272,18 @@
     return false;
   }
 
+  /* Later views of a play may be thinner than the one already held — a lane
+     that carries no participants must not strip the actors off a play the
+     richer lane already described. */
+  function mergePlay(prev,next){
+    if(!prev)return next;
+    const merged={...prev,...next};
+    if(!arr(next?.participants).length&&arr(prev?.participants).length)merged.participants=prev.participants;
+    return merged;
+  }
   function mergePlays(...groups){
     const map=new Map(arr(state.detail?.plays).map(p=>[String(p.id),p]));
-    groups.forEach(g=>arr(g).forEach(p=>{if(p?.id)map.set(String(p.id),p)}));
+    groups.forEach(g=>arr(g).forEach(p=>{if(p?.id)map.set(String(p.id),mergePlay(map.get(String(p.id)),p))}));
     return [...map.values()].sort((a,b)=>(num(a.sequence)??0)-(num(b.sequence)??0));
   }
 
@@ -290,27 +313,45 @@
        switching games leaves the previous game's requests in flight, and they
        resolve after the new game's have already painted. */
     if(state.activeId&&String(d.game.id||'')!==String(state.activeId)){state.rejected=(state.rejected||0)+1;return false}
-    if(regresses(d)){state.rejected=(state.rejected||0)+1;return false}
-    const before=state.lastPlayId,after=d?.current_play?.id||null;
     const base=state.detail||{};
-    state.detail={...base,
-      source:d.source||base.source,
-      game:d.game,
-      current_play:d.current_play??base.current_play,
-      current_drive:d.current_drive||base.current_drive,
-      last_five_plays:d.last_five_plays||base.last_five_plays,
+    const before=state.lastPlayId;
+
+    /* Two different things arrive in these payloads and they need different
+       rules. Accumulated history — the box score, leaders, win probability,
+       the play log — is additive and stays valid even when it arrives from a
+       slower lane, so it always merges. Live state is a claim about the
+       current moment, so it only moves forward.
+
+       Keeping them together is a bug: the detail lane fetches a payload an
+       order of magnitude larger than the live lane, so it routinely resolves
+       after a newer live frame has painted. Rejecting the whole response as a
+       regression would mean the box score simply stopped updating. */
+    const next={...base,
       plays:mergePlays(d.last_five_plays,d.current_drive?.plays,d.plays),
-      /* the slow lane owns these; a live frame must not blank them */
       player_stats:d.player_stats||base.player_stats,
       leaders:d.leaders||base.leaders,
       win_probability:d.win_probability||base.win_probability,
       drives:d.drives||base.drives};
-    state.lastPlayId=after;
-    anchorPlay(state.detail);
-    state.lastSyncAt=Date.now();
+
+    const forward=!regresses(d);
+    if(forward){
+      next.source=d.source||base.source;
+      next.game=d.game;
+      next.current_play=d.current_play??base.current_play;
+      next.current_drive=d.current_drive||base.current_drive;
+      next.last_five_plays=d.last_five_plays||base.last_five_plays;
+    }else state.rejected=(state.rejected||0)+1;
+
+    state.detail=next;
+    if(forward){
+      const after=next.current_play?.id||null;
+      state.lastPlayId=after;
+      anchorPlay(next);
+      state.lastSyncAt=Date.now();
+      if(sound&&before&&after&&before!==after&&state.sound)playCue(cueFor(next.current_play));
+    }
     state.error=null;
-    if(sound&&before&&after&&before!==after&&state.sound)playCue(cueFor(d.current_play));
-    return true;
+    return forward;
   }
 
   async function laneJson(name,url){
@@ -327,9 +368,11 @@
   function scheduleLane(name,fn){
     const l=lanes[name];
     clearTimeout(l.timer);
-    if(!mounted())return;
-    const on=isLive()&&visible();
-    l.timer=setTimeout(()=>{if(mounted())fn()},on?CADENCE[name].on:CADENCE[name].off);
+    /* A hidden tab holds no timers at all. Clearing them on visibilitychange
+       is not enough on its own: a request already in flight when the tab is
+       hidden re-arms its lane as it settles. */
+    if(!mounted()||!visible())return;
+    l.timer=setTimeout(()=>{if(mounted()&&visible())fn()},isLive()?CADENCE[name].on:CADENCE[name].off);
   }
 
   async function syncLive(){

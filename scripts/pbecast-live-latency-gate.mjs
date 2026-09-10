@@ -72,7 +72,8 @@ ws.onmessage=ev=>{
 
 const PROBE=[
   '(()=>{',
-  '  const T=window.__cast={reqs:[],plays:[],samples:[],rootSwaps:0,loaderAfterMount:0,mounted:false,regressions:[],start:Date.now()};',
+  '  try{',
+  '  const T=window.__cast={reqs:[],plays:[],samples:[],rootSwaps:0,loaderAfterMount:0,mounted:false,regressions:[],sampleError:null,start:Date.now()};',
   '  const of=window.fetch;',
   '  window.fetch=function(input){',
   '    try{const u=String(typeof input==="string"?input:(input&&input.url)||"");',
@@ -92,11 +93,14 @@ const PROBE=[
   '    if(r)rootNode=r;',
   '    if(T.mounted&&document.querySelector("#view-container .view-loading"))T.loaderAfterMount++;',
   '  });',
-  '  const startObs=()=>{const vc=document.getElementById("view-container");if(vc){mo.observe(vc,{childList:true,subtree:true});return true}return false};',
-  '  if(!startObs())new MutationObserver((m,o)=>{if(startObs())o.disconnect()}).observe(document.documentElement,{childList:true,subtree:true});',
+  /* At document-start there is no documentElement yet, so the observer is
+     attached to the document itself; a subtree watch there sees the whole
+     page as it is built and for the rest of the session. */
+  '  mo.observe(document,{childList:true,subtree:true});',
   '  const clockSec=v=>{const m=/^(\\d+):(\\d{2})$/.exec(String(v||"").trim());return m?+m[1]*60+ +m[2]:null};',
   '  let last=null;',
   '  setInterval(()=>{',
+  '    try{',
   '    const s=(window.PBEcastV6&&PBEcastV6.state)||{};',
   '    const d=s.detail;if(!d||!d.game)return;',
   '    if(document.querySelector(".pbecast6"))T.mounted=true;',
@@ -123,7 +127,9 @@ const PROBE=[
   '        provider:cur.provider});',
   '    }',
   '    last=cur;',
+  '    }catch(e){T.sampleError=String(e&&e.stack||e).slice(0,300)}',
   '  },500);',
+  '  }catch(e){window.__castBoot=String(e&&e.stack||e).slice(0,300)}',
   '})();'
 ].join('\n');
 
@@ -150,8 +156,9 @@ const until=Date.now()+MINUTES*60000;
 let tick=0;
 while(Date.now()<until){
   await sleep(30000);
-  const s=await evalIn(`(()=>{const T=window.__cast;const s=PBEcastV6.state;const st=(s.detail&&s.detail.game&&s.detail.game.status)||{};return{plays:T.plays.length,reqs:T.reqs.length,swaps:T.rootSwaps,loader:T.loaderAfterMount,regr:T.regressions.length,age:s.detail&&s.detail.source&&s.detail.source.play_age_seconds,period:st.period,clock:st.clock,badge:(document.querySelector(".pbecast6 .cast6-live")||{}).textContent||null,cast6:document.querySelectorAll(".pbecast6").length}})()`);
-  console.log(`+${String(++tick*0.5).padStart(4)}m  Q${s.period} ${String(s.clock).padStart(5)}  plays=${String(s.plays).padStart(3)}  age=${String(s.age).padStart(6)}s  badge="${String(s.badge).trim()}"  reqs=${s.reqs} rootSwaps=${s.swaps} loaderAfterMount=${s.loader} regressions=${s.regr} cast6=${s.cast6}`);
+  const s=await evalIn(`(()=>{const T=window.__cast;const s=PBEcastV6.state;const st=(s.detail&&s.detail.game&&s.detail.game.status)||{};return{plays:T.plays.length,samples:T.samples.length,probeErr:(window.__castBoot||T.sampleError||null),reqs:T.reqs.length,swaps:T.rootSwaps,loader:T.loaderAfterMount,regr:T.regressions.length,age:s.detail&&s.detail.source&&s.detail.source.play_age_seconds,period:st.period,clock:st.clock,badge:(document.querySelector(".pbecast6 .cast6-live")||{}).textContent||null,cast6:document.querySelectorAll(".pbecast6").length}})()`);
+  if(s.probeErr)console.log('PROBE ERROR:',s.probeErr);
+  console.log(`+${String(++tick*0.5).padStart(4)}m  Q${s.period} ${String(s.clock).padStart(5)}  plays=${String(s.plays).padStart(3)} samples=${String(s.samples).padStart(4)}  age=${String(s.age).padStart(6)}s  badge="${String(s.badge).trim()}"  reqs=${s.reqs} rootSwaps=${s.swaps} loaderAfterMount=${s.loader} regressions=${s.regr} cast6=${s.cast6}`);
 }
 
 /* tab hidden -> visible must pause and then resync immediately */
