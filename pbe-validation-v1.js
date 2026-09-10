@@ -9,7 +9,7 @@
   let timer=null,busy=false,last=null;
 
   const esc=value=>String(value??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-  const num=value=>{const n=Number(value);return Number.isFinite(n)?n:null};
+  const num=value=>{if(value===null||value===undefined||value==='')return null;const n=Number(value);return Number.isFinite(n)?n:null};
   const metric=(value,suffix='')=>value===null||value===undefined?'—':`${Number(value).toFixed(1)}${suffix}`;
   const shortTime=value=>{if(!value)return'—';const d=new Date(value);if(Number.isNaN(d.getTime()))return'—';return d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',second:'2-digit'})};
   const shortDate=value=>{if(!value)return'—';const d=new Date(value);if(Number.isNaN(d.getTime()))return'—';return d.toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})};

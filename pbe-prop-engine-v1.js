@@ -7,7 +7,7 @@
   const data={state:null,current:null,track:null,promise:null};
   let timers=[];
   const esc=v=>String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-  const n=v=>{const x=Number(v);return Number.isFinite(x)?x:null};
+  const n=v=>{if(v===null||v===undefined||v==='')return null;const x=Number(v);return Number.isFinite(x)?x:null};
   const pct=(a,b)=>b>0?Math.max(0,Math.min(100,(Number(a)||0)/(Number(b)||1)*100)):0;
   const american=v=>{const x=n(v);return x===null?'—':`${x>0?'+':''}${Math.round(x)}`};
   const prob=v=>{const x=n(v);return x===null?'—':`${(Math.abs(x)<=1?x*100:x).toFixed(1)}%`};
@@ -33,7 +33,16 @@
   }
 
   function stage(s){
+    /* Runtime health from the persisted run ledger comes first: an engine that
+       is not running is never shown as staged, tracking or production. */
+    if(s?.engine_health&&s.engine_health!=='HEALTHY')return{key:'degraded',label:'ENGINE DEGRADED',copy:'Player-prop engine lanes are not reporting healthy runs'};
     if(s?.selector_trained===true)return{key:'production',label:'PRODUCTION',copy:'Trained selector · official publication enabled'};
+    const orch=s?.engine_runtime?.lanes?.['nfl-prop-picks-orchestrator'];
+    if(!s?.runtime_evidence?.first_decision_seen&&orch?.last_work_at){
+      const why=Object.keys(orch?.detail?.pass_reasons||{}).map(k=>k.replace(/_/g,' ')).join(', ');
+      const evs=Number(orch?.counts?.evaluated_events||0);
+      return{key:'tracking',label:'LIVE · EVALUATING',copy:`Evaluated ${evs} event${evs===1?'':'s'} against the current passing-yards board; no tracking decision yet${why?` (${why})`:''}`};
+    }
     if(s?.runtime_evidence?.first_decision_seen)return{key:'tracking',label:'TRACKING · VALIDATING',copy:'Real pregame decisions are being frozen and graded privately'};
     return{key:'staged',label:'STAGED · BOOTSTRAP READY',copy:'Infrastructure is ready; first factual tracking decision has not been recorded yet'};
   }

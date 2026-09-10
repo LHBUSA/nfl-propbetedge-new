@@ -34,7 +34,8 @@
   const esc = value => String(value ?? '')
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-  const num = value => { const x = Number(value); return Number.isFinite(x) ? x : null; };
+  /* Number(null) is 0 and 0 is finite: absent must stay absent, never 0. */
+  const num = value => { if (value === null || value === undefined || value === '') return null; const x = Number(value); return Number.isFinite(x) ? x : null; };
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
   const isPro = () => window.PBEPro?.state?.pro === true;
 
@@ -196,8 +197,9 @@
     const orch = lane(data, 'nfl-game-picks-orchestrator');
     const detail = orch?.detail || {};
     const c = orch?.counts || {};
+    /* nflverse codes the Rams LA; the rest of the product says LAR. */
     const next = detail.next_game
-      ? `${detail.next_game.matchup} · ${dateTime(detail.next_game.kickoff_ts)}`
+      ? `${String(detail.next_game.matchup).replace(/\bLA\b/, 'LAR')} · ${dateTime(detail.next_game.kickoff_ts)}`
       : data?.current?.next_game ? `${data.current.next_game.name} · ${dateTime(data.current.next_game.kickoff)}` : '—';
     const evaluated = orch?.last_work_at
       ? `${ago(orch.last_work_at)} · ${num(c.evaluated_games) ?? 0} game${num(c.evaluated_games) === 1 ? '' : 's'} evaluated`
@@ -231,7 +233,7 @@
     return `${topline(active, data)}<section class="pbe2-stage gated"><div class="pbe2-gridwash"></div><div class="pbe2-validation">
       <div><div class="pbe2-kicker">PBE Picks Engine</div><h1>Earn the edge.<br><em>Then publish it.</em></h1><p class="pbe2-validation-copy">The production model is evaluating real NFL slates in bootstrap tracking mode. Those decisions can build the learning sample, but they cannot appear as customer picks and can never be retroactively converted into the public record.</p><div class="pbe2-validation-proof"><span>100 finalized decisions</span><span>4 distinct weeks</span><span>champion-only publication</span><span>no backfilled picks</span></div></div>
       <div class="pbe2-gates"><div class="pbe2-ring" style="--p:${gradePct.toFixed(1)}"><div><strong>${grades}</strong><span>of ${gradeReq} grades</span></div></div><div class="pbe2-ring" style="--p:${weekPct.toFixed(1)}"><div><strong>${weeks}</strong><span>of ${weekReq} weeks</span></div></div><div class="pbe2-gate-caption">Official publication remains closed until both gates are satisfied and a trained champion is promoted.</div></div>
-    </div></section><div class="pbe2-pipeline"><div class="${healthOf(data) === 'HEALTHY' ? 'active' : ''}"><span>01</span><strong>Track live</strong></div><div class="${grades > 0 ? 'active' : ''}"><span>02</span><strong>Grade final</strong></div><div><span>03</span><strong>Validate</strong></div><div><span>04</span><strong>Publish</strong></div></div>${engineProgress(data)}`;
+    </div></section>${engineProgress(data)}<div class="pbe2-pipeline"><div class="${healthOf(data) === 'HEALTHY' ? 'active' : ''}"><span>01</span><strong>Track live</strong></div><div class="${grades > 0 ? 'active' : ''}"><span>02</span><strong>Grade final</strong></div><div><span>03</span><strong>Validate</strong></div><div><span>04</span><strong>Publish</strong></div></div>`;
   }
 
   function freeLive(data) {
