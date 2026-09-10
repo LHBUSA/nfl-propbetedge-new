@@ -1,6 +1,32 @@
 const CDN = 'https://cdn.espn.com/core/nfl';
 const SITE = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl';
 
+/* ---- Three lanes, because these things change at three different speeds ---
+   Measured against the live NE @ SEA game on 2026-09-09/10. ESPN's own
+   gamecast does not poll JSON at all — it subscribes to a token-gated
+   Fastcast WebSocket — so among the public JSON surfaces there is no single
+   endpoint that is both fastest and richest, and treating "live data" as one
+   payload is what made PBEcast slow.
+
+     state   the scoreboard's own view of one event: score, period, clock,
+             possession, down, distance, yard line, timeouts, red zone. It is
+             the freshest public surface for game state and it is tiny.
+     live    the site summary: the current play with its participants already
+             hydrated, the current drive and the play history.
+     full    the same summary: box score, leaders, win probability, drives.
+             Slow-changing enrichment, and the fallback for the state lane.
+
+   sports.core.api's plays collection was measured and rejected. It is the
+   freshest play feed of the three — its newest play was 46.6s old while the
+   summary's was 89.6s — but it hands back athletes, positions and teams as
+   $ref links, so rendering one current play's actors would cost three extra
+   round trips per poll. The summary hydrates participants on exactly the play
+   we draw them for, and already meets the detail target, so the freshness is
+   not worth the fan-out.
+
+   The CDN gamepackage stays only as a last-resort fallback: it froze for
+   minutes at a time and showed 3 of 17 plays across a 29-minute benchmark. */
+
 /* ---- Which ESPN surface owns live truth ---------------------------------
    Measured against the live NE @ SEA game on 2026-09-09 (see
    scripts/nfl-live-upstream-bench.mjs). The CDN gamepackage this file used to
@@ -182,6 +208,27 @@ function liveLayer(full){
 
 /* Try each source in order and accept the first that both answers and answers
    usefully — a 200 carrying no game is a failed source, not a valid empty. */
+/* ---- Fast state lane ----------------------------------------------------
+   One event, taken from the scoreboard. The scoreboard competition carries a
+   `situation` block that the summary's header does not, so this lane is both
+   fresher and better-informed about down, distance, possession and timeouts
+   than the payload PBEcast used to read all of this from. */
+async function fastState(event,date){
+  const {raw,provider}=await firstUpstream(BOARD_SOURCES,date,date===todayET(),hasEvents);
+  const ev=findEvents(raw).find(e=>S(e?.id)===S(event));
+  if(!ev)throw new Error(`event_not_on_scoreboard:${event}`);
+  const g=game(ev);
+  return {ok:true,layer:'state',
+    source:{provider,semantics:g.status.semantics,fetched_at:new Date().toISOString(),transport:'poll',
+      /* The scoreboard's lastPlay carries no wallclock, so this lane cannot
+         date itself. It publishes the play id instead and the client joins it
+         against the plays lane, which does carry wallclocks. Saying "unknown"
+         is the honest answer here; inventing an age would not be. */
+      last_play_id:g.situation?.last_play?.id||null,
+      latest_play_wallclock:null,play_age_seconds:null},
+    game:g};
+}
+
 async function firstUpstream(sources,arg,arg2,valid){
   const errors=[];
   for(const src of sources){
@@ -207,6 +254,13 @@ export default async function handler(req,res){
   try{
     if(event){
       if(!/^\d+$/.test(event))return send(res,400,{ok:false,error:'invalid_event'});
+
+      /* The fast lane. Never touches the summary, so a slow or failing detail
+         fetch cannot hold up score, clock or possession. */
+      if(layer==='state'){
+        const out=await fastState(event,date);
+        return send(res,200,out,out.source.semantics==='LIVE'?'no-store':'public, s-maxage=10');
+      }
       const {raw,provider}=await firstUpstream(LIVE_SOURCES,event,null,hasCompetition);
       const full=detail(packageOf(raw),event,provider);
       const out=layer==='live'?liveLayer(full):full;

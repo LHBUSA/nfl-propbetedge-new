@@ -15,7 +15,10 @@
     date:'',scoreboard:null,activeId:null,detail:null,market:null,marketEvent:null,error:null,
     loading:false,poll:null,lastPlayId:null,lastMarketAt:0,sound:false,audioCtx:null,statFilter:'all',installed:false,
     /* live-sync bookkeeping: see the synchronisation block below */
-    syncing:false,lastSyncAt:0,playAnchor:null,rejected:0
+    syncing:false,lastSyncAt:0,playAnchor:null,rejected:0,
+    /* the two lanes keep separate views of the game; promoteGame() merges */
+    fastGame:null,detailGame:null,fastSource:null,fastAt:0,detailAt:0,
+    lastFastChangeAt:0,lastDetailChangeAt:0
   };
 
   const esc=v=>String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
@@ -240,9 +243,9 @@
      Every lane is background work: it patches values in place and never
      clears .pbecast6, never nulls state.detail, and never re-mounts the route.
      Only the first visit to an unpainted game shows a skeleton. */
-  const CADENCE={live:{on:2500,off:15000},detail:{on:12000,off:30000},board:{on:12000,off:30000}};
+  const CADENCE={state:{on:2000,off:15000},live:{on:3000,off:15000},detail:{on:12000,off:30000},board:{on:12000,off:30000}};
   const FRESH_OK=30,FRESH_BAD=120;
-  const lanes={live:{gen:0,timer:null,busy:false,ctrl:null},detail:{gen:0,timer:null,busy:false,ctrl:null},board:{gen:0,timer:null,busy:false,ctrl:null}};
+  const lanes={state:{gen:0,timer:null,busy:false,ctrl:null},live:{gen:0,timer:null,busy:false,ctrl:null},detail:{gen:0,timer:null,busy:false,ctrl:null},board:{gen:0,timer:null,busy:false,ctrl:null}};
 
   const mounted=()=>!!document.querySelector('.pbecast6');
   const visible=()=>document.visibilityState!=='hidden';
@@ -251,9 +254,45 @@
   function playStamp(d){const w=Date.parse(d?.source?.latest_play_wallclock||d?.current_play?.wallclock||'');return Number.isFinite(w)?w:null}
   function totalScore(d){return (num(d?.game?.teams?.away?.score)??0)+(num(d?.game?.teams?.home?.score)??0)}
 
-  /* A response describing an earlier moment than what is already on screen must
-     never pull the display backwards. Out-of-order HTTP responses and an
-     upstream falling back to a slower provider both produce exactly that. */
+  /* ---- Two lanes, two clocks ----------------------------------------------
+     The scoreboard reaches Q4 while the summary is still finishing Q3, so the
+     two lanes genuinely disagree about the present and each has to be judged
+     against its own history. A summary response is not "backwards" because
+     the fast lane has already moved on — it is simply the slower lane doing
+     its job — but it must not be allowed to drag score, clock or possession
+     back when it lands. So each lane keeps its own last-known game, each is
+     guarded against its own past, and promoteGame() decides which one the
+     screen actually shows. */
+  function progressOf(g){
+    const st=g?.status||{};
+    const p=num(st.period);if(p==null)return -1;
+    const l=clockSeconds(st.clock);
+    return p*10000+(l==null?0:(900-Math.min(900,l)));
+  }
+  function scoreOf(g){return (num(g?.teams?.away?.score)??0)+(num(g?.teams?.home?.score)??0)}
+  function aheadOf(a,b){                       // is a strictly later than b?
+    if(!b)return true; if(!a)return false;
+    const pa=progressOf(a),pb=progressOf(b);
+    if(pa!==pb)return pa>pb;
+    return scoreOf(a)>scoreOf(b);
+  }
+  function laneRegresses(g,prev){
+    if(!g||!prev)return false;
+    if(String(g.id||'')!==String(prev.id||''))return false;
+    const pg=progressOf(g),pp=progressOf(prev);
+    if(pg<pp)return true;
+    if(pg===pp&&scoreOf(g)<scoreOf(prev))return true;
+    return false;
+  }
+  /* The screen shows whichever lane is further into the game. */
+  function promoteGame(){
+    const winner=aheadOf(state.fastGame,state.detailGame)?state.fastGame:(state.detailGame||state.fastGame);
+    if(!winner)return;
+    if(!state.detail)state.detail={};
+    state.detail.game=winner;
+    if(!state.detail.source&&state.fastSource)state.detail.source=state.fastSource;
+  }
+
   function regresses(next){
     const cur=state.detail;
     if(!cur||!next?.game)return false;
@@ -307,6 +346,53 @@
     return (a.left-l)>=20;
   }
 
+  /* The fast lane: score, period, clock, possession, down, distance, yard
+     line, timeouts. Nothing here waits on the summary. */
+  function applyFast(d){
+    const g=d?.game;
+    if(!g){state.rejected=(state.rejected||0)+1;return false}
+    if(state.activeId&&String(g.id||'')!==String(state.activeId)){state.rejected=(state.rejected||0)+1;return false}
+    if(laneRegresses(g,state.fastGame)){state.rejected=(state.rejected||0)+1;return false}
+    const moved=!state.fastGame||progressOf(g)!==progressOf(state.fastGame)||scoreOf(g)!==scoreOf(state.fastGame);
+    state.fastGame=g;
+    state.fastSource=d.source||null;
+    state.fastAt=Date.now();
+    if(moved)state.lastFastChangeAt=Date.now();
+    promoteGame();
+    state.error=null;
+    return true;
+  }
+
+  /* ---- Freshness telemetry ------------------------------------------------
+     Two lanes means two different answers, and collapsing them into one number
+     is what let a four-minute lag hide behind a current fetched_at. The fast
+     lane cannot date itself — the scoreboard's lastPlay carries no wallclock —
+     so its age is recovered by joining its play id against the plays lane,
+     which does. When that id is not in the play log yet, the fast lane is
+     simply ahead of anything we can date, and that is what it reports. */
+  function telemetry(){
+    const now=Date.now();
+    const plays=arr(state.detail?.plays);
+    const fastPlayId=state.fastSource?.last_play_id||null;
+    const hit=fastPlayId?plays.find(p=>String(p.id)===String(fastPlayId)):null;
+    const hitWall=hit?.wallclock?Date.parse(hit.wallclock):NaN;
+    const playWall=Date.parse(state.detail?.source?.latest_play_wallclock||state.detail?.current_play?.wallclock||'');
+    const age=t=>Number.isFinite(t)?Math.max(0,Math.round((now-t)/100)/10):null;
+    return {
+      fast_state_age_seconds:age(hitWall),
+      fast_state_ahead_of_detail:!!(fastPlayId&&!hit),
+      latest_play_age_seconds:age(playWall),
+      fast_provider:state.fastSource?.provider||null,
+      detail_provider:state.detail?.source?.provider||null,
+      fast_fetched_at:state.fastSource?.fetched_at||null,
+      detail_fetched_at:state.detail?.source?.fetched_at||null,
+      latest_play_wallclock:state.detail?.source?.latest_play_wallclock||null,
+      last_fast_change_at:state.lastFastChangeAt||null,
+      last_detail_change_at:state.lastDetailChangeAt||null,
+      rejected_stale_responses:state.rejected||0
+    };
+  }
+
   function applyLive(d,{sound=true}={}){
     if(!d?.game){state.rejected=(state.rejected||0)+1;return false}
     /* A response for a game we have since navigated away from must never land:
@@ -333,16 +419,23 @@
       win_probability:d.win_probability||base.win_probability,
       drives:d.drives||base.drives};
 
-    const forward=!regresses(d);
+    /* Judged against the DETAIL lane's own past, not against the merged screen.
+       The fast lane is routinely a quarter ahead; treating that as this lane's
+       regression would reject every summary response it ever made. */
+    const forward=!laneRegresses(d.game,state.detailGame)&&!playRegresses(d);
     if(forward){
+      const movedPlay=(d.current_play?.id||null)!==(base.current_play?.id||null);
       next.source=d.source||base.source;
-      next.game=d.game;
       next.current_play=d.current_play??base.current_play;
       next.current_drive=d.current_drive||base.current_drive;
       next.last_five_plays=d.last_five_plays||base.last_five_plays;
+      state.detailGame=d.game;
+      state.detailAt=Date.now();
+      if(movedPlay)state.lastDetailChangeAt=Date.now();
     }else state.rejected=(state.rejected||0)+1;
 
     state.detail=next;
+    promoteGame();                      // fast vs detail decides what is painted
     if(forward){
       const after=next.current_play?.id||null;
       state.lastPlayId=after;
@@ -352,6 +445,13 @@
     }
     state.error=null;
     return forward;
+  }
+
+  /* The plays half of the detail lane has its own arrow of time. */
+  function playRegresses(d){
+    const nw=Date.parse(d?.source?.latest_play_wallclock||d?.current_play?.wallclock||'');
+    const cw=Date.parse(state.detail?.source?.latest_play_wallclock||state.detail?.current_play?.wallclock||'');
+    return Number.isFinite(nw)&&Number.isFinite(cw)&&nw<cw;
   }
 
   async function laneJson(name,url){
@@ -373,6 +473,21 @@
        hidden re-arms its lane as it settles. */
     if(!mounted()||!visible())return;
     l.timer=setTimeout(()=>{if(mounted()&&visible())fn()},isLive()?CADENCE[name].on:CADENCE[name].off);
+  }
+
+  /* Fast state. Deliberately the smallest request PBEcast makes (~2KB) and the
+     only one on the 2s cadence, so score, clock and possession never queue
+     behind a box score. */
+  async function syncState(){
+    const l=lanes.state;
+    if(l.busy||!state.activeId){scheduleLane('state',syncState);return}
+    l.busy=true;
+    try{
+      const d=await laneJson('state',`${LIVE_API}?event=${encodeURIComponent(state.activeId)}&layer=state`);
+      if(d&&applyFast(d))patchLive();
+    }catch(error){
+      if(error?.name!=='AbortError'){state.error=error instanceof Error?error.message:String(error);patchFreshness()}
+    }finally{l.busy=false;scheduleLane('state',syncState)}
   }
 
   async function syncLive(){
@@ -408,7 +523,7 @@
       if(board){
         state.scoreboard=board;
         const next=chooseActive();
-        if(next&&next!==state.activeId){state.activeId=next;persist();resetGame();syncLive();syncDetail()}
+        if(next&&next!==state.activeId){state.activeId=next;persist();resetGame();syncState();syncLive();syncDetail()}
         else{state.activeId=next||state.activeId;persist()}
         patchRail();
       }
@@ -422,8 +537,11 @@
   /* Manual refresh and first mount both want everything now, in parallel. */
   async function refresh(manual=false){
     state.date=state.date||sportsDay();
-    await Promise.all([syncBoard(),state.activeId?syncLive():Promise.resolve(),state.activeId?syncDetail():Promise.resolve()]);
-    if(!state.activeId&&state.scoreboard){state.activeId=chooseActive();persist();if(state.activeId)await Promise.all([syncLive(),syncDetail()])}
+    await Promise.all([syncBoard(),
+      state.activeId?syncState():Promise.resolve(),
+      state.activeId?syncLive():Promise.resolve(),
+      state.activeId?syncDetail():Promise.resolve()]);
+    if(!state.activeId&&state.scoreboard){state.activeId=chooseActive();persist();if(state.activeId)await Promise.all([syncState(),syncLive(),syncDetail()])}
     patchAll();
     return manual;
   }
@@ -431,6 +549,10 @@
   function resetGame(){
     state.detail=null;state.market=null;state.marketEvent=null;state.lastMarketAt=0;state.marketGameKey=null;
     state.lastPlayId=null;state.playAnchor=null;state.error=null;
+    /* both lanes forget the previous game, or its progress would look like the
+       new game's future and reject every real update */
+    state.fastGame=null;state.detailGame=null;state.fastSource=null;
+    state.fastAt=0;state.detailAt=0;state.lastFastChangeAt=0;state.lastDetailChangeAt=0;
   }
 
   /* Switching games is a deliberate act, not background polling: the previous
@@ -443,7 +565,7 @@
     /* Restart every lane, the board included — it is what keeps the rail and
        the active-game choice in step, and dropping it here used to leave it
        stopped for the rest of the session. */
-    await Promise.all([syncLive(),syncDetail()]);
+    await Promise.all([syncState(),syncLive(),syncDetail()]);
     syncBoard();
     patchAll();
   }
@@ -479,7 +601,7 @@
   document.addEventListener('visibilitychange',()=>{
     if(!mounted())return;
     if(!visible()){stopLanes();return}
-    syncLive();syncDetail();syncBoard();
+    syncState();syncLive();syncDetail();syncBoard();
   });
 
   /* v4 and v5 are out of the production runtime. If a stale cached copy of
@@ -512,6 +634,6 @@
     return true;
   }
 
-  window.PBEcastV6={state,load,refresh,focus,toggleSound,takeFocus,stopLegacyTransports};
+  window.PBEcastV6={state,load,refresh,focus,toggleSound,takeFocus,stopLegacyTransports,telemetry};
   if(!install())document.addEventListener('DOMContentLoaded',install,{once:true});
 })();

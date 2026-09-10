@@ -25,6 +25,7 @@ const SOURCES=[
   {key:'site_summary',    url:`https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=${EVENT}`},
   {key:'cdn_scoreboard',  url:`https://cdn.espn.com/core/nfl/scoreboard?xhr=1&limit=100&dates=${dateET}`},
   {key:'site_scoreboard', url:`https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates=${dateET}`},
+  {key:'core_plays',      url:`https://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/${EVENT}/competitions/${EVENT}/plays?limit=1000`},
   {key:'pbe_api',         url:`https://nfl.propbetedge.ai/api/nfl-live?event=${EVENT}`}
 ];
 
@@ -63,6 +64,12 @@ function newestPlay(sourceKey,body){
     if(!cp)return null;
     return {id:S(cp.id),seq:cp.sequence??null,text:S(cp.text||'').slice(0,90),wallclock:cp.wallclock||null,period:cp.period,clock:cp.clock};
   }
+  if(sourceKey==='core_plays'){
+    const items=A(body?.items).filter(p=>p?.wallclock);
+    if(!items.length)return null;
+    const best=items.reduce((a,b)=>Date.parse(b.wallclock)>Date.parse(a.wallclock)?b:a);
+    return readPlay(best);
+  }
   if(sourceKey==='cdn_scoreboard'||sourceKey==='site_scoreboard'){
     const ev=eventFromScoreboard(body);
     const comp=A(ev?.competitions)[0]||{};
@@ -91,6 +98,10 @@ function newestPlay(sourceKey,body){
 }
 
 function gameState(sourceKey,body){
+  if(sourceKey==='core_plays'){
+    const p=newestPlay('core_plays',body)||{};
+    return {period:p.period??null,clock:p.clock??null,score:'',possession:null,semantics:'LIVE'};
+  }
   if(sourceKey==='pbe_api'){
     const g=body?.game||{};
     return {period:g.status?.period??null,clock:g.status?.clock??null,
