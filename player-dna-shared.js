@@ -522,12 +522,59 @@
     }) || null;
   }
 
+
+  /* Which game on the slate is this player's NEXT game?
+
+     Every DNA product used to take the first slate game involving the team,
+     falling back to the first game on the slate if the team had none. Both
+     halves were wrong once the season started: a team that has already played
+     this week matched its FINISHED game and showed it as "Next", and a team not
+     on the slate at all was handed some other team's game.
+
+     A game that is over is never next. If the team has nothing upcoming on
+     this slate, the answer is "none on this slate" — and we keep the finished
+     game so the page can say what the team last did instead of going blank. */
+  const FINISHED = /FINAL|POST|COMPLETE/i;
+  function isFinished(g) {
+    return FINISHED.test(String((g && (g.status || g.state || g.status_name)) || ''))
+      || (g && g.completed === true);
+  }
+  function pickSlateGame(slate, team) {
+    const games = (slate && Array.isArray(slate.games)) ? slate.games : [];
+    const mine = team ? games.filter(g => g.home_team === team || g.away_team === team) : [];
+    const upcoming = mine.filter(g => !isFinished(g))
+      .sort((a, b) => Date.parse(a.kickoff_utc || 0) - Date.parse(b.kickoff_utc || 0));
+    const done = mine.filter(isFinished)
+      .sort((a, b) => Date.parse(b.kickoff_utc || 0) - Date.parse(a.kickoff_utc || 0));
+    return { next: upcoming[0] || null, lastFinished: done[0] || null, onSlate: mine.length > 0 };
+  }
+  function noNextGameHtml(pick, team) {
+    const last = pick && pick.lastFinished;
+    /* The slate carries no scores, so a score is only shown when the season
+       contract — which does — describes this exact game. Otherwise FINAL with
+       no score, never an invented one. */
+    let line = '';
+    if (last) {
+      const lf = window.PBESeason && typeof window.PBESeason.latestFinal === 'function' ? window.PBESeason.latestFinal() : null;
+      const same = lf && String(lf.id) === String(last.espn_event_id);
+      line = same
+        ? `FINAL · ${esc(lf.away.abbreviation)} ${esc(lf.away.score)}–${esc(lf.home.score)} ${esc(lf.home.abbreviation)}`
+        : `FINAL · ${esc(last.away_team)} @ ${esc(last.home_team)}`;
+    }
+    return `<div class="q2-hero-next is-none">
+      <div class="q2-hero-next-k">Next</div>
+      <div class="q2-hero-next-m">${esc(team || 'Team')} has no upcoming game on this slate</div>
+      ${line ? `<div class="q2-hero-next-w">Last: ${line}</div>` : ''}
+    </div>`;
+  }
+
   window.PBEPlayerDNA = {
     esc, headshot, crest, matchupLine, SEARCH_ICON, IMG_FAIL,
     modalRoot, openPicker, closePicker, isPickerOpen, takeFocus, applyFocus, softReason,
     FAMILY, familySwitch, wireFamily,
     paintCharts, drawSeries, drawDistribution,
     n1, pctSigned, samp, den, priceLabel, longDate, kickoffLabel,
-    SPECIFIC_CONDITIONS, similarCondition, limitedHistoryHtml, rareTodayWindow, NO_PATTERN
+    SPECIFIC_CONDITIONS, similarCondition, limitedHistoryHtml, rareTodayWindow, NO_PATTERN,
+    pickSlateGame, noNextGameHtml, isFinished
   };
 })();
