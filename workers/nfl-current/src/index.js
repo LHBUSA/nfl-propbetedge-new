@@ -35,10 +35,16 @@ const CORS = {
    belongs to it: the schedule, the KV cache, the derivation and the contract. */
 const PBE = 'https://nfl.propbetedge.ai/api/nfl-live';
 
-/* How old a cached payload may be before we stop calling it fresh. Live games
-   move fast; an empty Tuesday does not. */
-const SLA_LIVE_S = 120;
-const SLA_IDLE_S = 900;
+/* How old a cached payload may be before we stop calling it fresh.
+
+   These must stay looser than the cadence that produces them, or the normal
+   state of the product becomes STALE: the idle refresher runs every 900s, so
+   a 900s SLA reports stale for the moment before every scheduled refresh even
+   though nothing in the league has changed. An SLA of roughly twice the
+   refresh interval means FRESH is the resting state and STALE means the
+   refresher actually stopped, which is the only thing worth warning about. */
+const SLA_LIVE_S = 180;   // live cadence ~60s
+const SLA_IDLE_S = 1800;  // idle cadence ~900s
 
 const KEY = {
   season: s => `current:season:${s}`,
