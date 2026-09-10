@@ -342,7 +342,15 @@
 
   function heroNext() {
     const c = state.ctx;
-    if (!c) return '';
+    if (!c) {
+      /* Say what is true rather than go blank: the team has nothing upcoming
+         on this slate, and here is what it last did. */
+      if (state.slatePick && !state.slatePick.next && state.dna) {
+        const tm = (state.dna.player.team && state.dna.player.team.abbreviation) || state.dna.player.current_team;
+        return PD.noNextGameHtml(state.slatePick, tm);
+      }
+      return '';
+    }
     const g = c.game, ctx = c.context, f = c.forecast;
     const env = [];
     if (f) {
@@ -1114,7 +1122,7 @@
             else {
               state.playerId = id;
               state.dna = null; state.lab = null; state.cmp = null;
-              state.ctxCmp = null; state.ctx = null; state.eventId = null;
+              state.ctxCmp = null; state.ctx = null; state.eventId = null; state.slatePick = null;
             }
             load();
           }
@@ -1196,9 +1204,11 @@
       if (!state.eventId) {
         const team = (state.dna.player.team && state.dna.player.team.abbreviation)
           || state.dna.player.current_team || null;
-        const mineG = state.slate.games.find(g => g.home_team === team || g.away_team === team);
-        state.eventId = (mineG || state.slate.games[0]).espn_event_id;
+        /* never a finished game, never another team's game */
+        state.slatePick = PD.pickSlateGame(state.slate, team);
+        state.eventId = state.slatePick.next ? state.slatePick.next.espn_event_id : null;
       }
+      if (!state.eventId) { state.ctx = null; state.ctxCmp = null; render(); return; }
       state.ctx = await get(`/api/qb-dna/game-context?event_id=${encodeURIComponent(state.eventId)}`);
       state.ctxCmp = null;
       if (state.dna.history_available === false) return;

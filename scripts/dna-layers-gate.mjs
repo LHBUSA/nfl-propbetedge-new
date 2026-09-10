@@ -74,7 +74,11 @@ const READ=`(()=>{const b=document.querySelector('[data-pbe-current-layer]');
  const t=el=>el?el.textContent.replace(/\\s+/g,' ').trim():'';
  const g=(window.PBEQBDna||window.PBEWRDna||window.PBERBDna||window.PBETEDna);
  const p=(function(){const m={qbdna:'PBEQBDna',wrdna:'PBEWRDna',rbdna:'PBERBDna',tedna:'PBETEDna'}[App.current];const s=window[m]&&window[m].state&&window[m].state.dna;return s&&s.player||null})();
+ const nx=document.querySelector('.q2-hero-next');
+ const mod2={qbdna:'PBEQBDna',wrdna:'PBEWRDna',rbdna:'PBERBDna',tedna:'PBETEDna'}[App.current];
+ const g2=window[mod2]&&window[mod2].state&&window[mod2].state.ctx&&window[mod2].state.ctx.game;
  return {present:true, player:p&&p.name, espn_id:p&&p.espn_id, team:p&&p.current_team,
+   nextText:nx?nx.textContent.replace(/\\s+/g,' ').trim():'', nextStatus:g2?String(g2.status||''):null,
    current:t(cur), baseline:t(base),
    currentIsNone:!!(cur&&cur.classList.contains('is-none')),
    baselineIsNone:!!(base&&base.classList.contains('is-none')),
@@ -91,7 +95,7 @@ async function check(route,playerId,label,expect){
   await sleep(2500);
   if(playerId){
     const mod={qbdna:'PBEQBDna',wrdna:'PBEWRDna',rbdna:'PBERBDna',tedna:'PBETEDna'}[route];
-    await evalIn(`(async()=>{const m=window.${mod};m.state.playerId=${JSON.stringify(playerId)};m.state.dna=null;m.state.cmp=null;m.state.lab=null;await m.load();return true})()`);
+    await evalIn(`(async()=>{const m=window.${mod};m.state.playerId=${JSON.stringify(playerId)};m.state.dna=null;m.state.cmp=null;m.state.lab=null;m.state.ctx=null;m.state.ctxCmp=null;m.state.eventId=null;await m.load();return true})()`);
     await sleep(3500);
     await evalIn(`window.PBECurrentLayer&&PBECurrentLayer.sync(true)`);
     await sleep(2500);
@@ -138,6 +142,8 @@ const checks=[
   ['no horizontal overflow',rows.every(r=>(r.overflow||0)<=0)],
   ['rookie baseline says sample unavailable',ROOKIE.baselineIsNone&&/Historical sample unavailable/i.test(ROOKIE.baseline)],
   ['rookie baseline manufactures nothing',!/STRONG SAMPLE|Sample \d+games/i.test(ROOKIE.baseline)],
+  ['a finished game is never shown as Next',rows.every(r=>!/FINAL|POST/i.test(String(r.nextStatus||'')))],
+  ['played-team players say no upcoming game',played.filter(r=>/\((SEA|NE)\)/.test(r.label)).every(r=>/no upcoming game on this slate/i.test(r.nextText))],
   ['no uncaught exceptions',rows.every(r=>!r.exceptions.length)]
 ];
 let failed=0;
