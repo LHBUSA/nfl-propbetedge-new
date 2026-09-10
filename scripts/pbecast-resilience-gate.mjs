@@ -157,6 +157,25 @@ const backwards=(()=>{
   return t(q.score)<t(p.score);
 })();
 
+/* ---- 3. hidden for 60s, then restored ------------------------------------ */
+console.log('\n--- hiding the tab for 60s ---');
+const castReqs='(window.__res.reqs||[]).length';
+await evalIn("(()=>{window.__res.reqs=[];const of=window.fetch;window.fetch=function(i){try{const u=String(typeof i==='string'?i:(i&&i.url)||'');if(u.indexOf('/api/nfl-live')>-1){const st=(new Error().stack||'');if(/pbecast-v6/.test(st))window.__res.reqs.push(Date.now())}}catch(e){}return of.apply(this,arguments)};return true})()");
+await sleep(3000);
+await evalIn("(()=>{window.__res.reqs=[];Object.defineProperty(document,'visibilityState',{configurable:true,get:function(){return 'hidden'}});document.dispatchEvent(new Event('visibilitychange'));return true})()");
+await sleep(60000);
+const hiddenReqs=await evalIn(castReqs);
+const hiddenSnap=await evalIn(SNAP);
+say('after 60s hidden',hiddenSnap);
+await evalIn("(()=>{window.__res.reqs=[];Object.defineProperty(document,'visibilityState',{configurable:true,get:function(){return 'visible'}});document.dispatchEvent(new Event('visibilitychange'));return true})()");
+await sleep(3000);
+const resumeReqs=await evalIn(castReqs);
+await sleep(6000);
+const restored=await evalIn(SNAP);
+say('after restore',restored);
+console.log('PBEcast requests during 60s hidden: '+hiddenReqs+' (expected 0)');
+console.log('PBEcast requests within 3s of restore: '+resumeReqs+' (expected >=1)');
+
 console.log('\n=== verdict ===');
 const checks=[
   ['503 kept the game painted',        during.cast6===1&&during.chars>500&&!during.loading],
@@ -168,7 +187,10 @@ const checks=[
   ['stale response was rejected',      postRelease.rejected>=rejectedBefore],
   ['no root swaps at any point',       postRelease.rootSwaps===0],
   ['no loading screen at any point',   postRelease.loaderAfterMount===0],
-  ['no uncaught exceptions',           exceptions.length===0]
+  ['no uncaught exceptions',           exceptions.length===0],
+  ['60s hidden issued no requests',    Number(hiddenReqs)===0],
+  ['restore resynced immediately',     Number(resumeReqs)>=1],
+  ['restore did not remount',          restored.rootSwaps===0&&restored.loaderAfterMount===0&&restored.cast6===1]
 ];
 let failed=0;
 for(const [name,ok] of checks){if(!ok)failed++;console.log(`  ${ok?'PASS':'FAIL'}  ${name}`)}

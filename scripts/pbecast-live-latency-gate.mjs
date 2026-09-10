@@ -73,13 +73,13 @@ ws.onmessage=ev=>{
 const PROBE=[
   '(()=>{',
   '  try{',
-  '  const T=window.__cast={reqs:[],plays:[],samples:[],rootSwaps:0,loaderAfterMount:0,mounted:false,regressions:[],sampleError:null,start:Date.now()};',
+  '  const T=window.__cast={reqs:[],plays:[],samples:[],tele:[],states:[],lastStateKey:null,rootSwaps:0,loaderAfterMount:0,mounted:false,regressions:[],sampleError:null,start:Date.now()};',
   '  const of=window.fetch;',
   '  window.fetch=function(input){',
   '    try{const u=String(typeof input==="string"?input:(input&&input.url)||"");',
   '      if(u.indexOf("/api/nfl-live")>-1){',
   '        const st=(new Error().stack||"").replace(/https?:\\/\\/[^/]+\\//g,"");',
-  '        const lane=u.indexOf("layer=live")>-1?"live":u.indexOf("event=")>-1?"detail":"board";',
+  '        const lane=u.indexOf("layer=state")>-1?"state":u.indexOf("layer=live")>-1?"live":u.indexOf("event=")>-1?"detail":"board";',
   '        const owner=/pbecast-v6\\.js/.test(st)?"v6":/pbecast-v5[.-]/.test(st)?"v5":/pbecast-v4\\.js/.test(st)?"v4":/pbe-breaking/.test(st)?"breaking-rail":/sports-shell/.test(st)?"sports-shell":"other";',
   '        T.reqs.push({t:Date.now()-T.start,lane:lane,owner:owner});',
   '      }',
@@ -126,6 +126,18 @@ const PROBE=[
   '        latency:cur.wall&&Number.isFinite(Date.parse(cur.wall))?Math.round((now-Date.parse(cur.wall))/100)/10:null,',
   '        provider:cur.provider});',
   '    }',
+  '    try{',
+  '      const tl=(window.PBEcastV6&&PBEcastV6.telemetry)?PBEcastV6.telemetry():null;',
+  '      if(tl){',
+  '        T.tele.push({t:now-T.start,fastAge:tl.fast_state_age_seconds,playAge:tl.latest_play_age_seconds,ahead:tl.fast_state_ahead_of_detail,fastProv:tl.fast_provider,detailProv:tl.detail_provider,rejected:tl.rejected_stale_responses});',
+  '        const key=cur.period+"|"+cur.left+"|"+cur.score;',
+  '        if(key!==T.lastStateKey){',
+  '          const first=T.lastStateKey===null;',
+  '          T.lastStateKey=key;',
+  '          if(!first)T.states.push({t:now-T.start,key:key,age:tl.fast_state_age_seconds,ahead:tl.fast_state_ahead_of_detail,provider:tl.fast_provider});',
+  '        }',
+  '      }else{T.teleMissing=(T.teleMissing||0)+1}',
+  '    }catch(e){T.teleError=String(e&&e.message||e).slice(0,160)}',
   '    last=cur;',
   '    }catch(e){T.sampleError=String(e&&e.stack||e).slice(0,300)}',
   '  },500);',
@@ -186,7 +198,7 @@ const afterShow=await evalIn(castReqs);
 console.log(`PBEcast requests while hidden for 15s: ${duringHide-beforeHide} (expected 0; the global shell and breaking rail poll independently of this route)`);
 console.log(`PBEcast requests within 2.5s of becoming visible: ${afterShow-duringHide} (expected >=1 immediate resync)`);
 
-const T=await evalIn('JSON.stringify({plays:window.__cast.plays,reqs:window.__cast.reqs,samples:window.__cast.samples,rootSwaps:window.__cast.rootSwaps,loaderAfterMount:window.__cast.loaderAfterMount,regressions:window.__cast.regressions})');
+const T=await evalIn('JSON.stringify({plays:window.__cast.plays,reqs:window.__cast.reqs,samples:window.__cast.samples,tele:window.__cast.tele,states:window.__cast.states,teleMissing:window.__cast.teleMissing||0,teleError:window.__cast.teleError||null,rootSwaps:window.__cast.rootSwaps,loaderAfterMount:window.__cast.loaderAfterMount,regressions:window.__cast.regressions})');
 const data=JSON.parse(T);
 const pctl=(a,p)=>{if(!a.length)return null;const s=a.slice().sort((x,y)=>x-y);return Math.round(s[Math.min(s.length-1,Math.ceil(p/100*s.length)-1)]*10)/10};
 
@@ -206,6 +218,8 @@ const aheadPct=stateRows.length?Math.round(100*stateRows.filter(x=>x.ahead).leng
 console.log('\n=== FAST GAME STATE LATENCY (age of the play behind each score/clock/possession change) ===');
 console.log(`state changes=${stateRows.length}  dated=${stateAges.length}  median=${pctl(stateAges,50)}s  p95=${pctl(stateAges,95)}s  min=${stateAges.length?Math.min(...stateAges):null}s  max=${stateAges.length?Math.max(...stateAges):null}s`);
 console.log(`  fast lane ahead of the datable play log on ${aheadPct}% of changes`);
+if(data.teleError)console.log(`  TELEMETRY ERROR: ${data.teleError}`);
+if(data.teleMissing)console.log(`  telemetry unavailable on ${data.teleMissing} samples`);
 console.log('\n=== END-TO-END PLAY LATENCY (screen first showed the play, minus its wallclock) ===');
 console.log(`plays scored=${lat.length} (of ${data.plays.length} seen; the one current at mount is excluded)`);
 console.log(`    median=${pctl(lat,50)}s  p95=${pctl(lat,95)}s  min=${lat.length?Math.min(...lat):null}s  max=${lat.length?Math.max(...lat):null}s`);
