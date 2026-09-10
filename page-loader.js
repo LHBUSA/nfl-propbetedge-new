@@ -31,9 +31,14 @@
     {css:'./draft-review-v2.css',js:'./draft-review-v2.js'},
     {css:'./newsroom-v2.css',js:'./newsroom-v2.js'},
     {css:'./news-intelligence-v2.css',js:'./news-intelligence-v2.js'},
-    {css:'./pbecast-v4.css',js:'./pbecast-v4.js'},
-    {css:'./pbecast-v5.css',js:'./pbecast-v5.js'},
-    {js:'./pbecast-v5-renderer.js'},
+
+    /* PBEcast v4, v5 and the v5 renderer are retired from the production
+       runtime. All three registered App.VIEWS.pbecast and all three painted
+       before v6 replaced them on every deep link, and v4/v5 ran a second
+       /api/nfl-live transport against the same route. v6 below is the one
+       authority; see TERMINAL_AUTHORITIES. The files are kept on disk so the
+       rollback is a one-line revert here, not a restore. */
+
     {css:'./propchain-v2.css',js:'./propchain-v2.js'},
     {css:'./matchups-v2.css',js:'./matchups-v2.js'},
     {css:'./simulator-v2.css',js:'./simulator-v2.js'},
@@ -70,6 +75,9 @@
 
     /* Production authorities. */
     {css:'./paywall-funnel-v2.css',js:'./paywall-funnel-v2.js'},
+    /* PBEcast v6 is the sole route authority: #pbecast -> PBEcastV6.load ->
+       .pbecast6. v7 is additive only — it decorates v6's DOM and state and
+       never registers a route or renders the container itself. */
     {css:'./pbecast-v6.css',js:'./pbecast-v6.js'},
     {css:'./pbecast-v7-enhance.css',js:'./pbecast-v7-enhance.js'},
     {css:'./stadium-selector-v1.css',js:'./stadium-selector-v1.js'},
@@ -128,6 +136,53 @@
     {css:'./te-dna-v1.css',js:'./te-dna-v1.js'}
   ];
 
+  /* ---- Terminal route authorities ----------------------------------------
+     A route belongs here when more than one module in this manifest registers
+     its App.VIEWS key, so that painting it before the last one lands would
+     show a generation that is about to be replaced. app-core reads this
+     contract: it will not paint, and will not boot into, a declared route
+     until that route's module has installed — and once installed, that module
+     owns the key and no later module can reassign it.
+
+     Add a route here only if you have checked that the named module really is
+     the last registrant for it. Everything absent from this map behaves
+     exactly as it always has. */
+  const TERMINAL_AUTHORITIES=[
+    {route:'pbecast',js:'./pbecast-v6.js',installed:()=>typeof window.PBEcastV6?.load==='function'}
+  ];
+
+  const pendingRoutes=new Set(TERMINAL_AUTHORITIES.map(a=>a.route));
+  const declaredRoutes=new Set(pendingRoutes);
+  /* Published synchronously, before the first await below, so that app-core's
+     DOMContentLoaded fallback can tell "a loader is running" from "no loader
+     is present" without guessing at a delay. */
+  window.PBEUpgrades={
+    version:VERSION,
+    loading:true,
+    failed:false,
+    declares:route=>declaredRoutes.has(String(route)),
+    ready:route=>!pendingRoutes.has(String(route)),
+    pending:()=>[...pendingRoutes]
+  };
+
+  function settleAuthorities(js){
+    for(const spec of TERMINAL_AUTHORITIES){
+      if(spec.js!==js||!pendingRoutes.has(spec.route))continue;
+      pendingRoutes.delete(spec.route);
+      if(!spec.installed())console.warn('[pbe-route-authority]',spec.route,'module loaded without installing; route falls back to whatever is registered');
+      window.dispatchEvent(new CustomEvent('pbe:route-authority-ready',{detail:{route:spec.route,js:spec.js}}));
+    }
+  }
+  function releaseAuthorities(failed){
+    window.PBEUpgrades.loading=false;
+    if(failed)window.PBEUpgrades.failed=true;
+    if(!pendingRoutes.size)return;
+    /* Nothing further is coming: stop holding routes that never arrived. */
+    const stranded=[...pendingRoutes];
+    pendingRoutes.clear();
+    stranded.forEach(route=>window.dispatchEvent(new CustomEvent('pbe:route-authority-ready',{detail:{route,stranded:true}})));
+  }
+
   const PRO_MODULES=[
     {selector:'.pbe22-watch',global:'PBEMarketWatch'},
     {selector:'.pbe20-sim',global:'PBELineSimulator'},
@@ -169,6 +224,10 @@
   function replayPendingRoute(){
     const route=window.App?.current;
     if(!route||typeof window.App?.VIEWS?.[route]!=='function')return false;
+    /* Never replay a route whose terminal authority is still in flight: that
+       replay-after-every-module is what walked PBEcast through four
+       generations on a single load. */
+    if(!window.PBEUpgrades.ready(route))return false;
     const pending=document.querySelector(`[data-pbe-pending-route="${CSS.escape(String(route))}"]`);
     if(!pending&&window.App?.pendingRoute!==route)return false;
     try{window.App.nav(route,{history:false});return true}catch(error){console.error('[pbe-route-replay]',route,error?.message||error);return false}
@@ -211,15 +270,22 @@
         if(item.js==='./dashboard-v7.js'&&bootRoute==='home'&&typeof window.PBEDashboardV7?.load==='function'){
           await window.PBEDashboardV7.load();
         }
+        settleAuthorities(item.js);
         replayPendingRoute();
       }
       installProSync();
+      releaseAuthorities(false);
       window.dispatchEvent(new CustomEvent('pbe:upgrades-ready',{detail:{version:VERSION}}));
       replayPendingRoute();
       window.App?.replayCurrent?.();
       forceVisibleProRender();
     }catch(error){
       console.error('[pbe-loader-fatal]',error?.message||error);
+      /* The manifest genuinely failed. Release every held route so the app
+         boots on whatever did install rather than sitting on a loading state
+         forever, and say so rather than pretending the load completed. */
+      releaseAuthorities(true);
+      window.dispatchEvent(new CustomEvent('pbe:upgrades-failed',{detail:{version:VERSION,error:String(error?.message||error)}}));
       const route=window.App?.current||'home';
       const vc=document.getElementById('view-container');
       if(vc&&document.querySelector('[data-pbe-pending-route]'))vc.innerHTML=`<section class="pbe-v2-dashboard"><div class="pbe-v2-market-empty">Workspace failed to load. Refresh to retry ${String(route).replace(/-/g,' ')}.</div></section>`;

@@ -308,12 +308,13 @@
       'Open Prop Board',
       "App.nav('propboard')"
     );
-    App.VIEWS.pbecast = () => renderFeatureState(
-      'PBEcast',
-      'The visual concept stays in the product, but this workspace will not label game data LIVE until verified current play-by-play transport is connected.',
-      'Open NFL News',
-      "window.location.href='https://propbetedge.ai/news/nfl'"
-    );
+    /* PBEcast is deliberately NOT retired here any more. Verified live
+       play-by-play transport did get connected, and PBEcast v6 is the
+       production authority for the route. This module used to install a
+       placeholder that v4, v5 and finally v6 each overwrote — and it
+       reinstalled that placeholder a second time on DOMContentLoaded, part
+       way through the upgrade loader — so a hard refresh on #pbecast visibly
+       walked through every generation. ui-v2 does not own PBEcast. */
     App.VIEWS.injuries = () => renderFeatureState(
       'Injury Intelligence',
       'Legacy hardcoded injury cards are retired here. Verified NFL injury news remains available in the newsroom; structured official status will populate this workspace from current-season reporting.',

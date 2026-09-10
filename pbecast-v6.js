@@ -194,10 +194,39 @@
     }catch(_){return null}
   }
   async function load(){
-    clearTimeout(window.PBEcastV4?.state?.poll);clearTimeout(state.poll);state.date=sportsDay();restore();takeFocus();ensureRoot();patchAll();await refresh(true)
+    stopLegacyTransports();clearTimeout(state.poll);state.date=sportsDay();restore();takeFocus();ensureRoot();patchAll();await refresh(true)
   }
-  function install(){if(!window.App?.VIEWS)return false;clearTimeout(window.PBEcastV4?.state?.poll);App.VIEWS.pbecast=load;state.installed=true;if(document.querySelector('.pbecast4,.pbecast6'))setTimeout(load,20);return true}
 
-  window.PBEcastV6={state,load,refresh,focus,toggleSound,takeFocus};
+  /* v4 and v5 are out of the production runtime. If a stale cached copy of
+     either is still executing in someone's tab, silence its transport and its
+     observer rather than letting a second /api/nfl-live loop and a second
+     renderer run against this route. A no-op in the normal case. */
+  function stopLegacyTransports(){
+    try{
+      const v4=window.PBEcastV4;
+      if(v4?.state?.poll){clearTimeout(v4.state.poll);v4.state.poll=null}
+      window.PBEcastV5?.stop?.();
+    }catch(_){}
+  }
+
+  /* The nav entry belongs to whichever module owns the route; it was v5's
+     last, and v5 is retired. */
+  function labelNav(){
+    const nav=document.getElementById('nav-pbecast');
+    if(nav)nav.innerHTML='<span class="ni-icon">⚡</span> PBEcast <span class="nav-badge" style="color:#62e2a1;background:rgba(98,226,161,.10)">LIVE DATA</span>';
+  }
+
+  function install(){
+    if(!window.App?.VIEWS)return false;
+    stopLegacyTransports();
+    App.VIEWS.pbecast=load;
+    state.installed=true;
+    labelNav();
+    document.addEventListener('DOMContentLoaded',labelNav,{once:true});
+    if(document.querySelector('.pbecast4,.pbecast6'))setTimeout(load,20);
+    return true;
+  }
+
+  window.PBEcastV6={state,load,refresh,focus,toggleSound,takeFocus,stopLegacyTransports};
   if(!install())document.addEventListener('DOMContentLoaded',install,{once:true});
 })();

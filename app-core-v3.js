@@ -11,12 +11,50 @@
 
   let App = null;
   const rawViews = {};
+
+  /* ---- Terminal route authority ------------------------------------------
+     Several routes are built from stacked generations that all register the
+     same VIEWS key (PBEcast had four: a ui-v2 placeholder, v4, v5 and v6).
+     Because this Proxy replays the active route on every registration, and
+     because the upgrade loader replays the pending route after every module,
+     each generation repainted the live route in turn on a deep link. That is
+     the PBEcast refresh flash: placeholder -> v4 -> v5 -> v6, every load.
+
+     The loader therefore publishes window.PBEUpgrades: which routes still
+     have a terminal authority in flight, and when each one lands. Until a
+     declared route's authority has installed, nothing may paint that route
+     and nothing may boot into it — the document's own .view-loading state
+     stands instead. Once the authority has installed it OWNS the route: a
+     later generic or compatibility module cannot take it back.
+
+     This is a readiness contract, not a delay. Routes that declare no
+     terminal authority are unaffected and behave exactly as before. */
+  function upgrades() { return window.PBEUpgrades || null; }
+  function routeIsDeclared(route) {
+    const up = upgrades();
+    return !!(up && typeof up.declares === 'function' && up.declares(route));
+  }
+  function routeAuthorityReady(route) {
+    const up = upgrades();
+    if (!up || up.failed) return true;      // no loader present, or the loader genuinely failed
+    if (typeof up.ready !== 'function') return true;
+    return up.ready(route);
+  }
+  function routeAuthorityOwned(route) {
+    return routeIsDeclared(route) && routeAuthorityReady(route);
+  }
+
   const views = new Proxy(rawViews, {
     set(target, prop, value) {
-      target[prop] = value;
       const route = String(prop);
+      if (typeof rawViews[route] === 'function' && value !== rawViews[route] && routeAuthorityOwned(route)) {
+        console.warn('[pbe-route-ownership] refused reassignment of',route,'— terminal authority already installed');
+        return true;
+      }
+      target[prop] = value;
       queueMicrotask(() => {
         if (!App || typeof value !== 'function') return;
+        if (!App.booted) { App.bootWhenReady(); return; }
         if (App.current === route || App.pendingRoute === route) App.replayCurrent();
       });
       return true;
@@ -71,9 +109,15 @@
       return url.href;
     },
 
+    /* Is this route paintable right now? A route whose terminal authority is
+       still in flight is not: painting it would show a generation the loader
+       is about to replace. */
+    routeReady(route) { return routeAuthorityReady(this.normalize(route)); },
+
     renderRegistered(view) {
       const renderer = this.VIEWS[view];
       if (typeof renderer !== 'function') return false;
+      if (!routeAuthorityReady(view)) return false;
       try {
         this.pendingRoute = null;
         renderer();
@@ -128,6 +172,30 @@
       return false;
     },
 
+    /* The route this document was actually opened on. Boot readiness is
+       decided against it, never against 'home': deciding a #pbecast deep
+       link's boot on whether the dashboard happened to register yet is the
+       race this replaces. */
+    bootRoute() {
+      return this.normalize(String(location.hash || '').replace(/^#/,'') || this.current || 'home');
+    },
+
+    canBoot() {
+      const view = this.bootRoute();
+      return routeAuthorityReady(view) && typeof this.VIEWS[view] === 'function';
+    },
+
+    /* Boot the moment the opened route can actually be painted by the module
+       that owns it, and not before. Called on every view registration, on
+       every terminal-authority landing, and when the loader settles either
+       way — so there is no timer anywhere in this path. */
+    bootWhenReady() {
+      if (this.booted) { this.replayCurrent(); return false; }
+      if (!this.canBoot()) return false;
+      this.boot();
+      return true;
+    },
+
     toggleMobile() {
       document.getElementById('sidebar')?.classList.toggle('open');
       document.getElementById('mobile-overlay')?.classList.toggle('open');
@@ -139,8 +207,13 @@
         return;
       }
       this.booted = true;
-      const hash = String(location.hash || '').replace(/^#/,'');
-      const route = this.normalize(hash || this.current || 'home');
+      const route = this.bootRoute();
+      /* Claim the route before the deferred nav runs. Otherwise App.current
+         is still 'home' for that gap, and any module registering the home
+         view inside it would replay a dashboard over a deep link that is
+         about to become something else. */
+      this.current = route;
+      this.pendingRoute = route;
       setTimeout(() => this.nav(route,{ history:false }),0);
     }
   };
@@ -150,15 +223,29 @@
   // Compatibility stubs for upgrade modules that expect the historical globals to exist.
   window.HomeView = window.HomeView || { render() {} };
 
+  /* ---- Boot lifecycle -----------------------------------------------------
+     Three signals drive it, all of them facts rather than timings:
+
+       pbe:route-authority-ready  a declared route's terminal module installed
+       pbe:upgrades-ready         the loader finished the whole manifest
+       pbe:upgrades-failed        the loader gave up; nothing more is coming
+
+     plus every VIEWS registration (see the Proxy above). The DOMContentLoaded
+     path is the genuine-absence fallback only: if no upgrade loader ever
+     announced itself there is nothing to wait for, so boot on what we have.
+     Until one of these fires, the document's own .view-loading state stands. */
+  window.addEventListener('pbe:route-authority-ready',() => { App.bootWhenReady(); });
   window.addEventListener('pbe:upgrades-ready',() => {
     App.boot();
     setTimeout(() => App.replayCurrent(),0);
   });
+  window.addEventListener('pbe:upgrades-failed',() => {
+    App.boot();
+    setTimeout(() => App.replayCurrent(),0);
+  });
   document.addEventListener('DOMContentLoaded',() => {
-    setTimeout(() => {
-      if (!App.booted && typeof App.VIEWS.home === 'function') App.boot();
-      else App.replayCurrent();
-    },450);
+    if (window.PBEUpgrades) { App.bootWhenReady(); return; }
+    if (!App.booted) App.boot(); else App.replayCurrent();
   },{ once:true });
   window.addEventListener('hashchange',() => {
     App.params = readParams();
