@@ -186,7 +186,7 @@
     return LANE_ORDER.map(key => all[key]).filter(Boolean);
   }
   function degradedBanner(data) {
-    const bad = lanes(data).filter(l => l.state !== 'HEALTHY');
+    const bad = lanes(data).filter(l => l.critical !== false && l.state !== 'HEALTHY');
     const reason = data?.engine_runtime?.unavailable_reason;
     return `<section class="pbe2-degraded"><span>ENGINE DEGRADED</span><h2>The Picks Engine is not running normally</h2><p>This state comes from the engine's own persisted run records, not from this page. Nothing below should be read as a live evaluation until every critical lane reports healthy.</p><ul>${bad.length ? bad.map(l => `<li><b>${esc(l.label || l.lane)}</b> — ${esc(laneStateLabel(l.state))}${l.reason ? ` · ${esc(l.reason)}` : ''} · last run ${esc(ago(l.last_tick_at))}</li>`).join('') : `<li>${esc(reason || 'Run ledger unavailable')}</li>`}</ul></section>`;
   }
@@ -212,7 +212,14 @@
       ['Last engine evaluation', evaluated, outcome],
       ['Next eligible game', next, final ? `Latest final: ${final.away} ${final.away_score}–${final.home_score} ${final.home}` : ''],
     ];
-    const laneRows = lanes(data).map(l => `<div class="pbe2-lane" data-state="${esc(l.state)}"><i></i><div><strong>${esc(l.label || l.lane)}</strong><span>${esc(laneStateLabel(l.state))} · last run ${esc(ago(l.last_tick_at))}</span></div></div>`).join('');
+    /* A weekly, non-critical lane that has not reached its first run is waiting,
+     * not failing. It never makes the engine read as degraded. */
+    const laneRows = lanes(data).map(l => {
+      const waiting = l.critical === false && l.state === 'UNKNOWN';
+      const state = waiting ? 'WAITING' : l.state;
+      const line = waiting ? 'Weekly · first run pending' : `${laneStateLabel(l.state)} · last run ${ago(l.last_tick_at)}`;
+      return `<div class="pbe2-lane" data-state="${esc(state)}"><i></i><div><strong>${esc(l.label || l.lane)}</strong><span>${esc(line)}</span></div></div>`;
+    }).join('');
     return `<section class="pbe2-engine" aria-label="Picks Engine live progress"><div class="pbe2-engine-head"><span>Live engine · ${esc(data?.current?.season ?? d.season ?? '')} ${esc(data?.current?.season_type || '')} week ${esc(data?.current?.week ?? '—')}</span><b data-state="${esc(healthOf(data))}">${esc(laneStateLabel(healthOf(data)))}</b></div><div class="pbe2-engine-grid">${tiles.map(([label, value, sub]) => `<div class="pbe2-engine-tile"><span>${esc(label)}</span><strong>${esc(value)}</strong>${sub ? `<small>${esc(sub)}</small>` : ''}</div>`).join('')}</div><div class="pbe2-lanes">${laneRows || '<div class="pbe2-lane" data-state="UNKNOWN"><i></i><div><strong>Run ledger</strong><span>unavailable</span></div></div>'}</div><p class="pbe2-engine-note">Tracking decisions are real pregame decisions, frozen before kickoff and graded from the official final. They are never shown as picks and never enter the public record.</p></section>`;
   }
 

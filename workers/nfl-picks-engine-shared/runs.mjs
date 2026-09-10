@@ -21,10 +21,10 @@ export const LANES = Object.freeze({
   'nfl-game-picks-orchestrator': { label: 'Game decisions', tick_sla_s: 1800, work_sla_s: 13 * 3600, critical: true },
   'nfl-odds-snapshot': { label: 'Market tape + closing', tick_sla_s: 1800, work_sla_s: 20 * 3600, critical: true },
   'nfl-game-grader': { label: 'Game grading', tick_sla_s: 1800, work_sla_s: 26 * 3600, critical: true },
-  'nfl-weight-tuner': { label: 'Game champion/challenger', tick_sla_s: 8 * 86400, work_sla_s: 8 * 86400, critical: false },
+  'nfl-weight-tuner': { label: 'Game champion/challenger (weekly)', tick_sla_s: 8 * 86400, work_sla_s: 8 * 86400, critical: false },
   'nfl-prop-picks-orchestrator': { label: 'Prop decisions (pass yds)', tick_sla_s: 1800, work_sla_s: 13 * 3600, critical: true },
   'nfl-prop-picks-grader': { label: 'Prop grading', tick_sla_s: 1800, work_sla_s: 26 * 3600, critical: true },
-  'nfl-prop-picks-tuner': { label: 'Prop selector challenger', tick_sla_s: 8 * 86400, work_sla_s: 8 * 86400, critical: false },
+  'nfl-prop-picks-tuner': { label: 'Prop selector challenger (weekly)', tick_sla_s: 8 * 86400, work_sla_s: 8 * 86400, critical: false },
 });
 
 const key = (kind, lane) => `run:${kind}:${lane}`;

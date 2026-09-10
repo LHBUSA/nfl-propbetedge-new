@@ -57,6 +57,7 @@ function laneSummary(lane) {
   return {
     lane: lane.lane,
     label: lane.label,
+    critical: lane.critical === true,
     state: lane.state,
     reason: lane.reason,
     last_tick_at: lane.last_tick?.finished_at || null,
