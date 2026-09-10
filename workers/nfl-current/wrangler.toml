@@ -1,0 +1,18 @@
+name = "nfl-current"
+main = "src/index.js"
+compatibility_date = "2024-09-23"
+account_id = "fd3a233edadd0a60916413c1199f71ee"
+
+[vars]
+ENV = "production"
+
+[[kv_namespaces]]
+binding = "NFL_KV"
+id = "71eaad8fad534c419846db4efb321f8f"
+
+# Fires every two minutes; the handler itself decides whether an upstream call
+# is warranted. Live games refresh at ~60s, a kickoff window at ~120s, and an
+# idle league at ~15 minutes. Cadence is game-driven, and no refresh is ever
+# triggered by page traffic.
+[triggers]
+crons = ["*/2 * * * *"]

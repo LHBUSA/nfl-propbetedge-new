@@ -1,5 +1,6 @@
 const CDN = 'https://cdn.espn.com/core/nfl';
 const SITE = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl';
+const SITE_V2 = 'https://site.api.espn.com/apis/v2/sports/football/nfl';
 
 /* ---- Three lanes, because these things change at three different speeds ---
    Measured against the live NE @ SEA game on 2026-09-09/10. ESPN's own
@@ -251,7 +252,31 @@ export default async function handler(req,res){
   if(req.method==='OPTIONS'){res.statusCode=204;res.setHeader('access-control-allow-origin','*');res.setHeader('access-control-allow-methods','GET,OPTIONS');return res.end()}
   if(req.method!=='GET')return send(res,405,{ok:false,error:'method_not_allowed'});
   const event=S(req.query?.event).trim(),date=todayET(req.query?.date),layer=S(req.query?.layer).trim().toLowerCase();
+  const range=S(req.query?.range).trim(),standingsSeason=S(req.query?.standings).trim();
   try{
+    /* ---- provider adapter for the scheduler --------------------------------
+       ESPN's site.api answers Vercel but returns 403 to Cloudflare Worker
+       egress under every header combination tried, so the nfl-current worker —
+       which owns the cron, the KV cache and the derivation — reads the provider
+       through here rather than talking to ESPN directly. These two modes exist
+       for that worker; no page surface calls them. */
+    if(range){
+      if(!/^\d{8}-\d{8}$/.test(range))return send(res,400,{ok:false,error:'invalid_range',expected:'YYYYMMDD-YYYYMMDD'});
+      const raw=await upstream(`${SITE}/scoreboard?limit=100&dates=${encodeURIComponent(range)}`);
+      const games=findEvents(raw).map(game);
+      return send(res,200,{ok:true,mode:'range',range,count:games.length,
+        season:N(raw?.season?.year),season_type:N(raw?.season?.type),week:N(raw?.week?.number),
+        source:{provider:'espn_site_scoreboard',semantics:'SCOREBOARD',fetched_at:new Date().toISOString(),transport:'poll'},
+        games},'no-store');
+    }
+    if(standingsSeason){
+      if(!/^\d{4}$/.test(standingsSeason))return send(res,400,{ok:false,error:'invalid_season'});
+      const raw=await upstream(`${SITE_V2}/standings?season=${encodeURIComponent(standingsSeason)}&level=3`);
+      return send(res,200,{ok:true,mode:'standings',season:Number(standingsSeason),
+        source:{provider:'espn_site_standings',fetched_at:new Date().toISOString(),level:'division'},
+        standings:raw},'no-store');
+    }
+
     if(event){
       if(!/^\d+$/.test(event))return send(res,400,{ok:false,error:'invalid_event'});
 
