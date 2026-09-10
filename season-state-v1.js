@@ -174,8 +174,29 @@
     onReady(fn) { if (state.ready) { try { fn(state.data, state.error); } catch (_) {} } else listeners.push(fn); }
   };
 
+  /* The dashboard re-renders its own container on refresh, which removes an
+     element inserted above it. Rather than teach every dashboard generation
+     about this strip, watch the container and put it back whenever it is
+     missing while home is on screen. The re-insert is guarded so the observer
+     cannot see its own write and loop. */
+  let restoring = false;
+  function watchContainer() {
+    const vc = document.getElementById('view-container');
+    if (!vc || vc.__pbeSeasonWatched) return !!vc;
+    vc.__pbeSeasonWatched = true;
+    new MutationObserver(() => {
+      if (restoring) return;
+      if (window.App?.current !== 'home') return;
+      if (vc.querySelector('[data-pbe-season-strip]')) return;
+      restoring = true;
+      try { paintStrip(); } finally { setTimeout(() => { restoring = false; }, 0); }
+    }).observe(vc, { childList: true });
+    return true;
+  }
+
   load();
   state.timer = setInterval(() => { if (document.visibilityState !== 'hidden') load(); }, REFRESH_MS);
-  window.addEventListener('pbe:route-changed', paintStrip);
+  window.addEventListener('pbe:route-changed', () => { watchContainer(); paintStrip(); });
+  if (!watchContainer()) document.addEventListener('DOMContentLoaded', watchContainer, { once: true });
   document.addEventListener('visibilitychange', () => { if (document.visibilityState !== 'hidden' && Date.now() - state.fetchedAt > REFRESH_MS) load(); });
 })();
