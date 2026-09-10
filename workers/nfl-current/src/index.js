@@ -6,6 +6,7 @@
  * provider on a schedule; nothing is hardcoded, and nothing an LLM produced.
  *
  *   GET /api/season                       season/week/state contract
+ *   GET /api/current-games                every game in the window: state + score
  *   GET /api/standings?season=2026        division standings, live
  *   GET /api/current-stats?season=2026    current-season leaders, accumulated
  *   GET /api/current/health
@@ -50,6 +51,8 @@ const KEY = {
   season: s => `current:season:${s}`,
   standings: s => `current:standings:${s}`,
   stats: s => `current:stats:${s}`,
+  scores: s => `current:scores:${s}`,
+  games: 'current:games',
   tick: 'current:lasttick'
 };
 
@@ -115,6 +118,14 @@ function readGame(g) {
 
 /* ---- season contract ---------------------------------------------------- */
 async function buildSeason() {
+  return (await buildSeasonAndGames()).season;
+}
+
+/* One upstream call answers both questions: what season/week it is, and the
+   state of every game in the window. The picks engine needs the second — which
+   game is still pregame, which is FINAL and with what score — and must not keep
+   its own copy of "what week is it". */
+async function buildSeasonAndGames() {
   const board = await pbe(`range=${rangeAround()}`);
   const games = A(board?.games).map(readGame).filter(g => g.id);
   const now = Date.now();
@@ -136,7 +147,7 @@ async function buildSeason() {
      whatever happens next. A finished game is never the default. */
   const nextGame = live[0] || upcoming[0] || null;
 
-  return {
+  const payload = {
     ok: true,
     season,
     season_type: seasonType,
@@ -152,6 +163,18 @@ async function buildSeason() {
     last_updated: new Date().toISOString(),
     source: { provider: 'espn_site_scoreboard', via: 'nfl.propbetedge.ai/api/nfl-live?range', transport: 'poll' }
   };
+  const slate = {
+    ok: true,
+    season,
+    season_type: seasonType,
+    current_week: week,
+    window: payload.window,
+    counts: { games: games.length, final: finals.length, live: live.length, scheduled: games.filter(g => g.semantics === 'SCHEDULE').length },
+    games: games.slice().sort((a, b) => Date.parse(a.kickoff) - Date.parse(b.kickoff)),
+    last_updated: payload.last_updated,
+    source: payload.source
+  };
+  return { season: payload, slate };
 }
 
 /* ---- standings ---------------------------------------------------------- */
@@ -424,6 +447,54 @@ function currentPlayer(acc, espnId, teamHint, season, meta) {
   };
 }
 
+
+/* ---- scores ledger -----------------------------------------------------
+   The worker this replaces served a hardcoded array with every score null and
+   every status "scheduled", so Games & Schedule still showed NE @ SEA as an
+   upcoming game a day after it finished 13-10. Each refresh merges the
+   current window into a ledger keyed by event id, so a final, once recorded,
+   stays recorded as the window moves on. A score is carried only when the
+   game is live or final; a scheduled game has no score, not a zero. */
+async function refreshScores(env, season) {
+  const board = await pbe(`range=${rangeAround()}`);
+  const games = A(board?.games).map(readGame).filter(g => g.id && g.season === Number(season));
+  const prior = (await env.NFL_KV.get(KEY.scores(season), { type: 'json' })) || { season: Number(season), games: {} };
+  for (const g of games) {
+    const played = g.semantics === 'FINAL' || g.semantics === 'LIVE';
+    prior.games[g.id] = {
+      game_id: g.id,
+      season: g.season,
+      game_type: g.season_type,
+      week: g.week,
+      kickoff: g.kickoff,
+      away_team: g.away.abbreviation,
+      home_team: g.home.abbreviation,
+      away_score: played ? g.away.score : null,
+      home_score: played ? g.home.score : null,
+      status: g.semantics === 'FINAL' ? 'final' : g.semantics === 'LIVE' ? 'live' : 'scheduled',
+      semantics: g.semantics,
+      detail: g.detail
+    };
+  }
+  prior.updated = new Date().toISOString();
+  await env.NFL_KV.put(KEY.scores(season), JSON.stringify(prior), { expirationTtl: 200 * 86400 });
+  return prior;
+}
+
+function scoresPayload(ledger, season) {
+  const games = Object.values(ledger?.games || {}).sort((a, b) => Date.parse(a.kickoff) - Date.parse(b.kickoff));
+  return {
+    ok: true,
+    season: Number(season),
+    count: games.length,
+    live_count: games.filter(g => g.semantics === 'LIVE').length,
+    final_count: games.filter(g => g.semantics === 'FINAL').length,
+    source: { provider: 'espn_site_scoreboard', via: 'nfl.propbetedge.ai/api/nfl-live?range', semantics: 'SCOREBOARD', ledger: 'merged across refresh windows' },
+    last_updated: ledger?.updated || new Date().toISOString(),
+    games
+  };
+}
+
 /* ---- freshness ---------------------------------------------------------- */
 function withFreshness(payload, liveNow) {
   const t = Date.parse(payload?.last_updated || '');
@@ -447,10 +518,11 @@ async function refreshAll(env, reason) {
   let season = null, liveNow = false;
 
   try {
-    const s = await buildSeason();
+    const { season: s, slate } = await buildSeasonAndGames();
     season = s.season; liveNow = s.live_games > 0;
     await env.NFL_KV.put(KEY.season(s.season || 'current'), JSON.stringify(s), { expirationTtl: 86400 });
     await env.NFL_KV.put(KEY.season('current'), JSON.stringify(s), { expirationTtl: 86400 });
+    await env.NFL_KV.put(KEY.games, JSON.stringify(slate), { expirationTtl: 86400 });
     out.ok.season = { season: s.season, week: s.current_week, live: s.live_games, finals: s.completed_games_in_window };
   } catch (e) { out.errors.season = String(e?.message || e); }
 
@@ -460,6 +532,11 @@ async function refreshAll(env, reason) {
       await env.NFL_KV.put(KEY.standings(season), JSON.stringify(st), { expirationTtl: 86400 });
       out.ok.standings = { divisions: st.divisions.length, completed_games: st.completed_games };
     } catch (e) { out.errors.standings = String(e?.message || e); }
+
+    try {
+      const led = await refreshScores(env, season);
+      out.ok.scores = { games: Object.keys(led.games).length };
+    } catch (e) { out.errors.scores = String(e?.message || e); }
 
     try {
       const prior = await env.NFL_KV.get(KEY.stats(season), { type: 'json' });
@@ -518,7 +595,7 @@ export default {
           return json({ status: 'ok', rebuilt: true, refreshed: await refreshAll(env, 'rebuild') });
         }
         if (path.endsWith('/refresh') && force) return json({ status: 'ok', refreshed: await refreshAll(env, 'manual') });
-        return json({ status: 'ok', service: 'nfl-current', last_tick: tick, routes: ['/api/season', '/api/standings', '/api/current-stats', '/api/current-player'], generated_at: new Date().toISOString() });
+        return json({ status: 'ok', service: 'nfl-current', last_tick: tick, routes: ['/api/season', '/api/current-games', '/api/standings', '/api/current-stats', '/api/current-player', '/api/scores', '/api/stats'], generated_at: new Date().toISOString() });
       }
 
       if (path.endsWith('/current/diag')) {
@@ -545,6 +622,15 @@ export default {
         return json(withFreshness(s, s.live_games > 0));
       }
 
+      /* Every game in the season window with its provider state and score.
+         The picks engine reads this — not a schedule file, not a clock — to
+         decide what is still pregame, what is FINAL, and what a final is. */
+      if (path.startsWith('/api/current-games')) {
+        let g = force ? null : await cached(KEY.games);
+        if (!g) { g = (await buildSeasonAndGames()).slate; await env.NFL_KV.put(KEY.games, JSON.stringify(g), { expirationTtl: 86400 }); }
+        return json(withFreshness(g, (g.counts?.live || 0) > 0));
+      }
+
       if (path.startsWith('/api/standings')) {
         const season = Number(p.get('season')) || (await cached(KEY.season('current')))?.season;
         if (!season) return json({ ok: false, available: false, error: 'season_unresolved', unavailable_reason: 'current season could not be determined' }, 503);
@@ -558,6 +644,45 @@ export default {
         }
         const sc = await cached(KEY.season('current'));
         return json(withFreshness(st, (sc?.live_games || 0) > 0));
+      }
+
+      if (path.startsWith('/api/scores')) {
+        const sc = await cached(KEY.season('current'));
+        const season = Number(p.get('season')) || sc?.season;
+        if (!season) return json({ ok: false, error: 'season_unresolved' }, 503);
+        let led = force ? null : await cached(KEY.scores(season));
+        if (!led) {
+          try { led = await refreshScores(env, season); }
+          catch (e) { return json({ ok: false, available: false, season, error: 'scores_unavailable', unavailable_reason: String(e?.message || e) }, 503); }
+        }
+        return json(withFreshness(scoresPayload(led, season), (sc?.live_games || 0) > 0));
+      }
+
+      /* /api/stats used to answer ?season=2026 with 2025 finals stamped 2026.
+         This is the one place that knows which season is current, so it decides:
+         the current season comes from observed box scores or not at all, and a
+         past season goes to the archive worker, which labels it as that season. */
+      if (path.startsWith('/api/stats')) {
+        const sc = await cached(KEY.season('current'));
+        const current = sc?.season;
+        const asked = Number(p.get('season')) || current;
+        if (current && asked !== current) {
+          if (env.NFL_STATS) return await env.NFL_STATS.fetch(request);
+          return json({ ok: false, available: false, season: asked, error: 'archive_unreachable' }, 503);
+        }
+        const cat = S(p.get('category') || 'passing').toLowerCase();
+        const acc = current ? await cached(KEY.stats(current)) : null;
+        if (!acc) return json({ ok: false, available: false, season: asked, category: cat, leaders: [], error: 'current_stats_unavailable', unavailable_reason: 'current-season box scores not accumulated yet' }, 503);
+        const meta = { finalsCount: sc?.completed_games_in_window ?? A(acc.__processed).length, processed: A(acc.__processed).length, pendingCount: 0 };
+        const full = statsPayload(acc, current, meta);
+        const c = full.categories[cat];
+        return json(withFreshness({
+          ok: true, available: !!(c && c.leaders.length), season: current, category: cat,
+          leaders: c ? c.leaders : [], completed_games: full.completed_games,
+          updated: full.last_updated, last_updated: full.last_updated,
+          source: 'espn_box_scores_current_season',
+          unavailable_reason: c && c.leaders.length ? null : `no ${cat} production published for ${current} yet`
+        }, (sc?.live_games || 0) > 0));
       }
 
       if (path.startsWith('/api/current-player')) {

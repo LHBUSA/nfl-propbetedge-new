@@ -13,10 +13,29 @@
   async function fetchJson(url){const r=await fetch(url,{cache:'no-store',headers:{Accept:'application/json'}});if(!r.ok)throw new Error(`HTTP ${r.status}`);return r.json();}
   function arrayOf(payload){if(Array.isArray(payload))return payload;for(const key of ['games','schedule','data','events','results'])if(Array.isArray(payload?.[key]))return payload[key];return[];}
 
+  /* Wall-clock time in America/New_York -> the real instant, DST-aware, with
+     no date library: guess it as UTC, ask Intl what that instant looks like in
+     Eastern, and correct by the difference. */
+  function easternInstant(day,time){
+    const d=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(day||'')),t=/^(\d{1,2}):(\d{2})/.exec(String(time||''));
+    if(!d||!t)return null;
+    const guess=Date.UTC(+d[1],+d[2]-1,+d[3],+t[1],+t[2]);
+    const parts=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',hourCycle:'h23',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}).formatToParts(new Date(guess));
+    const g=k=>Number(parts.find(x=>x.type===k).value);
+    const asEastern=Date.UTC(g('year'),g('month')-1,g('day'),g('hour'),g('minute'));
+    return new Date(guess-(asEastern-guess)).toISOString();
+  }
   function normalize(raw,index){
     const away=raw?.away_team||raw?.away||raw?.awayTeam||raw?.visitor||raw?.visitor_team||raw?.away_name;
     const home=raw?.home_team||raw?.home||raw?.homeTeam||raw?.host||raw?.home_team_name||raw?.home_name;
-    const start=raw?.kickoff||raw?.start_time||raw?.game_time||raw?.commence_time||raw?.date||raw?.gameday||raw?.datetime;
+    /* nflverse schedules carry the kickoff as a separate gameday and an Eastern
+       gametime. Taking gameday alone parsed "2026-09-10" as UTC midnight —
+       Wednesday evening Eastern — so Thursday night's game read as already over
+       and the page named a Sunday game, at an invented Saturday time, as the
+       next kickoff. Combine the two in America/New_York instead. */
+    const start=raw?.kickoff||raw?.start_time||raw?.game_time||raw?.commence_time||raw?.datetime
+      ||(raw?.gameday&&raw?.gametime?easternInstant(raw.gameday,raw.gametime):null)
+      ||raw?.date||raw?.gameday;
     if(!away||!home||!start)return null;
     const week=num(raw?.week??raw?.week_number??raw?.game_week);
     const seasonType=String(raw?.season_type||raw?.seasonType||raw?.game_type||raw?.type||'REG').toUpperCase();
