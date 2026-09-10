@@ -12,18 +12,33 @@ SUPABASE_URL = "https://tkmlnhmylqnttmnsnief.supabase.co"
 NFL_GATEWAY = "https://nfl-api.propbetedge.ai"
 
 # Odds come through the EXISTING nfl-odds Worker, not a second provider key.
-# nfl-odds already serves h2h/spreads/totals on /api/odds for all 272 events
-# and caches them (verified: cache "hit", usage.last_cost 3). A service binding
-# therefore keeps one provider authority and one quota-control point, and adds
-# ZERO provider credits on a cache hit. No ODDS_API_KEY is duplicated.
+# nfl-odds serves h2h/spreads/totals on /api/odds for every event
+# from its scheduled KV snapshot (3 ingests/day). A service binding keeps one
+# provider authority and one quota-control point; reading it costs ZERO
+# provider credits. No ODDS_API_KEY is duplicated.
 [[services]]
 binding = "NFL_ODDS"
 service = "nfl-odds"
 
-# Two expressions rather than one */15 gated in code. Cloudflare exposes
-# event.cron, so the kickoff-window logic stays declarative instead of burning
-# ~2,880 invocations/day to perform ~30 useful ones.
+# Every 15 min: persist a NEW nfl-odds batch once, mark closings for games
+# that have kicked off, and record pre-kick prop closing quotes. Reads only
+# the nfl-odds KV snapshot; never the provider.
 [triggers]
-crons = ["0 */6 * * *", "*/15 * * * *"]
+crons = ["*/15 * * * *"]
 
 # Secrets (wrangler secret put): SUPABASE_SERVICE_ROLE_KEY
+
+# Durable run ledger (run:tick|work|ok|err:<lane>). Isolate memory is not
+# evidence that a cron ran; this namespace is.
+[[kv_namespaces]]
+binding = "PICKS_KV"
+id = "0e7c77bc62fa477ea8d1a1608fb69a62"
+
+# nfl-current is the only authority for season, week, kickoff and FINAL state.
+[[services]]
+binding = "NFL_CURRENT"
+service = "nfl-current"
+
+[observability]
+enabled = true
+head_sampling_rate = 1

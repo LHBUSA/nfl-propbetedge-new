@@ -11,11 +11,20 @@
  *   upserted on pick_id. A grade that would CHANGE an existing one is treated
  *   as an authoritative correction: it writes a correction_regrade audit event
  *   carrying the previous values, so history is appended to, never rewritten.
+ *
+ * FINAL comes from nfl-current (/api/current-games) — the same authority the
+ * rest of the product uses. The previous source, the gateway's /api/scores, is
+ * a static nflverse schedule with "no live score provider attached": it never
+ * reported a single 2026 final, so no game could ever be graded. The grader now
+ * runs every 15 minutes; a tick with nothing FINAL and unresolved costs one
+ * nfl-current read and one indexed query.
  */
 
 import {
-  select, insert, upsert, patch, audit,
+  select, upsert, patch, audit,
 } from '../../nfl-picks-engine-shared/supabase.mjs';
+import { loadSlate, gradable } from '../../nfl-picks-engine-shared/current-slate.mjs';
+import { recordRun, readLane, laneHealth } from '../../nfl-picks-engine-shared/runs.mjs';
 import {
   collectPlaysFromUrl, buildSeasonRatings, blendSeasons, toRatingRows,
   RATINGS_SOURCE, RATINGS_ALGO_VERSION,
@@ -27,30 +36,31 @@ import {
 } from '../../nfl-picks-engine-shared/pick-math.mjs';
 
 const SERVICE = 'nfl-game-grader';
-const VERSION = 'v1.0.0';
-
-const health = {
-  last_cron_run: null,
-  last_error_class: null,
-  /* Kept separate from last_error_class so a ratings-source failure is
-   * distinguishable from a grading/runtime failure at a glance. */
-  last_ratings_error_class: null,
-  last_result: null,
-};
+const VERSION = 'v1.1.0';
+/* Ratings are rebuilt from full nflverse play-by-play files — heavy, and only
+ * meaningful when a week's results change. Refresh when the latest completed
+ * week moves, and at most once a day otherwise. */
+const RATINGS_MAX_AGE_MS = 24 * 3600000;
 
 export default {
   async fetch(req, env) {
     const url = new URL(req.url);
     if (url.pathname === '/health') {
+      /* Evidence comes from the persisted run ledger, never from this isolate. */
+      const lane = laneHealth(SERVICE, await readLane(env, SERVICE));
       return json({
         service: SERVICE, version: VERSION,
-        last_cron_run: health.last_cron_run,
-        last_error_class: health.last_error_class,
-        last_ratings_error_class: health.last_ratings_error_class || null,
-        last_result: health.last_result,
+        health: lane.state,
+        health_reason: lane.reason,
+        last_tick: lane.last_tick,
+        last_work: lane.last_work,
+        last_ok_at: lane.last_ok_at,
+        last_error: lane.last_error,
         requirements: {
           SUPABASE_URL: Boolean(env.SUPABASE_URL),
           SUPABASE_SERVICE_ROLE_KEY: Boolean(env.SUPABASE_SERVICE_ROLE_KEY),
+          NFL_CURRENT_BINDING: Boolean(env.NFL_CURRENT),
+          PICKS_KV_BINDING: Boolean(env.PICKS_KV),
         },
       });
     }
@@ -58,56 +68,106 @@ export default {
   },
 
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(runGrading(env));
+    ctx.waitUntil(runGrading(env, event?.cron));
   },
 };
 
-async function runGrading(env) {
-  health.last_cron_run = new Date().toISOString();
+async function runGrading(env, cron) {
+  const base = { version: VERSION, cron: cron || null, started_at: new Date().toISOString() };
+  const counts = { finals_in_window: 0, eligible: 0, graded: 0, corrected: 0, unchanged: 0, awaiting_final: 0 };
+  let slate = null;
   try {
-    const finals = await finalScores(env);
+    slate = await loadSlate(env);
+    const finals = finalScores(slate);
+    counts.finals_in_window = finals.size;
+
     /* Killed picks are graded for CLV only: a kill is a model decision and the
      * tuner must see it. Superseded picks are NOT graded — the pick that
-     * replaced them is the live decision. */
-    const pending = await select(
-      env, 'nfl_game_picks',
-      'or=(status.eq.open,status.eq.killed)&select=*&limit=1000',
-    ) || [];
-
-    let graded = 0, corrected = 0, skipped = 0;
+     * replaced them is the live decision. Only decisions whose game is FINAL
+     * are fetched at all. */
+    const finalIds = [...finals.keys()];
+    const pending = finalIds.length
+      ? (await select(
+        env, 'nfl_game_picks',
+        `game_id=in.(${finalIds.map(id => `"${id}"`).join(',')})`
+        + '&or=(status.eq.open,status.eq.killed)&select=*&limit=1000',
+      ) || [])
+      : [];
+    counts.eligible = pending.length;
 
     for (const pick of pending) {
-      const final = finals.get(pick.game_id);
-      if (!final) { skipped += 1; continue; }
+      const outcome = await gradeOne(env, pick, finals.get(pick.game_id));
+      if (outcome === 'corrected') counts.corrected += 1;
+      else if (outcome === 'graded') counts.graded += 1;
+      else counts.unchanged += 1;
+    }
 
-      const outcome = await gradeOne(env, pick, final);
-      if (outcome === 'corrected') corrected += 1;
-      else if (outcome === 'graded') graded += 1;
-      else skipped += 1;
+    /* Unresolved decisions on games that have kicked off but are not FINAL
+     * yet. Visible so "waiting for a final" is distinguishable from "stuck". */
+    const liveIds = slate.games.filter(g => g.state === 'LIVE').map(g => `"${g.game_id}"`);
+    if (liveIds.length) {
+      const waiting = await select(
+        env, 'nfl_game_picks',
+        `game_id=in.(${liveIds.join(',')})&or=(status.eq.open,status.eq.killed)&select=id&limit=1000`,
+      ) || [];
+      counts.awaiting_final = waiting.length;
     }
 
     /* Ratings change exactly when games complete, so the refresh lives here.
      * It is deliberately AFTER grading and independently guarded: a ratings
      * failure must not lose a grade, and it must not be silently swallowed
      * either — it is recorded as its own error class. */
-    let ratings = 'skipped';
+    let ratings = 'not_due';
+    let ratingsError = null;
     try {
-      ratings = await refreshRatings(env);
-      /* Explicitly cleared so a stale failure from a previous run cannot make
-       * a healthy run look degraded. */
-      health.last_ratings_error_class = null;
+      ratings = await maybeRefreshRatings(env, slate);
     } catch (error) {
-      ratings = `failed:${errorClass(error)}`;
-      health.last_ratings_error_class = errorClass(error);
-      console.error(`[${SERVICE}] ratings refresh failed class=${errorClass(error)}`);
+      ratings = 'failed';
+      ratingsError = errorClass(error);
+      console.error(`[${SERVICE}] ratings refresh failed class=${ratingsError}`);
     }
 
-    health.last_result = `graded=${graded} corrected=${corrected} skipped=${skipped} ratings=${ratings}`;
-    health.last_error_class = null;
+    const worked = counts.graded || counts.corrected || (ratings !== 'not_due');
+    await recordRun(env, SERVICE, {
+      ...base,
+      status: ratingsError ? 'degraded' : 'ok',
+      reason: ratingsError ? `ratings_refresh_failed:${ratingsError}` : worked ? 'graded_or_refreshed' : 'nothing_final_unresolved',
+      error_class: ratingsError,
+      counts,
+      source_freshness: {
+        current_state_updated: slate.last_updated,
+        current_state_freshness: slate.freshness?.state || null,
+      },
+      detail: { public: { ratings, season: slate.season, week: slate.week } },
+    });
   } catch (error) {
-    health.last_error_class = errorClass(error);
-    console.error(`[${SERVICE}] grading failed class=${health.last_error_class}`);
+    console.error(`[${SERVICE}] grading failed class=${errorClass(error)} detail=${String(error?.message || error).slice(0, 160)}`);
+    await recordRun(env, SERVICE, {
+      ...base, status: 'failed', error_class: errorClass(error), counts,
+      source_freshness: slate ? { current_state_updated: slate.last_updated } : null,
+    });
   }
+}
+
+/* The completed-week signal the ratings job keys on, from nfl-current. */
+export function completedWeek(slate) {
+  const finals = (slate?.games || []).filter(g => g.state === 'FINAL' && g.season === slate.season && g.season_type === 'REG');
+  return { season: slate?.season, week: finals.length ? Math.max(...finals.map(g => Number(g.week) || 0)) : 0 };
+}
+
+async function maybeRefreshRatings(env, slate) {
+  const signal = completedWeek(slate);
+  let last = null;
+  try { last = await env.PICKS_KV?.get('ratings:last', { type: 'json' }); } catch (_) { last = null; }
+  const age = Date.now() - (Date.parse(last?.at || '') || 0);
+  const moved = !last || last.season !== signal.season || last.week !== signal.week;
+  if (!moved && age < RATINGS_MAX_AGE_MS) return 'not_due';
+  const result = await refreshRatings(env, signal);
+  try {
+    await env.PICKS_KV?.put('ratings:last', JSON.stringify({ ...signal, at: new Date().toISOString(), result }),
+      { expirationTtl: 30 * 86400 });
+  } catch (_) { /* next tick simply refreshes again */ }
+  return result;
 }
 
 /* ---------------------------------------------------------------------------
@@ -125,8 +185,7 @@ export function pbpUrl(season) {
   return `${PBP_BASE}/play_by_play_${season}.csv.gz`;
 }
 
-async function refreshRatings(env) {
-  const { season, week } = await completedSeasonWeek(env);
+async function refreshRatings(env, { season, week }) {
   if (!Number.isFinite(week) || week < 0) return 'no_week_signal';
 
   /* WEEK-1 BOOTSTRAP. Before any regular-season week has completed, Week 1
@@ -183,39 +242,6 @@ async function refreshRatings(env) {
     },
   });
   return `${usable}/${rows.length}@w${asOfWeek}${isBaseline ? ' (prior_only baseline)' : ''}`;
-}
-
-/* The most recent week with completed games — ratings are only refreshed for
- * weeks that actually finished. */
-/* The most recent COMPLETED REGULAR-SEASON week.
- *
- * Preseason must be excluded explicitly: a completed preseason week 3 would
- * otherwise outrank real regular-season weeks 1-3 in nfl_team_ratings, because
- * the orchestrator takes the highest as_of_week.
- *
- * Fails closed — if the payload carries no game_type at all we cannot prove
- * regular-season semantics, so we refuse rather than guess. */
-async function completedSeasonWeek(env) {
-  const base = String(env.NFL_GATEWAY || 'https://nfl-api.propbetedge.ai').replace(/\/$/, '');
-  const response = await fetch(`${base}/api/scores`, { cf: { cacheTtl: 0 } });
-  if (!response.ok) throw new Error(`gateway_${response.status}`);
-  const body = await response.json();
-  const games = Array.isArray(body?.games) ? body.games : [];
-
-  if (games.length && !games.some(g => g?.game_type !== undefined && g?.game_type !== null)) {
-    throw new Error('scores_missing_game_type');
-  }
-
-  const regular = games.filter(g => String(g?.game_type || '').toUpperCase() === 'REG');
-  const finals = regular.filter(g => {
-    const s = String(g?.semantics || '').toUpperCase();
-    const st = String(g?.status || '').toUpperCase();
-    return s === 'FINAL' || /FINAL|COMPLETE|CLOSED/.test(st);
-  });
-
-  const season = Number(body?.season || new Date().getUTCFullYear());
-  const week = finals.length ? Math.max(...finals.map(g => Number(g.week) || 0)) : 0;
-  return { season, week, regular_games: regular.length, completed_regular: finals.length };
 }
 
 /* QB tier comes from the injury/role source already feeding Injury
@@ -414,25 +440,18 @@ function sameGrade(a, b) {
  * Inputs
  * ------------------------------------------------------------------------ */
 
-async function finalScores(env) {
-  const base = String(env.NFL_GATEWAY || 'https://nfl-api.propbetedge.ai').replace(/\/$/, '');
-  const response = await fetch(`${base}/api/scores`, { cf: { cacheTtl: 0 } });
-  if (!response.ok) throw new Error(`gateway_${response.status}`);
-  const body = await response.json();
-  const games = Array.isArray(body?.games) ? body.games : [];
-
+/* FINAL results keyed by nflverse game_id, from nfl-current. Only the
+ * provider's own FINAL with both scores present counts — nothing is inferred
+ * from a clock. */
+export function finalScores(slate) {
   const out = new Map();
-  for (const game of games) {
-    const semantics = String(game?.semantics || '').toUpperCase();
-    const status = String(game?.status || '').toUpperCase();
-    const isFinal = semantics === 'FINAL' || /FINAL|COMPLETE|CLOSED/.test(status);
-    if (!isFinal) continue;
-    const home = Number(game.home_score), away = Number(game.away_score);
-    if (!Number.isFinite(home) || !Number.isFinite(away)) continue;
+  for (const game of slate?.games || []) {
+    if (!gradable(game)) continue;
     out.set(game.game_id, {
-      home_score: home,
-      away_score: away,
-      cancelled: /CANCEL|POSTPON/.test(status),
+      home_score: game.home_score,
+      away_score: game.away_score,
+      cancelled: false,
+      espn_id: game.espn_id,
     });
   }
   return out;

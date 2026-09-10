@@ -9,7 +9,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { inKickoffWindow } from '../../nfl-odds-snapshot/src/index.js';
+import { tapeRowsForBatch } from '../../nfl-odds-snapshot/src/index.js';
+import { parseSlate } from '../current-slate.mjs';
 import { evaluate } from '../../nfl-game-picks-orchestrator/src/index.js';
 import { computeGrade } from '../../nfl-game-grader/src/index.js';
 import {
@@ -79,15 +80,35 @@ function corpus({ n = 120, weeks = 4 } = {}) {
  * Brief acceptance #1 — snapshot windows
  * ----------------------------------------------------------------------- */
 
-test('[1] kickoff windows gate the quarter-hourly snapshot trigger', () => {
-  // Sunday 18:00 UTC — inside the Sunday afternoon window.
-  assert.equal(inKickoffWindow(new Date('2026-09-13T18:00:00Z')), true);
-  // Sunday 12:00 UTC — before the window opens.
-  assert.equal(inKickoffWindow(new Date('2026-09-13T12:00:00Z')), false);
-  // Thursday 23:00 UTC — TNF window.
-  assert.equal(inKickoffWindow(new Date('2026-09-10T23:00:00Z')), true);
-  // Wednesday — never a kickoff window.
-  assert.equal(inKickoffWindow(new Date('2026-09-09T23:00:00Z')), false);
+test('[1] the tape keeps primetime games and never records a post-kick market', () => {
+  const team = (abbr, score = null) => ({ abbreviation: abbr, score });
+  const slate = parseSlate({
+    ok: true, season: 2026, season_type: 'REG', current_week: 1,
+    games: [
+      // 8:35 PM ET Thursday = 00:35Z Friday. The old UTC-date join dropped it.
+      { id: '401872657', season: 2026, season_type: 'REG', week: 1, semantics: 'SCHEDULE', kickoff: '2026-09-11T00:35Z', away: team('SF'), home: team('LAR') },
+      { id: '401872656', season: 2026, season_type: 'REG', week: 1, semantics: 'FINAL', kickoff: '2026-09-10T00:20Z', away: team('NE', 10), home: team('SEA', 13) },
+    ],
+  });
+  const book = (price, point) => ({
+    key: 'b1', title: 'Book One', last_update: '2026-09-10T12:00:00Z',
+    markets: [{ key: 'totals', outcomes: [{ name: 'Over', price, point }, { name: 'Under', price, point }] }],
+  });
+  const odds = {
+    captured_at: '2026-09-10T12:00:46.000Z',
+    events: [
+      { id: 'x1', commence_time: '2026-09-11T00:35:00Z', away_team: 'San Francisco 49ers', home_team: 'Los Angeles Rams', bookmakers: [book(-110, 47.5)] },
+      // Already kicked off when observed: an in-game price, never tape.
+      { id: 'x2', commence_time: '2026-09-10T00:20:00Z', away_team: 'New England Patriots', home_team: 'Seattle Seahawks', bookmakers: [book(-110, 40.5)] },
+    ],
+  };
+  const out = tapeRowsForBatch(odds, slate.games, Date.parse('2026-09-10T15:00:00Z'));
+  assert.equal(out.unmapped, 0);
+  assert.equal(out.postKick, 1);
+  assert.ok(out.rows.length > 0);
+  assert.ok(out.rows.every(r => r.game_id === '2026_01_SF_LA'), 'ESPN LAR maps to nflverse LA');
+  // The row is stamped with the market's observation time, not the copy time.
+  assert.ok(out.rows.every(r => r.captured_at === odds.captured_at));
 });
 
 /* --------------------------------------------------------------------------

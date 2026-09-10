@@ -1,64 +1,84 @@
 /* nfl-prop-picks-grader — settles Algorithm #2 from authoritative FINAL box scores.
  *
  * v1 supports player_pass_yds only. Odds-provider event IDs are NEVER treated
- * as ESPN game IDs: the grader matches the frozen date + away/home matchup,
- * verifies FINAL semantics, then reads the labeled Passing/YDS box-score field.
+ * as ESPN game IDs: the grader matches the frozen away/home matchup and kickoff
+ * against nfl-current, requires nfl-current's FINAL, then reads the labeled
+ * Passing/YDS box-score field for that ESPN game.
+ *
+ * Runs every 15 minutes. A tick with no decision past kickoff costs one
+ * indexed query.
  */
 import { select, upsert, patch, insert } from '../../nfl-picks-engine-shared/supabase.mjs';
 import {
   unitsDelta, brierScore, devigTwoWay, clvProb, clvBeat, outcomeBit,
 } from '../../nfl-picks-engine-shared/pick-math.mjs';
 import { playerKey, PROP_MARKET } from '../../nfl-prop-picks-shared/prop-math.mjs';
+import { teamCodeFromName } from '../../nfl-picks-engine-shared/odds-normalize.mjs';
+import { loadSlate, gradable, matchGameForEvent } from '../../nfl-picks-engine-shared/current-slate.mjs';
+import { recordRun, readLane, laneHealth } from '../../nfl-picks-engine-shared/runs.mjs';
 
 const SERVICE = 'nfl-prop-picks-grader';
-const VERSION = 'v1.0.0';
-const health = { last_cron_run: null, last_error_class: null, last_result: null };
+const VERSION = 'v1.1.0';
 
 export default {
   async fetch(req, env) {
     const url = new URL(req.url);
     if (url.pathname !== '/health') return json({ error: 'not_found', service: SERVICE, version: VERSION }, 404);
+    const lane = laneHealth(SERVICE, await readLane(env, SERVICE));
     return json({
       service: SERVICE, version: VERSION,
-      last_cron_run: health.last_cron_run,
-      last_error_class: health.last_error_class,
-      last_result: health.last_result,
+      health: lane.state,
+      health_reason: lane.reason,
+      last_tick: lane.last_tick,
+      last_work: lane.last_work,
+      last_ok_at: lane.last_ok_at,
+      last_error: lane.last_error,
       market: PROP_MARKET,
       requirements: {
         SUPABASE_URL: Boolean(env.SUPABASE_URL),
         SUPABASE_SERVICE_ROLE_KEY: Boolean(env.SUPABASE_SERVICE_ROLE_KEY),
         NFL_SITE_URL: Boolean(env.NFL_SITE_URL),
+        NFL_CURRENT_BINDING: Boolean(env.NFL_CURRENT),
+        PICKS_KV_BINDING: Boolean(env.PICKS_KV),
       },
     });
   },
-  async scheduled(_event, env, ctx) { ctx.waitUntil(runGrading(env)); },
+  async scheduled(event, env, ctx) { ctx.waitUntil(runGrading(env, event?.cron)); },
 };
 
-async function runGrading(env) {
-  health.last_cron_run = new Date().toISOString();
+async function runGrading(env, cron) {
+  const base = { version: VERSION, cron: cron || null, started_at: new Date().toISOString() };
+  const counts = { past_kickoff: 0, graded: 0, corrected: 0, unchanged: 0, awaiting_final: 0 };
   try {
     const before = encodeURIComponent(new Date().toISOString());
     const picks = await select(
       env, 'nfl_prop_picks',
       `market=eq.${PROP_MARKET}&status=in.(open,killed)&kickoff_ts=lt.${before}&select=*&order=kickoff_ts.asc&limit=1000`,
     ) || [];
-    let graded = 0, corrected = 0, skipped = 0, unresolved = 0;
-    const finalCache = new Map();
-
-    for (const pick of picks) {
-      const final = await finalPlayerResult(env, pick, finalCache);
-      if (!final) { unresolved += 1; continue; }
-      const outcome = await gradeOne(env, pick, final);
-      if (outcome === 'graded') graded += 1;
-      else if (outcome === 'corrected') corrected += 1;
-      else skipped += 1;
+    counts.past_kickoff = picks.length;
+    if (!picks.length) {
+      await recordRun(env, SERVICE, { ...base, status: 'ok', reason: 'nothing_past_kickoff', counts });
+      return;
     }
 
-    health.last_result = `graded=${graded} corrected=${corrected} skipped=${skipped} unresolved=${unresolved}`;
-    health.last_error_class = null;
+    const slate = await loadSlate(env);
+    const finalCache = new Map();
+    for (const pick of picks) {
+      const final = await finalPlayerResult(env, pick, slate, finalCache);
+      if (!final) { counts.awaiting_final += 1; continue; }
+      const outcome = await gradeOne(env, pick, final);
+      if (outcome === 'graded') counts.graded += 1;
+      else if (outcome === 'corrected') counts.corrected += 1;
+      else counts.unchanged += 1;
+    }
+
+    await recordRun(env, SERVICE, {
+      ...base, status: 'ok', reason: counts.graded || counts.corrected ? 'graded' : 'awaiting_final', counts,
+      source_freshness: { current_state_updated: slate.last_updated },
+    });
   } catch (error) {
-    health.last_error_class = errorClass(error);
-    console.error(`[${SERVICE}] grading failed class=${health.last_error_class}`);
+    console.error(`[${SERVICE}] grading failed class=${errorClass(error)}`);
+    await recordRun(env, SERVICE, { ...base, status: 'failed', error_class: errorClass(error), counts });
   }
 }
 
@@ -175,25 +195,20 @@ async function closingFor(env, pick) {
   return { line: finiteOrNull(row.point), price: finiteOrNull(row.price), opposite_price: finiteOrNull(row.opposite_price) };
 }
 
-async function finalPlayerResult(env, pick, cache) {
+async function finalPlayerResult(env, pick, slate, cache) {
   const snapshot = pick.model_snapshot || {};
   const event = snapshot.event || {};
-  const away = event.away_team, home = event.home_team;
+  const away = teamCodeFromName(event.away_team), home = teamCodeFromName(event.home_team);
   if (!away || !home) return null;
-  const day = dateKeyET(pick.kickoff_ts);
-  const cacheKey = `${day}|${teamToken(away)}|${teamToken(home)}`;
+  /* nfl-current is the FINAL authority. The ESPN id it carries is used only to
+   * fetch that one game's published box score. */
+  const game = matchGameForEvent(slate.games, { away, home, commenceMs: Date.parse(pick.kickoff_ts) });
+  if (!gradable(game) || !/^\d+$/.test(String(game.espn_id || ''))) return null;
+  const cacheKey = game.espn_id;
 
   let detail = cache.get(cacheKey);
   if (detail === undefined) {
-    const scoreboard = await getJson(`${siteBase(env)}/api/nfl-live?date=${encodeURIComponent(day)}`).catch(() => null);
-    const game = (Array.isArray(scoreboard?.games) ? scoreboard.games : []).find(row =>
-      sameTeam(row?.teams?.away?.display_name, away)
-      && sameTeam(row?.teams?.home?.display_name, home));
-    if (!game || String(game?.status?.semantics || '').toUpperCase() !== 'FINAL' || !/^\d+$/.test(String(game.id || ''))) {
-      cache.set(cacheKey, null);
-      return null;
-    }
-    detail = await getJson(`${siteBase(env)}/api/nfl-live?event=${encodeURIComponent(game.id)}`).catch(() => null);
+    detail = await getJson(`${siteBase(env)}/api/nfl-live?event=${encodeURIComponent(game.espn_id)}`).catch(() => null);
     if (!detail || String(detail?.game?.status?.semantics || '').toUpperCase() !== 'FINAL') detail = null;
     cache.set(cacheKey, detail);
   }
@@ -253,20 +268,6 @@ function equalValue(a, b) {
 }
 function gradeSummary(row) {
   return { result: row?.result ?? null, final_value: row?.final_value ?? null, units_delta: row?.units_delta ?? null, clv_points: row?.clv_points ?? null, clv_prob: row?.clv_prob ?? null, brier: row?.brier ?? null };
-}
-function dateKeyET(value) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) throw new Error('bad_kickoff');
-  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(date);
-  const get = type => parts.find(part => part.type === type)?.value || '';
-  return `${get('year')}${get('month')}${get('day')}`;
-}
-function sameTeam(a, b) {
-  const x = teamToken(a), y = teamToken(b);
-  return Boolean(x && y && x === y);
-}
-function teamToken(value) {
-  return String(value || '').toUpperCase().replace(/[^A-Z0-9]+/g, ' ').trim().split(' ').filter(Boolean).at(-1) || '';
 }
 function statNumber(value) {
   const match = String(value ?? '').replace(/,/g, '').match(/-?\d+(?:\.\d+)?/);

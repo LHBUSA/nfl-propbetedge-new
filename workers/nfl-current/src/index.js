@@ -6,6 +6,7 @@
  * provider on a schedule; nothing is hardcoded, and nothing an LLM produced.
  *
  *   GET /api/season                       season/week/state contract
+ *   GET /api/current-games                every game in the window: state + score
  *   GET /api/standings?season=2026        division standings, live
  *   GET /api/current-stats?season=2026    current-season leaders, accumulated
  *   GET /api/current/health
@@ -50,6 +51,7 @@ const KEY = {
   season: s => `current:season:${s}`,
   standings: s => `current:standings:${s}`,
   stats: s => `current:stats:${s}`,
+  games: 'current:games',
   tick: 'current:lasttick'
 };
 
@@ -115,6 +117,14 @@ function readGame(g) {
 
 /* ---- season contract ---------------------------------------------------- */
 async function buildSeason() {
+  return (await buildSeasonAndGames()).season;
+}
+
+/* One upstream call answers both questions: what season/week it is, and the
+   state of every game in the window. The picks engine needs the second — which
+   game is still pregame, which is FINAL and with what score — and must not keep
+   its own copy of "what week is it". */
+async function buildSeasonAndGames() {
   const board = await pbe(`range=${rangeAround()}`);
   const games = A(board?.games).map(readGame).filter(g => g.id);
   const now = Date.now();
@@ -136,7 +146,7 @@ async function buildSeason() {
      whatever happens next. A finished game is never the default. */
   const nextGame = live[0] || upcoming[0] || null;
 
-  return {
+  const payload = {
     ok: true,
     season,
     season_type: seasonType,
@@ -152,6 +162,18 @@ async function buildSeason() {
     last_updated: new Date().toISOString(),
     source: { provider: 'espn_site_scoreboard', via: 'nfl.propbetedge.ai/api/nfl-live?range', transport: 'poll' }
   };
+  const slate = {
+    ok: true,
+    season,
+    season_type: seasonType,
+    current_week: week,
+    window: payload.window,
+    counts: { games: games.length, final: finals.length, live: live.length, scheduled: games.filter(g => g.semantics === 'SCHEDULE').length },
+    games: games.slice().sort((a, b) => Date.parse(a.kickoff) - Date.parse(b.kickoff)),
+    last_updated: payload.last_updated,
+    source: payload.source
+  };
+  return { season: payload, slate };
 }
 
 /* ---- standings ---------------------------------------------------------- */
@@ -447,10 +469,11 @@ async function refreshAll(env, reason) {
   let season = null, liveNow = false;
 
   try {
-    const s = await buildSeason();
+    const { season: s, slate } = await buildSeasonAndGames();
     season = s.season; liveNow = s.live_games > 0;
     await env.NFL_KV.put(KEY.season(s.season || 'current'), JSON.stringify(s), { expirationTtl: 86400 });
     await env.NFL_KV.put(KEY.season('current'), JSON.stringify(s), { expirationTtl: 86400 });
+    await env.NFL_KV.put(KEY.games, JSON.stringify(slate), { expirationTtl: 86400 });
     out.ok.season = { season: s.season, week: s.current_week, live: s.live_games, finals: s.completed_games_in_window };
   } catch (e) { out.errors.season = String(e?.message || e); }
 
@@ -518,7 +541,7 @@ export default {
           return json({ status: 'ok', rebuilt: true, refreshed: await refreshAll(env, 'rebuild') });
         }
         if (path.endsWith('/refresh') && force) return json({ status: 'ok', refreshed: await refreshAll(env, 'manual') });
-        return json({ status: 'ok', service: 'nfl-current', last_tick: tick, routes: ['/api/season', '/api/standings', '/api/current-stats', '/api/current-player'], generated_at: new Date().toISOString() });
+        return json({ status: 'ok', service: 'nfl-current', last_tick: tick, routes: ['/api/season', '/api/current-games', '/api/standings', '/api/current-stats', '/api/current-player'], generated_at: new Date().toISOString() });
       }
 
       if (path.endsWith('/current/diag')) {
@@ -543,6 +566,15 @@ export default {
         let s = force ? null : await cached(KEY.season('current'));
         if (!s) { s = await buildSeason(); await env.NFL_KV.put(KEY.season('current'), JSON.stringify(s), { expirationTtl: 86400 }); }
         return json(withFreshness(s, s.live_games > 0));
+      }
+
+      /* Every game in the season window with its provider state and score.
+         The picks engine reads this — not a schedule file, not a clock — to
+         decide what is still pregame, what is FINAL, and what a final is. */
+      if (path.startsWith('/api/current-games')) {
+        let g = force ? null : await cached(KEY.games);
+        if (!g) { g = (await buildSeasonAndGames()).slate; await env.NFL_KV.put(KEY.games, JSON.stringify(g), { expirationTtl: 86400 }); }
+        return json(withFreshness(g, (g.counts?.live || 0) > 0));
       }
 
       if (path.startsWith('/api/standings')) {

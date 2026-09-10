@@ -282,17 +282,25 @@ test('a real regular week outranks the week-0 baseline', () => {
   assert.ok(week1.as_of_week > baseline.as_of_week);
 });
 
-test('preseason finals cannot advance the regular-season week', () => {
-  const block = grader.slice(grader.indexOf('async function completedSeasonWeek'),
-    grader.indexOf('async function qbTierMap'));
-  assert.match(block, /game_type/);
-  assert.match(block, /=== 'REG'/);
-  assert.match(block, /scores_missing_game_type/, 'must fail closed without game_type');
+test('preseason finals cannot advance the regular-season week', async () => {
+  const { completedWeek } = await import('../../nfl-game-grader/src/index.js');
+  const { parseSlate } = await import('../current-slate.mjs');
+  const team = (abbr, score) => ({ abbreviation: abbr, score });
+  const slate = parseSlate({
+    ok: true, season: 2026, season_type: 'REG', current_week: 1,
+    games: [
+      { id: '1', season: 2026, season_type: 'PRE', week: 3, semantics: 'FINAL', kickoff: '2026-08-28T00:00Z', away: team('NE', 10), home: team('NYG', 20) },
+      { id: '2', season: 2026, season_type: 'REG', week: 1, semantics: 'FINAL', kickoff: '2026-09-10T00:20Z', away: team('NE', 10), home: team('SEA', 13) },
+    ],
+  });
+  // A preseason game has no nflverse regular-season id, so it never enters the slate.
+  assert.equal(slate.games.length, 1);
+  assert.deepEqual(completedWeek(slate), { season: 2026, week: 1 });
 });
 
 test('the baseline pass uses no current-season plays', () => {
   const block = grader.slice(grader.indexOf('async function refreshRatings'),
-    grader.indexOf('async function completedSeasonWeek'));
+    grader.indexOf('async function qbTierMap'));
   assert.match(block, /const isBaseline = week === 0/);
   assert.match(block, /!isBaseline && current/);
 });
@@ -342,21 +350,15 @@ test('attribution is required per market by a database constraint', () => {
  * Observability: ratings failure vs grading failure must be distinguishable
  * --------------------------------------------------------------------- */
 
-test('health exposes last_ratings_error_class separately from last_error_class', () => {
-  assert.match(grader, /last_ratings_error_class:\s*null/, 'must be initialized');
-  assert.match(grader, /last_ratings_error_class:\s*health\.last_ratings_error_class \|\| null/,
-    'must be exposed on /health');
-});
-
-test('a successful ratings refresh clears any previous ratings error', () => {
-  const block = grader.slice(grader.indexOf("let ratings = 'skipped'"),
-    grader.indexOf('health.last_result = `graded='));
-  assert.match(block, /health\.last_ratings_error_class = null/, 'must clear on success');
-  assert.match(block, /health\.last_ratings_error_class = errorClass\(error\)/,
-    'must record the class on failure');
-  // The two error channels stay independent.
-  assert.equal(/health\.last_error_class = errorClass\(error\)/.test(block), false,
-    'a ratings failure must not overwrite the grading error class');
+test('a ratings failure is recorded as its own class and never loses a grade', () => {
+  const block = grader.slice(grader.indexOf("let ratings = 'not_due'"),
+    grader.indexOf('} catch (error) {', grader.indexOf('await recordRun(env, SERVICE, {')));
+  // Ratings are refreshed AFTER grading, inside their own try.
+  assert.ok(grader.indexOf('await gradeOne(') < grader.indexOf('maybeRefreshRatings(env, slate)'));
+  assert.match(block, /ratingsError = errorClass\(error\)/, 'must record the class on failure');
+  assert.match(block, /ratings_refresh_failed:/, 'must be distinguishable in the ledger');
+  // A ratings failure degrades the run; it is not a grading failure.
+  assert.match(block, /status: ratingsError \? 'degraded' : 'ok'/);
 });
 
 test('the grader still exposes no manual grading trigger', () => {

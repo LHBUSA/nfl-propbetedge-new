@@ -1,16 +1,28 @@
 name = "nfl-prop-picks-tuner"
 main = "src/index.js"
 compatibility_date = "2026-08-30"
+account_id = "fd3a233edadd0a60916413c1199f71ee"
 workers_dev = true
 preview_urls = false
 
 [vars]
 SUPABASE_URL = "https://tkmlnhmylqnttmnsnief.supabase.co"
 
+# Tuesday 18:00 UTC (named day; Cloudflare counts 1=Sunday).
 [triggers]
-crons = ["0 18 * * 2"]
+crons = ["0 18 * * TUE"]
 
 # Required secret:
 # SUPABASE_SERVICE_ROLE_KEY
 #
 # No manual train or promote route. The hard sample gate lives in code.
+
+# Durable run ledger (run:tick|work|ok|err:<lane>). Isolate memory is not
+# evidence that a cron ran; this namespace is.
+[[kv_namespaces]]
+binding = "PICKS_KV"
+id = "0e7c77bc62fa477ea8d1a1608fb69a62"
+
+[observability]
+enabled = true
+head_sampling_rate = 1

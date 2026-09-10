@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   computePropGrade, propClvPoints, passingYards,
 } from '../workers/nfl-prop-picks-grader/src/index.js';
-import { exactClosingQuote } from '../workers/nfl-prop-picks-orchestrator/src/index.js';
+import { exactPropQuote } from '../workers/nfl-odds-snapshot/src/index.js';
 
 const basePick = {
   id: '00000000-0000-0000-0000-000000000001',
@@ -84,24 +84,38 @@ test('prop CLV direction is positive when market moves toward our side', () => {
   assert.equal(propClvPoints('OVER', 250.5, 245.5), -5);
 });
 
+/* Prop closing quotes are read from the nfl-odds board snapshot (the market
+ * tape owner is nfl-odds-snapshot). Same book, same player, same side, and the
+ * opposite side at the SAME point from the SAME book. */
+const q = (book, player, direction, point, price) => ({ book, player, direction, point, price, market: 'player_pass_yds' });
+
 test('closing tape requires same book, side and exact current line for opposite quote', () => {
-  const rows = [
-    { book: 'Book A', side: 'OVER', current: { point: 255.5, price: -115, captured_at: '2026-09-10T00:00:00Z' } },
-    { book: 'Book A', side: 'UNDER', current: { point: 255.5, price: -105, captured_at: '2026-09-10T00:00:00Z' } },
-    { book: 'Book B', side: 'UNDER', current: { point: 255.5, price: -120, captured_at: '2026-09-10T00:00:00Z' } },
+  const quotes = [
+    q('Book A', 'Brock Purdy', 'OVER', 255.5, -115),
+    q('Book A', 'Brock Purdy', 'UNDER', 255.5, -105),
+    q('Book B', 'Brock Purdy', 'UNDER', 255.5, -120),
+    q('Book A', 'Matthew Stafford', 'UNDER', 255.5, -130),
   ];
-  assert.deepEqual(exactClosingQuote(rows, { book: 'Book A', side: 'OVER' }), {
+  assert.deepEqual(exactPropQuote(quotes, { book: 'Book A', side: 'OVER', player_key: 'brock purdy' }), {
     point: 255.5,
     price: -115,
     opposite_price: -105,
-    observed_at: '2026-09-10T00:00:00Z',
   });
 });
 
 test('closing tape refuses mismatched two-way lines', () => {
-  const rows = [
-    { book: 'Book A', side: 'OVER', current: { point: 255.5, price: -115, captured_at: '2026-09-10T00:00:00Z' } },
-    { book: 'Book A', side: 'UNDER', current: { point: 256.5, price: -105, captured_at: '2026-09-10T00:00:00Z' } },
+  const quotes = [
+    q('Book A', 'Brock Purdy', 'OVER', 255.5, -115),
+    q('Book A', 'Brock Purdy', 'UNDER', 256.5, -105),
   ];
-  assert.equal(exactClosingQuote(rows, { book: 'Book A', side: 'OVER' }), null);
+  assert.equal(exactPropQuote(quotes, { book: 'Book A', side: 'OVER', player_key: 'brock purdy' }), null);
+});
+
+test('closing tape never pairs across books or players', () => {
+  const quotes = [
+    q('Book A', 'Brock Purdy', 'OVER', 255.5, -115),
+    q('Book B', 'Brock Purdy', 'UNDER', 255.5, -105),
+    q('Book A', 'Matthew Stafford', 'UNDER', 255.5, -105),
+  ];
+  assert.equal(exactPropQuote(quotes, { book: 'Book A', side: 'OVER', player_key: 'brock purdy' }), null);
 });

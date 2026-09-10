@@ -1,19 +1,44 @@
 name = "nfl-prop-picks-orchestrator"
 main = "src/index.js"
 compatibility_date = "2026-08-30"
+account_id = "fd3a233edadd0a60916413c1199f71ee"
 workers_dev = true
 preview_urls = false
 
 [vars]
 SUPABASE_URL = "https://tkmlnhmylqnttmnsnief.supabase.co"
 NFL_GATEWAY = "https://nfl-api.propbetedge.ai"
-NFL_INTELLIGENCE_URL = "https://pbe-nfl-intelligence.sales-fd3.workers.dev"
 
+# One quarter-hour trigger; the Worker decides from nfl-current game state
+# whether a tick does work (15 min near kickoff, hourly on game day, 6h
+# otherwise). No tick contacts the odds provider.
 [triggers]
-crons = ["7 * * * *", "*/15 * * * *"]
+crons = ["*/15 * * * *"]
 
 # Required secret:
 # SUPABASE_SERVICE_ROLE_KEY
 #
 # Deliberately absent:
-# ODDS_API_KEY — this selector consumes PBE NFL Intelligence's persisted tape.
+# ODDS_API_KEY — this selector reads nfl-odds' persisted snapshot through the
+# NFL_ODDS binding. It never calls a provider and never calls
+# pbe-nfl-intelligence (a separate product with its own provider key).
+
+# Durable run ledger (run:tick|work|ok|err:<lane>). Isolate memory is not
+# evidence that a cron ran; this namespace is.
+[[kv_namespaces]]
+binding = "PICKS_KV"
+id = "0e7c77bc62fa477ea8d1a1608fb69a62"
+
+# nfl-current is the only authority for season, week, kickoff and FINAL state.
+[[services]]
+binding = "NFL_CURRENT"
+service = "nfl-current"
+
+# Market reads go through nfl-odds' persisted KV snapshot. Zero provider spend.
+[[services]]
+binding = "NFL_ODDS"
+service = "nfl-odds"
+
+[observability]
+enabled = true
+head_sampling_rate = 1

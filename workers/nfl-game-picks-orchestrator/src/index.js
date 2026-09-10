@@ -24,18 +24,34 @@ import {
 } from '../../nfl-picks-engine-shared/stadiums.mjs';
 import { ratingUsable } from '../../nfl-picks-engine-shared/ratings.mjs';
 import {
+  loadSlate, issuable, cadenceDecision,
+} from '../../nfl-picks-engine-shared/current-slate.mjs';
+import {
+  recordRun, readAllLanes, overallHealth, lastWorkRecord, readLane, laneHealth,
+} from '../../nfl-picks-engine-shared/runs.mjs';
+import {
   championPublishable, isTrainedChampion, issuanceScope, isCustomerFacing,
   UNTRAINED_STATE, SCOPE_OFFICIAL, SCOPE_TRACKING,
 } from '../../nfl-picks-engine-shared/champion.mjs';
 
 const SERVICE = 'nfl-game-picks-orchestrator';
-const VERSION = 'v1.0.0';
+const VERSION = 'v1.1.0';
 const PICK_HORIZON_DAYS = 7;
+/* The market tape is refreshed by the scheduled nfl-odds ingest (08/13/18 ET),
+ * so the longest normal gap is ~14h (18:00 -> 08:00). A decision is never made
+ * against a tape older than twice that. */
+const TAPE_MAX_AGE_MS = 28 * 3600000;
 
-const health = {
-  last_cron_run: null, last_error_class: null, last_result: null,
-  engine_state: 'ENGINE WAITING — upcoming slate not ready',
-};
+/* Per-invocation scratch only. Nothing here is reported as evidence of a run —
+ * /health reads the durable ledger in KV. */
+let health = {};
+function resetHealth() {
+  health = {
+    engine_state: 'ENGINE WAITING — upcoming slate not ready',
+    last_result: null, last_error_class: null,
+  };
+}
+resetHealth();
 
 export default {
   async fetch(req, env) {
@@ -47,18 +63,38 @@ export default {
     }
 
     if (url.pathname === '/health') {
+      /* Evidence comes from the persisted run ledger, never from this isolate. */
+      const lane = laneHealth(SERVICE, await readLane(env, SERVICE));
       return json({
         service: SERVICE,
         version: VERSION,
-        last_cron_run: health.last_cron_run,
-        last_error_class: health.last_error_class,
-        last_result: health.last_result,
-        engine_state: health.engine_state,
+        health: lane.state,
+        health_reason: lane.reason,
+        last_tick: lane.last_tick,
+        last_work: lane.last_work,
+        last_ok_at: lane.last_ok_at,
+        last_error: lane.last_error,
         requirements: {
           SUPABASE_URL: Boolean(env.SUPABASE_URL),
           SUPABASE_SERVICE_ROLE_KEY: Boolean(env.SUPABASE_SERVICE_ROLE_KEY),
           PICKS_INTERNAL_TOKEN: Boolean(env.PICKS_INTERNAL_TOKEN),
+          NFL_CURRENT_BINDING: Boolean(env.NFL_CURRENT),
+          PICKS_KV_BINDING: Boolean(env.PICKS_KV),
         },
+      }, 200, origin, env);
+    }
+
+    /* Public-safe engine runtime evidence for the read contracts: per-lane
+     * health from the durable ledger. Counts, timestamps and error classes
+     * only — no pick, side, edge or feature ever appears here. */
+    if (url.pathname === '/v1/engine/runs' && req.method === 'GET') {
+      const lanes = await readAllLanes(env);
+      return json({
+        service: SERVICE, version: VERSION,
+        generated_at: new Date().toISOString(),
+        overall: overallHealth(lanes.filter(l => !l.lane.startsWith('nfl-prop'))),
+        overall_props: overallHealth(lanes.filter(l => l.lane.startsWith('nfl-prop'))),
+        lanes: lanes.map(publicLane),
       }, 200, origin, env);
     }
 
@@ -74,9 +110,57 @@ export default {
   },
 
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(runOrchestration(env));
+    ctx.waitUntil(scheduledTick(env, event));
   },
 };
+
+/* Only the `public` block of a run's detail leaves the Worker. */
+function publicLane(l) {
+  const strip = r => r ? {
+    status: r.status, reason: r.reason, error_class: r.error_class, started_at: r.started_at,
+    finished_at: r.finished_at, version: r.version, counts: r.counts, source_freshness: r.source_freshness,
+    detail: r.detail && r.detail.public ? r.detail.public : null,
+  } : null;
+  return { ...l, last_tick: strip(l.last_tick), last_work: strip(l.last_work) };
+}
+
+/* One cron (every 15 min). The cadence decision reads nfl-current and our own
+ * persisted tape — neither costs a provider credit. */
+async function scheduledTick(env, event) {
+  const startedAt = new Date();
+  const base = { version: VERSION, cron: event?.cron || null, started_at: startedAt.toISOString() };
+  let slate;
+  try {
+    slate = await loadSlate(env);
+  } catch (error) {
+    await recordRun(env, SERVICE, { ...base, status: 'degraded', reason: 'current_state_unavailable', error_class: errorClass(error) });
+    console.error(`[${SERVICE}] current state unavailable class=${errorClass(error)}`);
+    return;
+  }
+  const last = await lastWorkRecord(env, SERVICE);
+  const tape = await latestTapeCapturedAt(env).catch(() => null);
+  const lastTape = last?.source_freshness?.tape_captured_at || null;
+  const decision = cadenceDecision({
+    games: slate.games,
+    nowMs: startedAt.getTime(),
+    lastWorkMs: Date.parse(last?.finished_at || '') || null,
+    newTape: Boolean(tape && lastTape && Date.parse(tape) > Date.parse(lastTape)),
+  });
+  if (!decision.go) {
+    await recordRun(env, SERVICE, {
+      ...base, status: 'skipped', reason: decision.reason,
+      detail: { public: { tier: decision.tier } },
+      source_freshness: { tape_captured_at: tape, current_state_updated: slate.last_updated },
+    });
+    return;
+  }
+  await runOrchestration(env, slate, { ...base, tier: decision.tier, cadence_reason: decision.reason });
+}
+
+async function latestTapeCapturedAt(env) {
+  const rows = await select(env, 'nfl_odds_snapshots', 'select=captured_at&order=captured_at.desc&limit=1');
+  return Array.isArray(rows) && rows[0] ? rows[0].captured_at : null;
+}
 
 /* ---------------------------------------------------------------------------
  * Read contract
@@ -122,7 +206,7 @@ function proView(pick) {
 async function currentPicks(req, env, origin) {
   const full = isInternal(req, env);
   try {
-    const { season, week } = await currentSeasonWeek(env);
+    const { season, week } = await loadSlate(env);
 
     /* Customer-facing surfaces filter on publication_scope, NOT on the
      * champion's current trained flag. A bootstrap tracking row must stay
@@ -207,7 +291,7 @@ async function engineState(req, env, origin) {
   try {
     const champion = await latestPromotedWeights(env).catch(() => null);
     const observations = await select(
-      env, 'nfl_learning_observations', 'select=week,season&limit=2000',
+      env, 'nfl_learning_observations', 'select=week,season,publication_scope&limit=5000',
     ) || [];
     const weeks = new Set(observations.map(o => `${o.season}-${o.week}`));
     const graded = observations.length;
@@ -243,8 +327,15 @@ async function engineState(req, env, origin) {
  * Orchestration
  * ------------------------------------------------------------------------ */
 
-async function runOrchestration(env) {
-  health.last_cron_run = new Date().toISOString();
+async function runOrchestration(env, slate, base) {
+  resetHealth();
+  const evaluations = [];
+  const counts = {
+    eligible_games: 0, evaluated_games: 0, no_tape: 0, stale_tape: 0,
+    emitted: 0, kept: 0, killed: 0, superseded: 0, pass: 0, ratings_blocked: 0, scope_drain: 0,
+  };
+  let issuance = null;
+  let newestTape = null;
   try {
     const champion = await latestPromotedWeights(env);
 
@@ -252,37 +343,48 @@ async function runOrchestration(env) {
      * slate work. An untrained champion still evaluates real slates and
      * persists real pregame decisions, but as `tracking` — never as an
      * official customer-facing pick. */
-    const issuance = issuanceScope(champion);
-    health.champion_version = champion?.version ?? null;
-    health.champion_trained = isTrainedChampion(champion);
-    health.issuance_mode = issuance.mode;
-    health.issuance_scope = issuance.scope;
-    health.publication_blocked_reason = issuance.reason;
+    issuance = issuanceScope(champion);
 
     if (!issuance.canIssue) {
       health.engine_state = issuance.state;
-      health.last_result = `issuance_blocked:${issuance.reason}`;
-      health.last_error_class = null;
+      await recordRun(env, SERVICE, {
+        ...base, status: 'degraded', reason: `issuance_blocked:${issuance.reason}`,
+        counts, detail: { public: { tier: base.tier, engine_state: issuance.state } },
+      });
       console.log(`[${SERVICE}] issuance blocked ${issuance.reason} — emitting nothing`);
       return;
     }
 
-    const { season, week } = await currentSeasonWeek(env);
-    const games = await upcomingGames(env);
+    /* Season and week come from nfl-current. So does eligibility: a game is
+     * issuable only while the provider still calls it scheduled and its REAL
+     * kickoff is ahead of us — a completed game can never be re-opened. */
+    const season = slate.season;
+    const now = Date.now();
+    const games = slate.games
+      .filter(g => issuable(g, now, PICK_HORIZON_DAYS * 86400000))
+      .sort((a, b) => a.kickoff_ms - b.kickoff_ms);
+    counts.eligible_games = games.length;
 
     if (!games.length) {
-      health.engine_state = 'ENGINE WAITING — upcoming slate not ready';
-      health.last_result = 'no_upcoming_games';
-      health.last_error_class = null;
+      health.engine_state = issuance.scope === SCOPE_TRACKING
+        ? UNTRAINED_STATE
+        : 'ENGINE WAITING — upcoming slate not ready';
+      await recordRun(env, SERVICE, {
+        ...base, status: 'ok', reason: 'no_issuable_games', counts,
+        detail: { public: { tier: base.tier, engine_state: health.engine_state, next_game: null } },
+      });
       return;
     }
 
     const ratings = await teamRatings(env, season);
-    const rest = await restDays(env);
-    let emitted = 0, killed = 0, superseded = 0, kept = 0, ratingsBlocked = 0, scopeDrain = 0;
+    /* Rest days are calendar arithmetic on the published schedule; they do not
+     * depend on live state. A failure here is not fatal — every team is then
+     * scored on the documented 7-day default, which the snapshot records. */
+    const rest = await restDays(env).catch(() => new Map());
     const blockedReasons = new Set();
 
     for (const game of games) {
+      const week = game.week;
       /* Rest is derived from the full schedule, not the 7-day window, so a
        * team's previous game is visible even when it falls outside it. */
       const gameRest = rest.get(game.game_id) || {};
@@ -290,12 +392,33 @@ async function runOrchestration(env) {
       game.rest_away = gameRest[game.away_team] ?? 7;
 
       const odds = await latestOddsFor(env, game.game_id);
-      if (!odds.size) continue;
+      const tapeAt = odds.captured_at || null;
+      if (tapeAt && (!newestTape || Date.parse(tapeAt) > Date.parse(newestTape))) newestTape = tapeAt;
+      const record = {
+        game_id: game.game_id,
+        espn_id: game.espn_id,
+        matchup: `${game.away_team} @ ${game.home_team}`,
+        kickoff_ts: game.kickoff_ts,
+        tape_captured_at: tapeAt,
+        books: odds.books || 0,
+        markets: [],
+      };
+      evaluations.push(record);
+
+      if (!odds.size) { counts.no_tape += 1; record.outcome = 'no_market_tape'; continue; }
+      /* Never decide on a market we have not observed recently. */
+      if (!tapeAt || now - Date.parse(tapeAt) > TAPE_MAX_AGE_MS) {
+        counts.stale_tape += 1;
+        record.outcome = 'stale_market_tape';
+        continue;
+      }
       const weather = await weatherFor(game);
+      counts.evaluated_games += 1;
+      record.outcome = 'evaluated';
 
       for (const market of ['spread', 'total', 'moneyline']) {
         const quotes = odds.get(market);
-        if (!quotes || !quotes.length) continue;
+        if (!quotes || !quotes.length) { record.markets.push({ market, outcome: 'no_quote' }); continue; }
 
         /* Evaluate BOTH sides and take the strongest qualifying edge. If
          * neither qualifies we still pass the best one through so an existing
@@ -310,8 +433,9 @@ async function runOrchestration(env) {
          * either — killing an open pick because we lost our inputs would be a
          * model decision we did not actually make. */
         if (decision.ratings_available === false) {
-          ratingsBlocked += 1;
+          counts.ratings_blocked += 1;
           blockedReasons.add(decision.unavailable_reason);
+          record.markets.push({ market, outcome: 'ratings_unavailable', reason: decision.unavailable_reason });
           continue;
         }
 
@@ -321,43 +445,107 @@ async function runOrchestration(env) {
           scope: issuance.scope,
         });
 
-        emitted += result.emitted; killed += result.killed;
-        superseded += result.superseded; kept += result.kept;
-        scopeDrain += result.scope_drain || 0;
+        counts.emitted += result.emitted;
+        counts.killed += result.killed;
+        counts.superseded += result.superseded;
+        counts.kept += result.kept;
+        counts.scope_drain += result.scope_drain || 0;
+        const outcome = result.superseded ? 'superseded'
+          : result.emitted ? 'emitted'
+            : result.killed ? 'killed'
+              : result.kept ? 'kept'
+                : result.scope_drain ? 'scope_drain' : 'pass';
+        if (outcome === 'pass') counts.pass += 1;
+        record.markets.push({
+          market,
+          outcome,
+          side: decision.side,
+          edge_pct: decision.edge_pct,
+          threshold: edgeThreshold(market),
+          qualifies: decision.qualifies,
+          stake_units: decision.stake_units,
+          confidence_bucket: decision.confidence_bucket,
+          pass_reason: outcome === 'pass'
+            ? (decision.qualifies ? 'stake_zero' : `edge_${decision.edge_pct}_below_threshold_${edgeThreshold(market)}`)
+            : null,
+        });
       }
     }
 
-    /* A slate blocked entirely by missing ratings is DEGRADED, not "no
-     * qualified picks". Those are different truths and must not be conflated:
-     * one says the model looked and declined, the other says it could not
-     * look at all. */
     /* Three distinct internal truths, never conflated:
      *   - source degradation  : we could not evaluate
      *   - bootstrap tracking  : we evaluated, but the model may not publish
      *   - genuinely zero      : a trained champion evaluated and declined
      * "no qualified picks" is reserved for the last case alone. */
-    if (ratingsBlocked > 0 && !emitted && !kept) {
+    const couldNotLook = counts.evaluated_games === 0
+      || (counts.ratings_blocked > 0 && !counts.emitted && !counts.kept && !counts.pass);
+    if (couldNotLook) {
       health.engine_state = 'ENGINE DEGRADED — source unavailable';
     } else if (issuance.scope === SCOPE_TRACKING) {
       health.engine_state = UNTRAINED_STATE;
-    } else if (emitted || kept) {
+    } else if (counts.emitted || counts.kept) {
       health.engine_state = 'ENGINE LIVE — picks available';
     } else {
       health.engine_state = 'ENGINE LIVE — no qualified picks';
     }
 
-    health.ratings_blocked = ratingsBlocked;
-    health.ratings_blocked_reasons = [...blockedReasons].slice(0, 5);
-    health.last_result =
-      `scope=${issuance.scope} emitted=${emitted} kept=${kept} killed=${killed}`
-      + ` superseded=${superseded} ratings_blocked=${ratingsBlocked}`
-      + ` scope_drain=${scopeDrain}`;
-    health.tracking_only = issuance.scope === SCOPE_TRACKING;
-    health.last_error_class = null;
+    /* Detailed per-market evaluation (sides, edges) stays PRIVATE in KV — it
+     * describes tracking decisions that must never reach a public surface. */
+    try {
+      await env.PICKS_KV?.put(`eval:last:${SERVICE}`, JSON.stringify({
+        at: new Date().toISOString(), scope: issuance.scope, season, games: evaluations,
+      }), { expirationTtl: 30 * 86400 });
+    } catch (_) { /* the ledger write below still records the run */ }
+
+    const next = games[0];
+    await recordRun(env, SERVICE, {
+      ...base,
+      status: couldNotLook ? 'degraded' : 'ok',
+      reason: couldNotLook
+        ? (counts.ratings_blocked ? 'ratings_unavailable' : counts.stale_tape ? 'stale_market_tape' : 'no_market_tape')
+        : `scope=${issuance.scope}`,
+      counts,
+      source_freshness: {
+        tape_captured_at: newestTape,
+        current_state_updated: slate.last_updated,
+        current_state_freshness: slate.freshness?.state || null,
+      },
+      detail: {
+        public: {
+          tier: base.tier,
+          cadence_reason: base.cadence_reason,
+          engine_state: health.engine_state,
+          issuance_mode: issuance.mode,
+          season,
+          week: slate.week,
+          next_game: next
+            ? { game_id: next.game_id, matchup: `${next.away_team} @ ${next.home_team}`, kickoff_ts: next.kickoff_ts }
+            : null,
+          /* Per-game coverage without any decision content. */
+          games: evaluations.map(e => ({
+            game_id: e.game_id,
+            matchup: e.matchup,
+            kickoff_ts: e.kickoff_ts,
+            tape_captured_at: e.tape_captured_at,
+            books: e.books,
+            coverage: e.outcome,
+            markets_evaluated: e.markets.filter(m => !['no_quote', 'ratings_unavailable'].includes(m.outcome)).length,
+          })),
+          ratings_blocked_reasons: [...blockedReasons].slice(0, 5),
+        },
+      },
+    });
   } catch (error) {
     health.engine_state = 'ENGINE DEGRADED — source unavailable';
     health.last_error_class = errorClass(error);
     console.error(`[${SERVICE}] orchestration failed class=${health.last_error_class}`);
+    await recordRun(env, SERVICE, {
+      ...base,
+      status: 'failed',
+      error_class: health.last_error_class,
+      counts,
+      detail: { public: { tier: base?.tier, engine_state: health.engine_state } },
+    });
   }
 }
 
@@ -629,40 +817,6 @@ async function teamRatings(env, season) {
   return latest;
 }
 
-async function currentSeasonWeek(env) {
-  const base = String(env.NFL_GATEWAY || 'https://nfl-api.propbetedge.ai').replace(/\/$/, '');
-  const response = await fetch(`${base}/api/schedule`, { cf: { cacheTtl: 0 } });
-  if (!response.ok) throw new Error(`gateway_${response.status}`);
-  const body = await response.json();
-  const games = Array.isArray(body?.games) ? body.games : [];
-  const now = Date.now();
-  const next = games
-    .map(g => ({ ...g, ts: Date.parse(`${g.gameday}T${g.gametime || '00:00'}:00Z`) }))
-    .filter(g => Number.isFinite(g.ts) && g.ts >= now)
-    .sort((a, b) => a.ts - b.ts)[0];
-  return {
-    season: Number(body?.season || next?.season || new Date().getUTCFullYear()),
-    week: Number(next?.week || 1),
-  };
-}
-
-async function upcomingGames(env) {
-  const base = String(env.NFL_GATEWAY || 'https://nfl-api.propbetedge.ai').replace(/\/$/, '');
-  const response = await fetch(`${base}/api/schedule`, { cf: { cacheTtl: 0 } });
-  if (!response.ok) throw new Error(`gateway_${response.status}`);
-  const body = await response.json();
-  const games = Array.isArray(body?.games) ? body.games : [];
-  const now = Date.now();
-  const horizon = now + PICK_HORIZON_DAYS * 86400000;
-
-  return games
-    .map(g => {
-      const ts = Date.parse(`${g.gameday}T${g.gametime || '00:00'}:00Z`);
-      return { ...g, ts, kickoff_ts: Number.isFinite(ts) ? new Date(ts).toISOString() : null };
-    })
-    .filter(g => Number.isFinite(g.ts) && g.ts >= now && g.ts <= horizon);
-}
-
 /* Latest snapshot per market for a game, paired with its opposite side so the
  * price can be de-vigged. */
 async function latestOddsFor(env, gameId) {
@@ -682,6 +836,10 @@ async function latestOddsFor(env, gameId) {
    * and lets the edge decide — there is no default side and no assumption
    * that the selection is the home team. */
   const out = new Map();
+  /* Which market observation this decision rests on, carried into the run
+   * ledger so staleness is provable rather than assumed. */
+  out.captured_at = rows[0]?.captured_at || null;
+  out.books = new Set(rows.filter(r => r.captured_at === out.captured_at).map(r => r.book)).size;
   for (const [market, list] of byMarket) {
     const newest = list[0]?.captured_at;
     const current = list.filter(r => r.captured_at === newest);

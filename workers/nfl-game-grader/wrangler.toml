@@ -8,8 +8,25 @@ workers_dev = true
 SUPABASE_URL = "https://tkmlnhmylqnttmnsnief.supabase.co"
 NFL_GATEWAY = "https://nfl-api.propbetedge.ai"
 
-# Mon + Fri, per the brief. Monday catches MNF, Friday catches TNF.
+# Every 15 min, cheap and idempotent: grade any open decision whose game
+# nfl-current calls FINAL. A Sunday result is graded within minutes, not on
+# Monday.
 [triggers]
-crons = ["0 12 * * 1,5"]
+crons = ["*/15 * * * *"]
 
 # Secrets (wrangler secret put): SUPABASE_SERVICE_ROLE_KEY
+
+# Durable run ledger (run:tick|work|ok|err:<lane>). Isolate memory is not
+# evidence that a cron ran; this namespace is.
+[[kv_namespaces]]
+binding = "PICKS_KV"
+id = "0e7c77bc62fa477ea8d1a1608fb69a62"
+
+# nfl-current is the only authority for season, week, kickoff and FINAL state.
+[[services]]
+binding = "NFL_CURRENT"
+service = "nfl-current"
+
+[observability]
+enabled = true
+head_sampling_rate = 1

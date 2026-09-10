@@ -121,13 +121,13 @@ test('the orchestrator gates BEFORE doing any slate work', () => {
   const src = readFileSync(
     new URL('../../nfl-game-picks-orchestrator/src/index.js', import.meta.url), 'utf8');
 
-  const gateAt = src.indexOf('championPublishable(champion)');
-  const upcomingAt = src.indexOf('await upcomingGames(env)');
+  const gateAt = src.indexOf('issuance = issuanceScope(champion)');
+  const upcomingAt = src.indexOf('issuable(g, now');
   const insertAt = src.indexOf("insert(env, 'nfl_game_picks'");
 
   assert.ok(gateAt > 0, 'gate not present');
   assert.ok(upcomingAt > 0 && gateAt < upcomingAt,
-    'gate must run before the slate is fetched');
+    'gate must run before the slate is filtered for issuance');
   assert.ok(insertAt > 0 && gateAt < insertAt,
     'gate must run before any pick insert is reachable');
 });
@@ -142,7 +142,7 @@ test('the orchestrator returns early when it cannot issue at all, writing nothin
   assert.ok(start > 0, 'issuance scope block not found');
   const gateBlock = src.slice(
     start,
-    src.indexOf('const { season, week } = await currentSeasonWeek(env)', start),
+    src.indexOf('const season = slate.season', start),
   );
   assert.ok(/if \(!issuance\.canIssue\)/.test(gateBlock), 'no canIssue check');
   assert.ok(/\breturn;/.test(gateBlock), 'blocked path must return early');
@@ -155,7 +155,7 @@ test('an untrained champion reaches the slate but only as tracking', () => {
   const src = readFileSync(
     new URL('../../nfl-game-picks-orchestrator/src/index.js', import.meta.url), 'utf8');
   // Scope is resolved once, before the slate, and threaded into every insert.
-  assert.match(src, /const issuance = issuanceScope\(champion\)/);
+  assert.match(src, /issuance = issuanceScope\(champion\)/);
   assert.match(src, /scope: issuance\.scope/);
   assert.match(src, /publication_scope: scope/);
   // It is never hardcoded to official anywhere.

@@ -6,6 +6,7 @@
  * sample and atomically promoted. No HTTP train/promote route exists.
  */
 import { select, insert, rpc } from '../../nfl-picks-engine-shared/supabase.mjs';
+import { recordRun, readLane, laneHealth } from '../../nfl-picks-engine-shared/runs.mjs';
 import {
   logistic, SELECTOR_FEATURE_ORDER, PROP_MARKET,
 } from '../../nfl-prop-picks-shared/prop-math.mjs';
@@ -39,7 +40,7 @@ export default {
     return json({
       service: SERVICE,
       version: VERSION,
-      last_cron_run: health.last_cron_run,
+      ledger: laneHealth(SERVICE, await readLane(env, SERVICE)),
       last_error_class: health.last_error_class,
       last_result: health.last_result,
       gate: health.gate,
@@ -54,7 +55,7 @@ export default {
       },
     });
   },
-  async scheduled(_event, env, ctx) { ctx.waitUntil(runTuning(env)); },
+  async scheduled(event, env, ctx) { ctx.waitUntil(scheduledTuning(env, event)); },
 };
 
 export function gateStatus(observations) {
@@ -70,6 +71,20 @@ export function gateStatus(observations) {
         ? `insufficient_weeks:${weeks.size}/${MIN_WEEKS}`
         : null,
   };
+}
+
+/* The run is recorded to the durable ledger whatever the outcome — including
+ * the normal "gate closed" exit — so a weekly job's liveness is provable. */
+async function scheduledTuning(env, event) {
+  const startedAt = new Date().toISOString();
+  await runTuning(env);
+  await recordRun(env, SERVICE, {
+    version: VERSION, cron: event?.cron || null, started_at: startedAt,
+    status: health.last_error_class ? 'failed' : 'ok',
+    reason: health.last_result,
+    error_class: health.last_error_class,
+    counts: health.gate ? { ...health.gate } : null,
+  });
 }
 
 async function runTuning(env) {

@@ -1,6 +1,7 @@
 name = "nfl-prop-picks-grader"
 main = "src/index.js"
 compatibility_date = "2026-08-30"
+account_id = "fd3a233edadd0a60916413c1199f71ee"
 workers_dev = true
 preview_urls = false
 
@@ -8,10 +9,26 @@ preview_urls = false
 SUPABASE_URL = "https://tkmlnhmylqnttmnsnief.supabase.co"
 NFL_SITE_URL = "https://nfl.propbetedge.ai"
 
+# Every 15 min: grade prop decisions whose game nfl-current calls FINAL.
 [triggers]
-crons = ["30 11 * * 1,2,5,6"]
+crons = ["*/15 * * * *"]
 
 # Required secret:
 # SUPABASE_SERVICE_ROLE_KEY
 #
 # No manual grading route. Scheduled FINAL semantics only.
+
+# Durable run ledger (run:tick|work|ok|err:<lane>). Isolate memory is not
+# evidence that a cron ran; this namespace is.
+[[kv_namespaces]]
+binding = "PICKS_KV"
+id = "0e7c77bc62fa477ea8d1a1608fb69a62"
+
+# nfl-current is the only authority for season, week, kickoff and FINAL state.
+[[services]]
+binding = "NFL_CURRENT"
+service = "nfl-current"
+
+[observability]
+enabled = true
+head_sampling_rate = 1

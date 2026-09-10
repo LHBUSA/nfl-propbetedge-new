@@ -9,12 +9,29 @@ SUPABASE_URL = "https://tkmlnhmylqnttmnsnief.supabase.co"
 APP_ORIGIN = "https://nfl.propbetedge.ai"
 NFL_GATEWAY = "https://nfl-api.propbetedge.ai"
 
-# Daily at 14:00 UTC (~9am CT), per the brief.
+# One quarter-hour trigger; the Worker decides from nfl-current game state
+# whether a tick does work (15 min near kickoff, hourly on game day, 6h
+# otherwise). No tick contacts the odds provider.
 [triggers]
-crons = ["0 14 * * *"]
+crons = ["*/15 * * * *"]
 
 # Secrets (wrangler secret put):
 #   SUPABASE_SERVICE_ROLE_KEY  - database access
 #   PICKS_INTERNAL_TOKEN       - server-to-server token presented by the Vercel
 #                                proxy to unlock proprietary fields. NOT a user
 #                                session and NOT the session signing secret.
+
+# Durable run ledger (run:tick|work|ok|err:<lane>). Isolate memory is not
+# evidence that a cron ran; this namespace is.
+[[kv_namespaces]]
+binding = "PICKS_KV"
+id = "0e7c77bc62fa477ea8d1a1608fb69a62"
+
+# nfl-current is the only authority for season, week, kickoff and FINAL state.
+[[services]]
+binding = "NFL_CURRENT"
+service = "nfl-current"
+
+[observability]
+enabled = true
+head_sampling_rate = 1
