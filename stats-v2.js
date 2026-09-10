@@ -60,6 +60,9 @@
   function wireRows(){
     document.querySelectorAll('.pbe6-table tbody tr[data-player]').forEach(row=>row.addEventListener('click',()=>{try{if(window.PlayerModal)PlayerModal.show(row.dataset.player);}catch(_){}}));
   }
-  function install(){if(!window.App?.VIEWS)return false;App.VIEWS.stats=render;return true;}
+  function install(){if(!window.App?.VIEWS)return false;  /* This view is the 2025 ARCHIVE and no longer owns the current-season
+     route. stats-2026-v1.js is the live current-season authority; this one
+     keeps the verified final 2025 season available as history. */
+  App.VIEWS.stats2025=render;App.VIEWS['stats-2025']=render;return true;}
   window.PBEStatsV2={render,state};install();document.addEventListener('DOMContentLoaded',install,{once:true});
 })();

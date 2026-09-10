@@ -1,0 +1,68 @@
+name = "nfl-gateway"
+main = "index.js"
+compatibility_date = "2024-01-01"
+account_id = "fd3a233edadd0a60916413c1199f71ee"
+
+[vars]
+ENV = "production"
+
+[[kv_namespaces]]
+binding = "NFL_KV"
+id = "71eaad8fad534c419846db4efb321f8f"
+
+
+[[services]]
+binding = "NFL_SCORES"
+service = "nfl-scores"
+
+[[services]]
+binding = "NFL_STATS"
+service = "nfl-stats"
+
+[[services]]
+binding = "NFL_PICKS"
+service = "nfl-picks"
+
+[[services]]
+binding = "NFL_ODDS"
+service = "nfl-odds"
+
+[[services]]
+binding = "NFL_INJURIES"
+service = "nfl-injuries"
+
+[[services]]
+binding = "NFL_SCHEDULE"
+service = "nfl-schedule"
+
+[[services]]
+binding = "NFL_NEWS"
+service = "nfl-news"
+
+[[services]]
+binding = "NFL_HISTORICAL"
+service = "nfl-historical"
+
+[[services]]
+binding = "NFL_STE_ENGINE"
+service = "nfl-ste-engine"
+
+[[services]]
+binding = "NFL_MATCHUP"
+service = "nfl-matchup"
+
+[[services]]
+binding = "NFL_TARGET_SHARE"
+service = "nfl-target-share"
+
+[[services]]
+binding = "NFL_SITUATIONAL"
+service = "nfl-situational"
+
+[[services]]
+binding = "NFL_PBECAST"
+service = "nfl-pbecast"
+
+[[services]]
+binding = "NFL_CURRENT"
+service = "nfl-current"

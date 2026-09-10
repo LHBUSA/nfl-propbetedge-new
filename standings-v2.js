@@ -17,6 +17,9 @@
   function refresh(){const s=document.getElementById('pbe7-summary');if(s)s.innerHTML=summary();const c=document.getElementById('pbe7-confs');if(c)c.innerHTML=conferences();wireTeams();}
   function wire(){document.querySelectorAll('.pbe7-btn[data-conf]').forEach(b=>b.addEventListener('click',()=>{state.conf=b.dataset.conf||'all';render()}));document.getElementById('pbe7-search')?.addEventListener('input',e=>{state.search=e.currentTarget.value||'';refresh()});wireTeams();}
   function wireTeams(){document.querySelectorAll('[data-team]').forEach(el=>el.addEventListener('click',()=>{const abbr=el.dataset.team;try{if(window.PBETeamsV2)PBETeamsV2.openTeam(abbr);else if(window.TeamsView?.showTeam)TeamsView.showTeam(abbr)}catch(_){}}));}
-  function install(){if(!window.App?.VIEWS)return false;App.VIEWS.standings=render;return true;}
+  function install(){if(!window.App?.VIEWS)return false;  /* This view is the 2025 ARCHIVE and no longer owns the current-season
+     route. standings-2026-v1.js is the live current-season authority; this one
+     keeps the verified final 2025 season available as history. */
+  App.VIEWS.standings2025=render;App.VIEWS['standings-2025']=render;return true;}
   window.PBEStandingsV2={render,state};install();document.addEventListener('DOMContentLoaded',install,{once:true});
 })();

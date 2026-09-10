@@ -7,6 +7,11 @@
        .pbehome6; v7 historically registered itself after that without repainting
        until the next navigation. The loader explicitly invokes v7 after install. */
     {js:'./team-globals-v1.js'},
+    /* The one place that knows what season, week and game state it is. Loaded
+       early because standings, stats and the dashboard all read it, and
+       because it repoints a stale default event before the market surfaces
+       resolve one. */
+    {css:'./season-state-v1.css',js:'./season-state-v1.js'},
     /* Trust guard must be installed before any surface renders news copy. */
     {js:'./pbe-news-trust.js'},
     {css:'./dashboard-v5.css',js:'./dashboard-v5.js'},
@@ -23,6 +28,8 @@
     {css:'./games-v2.css',js:'./games-v2.js'},
     {css:'./team-research-v3.css',js:'./team-research-v3.js'},
     {css:'./stats-v2.css',js:'./stats-v2.js'},
+    /* 2025 archives. These no longer own the standings/stats routes; they
+       register standings2025 / stats2025 and are reached from Archives. */
     {css:'./standings-v2.css',js:'./standings-v2.js'},
     {css:'./season-archive-v2.css',js:'./season-archive-v2.js'},
     {css:'./hof-v2.css',js:'./hof-v2.js'},
@@ -102,6 +109,12 @@
        layer and the responsive-v5 patch are superseded and deliberately
        NOT loaded: they mutated v3's table after render and repaired each
        other's layout, which is the layering this replaces. */
+    /* Current-season authorities for the standings and stats routes. They
+       load after the archives so the live view is the last registrant, and
+       they fail closed rather than showing a previous season. */
+    {js:'./standings-2026-v1.js'},
+    {js:'./stats-2026-v1.js'},
+
     {css:'./prop-board-v5.css',js:'./prop-board-v5.js'},
 
     /* PBE Picks + Verified Track Record v2 is the sole UI authority. */
@@ -148,7 +161,13 @@
      the last registrant for it. Everything absent from this map behaves
      exactly as it always has. */
   const TERMINAL_AUTHORITIES=[
-    {route:'pbecast',js:'./pbecast-v6.js',installed:()=>typeof window.PBEcastV6?.load==='function'}
+    {route:'pbecast',js:'./pbecast-v6.js',installed:()=>typeof window.PBEcastV6?.load==='function'},
+    /* standings-v2 and stats-v2 register the 2025 archive routes now, but both
+       owned the live route names for a long time; declaring the current-season
+       modules terminal keeps a cached copy of either archive from painting the
+       live route during a load. */
+    {route:'standings',js:'./standings-2026-v1.js',installed:()=>typeof window.PBEStandings2026?.load==='function'},
+    {route:'stats',js:'./stats-2026-v1.js',installed:()=>typeof window.PBEStats2026?.load==='function'}
   ];
 
   const pendingRoutes=new Set(TERMINAL_AUTHORITIES.map(a=>a.route));

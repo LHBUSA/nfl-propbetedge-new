@@ -49,7 +49,10 @@ const KEY = {
 
 const A = v => (Array.isArray(v) ? v : []);
 const S = v => (v == null ? '' : String(v));
-const N = v => { const n = Number(v); return Number.isFinite(n) ? n : null; };
+/* Number(null) is 0 and 0 is finite, so a bare Number() check quietly turns a
+   missing season into season 0 — and 0 is falsy, which then skipped standings
+   and stats entirely. Absent stays absent. */
+const N = v => { if (v === null || v === undefined || v === '') return null; const n = Number(v); return Number.isFinite(n) ? n : null; };
 
 function json(data, status = 200, extra = {}) {
   return new Response(JSON.stringify(data), { status, headers: { ...CORS, ...extra } });

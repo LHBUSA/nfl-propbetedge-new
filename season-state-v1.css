@@ -1,0 +1,44 @@
+/* Season state — a single honest line above the dashboard, and the small
+   live/stale marks the current-season views need. Additive only: this adds no
+   layout of its own to any existing component and restyles nothing. */
+
+.pbe-season-strip{
+  display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  margin:0 0 16px;padding:11px 14px;
+  border:1px solid rgba(255,255,255,.09);border-radius:12px;
+  background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.015));
+}
+.pbe-season-badge{
+  display:inline-flex;align-items:center;gap:7px;flex:0 0 auto;
+  min-height:26px;padding:0 10px;border-radius:999px;
+  border:1px solid rgba(255,255,255,.10);background:rgba(0,0,0,.22);
+  color:var(--pbe-paper-2,#d8dee9);font:800 11px/1 'JetBrains Mono',ui-monospace,monospace;letter-spacing:.09em;white-space:nowrap;
+}
+.pbe-season-badge.on{color:#7ce4a7;border-color:rgba(98,220,150,.30);background:rgba(98,220,150,.08)}
+.pbe-season-badge.live{color:#7ce4a7;border-color:rgba(98,220,150,.34);background:rgba(98,220,150,.10)}
+.pbe-season-badge.live i{width:6px;height:6px;border-radius:50%;background:#62dc96;box-shadow:0 0 12px rgba(98,220,150,.8)}
+.pbe-season-badge.warn{color:#f0c45b;border-color:rgba(240,196,91,.32);background:rgba(240,196,91,.08)}
+
+.pbe-season-items{display:flex;align-items:center;gap:18px;flex-wrap:wrap;flex:1 1 auto;min-width:0}
+.pbe-season-item{display:flex;flex-direction:column;gap:2px;min-width:0}
+.pbe-season-item b{color:var(--pbe-paper,#eef2f7);font:700 12.5px/1.15 'JetBrains Mono',ui-monospace,monospace;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pbe-season-item span{color:var(--pbe-dim,#8b95a5);font:600 10px/1 'JetBrains Mono',ui-monospace,monospace;letter-spacing:.10em;text-transform:uppercase}
+.pbe-season-stamp{margin-left:auto;flex:0 0 auto;color:var(--pbe-dim,#8b95a5);font:700 10px/1 'JetBrains Mono',ui-monospace,monospace;letter-spacing:.08em;white-space:nowrap}
+
+.pbe-season-strip.is-stale{border-color:rgba(240,196,91,.28)}
+.pbe-season-strip.is-stale .pbe-season-stamp{color:#f0c45b}
+.pbe-season-strip.is-unavailable .pbe-season-copy{color:var(--pbe-dim,#8b95a5);font:600 12px/1.4 system-ui,sans-serif}
+
+/* Current-season markers on the standings and stats heroes. */
+.pbe7-archive.is-live,.pbe6-archive-note.is-live{color:#7ce4a7;border-color:rgba(98,220,150,.30);background:rgba(98,220,150,.08)}
+.pbe7-team-row.is-unplayed{opacity:.62}
+.pbe7-crest-fallback{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;background:rgba(255,255,255,.06);font:800 9px/1 'JetBrains Mono',monospace;color:var(--pbe-paper-2,#d8dee9)}
+.pbe6-empty-note{padding:26px 18px;color:var(--pbe-dim,#8b95a5);font:600 13px/1.5 system-ui,sans-serif;text-align:center}
+.pbe6-tab.archive-link{margin-left:auto;color:var(--pbe-dim,#8b95a5);text-decoration:none}
+.pbe6-table td small{color:var(--pbe-dim,#8b95a5);font:600 10px/1 'JetBrains Mono',monospace;margin-left:4px}
+
+@media(max-width:760px){
+  .pbe-season-strip{gap:10px;padding:10px 12px}
+  .pbe-season-items{gap:12px}
+  .pbe-season-stamp{margin-left:0;width:100%}
+}

@@ -84,9 +84,15 @@
       ['TOOLS',[
         ['simulator','Simulator',''],['sgplab','SGP Lab',''],['propchain','PropChain','']
       ]],
+      /* Standings and Stats are current-season surfaces now, so they sit with
+         the live product rather than under ARCHIVE; the verified 2025 finals
+         keep their own entries below. */
+      ['CURRENT',[
+        ['standings','Standings',''],['stats','Stats',''],['teams','Teams','']
+      ]],
       ['ARCHIVE',[
-        ['teams','Teams',''],['standings','Standings',''],['stats','Stats',''],
-        ['seasonhistory','Seasons',''],['records','Records',''],['hof','Hall of Fame',''],
+        ['seasonhistory','Seasons',''],['standings2025','2025 Standings',''],['stats2025','2025 Stats',''],
+        ['records','Records',''],['hof','Hall of Fame',''],
         ['sb','Super Bowls',''],['prospects','Draft',''],['trades','Transactions','']
       ]]
     ]

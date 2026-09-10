@@ -31,8 +31,10 @@
     injuries:['Injury Editorial','PropBetEdge reporting · analysis · latest injury coverage'],
     trades:['Transactions','Current trades · signings · roster movement'],
     teams:['Team Research','Current team news · selected game · 2025 final context'],
-    stats:['2025 Stats Archive','Historical final statistical leaders'],
-    standings:['2025 Final Standings','Historical playoff picture · division results'],
+    stats:['Stats','Current-season statistical leaders · live'],
+    standings:['Standings','Current-season division standings · live'],
+    stats2025:['2025 Stats','Verified final statistical leaders · archive'],
+    standings2025:['2025 Final Standings','Verified final playoff picture · archive'],
     seasonhistory:['Season Archive','Champions · MVPs · awards · leaders'],
     'season-history':['Season Archive','Champions · MVPs · awards · leaders'],
     hof:['Hall of Fame','Canton induction archive'],
@@ -60,7 +62,7 @@
 
   function ensureProductNav(){addIntelligenceNav('pbepicks','PBE Picks','PRO');addIntelligenceNav('trackrecord','Track Record','PUBLIC');}
   function reorderIntelligence(){const group=document.getElementById('intelligence-nav-group');if(!group)return;['nav-home','nav-games','nav-propboard','nav-marketwatch','nav-matchups','nav-picks','nav-pbepicks','nav-trackrecord','nav-simulator','nav-sgplab','nav-usage','nav-propchain','nav-pbecast','nav-newsintel','nav-injuries','nav-trades','nav-qbdna','nav-wrdna','nav-rbdna','nav-tedna'].forEach(id=>{const el=document.getElementById(id);if(el)group.appendChild(el)});}
-  function renameGroups(){document.querySelectorAll('.nav-group-label').forEach(label=>{const text=label.textContent.trim();if(text==='2025 Archive')label.textContent='Season Archive';if(text==='Research')label.textContent='History & Research';});const foot=document.querySelector('.sf-season');if(foot)foot.textContent='NFL Intelligence OS';const status=document.querySelector('.sf-status');if(status)status.textContent='Games · market · model · picks · usage · news · archive';const api=document.querySelector('.sf-api');if(api)api.innerHTML='NFL Pro · $9.99/week <span class="pbe-os-shortcut"><kbd>Ctrl K</kbd> search</span> <span class="pbe-os-shortcut"><kbd>Shift E</kbd> event</span>';}
+  function renameGroups(){document.querySelectorAll('.nav-group-label').forEach(label=>{const text=label.textContent.trim();if(text==='2025 Archive')label.textContent='Archives';if(text==='Research')label.textContent='History & Research';});const foot=document.querySelector('.sf-season');if(foot)foot.textContent='NFL Intelligence OS';const status=document.querySelector('.sf-status');if(status)status.textContent='Games · market · model · picks · usage · news · archive';const api=document.querySelector('.sf-api');if(api)api.innerHTML='NFL Pro · $9.99/week <span class="pbe-os-shortcut"><kbd>Ctrl K</kbd> search</span> <span class="pbe-os-shortcut"><kbd>Shift E</kbd> event</span>';}
 
   function syncQuickNav(route){const key=normalizeRoute(route||window.App?.current);document.querySelectorAll('.pbe-v2-quicknav [data-route]').forEach(el=>{const active=el.dataset.route===key;el.classList.toggle('primary',active);el.setAttribute('aria-current',active?'page':'false')});}
   function rebuildQuickNav(){const nav=document.querySelector('.pbe-v2-quicknav');if(!nav)return;nav.innerHTML=QUICK_NAV.map(([route,label])=>`<button type="button" data-route="${route}" onclick="App.nav('${route}')">${label}</button>`).join('');syncQuickNav(window.App?.current||'home');}
