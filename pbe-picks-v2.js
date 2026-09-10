@@ -225,12 +225,12 @@
     return `<section class="pbe2-engine" aria-label="Picks Engine live progress"><div class="pbe2-engine-head"><span>Live engine · ${esc(data?.current?.season ?? d.season ?? '')} ${esc(data?.current?.season_type || '')} week ${esc(data?.current?.week ?? '—')}</span><b data-state="${esc(healthOf(data))}">${esc(laneStateLabel(healthOf(data)))}</b></div><div class="pbe2-engine-grid">${tiles.map(([label, value, sub]) => `<div class="pbe2-engine-tile"><span>${esc(label)}</span><strong>${esc(value)}</strong>${sub ? `<small>${esc(sub)}</small>` : ''}</div>`).join('')}</div><div class="pbe2-lanes">${laneRows || '<div class="pbe2-lane" data-state="UNKNOWN"><i></i><div><strong>Run ledger</strong><span>unavailable</span></div></div>'}</div><p class="pbe2-engine-note">Tracking decisions are real pregame decisions, frozen before kickoff and graded from the official final. They are never shown as picks and never enter the public record.</p></section>`;
   }
 
-  function validation(data, active = 'pbepicks') {
+  function validation(data, active = 'pbepicks', banner = '') {
     const grades = Number(data?.graded_sample || 0), gradeReq = Number(data?.graded_sample_required || 100);
     const weeks = Number(data?.distinct_weeks || 0), weekReq = Number(data?.distinct_weeks_required || 4);
     const gradePct = gradeReq ? clamp(grades / gradeReq * 100, 0, 100) : 0;
     const weekPct = weekReq ? clamp(weeks / weekReq * 100, 0, 100) : 0;
-    return `${topline(active, data)}<section class="pbe2-stage gated"><div class="pbe2-gridwash"></div><div class="pbe2-validation">
+    return `${topline(active, data)}${banner}<section class="pbe2-stage gated"><div class="pbe2-gridwash"></div><div class="pbe2-validation">
       <div><div class="pbe2-kicker">PBE Picks Engine</div><h1>Earn the edge.<br><em>Then publish it.</em></h1><p class="pbe2-validation-copy">The production model is evaluating real NFL slates in bootstrap tracking mode. Those decisions can build the learning sample, but they cannot appear as customer picks and can never be retroactively converted into the public record.</p><div class="pbe2-validation-proof"><span>100 finalized decisions</span><span>4 distinct weeks</span><span>champion-only publication</span><span>no backfilled picks</span></div></div>
       <div class="pbe2-gates"><div class="pbe2-ring" style="--p:${gradePct.toFixed(1)}"><div><strong>${grades}</strong><span>of ${gradeReq} grades</span></div></div><div class="pbe2-ring" style="--p:${weekPct.toFixed(1)}"><div><strong>${weeks}</strong><span>of ${weekReq} weeks</span></div></div><div class="pbe2-gate-caption">Official publication remains closed until both gates are satisfied and a trained champion is promoted.</div></div>
     </div></section>${engineProgress(data)}<div class="pbe2-pipeline"><div class="${healthOf(data) === 'HEALTHY' ? 'active' : ''}"><span>01</span><strong>Track live</strong></div><div class="${grades > 0 ? 'active' : ''}"><span>02</span><strong>Grade final</strong></div><div><span>03</span><strong>Validate</strong></div><div><span>04</span><strong>Publish</strong></div></div>`;
@@ -272,7 +272,7 @@
       /* Health first: a degraded engine is never presented as a healthy
        * validation page or an honest PASS. */
       const banner = healthOf(governance) !== 'HEALTHY' ? degradedBanner(governance) : '';
-      if (governance.champion_trained !== true) body = banner + validation(governance, 'pbepicks');
+      if (governance.champion_trained !== true) body = validation(governance, 'pbepicks', banner);
       else if (banner) body = `${topline('pbepicks', governance)}${banner}${engineProgress(governance)}`;
       else if (!isPro()) body = freeLive(governance);
       else {
