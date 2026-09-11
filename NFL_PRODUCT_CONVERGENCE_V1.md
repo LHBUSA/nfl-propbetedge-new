@@ -105,6 +105,12 @@ separately, single `.pbecast6` root, the Sunday board mounted, no geometry eleme
   are all stoppages); EPA/WPA/air/YAC shown only on the final game, labelled.
 - Gate: all routes pass at 1440/1280/1024/390/360 on the working tree, and 1440/390 on the
   deployed preview.
+- Existing regression gates: `pbecast-refresh-gate` on the deployed preview, 17/17 hard refreshes
+  with one owner (v6) and 0 duplicate PBEcast polls. `pbecast-nav-gate`: 31 steps, 0 problems with
+  this tree against production APIs; on the deployed preview, 1 timing flag (`qbdna` sampled at
+  3 s on a cold function — it renders 2,629 chars at 8 s). `mobile-nav-gate`: passed, 0 failures.
+  `recovery-browser-smoke`: PASS, 33 routes alive, 0 exceptions. Its research-route list was stale
+  and failed on untouched main too; it was corrected.
 - Unit tests: 79/79 in `tests/`. Full suite (`tests/` + `research/`): 339 tests, 335 pass, 3 skipped,
   1 fail — `archive teamCrest`, which fails identically on untouched main.
 
