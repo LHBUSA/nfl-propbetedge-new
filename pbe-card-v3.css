@@ -321,7 +321,8 @@
 }
 @media (max-width:980px){
   .pbec-grid{grid-template-columns:1fr}
-  .pbec-card-body,.pbec-card.is-featured .pbec-card-body{grid-template-columns:1fr}
+  .pbec-card-body,.pbec-card.is-featured .pbec-card-body,.pbec-card-body.is-locked{grid-template-columns:1fr}
+  .pbec-terms.is-locked{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media (max-width:640px){
   .pbec-hero{padding:12px;border-radius:16px}

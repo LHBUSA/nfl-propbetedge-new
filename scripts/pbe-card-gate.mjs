@@ -16,6 +16,8 @@
  *                        (PBE_PRO_COOKIE / PBE_FREE_COOKIE env values also work.)
  *   --live               use the deployed static files instead of this checkout
  *   --free-only          skip the Pro persona (public half of the canary)
+ *   --no-free-account    no signed-in free session exists; the free 403 is
+ *                        covered by the real-handler tests, not reported missing
  *
  * The canary proves one real decision end to end:
  *   persisted nfl_game_picks row (view=decision, Pro)  ->  card response
@@ -40,6 +42,10 @@ const arg = (n, f) => { const i = argv.indexOf(`--${n}`); return i > -1 && argv[
 const CANARY = flag('canary');
 const LIVE = flag('live');
 const FREE_ONLY = flag('free-only');
+/* --no-free-account: the operator has no signed-in free account. The
+   free-session 403 is then covered by the real-handler contract suite
+   (tests/pbe-card-v3.test.mjs) instead of a production session. */
+const NO_FREE_ACCOUNT = flag('no-free-account');
 const TARGET = process.env.PBE_TARGET || 'https://nfl.propbetedge.ai';
 const ORIGIN = new URL(TARGET).origin;
 const OUT = resolve(arg('out', join(REPO, '.pbe-card-gate')));
@@ -169,8 +175,11 @@ async function open(path, width) {
   await sleep(SETTLE);
   /* A cold first load can still be painting; wait for the card store to land
      and the route to settle rather than trusting a fixed delay. */
-  for (let i = 0; i < 30; i++) {
-    const ready = await evaluate(`Boolean(window.PBECard?.store?.data || window.PBECard?.store?.error) && !window.PBECard?.store?.busy && getComputedStyle(document.getElementById('view-container') || document.body).opacity === '1'`);
+  /* ...and for the route's own PBE Card section to be painted: PBE Picks
+     paints only after its governance read lands as well. */
+  const painted = path.includes('#pbepicks') ? `!!document.querySelector('.pbec-hero') && !!document.querySelector('.pbe2-deep-head, .pbec-empty')` : 'true';
+  for (let i = 0; i < 40; i++) {
+    const ready = await evaluate(`Boolean(window.PBECard?.store?.data || window.PBECard?.store?.error) && !window.PBECard?.store?.busy && getComputedStyle(document.getElementById('view-container') || document.body).opacity === '1' && (${painted})`);
     if (ready === true) break;
     await sleep(500);
   }
@@ -365,6 +374,11 @@ if (!FREE_ONLY) {
 const expected = { anonymous: 401, forged: 401, free: 403 };
 for (const who of ['anonymous', 'forged', 'free']) {
   if (who === 'free' && CANARY && !FREE_COOKIE) {
+    if (NO_FREE_ACCOUNT) {
+      report.personas.free = 'covered by tests/pbe-card-v3.test.mjs: a signed-in free session gets 403 from view=current, view=validation-history and view=decision, and no selection value in any body';
+      console.log('NOTE free — no signed-in free account; the 403 is covered by the real-handler contract suite');
+      continue;
+    }
     incomplete += 1;
     report.personas.free = 'NOT RUN — PBE_FREE_COOKIE_FILE not supplied';
     console.log('SKIP free — signed-in free account cookie not supplied (PBE_FREE_COOKIE_FILE)');
