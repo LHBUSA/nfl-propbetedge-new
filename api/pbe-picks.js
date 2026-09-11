@@ -5,6 +5,7 @@ import {
 import {
   LABELS, displayMode, eligibleDecisions, verifyReceipt, lifecycleOf, attributionValid,
   proCard, lockedPreview, withdrawnEvent, marketSinceIssue, cardSummary, assertNoSelection, nflverseTeam,
+  lineageIndex, lineageOf, replacedEntry, lockViolations,
 } from '../workers/nfl-picks-engine-shared/publication.mjs';
 
 const DEFAULT_SUPABASE_URL = 'https://tkmlnhmylqnttmnsnief.supabase.co';
@@ -442,11 +443,22 @@ async function loadCard(secret, { withTape }) {
     + `&or=(status.eq.open,and(status.in.(graded,killed,superseded),week.eq.${week}))`
     + `&select=${PICK_COLUMNS}&order=kickoff_ts.asc&limit=1000`;
   const rows = (await sb('nfl_game_picks', query, secret)) || [];
+  /* The full replacement chain of every game still in play, whatever week
+   * each link was issued in, so a replacement card can show every frozen
+   * decision it replaced. */
+  const liveGames = [...new Set(rows.filter(r => r.status !== 'superseded').map(r => r.game_id))];
+  const known = new Set(rows.map(r => r.id));
+  for (const group of chunks(liveGames, 40)) {
+    const older = (await sb('nfl_game_picks',
+      `season=eq.${season}&status=eq.superseded&game_id=in.(${inList(group)})&select=${PICK_COLUMNS}&limit=2000`, secret)) || [];
+    for (const r of older) if (!known.has(r.id)) { known.add(r.id); rows.push(r); }
+  }
   const ids = rows.map(row => row.id);
   const [receipts, audits, grades] = await Promise.all([
     receiptsWithText(secret, ids), auditsFor(secret, ids), gradesFor(secret, ids),
   ]);
   const killedIds = new Set(audits.filter(a => a.event_type === 'pick_killed').map(a => a.pick_id));
+  const killedAt = new Map(audits.filter(a => a.event_type === 'pick_killed').map(a => [a.pick_id, a.occurred_at]));
   const verified = new Map();
   const [games] = await Promise.all([
     gameStates(season),
@@ -454,9 +466,12 @@ async function loadCard(secret, { withTape }) {
   ]);
   /* Lifecycle is decided against nfl-current's real kickoff and game state. */
   const eligible = eligibleDecisions(rows, { nowMs, killedIds, verified, season, week, games });
+  const index = lineageIndex(rows);
+  const byId = new Map(rows.map(r => [r.id, r]));
+  const violations = lockViolations(rows, { index, games, killedAt, byId });
   const gameIds = [...new Set(eligible.current.map(e => e.row.game_id))];
   const tape = withTape ? await tapeFor(secret, gameIds) : [];
-  return { nowMs, state, season, week, rows, receipts, audits, grades, verified, eligible, tape, games };
+  return { nowMs, state, season, week, rows, receipts, audits, grades, verified, eligible, tape, games, index, violations };
 }
 
 function freshnessOf(state, tape, nowMs) {
@@ -495,8 +510,22 @@ function eligibilityReport(ctx, { withIds = false } = {}) {
       failure_reasons: reasons,
       chain_links_verified: checks.filter(([, v]) => v.chain === true).length,
     },
+    /* Nothing may change after the real kickoff. Counted on every read. */
+    lock_integrity: {
+      rule: 'no issuance, replacement or withdrawal at or after the real kickoff',
+      checked: ctx.rows.length,
+      violations: ctx.violations.length,
+      kinds: ctx.violations.reduce((acc, v) => { acc[v.kind] = (acc[v.kind] || 0) + 1; return acc; }, {}),
+    },
+    replacements: {
+      superseded_rows: ctx.rows.filter(r => r.status === 'superseded').length,
+      current_cards_with_history: ctx.eligible.current.filter(e => ctx.index.predecessors.has(e.row.id)).length,
+    },
   };
-  if (withIds) report.receipt_failures = failures.map(([id, v]) => ({ id, reason: v.reason, terms: v.terms })).slice(0, 20);
+  if (withIds) {
+    report.receipt_failures = failures.map(([id, v]) => ({ id, reason: v.reason, terms: v.terms })).slice(0, 20);
+    report.lock_integrity.list = ctx.violations.slice(0, 20);
+  }
   return report;
 }
 
@@ -517,6 +546,9 @@ async function currentView(req, res, secret) {
     audits: ctx.audits,
     nowMs: ctx.nowMs,
     engineHealthy: healthy,
+    lineage: lineageOf(row, ctx.index),
+    receipts: ctx.receipts,
+    verified: ctx.verified,
   }));
   const engineState = composeEngineState({
     health: ctx.state.engine_health, trained: ctx.state.champion_trained, hasPicks: cards.length > 0, gatedState: UNTRAINED_STATE,
@@ -546,7 +578,7 @@ async function currentView(req, res, secret) {
 async function previewView(res, secret) {
   const ctx = await loadCard(secret, { withTape: false });
   const mode = displayMode({ health: ctx.state.engine_health, trained: ctx.state.champion_trained });
-  const previews = ctx.eligible.current.map(({ row, lifecycle }) => lockedPreview({ row, lifecycle, game: ctx.games.get(row.game_id) || null }));
+  const previews = ctx.eligible.current.map(({ row, lifecycle }) => lockedPreview({ row, lifecycle, game: ctx.games.get(row.game_id) || null, revisions: lineageOf(row, ctx.index).length }));
   const lane = ctx.state?.engine_runtime?.lanes?.['nfl-game-picks-orchestrator'] || null;
   const body = {
     contract: CARD_CONTRACT,
@@ -586,18 +618,33 @@ async function validationHistoryView(req, res, secret) {
   const [state, schedule] = await Promise.all([governance(secret), seasonContext()]);
   const rows = (await sb(
     'nfl_game_picks',
-    `publication_scope=eq.tracking&season=eq.${schedule.season}&status=in.(graded,killed)&select=${PICK_COLUMNS}&order=kickoff_ts.desc&limit=1000`,
+    `publication_scope=eq.tracking&season=eq.${schedule.season}&status=in.(graded,killed,superseded)&select=${PICK_COLUMNS}&order=kickoff_ts.desc&limit=2000`,
     secret
   )) || [];
-  const ids = rows.map(row => row.id);
-  const [receipts, audits, grades] = await Promise.all([
-    receiptsWithText(secret, ids), auditsFor(secret, ids), gradesFor(secret, ids),
+  /* A replaced decision's successor may still be open: read it too. */
+  const have = new Set(rows.map(r => r.id));
+  const successorIds = [...new Set(rows.filter(r => r.status === 'superseded' && r.superseded_by && !have.has(r.superseded_by)).map(r => r.superseded_by))];
+  const successors = successorIds.length
+    ? (await Promise.all(chunks(successorIds).map(group => sb('nfl_game_picks', `id=in.(${inList(group)})&select=${PICK_COLUMNS}`, secret)))).flat().filter(Boolean)
+    : [];
+  const all = [...rows, ...successors];
+  const ids = all.map(row => row.id);
+  const [receipts, audits, grades, games] = await Promise.all([
+    receiptsWithText(secret, ids), auditsFor(secret, ids), gradesFor(secret, ids), gameStates(schedule.season),
   ]);
   const killedIds = new Set(audits.filter(a => a.event_type === 'pick_killed').map(a => a.pick_id));
+  const byId = new Map(all.map(r => [r.id, r]));
+  const verifiedMap = new Map();
+  await Promise.all(all.map(async r => { verifiedMap.set(r.id, await verifyReceipt(r, receipts.get(r.id))); }));
+  /* REPLACED BEFORE LOCK: frozen, receipted, never graded, never a loss. */
+  const replaced = rows.filter(r => r.status === 'superseded')
+    .map(r => replacedEntry({ row: r, replacedBy: byId.get(r.superseded_by) || null }, { receipts, verified: verifiedMap, game: games.get(r.game_id) || null }))
+    .sort((a, b) => Date.parse(b.replaced_at || 0) - Date.parse(a.replaced_at || 0));
   const decided = [];
   const withdrawn = [];
   let receiptFailures = 0;
   for (const row of rows) {
+    if (row.status === 'superseded') continue;
     const lifecycle = lifecycleOf(row, { nowMs, killedIds });
     if (lifecycle === 'WITHDRAWN') { withdrawn.push(withdrawnEvent({ row, audits })); continue; }
     if (lifecycle !== 'FINAL' || !attributionValid(row)) continue;
@@ -626,9 +673,12 @@ async function validationHistoryView(req, res, secret) {
       units: settled.length ? Number(settled.reduce((s, c) => s + (c.grade.units_delta ?? 0), 0).toFixed(4)) : null,
       clv_beat_pct: clv.length ? Number((clv.filter(c => c.grade.clv_beat).length / clv.length * 100).toFixed(1)) : null,
       withdrawn: withdrawn.length,
+      replaced_before_lock: replaced.filter(r => r.before_lock !== false).length,
+      replaced_after_lock: replaced.filter(r => r.before_lock === false).length,
       receipt_failures: receiptFailures,
     },
     picks: decided,
+    replaced,
     withdrawn,
   });
 }
@@ -650,7 +700,11 @@ async function trackRecordView(req, res, secret) {
     receiptsFor(secret, ids),
     marketPathsFor(secret, picks || [])
   ]);
-  const rows = decorate(picks, grades, receipts, paths, true);
+  const decoratedRows = decorate(picks, grades, receipts, paths, true);
+  /* A decision replaced before lock was never a playable pick: it is listed
+   * as a replacement, never counted in the record, never graded as a loss. */
+  const rows = decoratedRows.filter(row => row.status !== 'superseded');
+  const replacedRows = decoratedRows.filter(row => row.status === 'superseded');
   const filtered = applyTrackFilters(rows, req.query || {});
 
   const availableFilters = {
@@ -667,8 +721,49 @@ async function trackRecordView(req, res, secret) {
     total_count: rows.length,
     count: filtered.length,
     available_filters: availableFilters,
+    replaced_count: replacedRows.length,
+    replaced: replacedRows,
     picks: filtered
   }, 'public, max-age=30, s-maxage=30, stale-while-revalidate=120');
+}
+
+/* Pro-only: one decision exactly as persisted (every nfl_game_picks column
+ * except the raw feature vector), its receipt, and the server's verification
+ * of the receipt against the row. The PBE Card canary compares this to the
+ * card and the rendered DOM field by field. */
+const RAW_COLUMNS = [
+  'id','created_at','game_id','season','week','kickoff_ts','market','side','market_line','market_price',
+  'model_line','model_prob','market_prob','edge_pct','stake_units','confidence_bucket','model_version',
+  'publication_scope','status','superseded_by','selection_team','selection_over_under','side_is_home'
+].join(',');
+async function decisionView(req, res, secret) {
+  const auth = await requirePro(req, res);
+  if (!auth) return;
+  const id = String(req.query?.id || '').trim();
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) return send(res, 400, { error: 'invalid_id' });
+  const [raw, full] = await Promise.all([
+    sb('nfl_game_picks', `id=eq.${id}&select=${RAW_COLUMNS}&limit=1`, secret),
+    sb('nfl_game_picks', `id=eq.${id}&select=${PICK_COLUMNS}&limit=1`, secret),
+  ]);
+  if (!raw?.length) return send(res, 404, { error: 'decision_not_found' });
+  const receipts = await receiptsWithText(secret, [id]);
+  const receipt = receipts.get(id) || null;
+  const verification = await verifyReceipt(full[0], receipt);
+  return send(res, 200, {
+    contract: CARD_CONTRACT,
+    view: 'decision',
+    entitlement: 'pro',
+    source: 'nfl_game_picks (PostgREST, service role)',
+    /* Projected here as well as in the query: the raw feature vector never
+     * leaves the server, whatever the query returns. */
+    row: Object.fromEntries(RAW_COLUMNS.split(',').map(k => [k, raw[0][k] ?? null])),
+    receipt: receipt ? {
+      seq: receipt.seq, pick_id: receipt.pick_id, issued_at: receipt.issued_at, publication_scope: receipt.publication_scope,
+      receipt_version: receipt.receipt_version, payload_sha256: receipt.payload_sha256,
+      previous_chain_hash: receipt.previous_chain_hash, chain_hash: receipt.chain_hash,
+    } : null,
+    verification: { ok: verification.ok, reason: verification.reason, payload_hash: verification.payload_hash, chain_link: verification.chain, mismatched_terms: verification.terms },
+  });
 }
 
 async function receiptView(req, res, secret) {
@@ -705,6 +800,7 @@ export default async function handler(req, res) {
     if (view === 'current') return await currentView(req, res, secret);
     if (view === 'preview') return await previewView(res, secret);
     if (view === 'validation-history') return await validationHistoryView(req, res, secret);
+    if (view === 'decision') return await decisionView(req, res, secret);
     if (view === 'trackrecord') return await trackRecordView(req, res, secret);
     if (view === 'receipt') return await receiptView(req, res, secret);
     return send(res, 404, { error: 'view_not_found' });

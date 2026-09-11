@@ -163,6 +163,16 @@ test('live progress is derived from the live score only', () => {
 const sessionCookie = email => signCookie(email, { namespace: HMAC_NAMESPACE, cookieName: SESSION_COOKIE });
 installMockFetch();
 
+async function callQ(query, cookie = '') {
+  const res = {
+    statusCode: 200, headers: {}, body: '',
+    setHeader(k, v) { this.headers[k.toLowerCase()] = v; },
+    end(text) { this.body = text; },
+  };
+  await handler({ method: 'GET', query, headers: cookie ? { cookie } : {} }, res);
+  return { status: res.statusCode, headers: res.headers, text: res.body, json: JSON.parse(res.body || 'null') };
+}
+
 async function call(view, cookie = '') {
   const res = {
     statusCode: 200, headers: {}, body: '',
@@ -283,4 +293,132 @@ test('official mode: the contract switches to OFFICIAL from the champion row alo
     /* Bootstrap rows still in play keep their validation label. */
     assert.equal(pro.json.picks.every(c => c.label === 'PBE VALIDATION SIGNAL'), true);
   } finally { mock.trained = false; }
+});
+
+/* ------------------------------------------------------------------------
+ * 3. Signal lifecycle: ACTIVE -> REPLACED -> NEW ACTIVE -> LOCKED -> FINAL
+ * --------------------------------------------------------------------- */
+const CHAIN = [
+  pick({ id: 'c0000000-0000-4000-8000-000000000001', side: 'BUF -2.5', market_line: -2.5, selection_team: 'BUF', side_is_home: false,
+    status: 'superseded', superseded_by: 'c0000000-0000-4000-8000-000000000002', created_at: '2026-09-06T14:00:00+00:00', created_text: '2026-09-06 14:00:00+00' }),
+  pick({ id: 'c0000000-0000-4000-8000-000000000002', side: 'HOU +3', market_line: 3, market_price: -105, selection_team: 'HOU', side_is_home: true,
+    edge_pct: 0.024, confidence_bucket: 'C', stake_units: 0.6, status: 'superseded', superseded_by: 'c0000000-0000-4000-8000-000000000003',
+    created_at: '2026-09-09T17:00:00+00:00', created_text: '2026-09-09 17:00:00+00' }),
+  pick({ id: 'c0000000-0000-4000-8000-000000000003', side: 'BUF -3.5', market_line: -3.5, market_price: -110, selection_team: 'BUF', side_is_home: false,
+    edge_pct: 0.033, confidence_bucket: 'C', stake_units: 0.8, created_at: '2026-09-11T17:30:00+00:00', created_text: '2026-09-11 17:30:00+00' }),
+];
+
+test('a replacement carries every frozen decision it replaced, oldest first, never edited', () => {
+  const index = P.lineageIndex(CHAIN);
+  const chain = P.lineageOf(CHAIN[2], index);
+  assert.deepEqual(chain.map(l => l.row.id.slice(-1)), ['1', '2']);
+  const game = { kickoff: '2026-09-13T17:00Z', state: 'SCHEDULE' };
+  const card = P.proCard({ row: CHAIN[2], lifecycle: 'ACTIVE', receipt: receiptFor(CHAIN[2]), verification: { terms: [] }, game, nowMs: NOW, engineHealthy: true, audits: [],
+    lineage: chain, receipts: new Map(CHAIN.map(r => [r.id, receiptFor(r)])), verified: new Map(CHAIN.map(r => [r.id, { payload_hash: true, terms: [], chain: true }])) });
+  assert.equal(card.lineage.revision, 3);
+  assert.equal(card.lineage.post_lock_changes, 0);
+  const [first, second] = card.lineage.replaced;
+  /* Original terms preserved exactly as persisted. */
+  assert.deepEqual([first.status, first.selection.display, first.issue.line, first.issue.price, first.issue.at, first.model.version, first.receipt.chain_hash],
+    ['SIGNAL REPLACED', 'BUF -2.5', -2.5, -110, '2026-09-06T14:00:00+00:00', 1, receiptFor(CHAIN[0]).chain_hash]);
+  /* Replacement shown with its own terms, time and receipt. */
+  assert.deepEqual([first.replaced_by.selection.display, first.replaced_by.issue.line, first.replaced_by.issue.price, first.replaced_at, first.replaced_by.receipt_chain_hash],
+    ['HOU +3', 3, -105, '2026-09-09T17:00:00+00:00', receiptFor(CHAIN[1]).chain_hash]);
+  assert.equal(first.graded, false);
+  assert.equal(first.before_lock, true);
+  assert.equal(first.record, 'validation_history');
+  assert.equal(card.lineage.replaces.id, second.id);
+  assert.equal(second.replaced_by.selection.display, 'BUF -3.5');
+  /* The timeline reads issued -> replaced -> issued -> replaced -> issued. */
+  const types = card.events.map(e => e.type);
+  assert.deepEqual(types.slice(0, 5), ['NEW_PBE_SIGNAL', 'SIGNAL_SUPERSEDED', 'NEW_PBE_SIGNAL', 'SIGNAL_SUPERSEDED', 'NEW_PBE_SIGNAL']);
+});
+
+test('a replacement reason is stated only when the engine rule is provable from the rows', () => {
+  const r = P.replacementReason(CHAIN[0], CHAIN[1]);
+  assert.deepEqual([r.rule, r.from, r.to, r.new_edge_pp, r.threshold_pp, r.new_stake_units], ['opposite_side_qualified', 'BUF -2.5', 'HOU +3', 2.4, 2, 0.6]);
+  assert.equal(P.replacementReason(CHAIN[0], { ...CHAIN[1], edge_pct: 0.015 }), null);            // below threshold: no reason claimed
+  assert.equal(P.replacementReason(CHAIN[0], { ...CHAIN[1], stake_units: 0 }), null);             // zero stake: no reason claimed
+  assert.equal(P.replacementReason(CHAIN[0], { ...CHAIN[1], selection_team: 'BUF' }), null);      // same side: not the rule
+  assert.equal(P.replacementReason(CHAIN[0], null), null);
+});
+
+test('lock immutability: any change at or after the real kickoff is reported, never hidden', () => {
+  const index = P.lineageIndex(CHAIN);
+  const byId = new Map(CHAIN.map(r => [r.id, r]));
+  const pre = new Map([['2026_01_BUF_HOU', { kickoff: '2026-09-13T17:00Z' }]]);
+  assert.deepEqual(P.lockViolations(CHAIN, { index, games: pre, byId }), []);
+  /* Same rows against a kickoff that already happened on 09-10: the 09-11
+   * replacement and issuance are breaches and must surface. */
+  const past = new Map([['2026_01_BUF_HOU', { kickoff: '2026-09-10T00:00Z' }]]);
+  const v = P.lockViolations(CHAIN, { index, games: past, byId });
+  /* CHAIN[1] (09-09) was replaced on 09-11, and CHAIN[2] was issued on 09-11. */
+  assert.deepEqual(v.map(x => `${x.kind}:${x.id.slice(-1)}`).sort(), ['issued_after_kickoff:3', 'replaced_after_kickoff:2']);
+  const late = P.replacedEntry({ row: CHAIN[1], replacedBy: CHAIN[2] }, { game: { kickoff: '2026-09-10T00:00Z' } });
+  assert.equal(late.before_lock, false);
+  const killed = P.lockViolations([CHAIN[2]], { games: pre, killedAt: new Map([[CHAIN[2].id, '2026-09-13T17:05:00Z']]) });
+  assert.deepEqual(killed.map(x => x.kind), ['withdrawn_after_kickoff']);
+});
+
+test('handler: the Pro card shows SIGNAL REPLACED with both frozen decisions and receipts', async () => {
+  const pro = await call('current', sessionCookie('pro@propbetedge.test'));
+  const card = pro.json.picks.find(c => c.id === ROWS[0].id);                  // BUF -2.5 replaced HOU +2.5
+  assert.equal(card.lineage.revision, 2);
+  const r = card.lineage.replaces;
+  assert.deepEqual([r.id, r.selection.display, r.issue.line, r.issue.price, r.issue.at, r.receipt.chain_hash, r.graded],
+    [ROWS[1].id, 'HOU +2.5', 2.5, -110, ROWS[1].created_at, RECEIPTS[1].chain_hash, false]);
+  assert.equal(r.replaced_by.selection.display, 'BUF -2.5');
+  assert.equal(r.replaced_by.receipt_chain_hash, RECEIPTS[0].chain_hash);
+  assert.equal(r.reason.rule, 'opposite_side_qualified');
+  assert.equal(pro.json.eligibility.lock_integrity.violations, 0);
+  assert.equal(pro.json.summary.replaced_before_lock, 1);
+  /* The replaced row itself is never a current pick. */
+  assert.equal(pro.json.picks.some(c => c.id === ROWS[1].id), false);
+  /* Free sees that the signal was revised, not what it was or is. */
+  const preview = await call('preview');
+  const pv = preview.json.previews.find(p => p.game_id === '2026_01_BUF_HOU' && p.market === 'spread');
+  assert.equal(pv.revisions, 1);
+  assert.equal(preview.text.includes('HOU +2.5'), false);
+  assert.equal(P.assertNoSelection(preview.json), true);
+});
+
+test('handler: replaced decisions live in Validation History, ungraded and outside the record', async () => {
+  const hist = await call('validation-history', sessionCookie('pro@propbetedge.test'));
+  assert.equal(hist.status, 200);
+  const rep = hist.json.replaced.find(x => x.id === ROWS[1].id);
+  assert.ok(rep, 'superseded decision listed');
+  assert.deepEqual([rep.status, rep.graded, rep.before_lock, rep.replaced_by.id], ['SIGNAL REPLACED', false, true, ROWS[0].id]);
+  assert.equal(hist.json.summary.replaced_before_lock, 1);
+  /* Not a result: the W-L-P only counts graded decisions. */
+  assert.equal(hist.json.summary.win + hist.json.summary.loss + hist.json.summary.push, 1);   // only the graded NE@SEA win
+  assert.equal(hist.json.picks.some(p => p.id === ROWS[1].id), false);
+});
+
+test('handler: an official decision replaced before lock is not an Official Track Record pick', async () => {
+  const off = pick({ id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', publication_scope: 'official', model_version: 2, status: 'superseded',
+    superseded_by: '11111111-1111-4111-8111-111111111111', game_id: '2026_01_KC_DEN', kickoff_ts: '2026-09-10T00:00:00+00:00' });
+  mock.extraRows.push(off);
+  try {
+    const track = await call('trackrecord');
+    assert.equal(track.json.total_count, 0);
+    assert.equal(track.json.picks.length, 0);
+    assert.equal(track.json.replaced_count, 1);
+  } finally { mock.extraRows.length = 0; }
+});
+
+test('handler: view=decision returns the persisted row to Pro only', async () => {
+  const id = ROWS[0].id;
+  const pro = await callQ({ view: 'decision', id }, sessionCookie('pro@propbetedge.test'));
+  assert.equal(pro.status, 200);
+  for (const k of ['selection_team', 'market_line', 'market_price', 'created_at', 'model_prob', 'market_prob', 'edge_pct', 'stake_units', 'model_version', 'publication_scope']) {
+    assert.equal(pro.json.row[k], ROWS[0][k], k);
+  }
+  assert.equal('features' in pro.json.row, false);
+  assert.equal(pro.json.receipt.chain_hash, RECEIPTS[0].chain_hash);
+  assert.equal(pro.json.verification.ok, true);
+  assert.equal((await callQ({ view: 'decision', id })).status, 401);
+  assert.equal((await callQ({ view: 'decision', id }, `${SESSION_COOKIE}=eyJhbGciOiJIUzI1NiJ9.eyJlbWFpbCI6InByb0B4LmNvbSJ9.AAAA`)).status, 401);
+  const free = await callQ({ view: 'decision', id }, sessionCookie('free@propbetedge.test'));
+  assert.equal(free.status, 403);
+  assertNoSecrets(free.text);
 });

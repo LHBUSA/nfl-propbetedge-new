@@ -210,6 +210,43 @@
     </section>`;
   }
 
+  /* ---- SIGNAL LIFECYCLE: replacement ------------------------------------- */
+  const priceText = (sel, issue, market) => (market === 'moneyline' ? `${sel?.team || '—'} ${american(issue?.price)}` : `${sel?.display || '—'} ${american(issue?.price)}`);
+  const short = h => (h ? `${String(h).slice(0, 10)}…` : '—');
+  function reasonText(r, market) {
+    if (!r) return 'No replacement reason is stated: the persisted rows do not prove which engine rule applied.';
+    const f1 = v => Number(v).toFixed(1);
+    return `Engine rule, from the two persisted decisions: on a later market capture the opposite side (${r.to}) cleared the ${String(MARKET[market] || market).toLowerCase()} threshold — edge ${r.new_edge_pp > 0 ? '+' : ''}${f1(r.new_edge_pp)}pp against ${f1(r.threshold_pp)}pp, stake ${units(r.new_stake_units)}. The engine replaces a decision; it never edits one.`;
+  }
+  function replacedBlock(c) {
+    const L = c.lineage;
+    if (!L || !L.replaces) return '';
+    const r = L.replaces;
+    const n = L.replaced.length;
+    const history = L.replaced.map((x, i) => `<li class="${x.before_lock === false ? 'is-breach' : ''}">
+        <span class="rev">R${i + 1}</span>
+        <div><b class="was">${esc(priceText(x.selection, x.issue, c.market))}</b><small>Issued ${esc(etStamp(x.issue?.at))} · v${esc(x.model?.version ?? '—')} · edge ${esc(pp(x.edge_pct))}pp · ${esc(x.confidence_bucket || '—')} · ${esc(units(x.stake_units))} · receipt ${esc(short(x.receipt?.chain_hash))}</small>
+          <small>Replaced ${esc(etStamp(x.replaced_at))} by ${esc(priceText(x.replaced_by?.selection, x.replaced_by?.issue, c.market))}${x.before_lock === false ? ' · AFTER KICKOFF' : ' · before lock · not graded'}</small></div></li>`).join('')
+      + `<li class="is-current"><span class="rev">R${n + 1}</span><div><b>${esc(priceText(c.selection, c.issue, c.market))}</b><small>Issued ${esc(etStamp(c.issue?.at))} · receipt ${esc(short(c.receipt?.chain_hash))} · ${esc(c.lifecycle === 'ACTIVE' ? 'current signal' : c.lifecycle === 'LOCKED' ? 'locked at kickoff' : 'final')}</small></div></li>`;
+    return `<section class="pbec-replaced${L.post_lock_changes ? ' is-breach' : ''}">
+      <header><b>SIGNAL REPLACED</b><span>Revision ${esc(L.revision)} · replaced ${esc(n)} time${n === 1 ? '' : 's'} before lock</span></header>
+      <div class="pbec-replaced-row">
+        <div class="was"><small>Replaced · frozen as issued</small><strong>${esc(priceText(r.selection, r.issue, c.market))}</strong><em>Issued ${esc(etStamp(r.issue?.at))} · model v${esc(r.model?.version ?? '—')}</em><em>Receipt ${esc(short(r.receipt?.chain_hash))}${r.receipt?.verified?.payload_hash && r.receipt?.verified?.issued_terms ? ' · verified' : ''}</em></div>
+        <div class="arrow"><i aria-hidden="true"></i><em>Replaced ${esc(etStamp(r.replaced_at))}</em></div>
+        <div class="now"><small>${c.lifecycle === 'ACTIVE' ? 'New active signal' : 'Replacement'}</small><strong>${esc(priceText(c.selection, c.issue, c.market))}</strong><em>Issued ${esc(etStamp(c.issue?.at))} · model v${esc(c.model?.version ?? '—')}</em><em>Receipt ${esc(short(c.receipt?.chain_hash))}</em></div>
+      </div>
+      <p class="pbec-replaced-why">${esc(reasonText(r.reason, c.market))}</p>
+      <p class="pbec-muted">The replaced decision is never edited. It stays frozen with its own receipt in Validation History; it is not graded, not a loss, and never an Official Track Record pick.</p>
+      ${L.post_lock_changes ? `<p class="pbec-breach">POST-LOCK CHANGE DETECTED — ${esc(L.post_lock_changes)} replacement${L.post_lock_changes === 1 ? '' : 's'} recorded at or after the real kickoff. Reported, not hidden.</p>` : ''}
+      <details class="pbec-revs"><summary>Full signal history · ${esc(n + 1)} revisions</summary><ol>${history}</ol></details>
+    </section>`;
+  }
+  function lockNote(c) {
+    if (c.lifecycle === 'ACTIVE') return `<p class="pbec-lock-note is-open"><i aria-hidden="true"></i>Replaceable until kickoff (${esc(etStamp(c.lock?.boundary || c.kickoff_ts))}). If the other side clears the threshold first, a new signal is issued and this one is shown as replaced — never edited.</p>`;
+    if (c.lifecycle === 'LOCKED' || c.lifecycle === 'FINAL') return `<p class="pbec-lock-note is-locked"><i aria-hidden="true"></i>Locked at kickoff (${esc(etStamp(c.lock?.boundary || c.kickoff_ts))}). The engine no longer evaluates this market; this decision can no longer change.</p>`;
+    return '';
+  }
+
   /* ---- LIVE / FINAL -------------------------------------------------------- */
   function liveBlock(c) {
     if (c.lifecycle !== 'LOCKED') return '';
@@ -242,8 +279,15 @@
   /* ---- AUDIT: why it cleared, receipt, events ------------------------------ */
   const EVENT_LABEL = {
     NEW_PBE_SIGNAL: 'Signal issued', PRICE_MOVED_THROUGH_ISSUE_LINE: 'Market moved off the issue line',
-    SIGNAL_SUPERSEDED: 'Superseded', SIGNAL_WITHDRAWN: 'Withdrawn', PICK_LOCKED: 'Locked at kickoff', FINAL_GRADE: 'Graded from the final',
+    SIGNAL_SUPERSEDED: 'Signal replaced', SIGNAL_WITHDRAWN: 'Withdrawn', PICK_LOCKED: 'Locked at kickoff', FINAL_GRADE: 'Graded from the final',
   };
+  function eventDetail(e) {
+    const d = e.detail || {};
+    if (e.type === 'NEW_PBE_SIGNAL' && d.selection) return `${d.selection} ${american(d.price)}${d.replacement ? ' · replacement' : ''}`;
+    if (e.type === 'SIGNAL_SUPERSEDED' && d.selection) return `${d.selection} → ${d.replaced_by || '—'}`;
+    if (d.from !== undefined) return `${line(d.from)} → ${line(d.to)}`;
+    return '';
+  }
   function auditBlock(c) {
     const w = c.why_cleared;
     const rc = c.receipt;
@@ -255,7 +299,7 @@
       return `<li class="${k.pass ? 'pass' : 'fail'}"><i aria-hidden="true">${k.pass ? '✓' : '!'}</i><div><b>${esc(k.label)}</b><small>${esc(body)}</small></div></li>`;
     }).join('');
     const flags = arr(w?.frozen_flags).map(f => `<span>${esc(f.label)}</span>`).join('');
-    const events = arr(c.events).map(e => `<li><time>${esc(etStamp(e.at))}</time><b>${esc(EVENT_LABEL[e.type] || e.type)}</b>${e.detail?.from !== undefined ? `<small>${esc(line(e.detail.from))} → ${esc(line(e.detail.to))}</small>` : ''}</li>`).join('');
+    const events = arr(c.events).map(e => { const dt = eventDetail(e); return `<li class="ev-${esc(String(e.type).toLowerCase())}"><time>${esc(etStamp(e.at))}</time><b>${esc(EVENT_LABEL[e.type] || e.type)}</b>${dt ? `<small>${esc(dt)}</small>` : ''}</li>`; }).join('');
     const v = rc?.verified || {};
     return `<details class="pbec-audit" data-pbec-audit="${esc(c.id)}"${store.open.has(c.id) ? ' open' : ''}><summary><span>Why it cleared · receipt · timeline</span><i aria-hidden="true"></i></summary>
       <div class="pbec-audit-grid">
@@ -279,7 +323,7 @@
     const p = priceParts(c);
     const scope = c.publication_scope === 'official' ? 'official' : 'validation';
     return `<article class="pbec-card is-${scope} lc-${esc(String(c.lifecycle).toLowerCase())}${featured ? ' is-featured' : ''}${c.actionable === false && c.lifecycle === 'ACTIVE' ? ' is-unconfirmed' : ''}" data-pbec-card="${esc(c.id)}">
-      <header class="pbec-card-head">${scopeChip(c)}${lifeChip(c.lifecycle, c)}${strongest ? '<span class="pbec-strong">STRONGEST EDGE ON THE CARD</span>' : ''}<span class="pbec-kick">${esc(MARKET[c.market] || c.market)} · ${esc(etStamp(c.kickoff_ts))}${c.lifecycle === 'ACTIVE' ? ` · ${esc(until(c.kickoff_ts))}` : ''}</span></header>
+      <header class="pbec-card-head">${scopeChip(c)}${lifeChip(c.lifecycle, c)}${c.lineage?.revision > 1 ? `<span class="pbec-revchip">${c.lifecycle === 'ACTIVE' ? 'NEW ACTIVE SIGNAL' : 'REPLACEMENT'} · R${esc(c.lineage.revision)}</span>` : ''}${strongest ? '<span class="pbec-strong">STRONGEST EDGE ON THE CARD</span>' : ''}<span class="pbec-kick">${esc(MARKET[c.market] || c.market)} · ${esc(etStamp(c.kickoff_ts))}${c.lifecycle === 'ACTIVE' ? ` · ${esc(until(c.kickoff_ts))}` : ''}</span></header>
       <div class="pbec-card-body">
         <div class="pbec-sel">
           ${matchupHtml(c.matchup, featured ? 40 : 30)}
@@ -297,7 +341,9 @@
           <div class="is-wide"><dt>Issued at</dt><dd>${esc(etStamp(c.issue?.at))}<small>model v${esc(c.model?.version ?? '—')} · receipt ${esc(String(c.receipt?.chain_hash || '').slice(0, 10))}…</small></dd></div>
         </dl>
       </div>
+      ${replacedBlock(c)}
       ${liveBlock(c)}${finalBlock(c)}${c.lifecycle !== 'FINAL' ? marketBlock(c) : ''}
+      ${lockNote(c)}
       ${auditBlock(c)}
       <footer class="pbec-card-foot">${esc(c.tag || '')}</footer>
     </article>`;
@@ -306,7 +352,7 @@
   /* ---- LOCKED PREVIEW (free) ------------------------------------------------ */
   function lockedCard(pv) {
     return `<article class="pbec-card is-locked lc-${esc(String(pv.lifecycle).toLowerCase())}">
-      <header class="pbec-card-head"><span class="pbec-scope is-${pv.publication_scope === 'official' ? 'official' : 'validation'}">${esc(pv.label)}</span>${lifeChip(pv.lifecycle)}<span class="pbec-kick">${esc(MARKET[pv.market] || pv.market)} · ${esc(etStamp(pv.kickoff_ts))}</span></header>
+      <header class="pbec-card-head"><span class="pbec-scope is-${pv.publication_scope === 'official' ? 'official' : 'validation'}">${esc(pv.label)}</span>${lifeChip(pv.lifecycle)}${num(pv.revisions) ? `<span class="pbec-revchip">REVISED ×${esc(pv.revisions)} BEFORE LOCK</span>` : ''}<span class="pbec-kick">${esc(MARKET[pv.market] || pv.market)} · ${esc(etStamp(pv.kickoff_ts))}</span></header>
       <div class="pbec-card-body is-locked">
         <div class="pbec-sel">${matchupHtml(pv.matchup, 30)}
           <div class="pbec-sel-label">SELECTION · ${esc((MARKET[pv.market] || pv.market).toUpperCase())}</div>
@@ -325,7 +371,7 @@
     const f = d.freshness || {};
     const strongest = pro && s.strongest ? cards().find(c => c.id === s.strongest.id) : null;
     const tiles = [
-      ['Active signals', `${num(s.active) ?? 0}`, `${num(s.locked) ?? 0} locked · ${num(s.final) ?? 0} final this week`],
+      ['Active signals', `${num(s.active) ?? 0}`, `${num(s.locked) ?? 0} locked · ${num(s.final) ?? 0} final${pro ? ` · ${num(s.replaced_before_lock) ?? 0} replaced before lock` : ''}`],
       ['Strongest signal', strongest ? `${strongest.selection?.display || '—'} ${american(strongest.issue?.price)}` : pro ? '—' : 'NFL Pro', strongest ? `${pp(strongest.edge_pct)}pp edge · ${strongest.matchup?.away} @ ${strongest.matchup?.home}` : pro ? 'No active signal' : 'Highest persisted edge on the card'],
       ['Next kickoff', s.next_kickoff ? etStamp(s.next_kickoff) : '—', s.next_kickoff ? until(s.next_kickoff) : 'No pending kickoff'],
       ['Last engine evaluation', ago(f.last_evaluation_at || d.last_evaluation_at), f.last_evaluation_at || d.last_evaluation_at ? etStamp(f.last_evaluation_at || d.last_evaluation_at) : 'No run recorded'],
@@ -379,6 +425,14 @@
   }
 
   /* ---- VALIDATION HISTORY (Pro) -------------------------------------------- */
+  function replacedTable(d) {
+    const list = arr(d?.replaced);
+    if (!list.length) return '';
+    const market = x => (MARKET[x.selection?.kind] || x.selection?.kind || '');
+    return `<section class="pbec-replaced-hist"><h4>Replaced before lock · ${esc(list.length)}</h4>
+      <p class="pbec-muted">Every decision the engine replaced, exactly as issued, with its receipt and what replaced it. Not graded. Not a loss. Never in any record.</p>
+      <div class="pbec-table"><table><thead><tr><th>Replaced</th><th>Market</th><th>Was (frozen)</th><th>Issued</th><th>Edge</th><th>Replaced by</th><th>Rule</th><th>Receipt</th></tr></thead><tbody>${list.map(x => `<tr class="${x.before_lock === false ? 'is-breach' : ''}"><td>${esc(etStamp(x.replaced_at))}${x.before_lock === false ? '<small>AFTER KICKOFF</small>' : '<small>before lock</small>'}</td><td>${esc(market(x))}</td><td><b class="was">${esc(x.selection?.display)} ${esc(american(x.issue?.price))}</b></td><td>${esc(etStamp(x.issue?.at))}<small>v${esc(x.model?.version ?? '—')}</small></td><td>${esc(pp(x.edge_pct))}</td><td><b>${esc(x.replaced_by?.selection?.display || '—')} ${esc(american(x.replaced_by?.issue?.price))}</b></td><td>${x.reason ? `opposite side ${esc(x.reason.new_edge_pp)}pp ≥ ${esc(x.reason.threshold_pp)}pp` : 'not stated'}</td><td><code>${esc(short(x.receipt?.chain_hash))}</code></td></tr>`).join('')}</tbody></table></div></section>`;
+  }
   function historyHtml() {
     const h = store.history;
     const d = h.data;
@@ -388,6 +442,7 @@
       <p class="pbec-muted">Separate from the Official Track Record and never merged into it. Withdrawn decisions are listed as audit events, not results.</p>
       ${!d ? `<div class="pbec-empty">${h.error ? `<b>History unavailable</b><span>${esc(h.error)}</span>` : '<b>Open to load</b>'}</div>`
         : `<div class="pbec-history-kpis"><div><span>Record</span><b>${s.win}-${s.loss}${s.push ? `-${s.push}` : ''}</b></div><div><span>Units</span><b>${esc(signedUnits(s.units))}</b></div><div><span>CLV beat</span><b>${s.clv_beat_pct === null ? '—' : `${s.clv_beat_pct}%`}</b></div><div><span>Withdrawn</span><b>${esc(s.withdrawn)}</b></div></div>
+        ${replacedTable(d)}
         ${rows.length ? `<div class="pbec-table"><table><thead><tr><th>Kickoff</th><th>Selection</th><th>Issue</th><th>Edge</th><th>Conf</th><th>Risk</th><th>Result</th><th>Units</th><th>Receipt</th></tr></thead><tbody>${rows.map(c => `<tr><td>${esc(etDay(c.kickoff_ts))}<small>W${esc(c.week)}</small></td><td><b>${esc(c.selection?.display)}</b><small>${esc(c.matchup?.away)} @ ${esc(c.matchup?.home)}</small></td><td>${esc(c.market === 'moneyline' ? american(c.issue?.price) : `${line(c.issue?.line)} · ${american(c.issue?.price)}`)}</td><td>${esc(pp(c.edge_pct))}</td><td>${esc(c.confidence_bucket)}</td><td>${esc(units(c.stake_units))}</td><td><span class="pbec-res is-${esc(String(c.grade?.result || '').toLowerCase())}">${esc(String(c.grade?.result || '—').toUpperCase())}</span></td><td>${esc(signedUnits(c.grade?.units_delta))}</td><td><code>${esc(String(c.receipt?.chain_hash || '').slice(0, 10))}…</code></td></tr>`).join('')}</tbody></table></div>` : '<div class="pbec-empty"><b>No graded validation signals yet this season</b></div>'}`}
     </details>`;
   }
@@ -396,7 +451,7 @@
   function compactCard(c) {
     const p = priceParts(c);
     return `<button type="button" class="pbec-mini is-${c.publication_scope === 'official' ? 'official' : 'validation'} lc-${esc(String(c.lifecycle).toLowerCase())}" data-route="pbepicks">
-      <span class="pbec-mini-top">${matchupHtml(c.matchup, 18)}${lifeChip(c.lifecycle, c)}</span>
+      <span class="pbec-mini-top">${matchupHtml(c.matchup, 18)}<span class="pbec-mini-chips">${c.lineage?.revision > 1 ? `<span class="pbec-revchip is-small">REPLACED ×${esc(c.lineage.replaced.length)}</span>` : ''}${lifeChip(c.lifecycle, c)}</span></span>
       <strong>${esc(p.main)} <em>${esc(p.price)}</em></strong>
       <span class="pbec-mini-stats"><b>${esc(pp(c.edge_pct))}pp</b> edge · ${esc(c.confidence_bucket || '—')} · ${esc(units(c.stake_units))}${c.lifecycle === 'LOCKED' && c.progress ? ` · ${esc(c.progress.text)}` : c.lifecycle === 'FINAL' && c.grade ? ` · ${esc(String(c.grade.result).toUpperCase())}` : ''}</span>
     </button>`;
@@ -432,7 +487,7 @@
     const c = hit.cards.find(x => x.lifecycle !== 'FINAL') || hit.cards[0];
     if (c) {
       const more = hit.cards.length > 1 ? ` +${hit.cards.length - 1}` : '';
-      return `<button type="button" class="pbec-badge is-${c.publication_scope === 'official' ? 'official' : 'validation'}" data-route="pbepicks" title="${esc(c.label)}"><i></i>${esc(c.publication_scope === 'official' ? 'PBE PICK' : 'PBE SIGNAL')} · ${esc(c.selection?.display)}${esc(more)}</button>`;
+      return `<button type="button" class="pbec-badge is-${c.publication_scope === 'official' ? 'official' : 'validation'}" data-route="pbepicks" title="${esc(c.label)}"><i></i>${esc(c.publication_scope === 'official' ? 'PBE PICK' : 'PBE SIGNAL')} · ${esc(c.selection?.display)}${c.lineage?.revision > 1 ? ' · REVISED' : ''}${esc(more)}</button>`;
     }
     const pv = hit.previews.find(x => x.lifecycle !== 'FINAL');
     return pv ? `<button type="button" class="pbec-badge is-locked" data-pbec-upgrade title="Unlock today's PBE card"><i></i>PBE SIGNAL · ${hit.previews.filter(x => x.lifecycle !== 'FINAL').length} LOCKED</button>` : '';

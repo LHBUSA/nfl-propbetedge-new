@@ -265,6 +265,140 @@ export function eligibleDecisions(rows, { nowMs, killedIds = new Set(), verified
 }
 
 /* ---------------------------------------------------------------------------
+ * Signal lifecycle: replacements
+ *
+ * The engine never edits an issued decision. When the other side of a market
+ * clears the threshold before kickoff, nfl_replace_open_pick marks the
+ * incumbent `superseded` (superseded_by -> the new row) and inserts the
+ * replacement in the same transaction. Both rows stay frozen forever.
+ *
+ * A customer must see that happen: the replacement card carries the full
+ * chain of frozen decisions it replaced, each with its own terms and receipt,
+ * and the moment it was replaced. A replaced decision is never graded, never
+ * counted as a loss and never an Official Track Record pick.
+ * ------------------------------------------------------------------------ */
+
+const selectionKey = row => `${row?.market}|${row?.market === 'total' ? row?.selection_over_under : row?.selection_team}`;
+
+/* predecessors: replacement id -> rows it superseded. */
+export function lineageIndex(rows) {
+  const predecessors = new Map();
+  for (const row of Array.isArray(rows) ? rows : []) {
+    if (row?.status !== 'superseded' || !row.superseded_by) continue;
+    if (!predecessors.has(row.superseded_by)) predecessors.set(row.superseded_by, []);
+    predecessors.get(row.superseded_by).push(row);
+  }
+  for (const list of predecessors.values()) list.sort((a, b) => ms(a.created_at) - ms(b.created_at));
+  return { predecessors };
+}
+
+/* The chain a decision replaced, oldest first: [{ row, replacedBy }]. */
+export function lineageOf(row, index) {
+  const chain = [];
+  const seen = new Set([row?.id]);
+  let cur = row;
+  while (cur && index?.predecessors?.has(cur.id)) {
+    const preds = index.predecessors.get(cur.id).filter(p => !seen.has(p.id));
+    if (!preds.length) break;
+    const prev = preds[preds.length - 1];
+    seen.add(prev.id);
+    chain.unshift({ row: prev, replacedBy: cur });
+    cur = prev;
+  }
+  return chain;
+}
+
+/* The only replacement reason the engine's own rule allows us to state: the
+ * opposite selection qualified (edge at or above the market threshold, stake
+ * above zero) on a later market capture. Derived from the two persisted rows;
+ * anything that does not satisfy the rule gets no reason at all. */
+export function replacementReason(prev, next) {
+  if (!prev || !next || prev.market !== next.market) return null;
+  const threshold = EDGE_THRESHOLD[next.market];
+  const edge = finite(next.edge_pct), stake = finite(next.stake_units);
+  if (selectionKey(prev) === selectionKey(next) || threshold === undefined || edge === null || edge < threshold || !(stake > 0)) return null;
+  return {
+    rule: 'opposite_side_qualified',
+    from: selectionOf(prev).display,
+    to: selectionOf(next).display,
+    new_edge_pp: Number((edge * 100).toFixed(2)),
+    threshold_pp: Number((threshold * 100).toFixed(2)),
+    new_stake_units: stake,
+    source: 'persisted_rows_and_engine_threshold',
+  };
+}
+
+function receiptSummary(receipt, verification) {
+  if (!receipt) return null;
+  return {
+    seq: receipt.seq,
+    receipt_version: receipt.receipt_version,
+    issued_at: receipt.issued_at,
+    payload_sha256: receipt.payload_sha256,
+    chain_hash: receipt.chain_hash,
+    publication_scope: receipt.publication_scope,
+    verified: {
+      payload_hash: verification?.payload_hash === true,
+      issued_terms: Array.isArray(verification?.terms) && verification.terms.length === 0,
+      chain_link: verification?.chain ?? null,
+    },
+  };
+}
+
+/* One frozen, replaced decision as a customer sees it. `game` is nfl-current's
+ * view of the game, so "before lock" is judged against the real kickoff. */
+export function replacedEntry({ row, replacedBy }, { receipts = new Map(), verified = new Map(), game = null } = {}) {
+  const replacedAt = replacedBy?.created_at || null;
+  const kick = effectiveKickoff(row, game);
+  const beforeLock = replacedAt !== null && kick !== null ? ms(replacedAt) < kick : null;
+  return {
+    id: row.id,
+    status: 'SIGNAL REPLACED',
+    publication_scope: row.publication_scope,
+    record: row.publication_scope === SCOPE_OFFICIAL ? 'official_replaced_not_a_pick' : 'validation_history',
+    graded: false,
+    selection: selectionOf(row),
+    issue: { line: finite(row.market_line), price: finite(row.market_price), at: row.created_at },
+    model: { version: row.model_version, prob: finite(row.model_prob), fair_line: finite(row.model_line) },
+    market_prob: finite(row.market_prob),
+    edge_pct: finite(row.edge_pct),
+    confidence_bucket: row.confidence_bucket,
+    stake_units: finite(row.stake_units),
+    receipt: receiptSummary(receipts.get(row.id), verified.get(row.id)),
+    replaced_at: replacedAt,
+    before_lock: beforeLock,
+    replaced_by: replacedBy ? {
+      id: replacedBy.id,
+      selection: selectionOf(replacedBy),
+      issue: { line: finite(replacedBy.market_line), price: finite(replacedBy.market_price), at: replacedBy.created_at },
+      receipt_chain_hash: receipts.get(replacedBy.id)?.chain_hash || null,
+    } : null,
+    reason: replacementReason(row, replacedBy),
+  };
+}
+
+/* LOCK IMMUTABILITY. After the real kickoff nothing about a decision may
+ * change: no replacement, no withdrawal, no new issuance. The engine enforces
+ * this by only evaluating games nfl-current still calls scheduled; this check
+ * proves it from the persisted rows and reports any breach instead of hiding
+ * it. killedAt: Map pick id -> pick_killed occurred_at. */
+export function lockViolations(rows, { index, games = new Map(), killedAt = new Map(), byId = new Map() } = {}) {
+  const out = [];
+  for (const row of Array.isArray(rows) ? rows : []) {
+    const kick = effectiveKickoff(row, games.get(row.game_id));
+    if (kick === null) continue;
+    if (ms(row.created_at) >= kick) out.push({ id: row.id, kind: 'issued_after_kickoff', at: row.created_at });
+    if (row.status === 'superseded' && row.superseded_by) {
+      const next = byId.get(row.superseded_by);
+      if (next && ms(next.created_at) >= kick) out.push({ id: row.id, kind: 'replaced_after_kickoff', at: next.created_at });
+    }
+    const killed = killedAt.get(row.id);
+    if (killed && ms(killed) >= kick) out.push({ id: row.id, kind: 'withdrawn_after_kickoff', at: killed });
+  }
+  return out;
+}
+
+/* ---------------------------------------------------------------------------
  * Presentation facts (all from persisted rows)
  * ------------------------------------------------------------------------ */
 
@@ -427,11 +561,17 @@ export const EVENT_TYPES = Object.freeze({
   FINAL: 'FINAL_GRADE',
 });
 
-export function eventsFor(row, { audits = [], market = null, lifecycle, grade = null, nowMs, game = null } = {}) {
+export function eventsFor(row, { audits = [], market = null, lifecycle, grade = null, nowMs, game = null, lineage = [] } = {}) {
   const out = [];
+  /* The signals this one replaced come first, so the timeline reads
+   * issued -> replaced -> issued ... exactly as it happened. */
+  for (const { row: prev, replacedBy } of lineage) {
+    out.push({ type: EVENT_TYPES.NEW_SIGNAL, at: prev.created_at, source: 'row:created_at', detail: { selection: selectionOf(prev).display, price: finite(prev.market_price), pick_id: prev.id } });
+    out.push({ type: EVENT_TYPES.SUPERSEDED, at: replacedBy?.created_at || null, source: 'row:superseded_by', detail: { selection: selectionOf(prev).display, replaced_by: selectionOf(replacedBy).display } });
+  }
   const mine = audits.filter(a => a.pick_id === row.id);
   const created = mine.find(a => a.event_type === 'pick_created');
-  out.push({ type: EVENT_TYPES.NEW_SIGNAL, at: row.created_at, source: created ? 'audit:pick_created' : 'row:created_at' });
+  out.push({ type: EVENT_TYPES.NEW_SIGNAL, at: row.created_at, source: created ? 'audit:pick_created' : 'row:created_at', detail: { selection: selectionOf(row).display, price: finite(row.market_price), pick_id: row.id, replacement: lineage.length > 0 } });
   if (market?.available && market.line_moved) {
     const first = (market.path || []).find(p => p.stage !== 'issue' && p.line !== null && p.line !== market.issue.line);
     if (first) out.push({ type: EVENT_TYPES.MOVED_THROUGH_ISSUE, at: first.captured_at, source: 'tape:nfl_odds_snapshots', detail: { from: market.issue.line, to: first.line } });
@@ -457,10 +597,11 @@ export function eventsFor(row, { audits = [], market = null, lifecycle, grade = 
 
 /* The complete Pro card. Every value is a persisted fact or a deterministic
  * function of persisted facts. No features leave the server raw. */
-export function proCard({ row, lifecycle, receipt, verification, grade, market, game, audits, nowMs, engineHealthy }) {
+export function proCard({ row, lifecycle, receipt, verification, grade, market, game, audits, nowMs, engineHealthy, lineage = [], receipts = new Map(), verified = new Map() }) {
   const scope = labelFor(row.publication_scope);
   const matchup = matchupFromGameId(row.game_id);
   const kick = effectiveKickoff(row, game);
+  const replaced = lineage.map(link => replacedEntry(link, { receipts, verified, game }));
   return {
     id: row.id,
     publication_scope: row.publication_scope,
@@ -525,7 +666,22 @@ export function proCard({ row, lifecycle, receipt, verification, grade, market, 
       brier: finite(grade.brier),
       graded_at: grade.graded_at || null,
     } : null,
-    events: eventsFor(row, { audits, market, lifecycle, grade, nowMs, game }),
+    /* SIGNAL LIFECYCLE. revision 1 is an original decision; revision n > 1
+     * replaced n-1 frozen decisions on this market, all shown. */
+    lineage: {
+      revision: replaced.length + 1,
+      replaced,
+      replaces: replaced.length ? replaced[replaced.length - 1] : null,
+      post_lock_changes: replaced.filter(r => r.before_lock === false).length,
+    },
+    /* Kickoff is the lock boundary: before it the engine may replace this
+     * decision (visibly, as a new row); after it nothing can change. */
+    lock: {
+      boundary: kick !== null ? new Date(kick).toISOString() : null,
+      locked: lifecycle === LIFECYCLE.LOCKED || lifecycle === LIFECYCLE.FINAL,
+      replaceable: lifecycle === LIFECYCLE.ACTIVE,
+    },
+    events: eventsFor(row, { audits, market, lifecycle, grade, nowMs, game, lineage }),
   };
 }
 
@@ -546,7 +702,7 @@ export function withdrawnEvent({ row, audits }) {
 
 /* What a free visitor may see about a current decision: that it exists, what
  * game and market it is on, and when it was issued. Nothing actionable. */
-export function lockedPreview({ row, lifecycle, game = null }) {
+export function lockedPreview({ row, lifecycle, game = null, revisions = 0 }) {
   const matchup = matchupFromGameId(row.game_id);
   const scope = labelFor(row.publication_scope);
   const kick = effectiveKickoff(row, game);
@@ -559,6 +715,9 @@ export function lockedPreview({ row, lifecycle, game = null }) {
     kickoff_ts: kick !== null ? new Date(kick).toISOString() : row.kickoff_ts,
     market: row.market,
     issued_at: row.created_at,
+    /* How many times this market's signal was replaced before lock. Not
+     * actionable; shown to everyone so model evolution is never hidden. */
+    revisions,
     locked: true,
   };
 }
@@ -589,6 +748,8 @@ export function cardSummary(cards, { nowMs } = {}) {
   const upcoming = [...active, ...locked].map(c => ms(c.kickoff_ts)).filter(t => t !== null && t > (nowMs ?? 0)).sort((a, b) => a - b)[0];
   const settled = final.filter(c => ['win', 'loss', 'push'].includes(c.grade?.result));
   return {
+    replaced_before_lock: list.reduce((n, c) => n + (c.lineage?.replaced?.length || 0), 0),
+    revised_signals: list.filter(c => (c.lineage?.replaced?.length || 0) > 0).length,
     active: active.length,
     locked: locked.length,
     final: final.length,

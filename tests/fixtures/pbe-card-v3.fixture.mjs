@@ -41,7 +41,8 @@ export const ROWS = [
   pick({ id: '33333333-3333-4333-8333-333333333333', game_id: '2026_01_NO_DET', market: 'moneyline', side: 'NO', market_line: null,
     market_price: 185, selection_team: 'NO', side_is_home: false, status: 'graded', model_line: 150, edge_pct: 0.041 }),         // C killed then stamped graded
   pick({ id: '44444444-4444-4444-8444-444444444444', game_id: '2026_01_NE_SEA', kickoff_ts: '2026-09-10T00:20:00+00:00',
-    side: 'SEA -1.5', market_line: -1.5, selection_team: 'SEA', side_is_home: true, status: 'graded' }),                        // D final
+    side: 'SEA -1.5', market_line: -1.5, selection_team: 'SEA', side_is_home: true, status: 'graded',
+    created_at: '2026-09-09T14:00:00+00:00', created_text: '2026-09-09 14:00:00+00' }),                        // D final
   pick({ id: '55555555-5555-4555-8555-555555555555', game_id: '2026_01_SF_LA', kickoff_ts: '2026-09-12T11:00:00+00:00',
     side: 'SF -3', market_line: -3, selection_team: 'SF', side_is_home: false }),                                               // E locked (kicked off)
   pick({ id: '66666666-6666-4666-8666-666666666666', game_id: '2026_01_CHI_CAR', kickoff_ts: '2026-09-13T17:00:00+00:00',
@@ -105,8 +106,11 @@ function inIds(query) {
 }
 const reply = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
 
-/* Mutable switches the suites flip: engine down, trained champion. */
-export const mock = { engineDown: false, trained: false, requested: [] };
+/* Mutable switches the suites flip: engine down, trained champion, extra
+ * decision rows (with receipts) injected for a single test. */
+export const mock = { engineDown: false, trained: false, requested: [], extraRows: [] };
+const allRows = () => [...ROWS, ...mock.extraRows];
+const allReceipts = () => [...RECEIPTS, ...mock.extraRows.map(r => receiptFor(r))];
 
 export function installMockFetch() {
   const real = globalThis.fetch;
@@ -137,12 +141,18 @@ export function installMockFetch() {
       if (table === 'nfl_model_weights') return reply([{ version: mock.trained ? 2 : 1, weights: { meta: { trained: mock.trained } }, notes: 'fixture' }]);
       if (table === 'nfl_learning_observations') return reply([{ season: 2026, week: 1, publication_scope: 'tracking' }]);
       if (table === 'nfl_game_picks') {
-        if (q.includes('select=season,status,publication_scope,created_at')) return reply(ROWS.map(({ season, status, publication_scope, created_at }) => ({ season, status, publication_scope, created_at })));
-        if (dq.includes('publication_scope=eq.official')) return reply(ROWS.filter(r => r.publication_scope === 'official'));
-        if (dq.includes('publication_scope=eq.tracking')) return reply(ROWS.filter(r => ['graded', 'killed'].includes(r.status)));
-        return reply(ROWS);
+        const rows = allRows();
+        if (q.includes('select=season,status,publication_scope,created_at')) return reply(rows.map(({ season, status, publication_scope, created_at }) => ({ season, status, publication_scope, created_at })));
+        const eqId = /(?:^|[?&])id=eq\.([0-9a-f-]+)/.exec(dq)?.[1];
+        if (eqId) return reply(rows.filter(r => r.id === eqId));
+        const inIdList = /(?:^|[?&])id=in\.\(([^)]*)\)/.exec(dq)?.[1];
+        if (inIdList) { const ids = inIdList.split(',').map(x => x.replace(/"/g, '')); return reply(rows.filter(r => ids.includes(r.id))); }
+        if (dq.includes('status=eq.superseded')) return reply(rows.filter(r => r.status === 'superseded'));
+        if (dq.includes('publication_scope=eq.official')) return reply(rows.filter(r => r.publication_scope === 'official'));
+        if (dq.includes('publication_scope=eq.tracking')) return reply(rows.filter(r => r.publication_scope === 'tracking' && ['graded', 'killed', 'superseded'].includes(r.status)));
+        return reply(rows);
       }
-      if (table === 'nfl_pick_receipts') { const ids = inIds(q); return reply(RECEIPTS.filter(r => ids.includes(r.pick_id))); }
+      if (table === 'nfl_pick_receipts') { const ids = inIds(q); return reply(allReceipts().filter(r => ids.includes(r.pick_id))); }
       if (table === 'nfl_pick_audit_events') { const ids = inIds(q); return reply(AUDITS.filter(a => ids.includes(a.pick_id))); }
       if (table === 'nfl_pick_grades') { const ids = inIds(q); return reply(GRADES.filter(g => ids.includes(g.pick_id))); }
       if (table === 'nfl_odds_snapshots') { const id = /game_id=eq\.([^&]+)/.exec(q)?.[1]; return reply(TAPE.filter(s => s.game_id === decodeURIComponent(id || ''))); }
