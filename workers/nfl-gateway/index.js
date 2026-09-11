@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════
 // nfl-gateway — API Gateway for NFL Platform
-// Routes: /api/season /api/standings /api/current-stats
+// Routes: /api/season /api/standings /api/current-stats /api/changes /api/best-line /api/replay/*
 //         /api/scores /api/stats /api/picks
 //         /api/odds /api/injuries /api/schedule
 //         /api/news /api/historical
@@ -61,6 +61,13 @@ export default {
       if (path.startsWith('/api/current-stats'))  return await env.NFL_CURRENT.fetch(req);
       if (path.startsWith('/api/current-player')) return await env.NFL_CURRENT.fetch(req);
       if (path.startsWith('/api/current/'))      return await env.NFL_CURRENT.fetch(req);
+
+      // Product intelligence (2026-09-11). What Changed and Best Line are
+      // nfl-intel; PBE Replay's post-game enrichment is nfl-replay. Both are
+      // owned Cloudflare Workers that read persisted state — no Vercel relay.
+      if (path.startsWith('/api/changes'))       return await env.NFL_INTEL.fetch(req);
+      if (path.startsWith('/api/best-line'))     return await env.NFL_INTEL.fetch(req);
+      if (path.startsWith('/api/replay/'))       return await env.NFL_REPLAY.fetch(req);
 
       return json({ error: 'Unknown route', path }, cors, 404);
     } catch (err) {

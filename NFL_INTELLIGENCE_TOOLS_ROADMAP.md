@@ -10,7 +10,7 @@ release API and live ESPN endpoints on 2026-09-11.
 | Source | 2026 asset | Latency | Reachable from | Licence / terms |
 |---|---|---|---|---|
 | ESPN scoreboard / summary (live state, play log, box score) | live | ~16–30 s | Vercel (site.api 403s Worker egress) | public endpoints, attribution |
-| ESPN league injury report (`/injuries`) | live | minutes | Vercel | as above |
+| ESPN injury records, core API (`teams/{id}/injuries` → records) | live | 10-min ingest | **Workers** (nfl-intel) | as above — site.api's league report caps each team at 25 and 403s Workers |
 | ESPN core API depth charts (`seasons/2026/teams/{id}/depthcharts`) | live | unknown cadence | Workers + Vercel | as above |
 | nflverse `play_by_play_2026` | ✅ | next day | anywhere | CC-BY-4.0 |
 | nflverse `snap_counts_2026` (keyed by `pfr_player_id`) | ✅ | next day | anywhere | CC-BY-4.0 (PFR-derived) |
@@ -85,11 +85,15 @@ Track Record row links to its Replay (prop-progress history, see `NFL_REPLAY_ARC
 ## What Changed — the change ledger (DESIGNED, Cloudflare-owned)
 
 The shipped What Changed reports current designations with ESPN's own update time. **Transitions**
-(QUESTIONABLE → OUT, unexpected ACTIVE, depth-chart moves) need prior observations:
+(QUESTIONABLE → OUT, unexpected ACTIVE, depth-chart moves) need prior observations.
+
+**Seeded 2026-09-11:** the nfl-intel injuries lane already stores the designation it saw per athlete
+(`inj:v1:state`) and appends a transition between two of its own observations
+(`inj:v1:transitions`). It is not displayed. The ledger milestone moves this into D1 and publishes it:
 
 ```
 Cron */10 in season  ->  nfl-changes Worker
-  injuries:     ESPN report via the Vercel relay for intraday designations (dated by ESPN);
+  injuries:     ESPN core API records (Worker-reachable; dated by ESPN) — already ingested by nfl-intel;
                 nflverse injuries_2026 (report_status + practice_status per week) as the
                 weekly reference — it has no intraday timestamp, so it never dates a change
   depth charts: nflverse depth_charts_2026 snapshots (dated by `dt`, keyed by espn_id)

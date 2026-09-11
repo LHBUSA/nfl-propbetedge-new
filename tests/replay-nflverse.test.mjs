@@ -5,7 +5,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { parseCsv, extractGame, joinRate } from '../api/_replay/nflverse.js';
+import { parseCsv, extractGame, joinRate } from '../workers/nfl-replay/src/nflverse.js';
 
 const rows = parseCsv(readFileSync(new URL('./fixtures/nflverse-pbp-2026-sample.csv', import.meta.url), 'utf8'));
 

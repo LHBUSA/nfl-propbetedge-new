@@ -72,6 +72,8 @@ blockquote.pbewc-note span{display:block;font:700 var(--fs-micro,10px)/1.2 var(-
 .pbewc-game li b{display:block;font:600 13px/1.25 var(--pbe-font-ui)}
 .pbewc-game li small{display:block;font:500 11px/1.25 var(--pbe-font-data);color:var(--pbe-faint)}
 .pbewc-none{margin:0;color:var(--pbe-faint);font-size:12px}
+.pbewc-game li.is-aged b{color:var(--pbe-dim)}
+.pbewc-game li.is-aged .pbewc-badge{opacity:.7}
 .pbewc-game footer{margin-top:auto}
 @media (max-width:768px){
   .pbewc-filters{position:static}

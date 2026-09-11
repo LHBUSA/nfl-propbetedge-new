@@ -92,6 +92,11 @@ const NWS_ALERTS = 'https://api.weather.gov/alerts/active';
 const NWS_UA = 'PropBetEdge-NFL/1.0 (https://nfl.propbetedge.ai)';
 
 let VENUES = null;
+/* A Cloudflare Worker has no project filesystem: the nfl-intel Worker imports
+   the same data/dist/nfl-venues.json at build time and hands it in here, so
+   both runtimes classify against one venue table and one set of thresholds. */
+export function setVenues(table) { VENUES = table; }
+
 export function venues() {
   if (!VENUES) {
     VENUES = JSON.parse(readFileSync(join(process.cwd(), 'data', 'dist', 'nfl-venues.json'), 'utf8'));

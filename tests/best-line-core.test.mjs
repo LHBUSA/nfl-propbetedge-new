@@ -2,7 +2,7 @@
  * edge are four different numbers and are never merged. */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { flattenEvent, bestQuote, summarizeEvent, bookLeaderboard, impliedProb, payout } from '../api/_bestline/core.js';
+import { flattenEvent, bestQuote, summarizeEvent, bookLeaderboard, impliedProb, payout } from '../workers/nfl-intel/src/bestline-core.js';
 
 const book = (key, title, markets) => ({ key, title, last_update: '2026-09-11T12:00:00Z', markets });
 const EVENT = {

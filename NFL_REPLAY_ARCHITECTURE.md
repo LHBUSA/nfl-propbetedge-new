@@ -1,8 +1,7 @@
 # PBE Replay — Architecture
 
-Status 2026-09-11, branch `nfl-product-depth-v1`. What is built is marked **BUILT**; what is
-designed but not deployed is marked **DESIGNED**. Nothing in this document is deployed to
-production.
+Status 2026-09-11, branch `nfl-product-depth-v1`. The ingest pipeline and read path are deployed
+Cloudflare Workers (`nfl-replay`, R2 bucket `nfl-replay`, Workflow `nfl-replay-ingest`).
 
 ## 1 · Two layers, never merged
 
@@ -57,45 +56,43 @@ formation stay **UNAVAILABLE** until a 2026 asset exists. They are never inferre
 **Never available:** 10 Hz player tracking. The only public corpus (Big Data Bowl) forbids
 redistribution. See `NFL_DATA_GAP_VS_MLB.md`.
 
-## 4 · What is built
+## 4 · What is built (Cloudflare-owned, 2026-09-11)
 
 | Piece | File | State |
 |---|---|---|
-| Replay v0: scoring, turnover and explosive (20+ yds stated in play text) jump lists; drive chart with expandable drives | `pbecast-command-v1.js` (`keyMomentsHtml`, `driveChart`) | **BUILT**, live-source only |
-| Enrichment core: RFC-4180 CSV, per-game extraction keyed by ESPN play id; NA stays absent; a schema change throws | `api/_replay/nflverse.js` | **BUILT**, 6 tests on real rows |
-| Prototype read path | `api/replay-enrich.js` | **BUILT**, bounded (see §5) |
-| Enriched chips per play (EPA, WPA, air, YAC, CPOE, passer→receiver) and a **Biggest swings** jump list (top \|WPA\|) | `pbecast-command-v1.js` | **BUILT**, final games only, fetched once per game |
+| Replay v0: scoring, turnover and explosive (20+ yds stated in play text) jump lists; drive chart | `pbecast-command-v1.js` | **BUILT**, live-source only |
+| Enrichment core: RFC-4180 CSV (whole-file and streaming, chunk-boundary safe), compact play, ESPN-id keying; NA stays absent; a renamed key column throws | `workers/nfl-replay/src/nflverse.js` | **BUILT** |
+| Ingest pipeline: cron (`20 */3`) → HEAD the release asset → Workflow `nfl-replay-ingest` (instance id = season + Last-Modified, so idempotent) → stream gunzip → CSV → one R2 object per game → season index | `workers/nfl-replay/src/{index,pipeline}.js` | **BUILT, DEPLOYED** |
+| Read path `GET /api/replay/enrich` through the NFL gateway: one R2 object, keyed to ESPN play ids | same | **BUILT, DEPLOYED** |
+| Enriched chips per play and a **Biggest swings** jump list; LIVE SOURCE and POST-GAME ENRICHED labelled separately | `pbecast-command-v1.js` | **BUILT**, final games only, one fetch per game |
 
-## 5 · Why the prototype read path is bounded
+The Vercel prototype `api/replay-enrich.js` is deleted.
 
-`api/replay-enrich.js` downloads the season file from the nflverse release on a cache miss
-(`s-maxage=3600`). That is fine at week 1 (0.1 MB gzipped). A full season is about 19 MB gzipped and
-100 MB as CSV, which is wrong for a request path. Above **8 MB gzipped** the endpoint returns
-`503 ENRICHMENT_PIPELINE_REQUIRED` instead of degrading. Estimated from the 2025 file (19 MB
-gzipped over ~20 weeks), that point arrives around week 8. The pipeline below must ship before then.
+## 5 · Read-path states
 
-## 6 · Production pipeline (DESIGNED, Cloudflare-owned)
+| State | When | Response |
+|---|---|---|
+| `available: true`, `read_path: R2_INGESTED` | the game is in the ingested file | plays keyed by ESPN play id, attribution, `ingested_at` |
+| `NOT_YET_PUBLISHED` | the season is ingested and this game is not in it | names the ingested asset's Last-Modified |
+| `read_path: TRANSITIONAL_BOUNDED_READ` | no season index exists yet (pipeline never completed) and the file is ≤ 8 MB gzipped | same contract, labelled transitional |
+| `POST_GAME_ENRICHMENT_UNAVAILABLE` | no season index and the file exceeds 8 MB gzipped | 503, explicit reason |
 
-GitHub Actions stays CI only. The pipeline is Cloudflare compute:
+The 8 MB bound applies only to the transitional path and is not to be raised. The pipeline is the
+fix.
 
-```
-Cron (daily 10:00 UTC, plus Tue 10:00 for MNF)
-  -> nfl-replay-enrich  Workflow
-       step 1  HEAD release asset; compare Last-Modified / ETag with KV replay:asset:<season>
-               unchanged -> exit (idempotent, no work)
-       step 2  stream play_by_play_<season>.csv.gz (DecompressionStream)
-               line-split, keep COLUMNS only, group by game_id
-       step 3  per game: R2 put replay/<season>/<game_id>.json   (checkpoint: KV replay:done:<game_id>=etag)
-       step 4  KV replay:index:<season> = [{game_id, espn_event?, plays, etag, published_at}]
-  -> read path  GET /api/replay?event=  (Vercel function or Worker route)
-       R2 get by game_id; attach ESPN play ids; same response contract as api/replay-enrich.js
-```
+## 6 · Pipeline properties (measured)
 
-- **Resumable:** each game is a Workflow step, and completed games are skipped by ETag.
-- **Idempotent:** the same asset ETag produces the same objects. R2 puts are overwrites of
-  identical content.
-- **Bounded:** streaming never holds the full CSV in memory. Per-game objects are 40–80 KB.
-- **Attribution** travels in every object: `{dataset, license:'CC-BY-4.0', attribution:'nflverse'}`.
+- **Throughput:** the full 2025 file (19 MB gzipped, 98 MB CSV, 285 games, 48,771 plays) streamed
+  in 1.8 s wall / 2.3 s CPU in the Node simulation of the Worker code, with output byte-identical
+  to the whole-file extractor. Per-game objects are a median of 45 KB, 60 KB at most; the index is
+  13 KB. The Worker runs with `limits.cpu_ms = 300000` for headroom.
+- **Memory:** the file is grouped by game (285 contiguous runs), so one game is held at a time.
+- **Idempotent:** an unchanged asset starts nothing. A re-run for the same asset overwrites
+  identical objects.
+- **Resumable:** the probe, stream and record steps are Workflow steps with retries. A failed
+  stream retries from the start and rewrites.
+- **Attribution** in every object and response: `{dataset, license: 'CC-BY-4.0', attribution:
+  'nflverse'}`.
 
 ## 7 · Next replay capabilities, in order
 

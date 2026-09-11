@@ -66,3 +66,11 @@ service = "nfl-pbecast"
 [[services]]
 binding = "NFL_CURRENT"
 service = "nfl-current"
+
+[[services]]
+binding = "NFL_INTEL"
+service = "nfl-intel"
+
+[[services]]
+binding = "NFL_REPLAY"
+service = "nfl-replay"
