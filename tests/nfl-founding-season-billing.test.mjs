@@ -35,6 +35,15 @@ test('Founding Season has no trial and is clearly recurring/cancelable', () => {
   assert.match(funnel, /Cancel anytime/);
 });
 
+test('active NFL Pro uses the same premium presentation authority', () => {
+  assert.match(funnel, /data-funnel-state="active-pro"/);
+  assert.match(funnel, /Your NFL intelligence desk is live\./);
+  assert.match(funnel, /Verified account/);
+  assert.match(funnel, /Open Pro Prop Board/);
+  assert.match(funnel, /PBE Fair Line · Model Probability · Best Line · PBE Cast · Track Record/);
+  assert.match(funnel, /const mode = s\.pro \? 'active-pro' : s\.user \? 'signed-in-free' : 'signed-out'/);
+});
+
 test('Cloudflare billing worker recognizes both legacy and Founding Season entitlements', () => {
   for (const value of [NEW_WEEKLY_PRICE, NEW_MONTHLY_PRICE, LEGACY_WEEKLY_PRICE, LEGACY_SEASON_PRICE]) {
     assert.ok(billing.includes(value), `billing worker must recognize ${value}`);
