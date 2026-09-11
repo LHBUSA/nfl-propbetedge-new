@@ -54,7 +54,8 @@ jobs:
           set -euo pipefail
           grep -Eq "const VERSION='20[0-9]{6}[A-Za-z0-9-]+'" page-loader.js
           required=(
-            dashboard-v5.js dashboard-v6.js dashboard-v7.js dashboard-v8-enhance.js
+            dashboard-v7.js dashboard-v8-enhance.js
+            nfl-command-center-v1.js what-changed-v1.js best-line-v1.js pbecast-command-v1.js
             sports-shell-v2.js sports-shell-auth-state.js
             games-v2.js games-command-v4.js games-intel-v5.js
             prop-board-v3.js prop-board-v5.js market-watch-v3.js matchups-v2.js
@@ -73,7 +74,14 @@ jobs:
               exit 1
             fi
           done
-          grep -Fq 'PBEcastV6?.focus' dashboard-v5.js
+          # Dashboard -> PBEcast opens the chosen game through v6's one-shot
+          # session handoff (dashboard v5, which called PBEcastV6.focus, is
+          # retired; v4/v5 PBEcast focus calls opened the wrong game).
+          grep -Fq "pbe.pbecast.focus" dashboard-v7.js
+          grep -Fq "pbe.pbecast.focus" nfl-command-center-v1.js
+          grep -Fq "const FOCUS_KEY='pbe.pbecast.focus'" pbecast-v6.js
+          ! grep -Fq "./dashboard-v5.js" page-loader.js
+          ! grep -Fq "./dashboard-v6.js" page-loader.js
           grep -Fq 'PBEcastV6?.focus' sports-shell-v2.js
           grep -Fq "['pbepicks','PBE Picks'" sports-shell-v2.js
           grep -Fq "['trackrecord','Track Record'" sports-shell-v2.js

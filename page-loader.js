@@ -53,8 +53,8 @@
        runtime. All three registered App.VIEWS.pbecast and all three painted
        before v6 replaced them on every deep link, and v4/v5 ran a second
        /api/nfl-live transport against the same route. v6 below is the one
-       authority; see TERMINAL_AUTHORITIES. The files are kept on disk so the
-       rollback is a one-line revert here, not a restore. */
+       authority; see TERMINAL_AUTHORITIES. The files were deleted on
+       2026-09-11 (nfl-product-depth-v1); git history is the rollback. */
 
     {css:'./propchain-v2.css',js:'./propchain-v2.js'},
     {css:'./matchups-v2.css',js:'./matchups-v2.js'},

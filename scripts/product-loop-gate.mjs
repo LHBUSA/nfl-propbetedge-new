@@ -17,6 +17,7 @@
  *   --live   screenshot deployed production (no substitution) — the baseline
  *   --full   full-page screenshots (default: first 2 viewports of the page)
  *   PBE_TARGET=<origin>  point at a preview instead of production
+ *   PBE_GATE_BOOTSTRAP=<share url>  set the preview auth cookie first (use with --live)
  *
  * Exit code 1 when any assertion fails.
  */
@@ -166,6 +167,10 @@ async function shot(file,full){
   writeFileSync(file,Buffer.from(r.data,'base64'));
 }
 
+/* A protected preview: visit its share URL once so the auth cookie is set.
+   Use the immutable deployment URL, not the branch alias, which rotates. */
+if(process.env.PBE_GATE_BOOTSTRAP){await send('Page.navigate',{url:process.env.PBE_GATE_BOOTSTRAP});await sleep(4000);}
+
 const report=[];let failures=0;
 for(const width of WIDTHS){
   await setViewport(width);
@@ -175,6 +180,9 @@ for(const width of WIDTHS){
     await send('Page.navigate',{url:'about:blank'});await sleep(150);
     await send('Page.navigate',{url});
     await sleep(SETTLE);
+    /* --prep runs an expression after the route settles (e.g. focus a game),
+       then waits another settle before measuring. */
+    if(arg('prep','')){await evaluate(arg('prep',''));await sleep(SETTLE);}
     const measure=await evaluate(MEASURE);
     if(arg('eval',''))console.log('   eval:',JSON.stringify(await evaluate(arg('eval',''))));
     const checks=ASSERT[route]?await evaluate(ASSERT[route]):[];

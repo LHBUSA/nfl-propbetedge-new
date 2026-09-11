@@ -30,7 +30,6 @@ const BODY_OBSERVER_ALLOWLIST = new Map([
   ['network-footer-v1.js', 'footer re-insert is guarded by getElementById early-return'],
   ['sports-shell-auth-state.js', 'guarded by [data-pbe-auth-degraded] idempotence check'],
   ['model-lab-v2-enhance.js', 'route-guarded and diffs before writing'],
-  ['prop-board-v4.js', 'route-guarded enhance queue'],
   ['simulator-v3-enhance.js', 'route-guarded and diffs before writing'],
 ]);
 

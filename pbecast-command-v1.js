@@ -225,7 +225,13 @@
     if (local.lastActive !== activeId) { local.openDrive = null; local.lastActive = activeId; }
     root.classList.add('has-board');
     write(hostFor(root, 'board', '[data-cast6-rail]'), boardHtml());
-    write(hostFor(root, 'moments', '[data-cast6-action]'), keyMomentsHtml() || beforeKickoffHtml());
+    /* Before kickoff the current-play and drive panels are empty by
+       definition, so the pre-game context goes directly under the hero. */
+    const pre = sem(v6().detail?.game) === 'SCHEDULE';
+    const moments = hostFor(root, 'moments', '[data-cast6-action]');
+    const anchor = root.querySelector(pre ? '[data-cast6-hero]' : '[data-cast6-action]');
+    if (anchor && moments.previousElementSibling !== anchor) anchor.after(moments);
+    write(moments, keyMomentsHtml() || beforeKickoffHtml());
   }
 
   let watched = null;
