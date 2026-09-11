@@ -449,6 +449,18 @@ if (!FREE_ONLY) {
       { name: 'production sign-in flow established a session (/api/auth-session valid=true)', ok: login.valid === true, detail: login.stage },
       { name: '/api/auth-session reports pro=true', ok: login.pro === true, detail: login.stage },
     ]);
+    if (login.valid === true && login.pro !== true) {
+      /* Signed in, but this account has no active NFL Pro entitlement. That is
+         an account fact, not a product failure: stop before any gated-card
+         test, sign out, and never try another account. */
+      report.stopped = 'signed_in_not_pro';
+      writeFileSync(join(OUT, 'report.json'), JSON.stringify(report, null, 2));
+      console.log(`\nSTOPPED · ${mask(PRO_EMAIL)} signed in (valid=true) but /api/auth-session reports pro=false (stage ${login.stage}). No gated-card test was run.`);
+      await endSession().catch(() => {});
+      await clearSessionState();
+      finish(5);
+      await new Promise(() => {});
+    }
     if (!login.ok) {
       writeFileSync(join(OUT, 'report.json'), JSON.stringify(report, null, 2));
       console.log(`\nGATE FAILED · real Pro login did not complete (${login.stage})`);
