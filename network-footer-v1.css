@@ -1,1 +1,126 @@
-.pbe-network-footer{position:relative;margin-top:42px;border-top:1px solid rgba(216,183,91,.18);background:linear-gradient(180deg,rgba(13,12,10,.985),rgba(10,10,9,.995));color:var(--pbe-paper);overflow:hidden}.pbe-network-footer:before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(216,183,91,.035),transparent 34%,transparent 70%,rgba(85,214,140,.025));pointer-events:none}.pbe-network-footer-shell{position:relative;z-index:1;width:min(1460px,calc(100% - 48px));margin:0 auto;padding:28px 0 18px}.pbe-network-footer-top{display:flex;align-items:center;justify-content:space-between;gap:28px;padding-bottom:24px;border-bottom:1px solid rgba(255,255,255,.06)}.pbe-network-footer-brand{display:flex;align-items:center;gap:18px;min-width:0}.pbe-network-footer-logo{display:flex;align-items:center;width:118px;flex:0 0 auto;opacity:.96;transition:opacity .18s ease,transform .18s ease}.pbe-network-footer-logo:hover{opacity:1;transform:translateY(-1px)}.pbe-network-footer-logo img{display:block;width:100%;height:auto}.pbe-network-footer-brand-copy{display:flex;min-width:0;flex-direction:column;gap:4px}.pbe-network-footer-brand-copy strong{font:900 17px/1.05 "Inter",sans-serif;letter-spacing:-.015em;text-transform:uppercase;color:#fff}.pbe-network-footer-brand-copy span{max-width:560px;color:var(--pbe-dim);font-size:12px;line-height:1.45}.pbe-footer-account-strip{display:flex;align-items:center;gap:18px;min-width:min(100%,470px);justify-content:space-between;padding:12px 14px 12px 16px;border:1px solid rgba(216,183,91,.14);border-radius:13px;background:rgba(255,255,255,.025)}.pbe-footer-account-state{display:flex;align-items:center;gap:10px;min-width:0}.pbe-footer-account-state>i{width:8px;height:8px;flex:0 0 auto;border-radius:50%;background:#57534b;box-shadow:0 0 0 4px rgba(255,255,255,.02)}.pbe-footer-account-state>i.signed{background:var(--pbe-gold);box-shadow:0 0 14px rgba(216,183,91,.38)}.pbe-footer-account-state>i.on{background:var(--pbe-pos);box-shadow:0 0 16px rgba(85,214,140,.45)}.pbe-footer-account-state div{min-width:0}.pbe-footer-account-state span{display:block;color:var(--pbe-dim);font:800 9px/1 "JetBrains Mono",monospace;letter-spacing:.14em}.pbe-footer-account-state strong{display:block;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--pbe-paper);font:800 12px/1.15 "Inter",sans-serif;text-transform:uppercase}.pbe-footer-account-actions{display:flex;align-items:center;gap:8px;flex:0 0 auto}.pbe-footer-account-actions button,.pbe-footer-account-actions a{display:flex;align-items:center;justify-content:center;min-height:34px;padding:0 11px;border:1px solid rgba(255,255,255,.08);border-radius:8px;background:rgba(255,255,255,.025);color:var(--pbe-paper-2);font:800 10px/1 "JetBrains Mono",monospace;letter-spacing:.06em;text-transform:uppercase;text-decoration:none;cursor:pointer;transition:.18s ease}.pbe-footer-account-actions button{border-color:rgba(216,183,91,.28);background:rgba(216,183,91,.10);color:#f1d47b}.pbe-footer-account-actions button:hover,.pbe-footer-account-actions a:hover{border-color:rgba(216,183,91,.36);color:var(--pbe-gold);background:rgba(216,183,91,.055)}.pbe-network-footer-grid{display:grid;grid-template-columns:1.35fr 1fr 1fr 1fr;gap:34px;padding:25px 0 22px}.pbe-network-link-group{display:flex;min-width:0;align-content:flex-start;flex-wrap:wrap;gap:9px 15px}.pbe-network-link-label{display:block;width:100%;margin-bottom:2px;color:#8f8a80;font:800 9px/1 "JetBrains Mono",monospace;letter-spacing:.18em}.pbe-network-link-group a,.pbe-network-current-sport,.pbe-network-soon{font-size:12px;line-height:1.35;color:var(--pbe-paper-2);text-decoration:none;white-space:nowrap}.pbe-network-link-group a{transition:color .16s ease}.pbe-network-link-group a:hover{color:var(--pbe-gold)}.pbe-network-link-group.account a:first-of-type{color:#efd579}.pbe-network-current-sport{color:#fff;font-weight:750}.pbe-network-current-sport em,.pbe-network-soon em{display:inline-block;margin-left:5px;padding:2px 5px;border:1px solid rgba(216,183,91,.17);border-radius:999px;color:var(--pbe-gold);font:700 8px/1 "JetBrains Mono",monospace;letter-spacing:.08em;font-style:normal;vertical-align:1px}.pbe-network-soon{color:#7f7b72}.pbe-network-account-note{display:block;width:100%;margin-top:2px;color:#77736b;font-size:10px;line-height:1.35}.pbe-network-footer-rail{display:flex;align-items:center;gap:10px 18px;flex-wrap:wrap;padding-top:15px;border-top:1px solid rgba(255,255,255,.055);color:#6f6b64;font-size:10px;line-height:1.45}.pbe-network-footer-rail span:not(:last-child):after{content:"·";margin-left:18px;color:#4e4b45}@media(max-width:980px){.pbe-network-footer-top{align-items:flex-start;flex-direction:column}.pbe-footer-account-strip{width:100%;min-width:0}.pbe-network-footer-grid{grid-template-columns:1.3fr 1fr}.pbe-network-link-group{padding-right:12px}}@media(max-width:620px){.pbe-network-footer{margin-top:34px}.pbe-network-footer-shell{width:min(100% - 26px,1460px);padding:22px 0 calc(82px + env(safe-area-inset-bottom))}.pbe-network-footer-top{gap:18px;padding-bottom:20px}.pbe-network-footer-brand{align-items:flex-start;gap:13px}.pbe-network-footer-logo{width:95px}.pbe-network-footer-brand-copy strong{font-size:15px}.pbe-network-footer-brand-copy span{font-size:11px}.pbe-footer-account-strip{align-items:flex-start;flex-direction:column;gap:12px;padding:13px}.pbe-footer-account-actions{width:100%}.pbe-footer-account-actions button,.pbe-footer-account-actions a{flex:1;min-height:38px}.pbe-network-footer-grid{grid-template-columns:1fr 1fr;gap:26px 18px;padding:23px 0 20px}.pbe-network-link-group{align-content:flex-start;flex-direction:column;align-items:flex-start;gap:9px;padding-right:0}.pbe-network-link-group a,.pbe-network-current-sport,.pbe-network-soon{white-space:normal}.pbe-network-link-label{margin-bottom:4px}.pbe-network-footer-rail{align-items:flex-start;flex-direction:column;gap:5px}.pbe-network-footer-rail span:not(:last-child):after{content:"";margin:0}}@media(max-width:390px){.pbe-network-footer-grid{grid-template-columns:1fr;gap:24px}.pbe-network-footer-logo{width:88px}}
+/* PropBetEdge NFL — premium sports-network footer */
+.pbe-network-footer{position:relative;margin-top:46px;border-top:1px solid rgba(216,183,91,.19);background:linear-gradient(180deg,#100e0b 0%,#0b0a08 52%,#090908 100%);color:var(--pbe-paper);overflow:hidden;isolation:isolate}
+.pbe-network-footer:before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 8% 0%,rgba(216,183,91,.11),transparent 31%),radial-gradient(circle at 92% 30%,rgba(255,255,255,.035),transparent 26%);pointer-events:none;z-index:-1}
+.pbe-network-footer:after{content:"";position:absolute;left:0;right:0;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(216,183,91,.62) 22%,rgba(216,183,91,.15) 68%,transparent)}
+.pbe-network-footer-shell{width:min(1460px,calc(100% - 48px));margin:0 auto;padding:36px 0 20px}
+
+.pbe-network-footer-intro{display:flex;align-items:flex-end;justify-content:space-between;gap:40px;padding-bottom:26px}
+.pbe-network-footer-lockup{display:flex;align-items:flex-start;gap:28px;min-width:0}
+.pbe-network-footer-logo{display:flex;width:126px;flex:0 0 auto;margin-top:3px;opacity:.97;transition:transform .18s ease,opacity .18s ease}
+.pbe-network-footer-logo:hover{transform:translateY(-2px);opacity:1}
+.pbe-network-footer-logo img{display:block;width:100%;height:auto}
+.pbe-network-footer-copy{min-width:0}
+.pbe-network-footer-copy>span{display:block;margin-bottom:8px;color:var(--pbe-gold);font:800 9px/1 "JetBrains Mono",monospace;letter-spacing:.2em}
+.pbe-network-footer-copy h2{margin:0;color:#fff;font:900 clamp(24px,2.35vw,38px)/.96 "Inter",sans-serif;letter-spacing:-.035em;text-transform:uppercase}
+.pbe-network-footer-copy h2 em{font-style:normal;color:var(--pbe-gold)}
+.pbe-network-footer-copy p{max-width:740px;margin:11px 0 0;color:#a7a198;font-size:12px;line-height:1.62}
+.pbe-network-live-mark{display:grid;grid-template-columns:auto auto;grid-template-rows:auto auto;align-items:end;column-gap:10px;min-width:150px;padding-left:26px;border-left:1px solid rgba(255,255,255,.07)}
+.pbe-network-live-mark>span{grid-column:1/-1;display:flex;align-items:center;gap:7px;margin-bottom:5px;color:#8d887f;font:700 8px/1 "JetBrains Mono",monospace;letter-spacing:.17em}
+.pbe-network-live-mark>span i{width:6px;height:6px;border-radius:50%;background:var(--pbe-pos);box-shadow:0 0 14px rgba(85,214,140,.55)}
+.pbe-network-live-mark strong{color:#fff;font:900 32px/.8 "Inter",sans-serif}
+.pbe-network-live-mark small{padding-bottom:1px;color:#736f68;font:700 8px/1.25 "JetBrains Mono",monospace;letter-spacing:.1em}
+
+.pbe-network-sports{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));border:1px solid rgba(255,255,255,.075);border-radius:16px;overflow:hidden;background:rgba(255,255,255,.018);box-shadow:inset 0 1px 0 rgba(255,255,255,.025),0 20px 60px rgba(0,0,0,.16)}
+.pbe-network-sport{position:relative;display:flex;min-width:0;min-height:92px;flex-direction:column;justify-content:center;padding:15px 17px;border-right:1px solid rgba(255,255,255,.065);color:inherit;text-decoration:none;overflow:hidden;transition:background .18s ease,transform .18s ease}
+.pbe-network-sport:last-child{border-right:0}
+.pbe-network-sport:before{content:"";position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.03),transparent 58%);opacity:0;transition:opacity .18s ease}
+.pbe-network-sport:hover{background:rgba(255,255,255,.03)}
+.pbe-network-sport:hover:before{opacity:1}
+.pbe-network-sport.current{background:linear-gradient(135deg,rgba(216,183,91,.13),rgba(216,183,91,.035));box-shadow:inset 0 2px 0 var(--pbe-gold)}
+.pbe-network-sport-top{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.pbe-network-sport-top b{color:#fff;font:900 25px/.9 "Inter",sans-serif;letter-spacing:-.035em}
+.pbe-network-sport-top em{padding:4px 6px;border:1px solid rgba(216,183,91,.22);border-radius:999px;background:rgba(216,183,91,.07);color:var(--pbe-gold);font:800 7px/1 "JetBrains Mono",monospace;letter-spacing:.1em;font-style:normal}
+.pbe-network-sport.wnba .pbe-network-sport-top em{border-color:rgba(85,214,140,.22);background:rgba(85,214,140,.06);color:#83e3ad}
+.pbe-network-sport-top i{color:#777269;font-size:13px;font-style:normal;transition:transform .18s ease,color .18s ease}
+.pbe-network-sport:hover .pbe-network-sport-top i{color:var(--pbe-gold);transform:translate(2px,-2px)}
+.pbe-network-sport-sub{position:relative;z-index:1;margin-top:7px;color:#77736c;font-size:10px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pbe-network-sport-line{position:absolute;left:17px;right:17px;bottom:0;height:1px;background:linear-gradient(90deg,transparent,rgba(216,183,91,.55),transparent);opacity:0;transform:scaleX(.35);transition:opacity .18s ease,transform .18s ease}
+.pbe-network-sport:hover .pbe-network-sport-line,.pbe-network-sport.current .pbe-network-sport-line{opacity:1;transform:scaleX(1)}
+
+.pbe-network-footer-console{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(300px,.7fr);gap:16px;margin-top:16px}
+.pbe-network-nflpro,.pbe-footer-account-card{border:1px solid rgba(255,255,255,.07);border-radius:15px;background:linear-gradient(145deg,rgba(255,255,255,.035),rgba(255,255,255,.012));box-shadow:inset 0 1px 0 rgba(255,255,255,.025)}
+.pbe-network-nflpro{padding:17px 18px 16px}
+.pbe-network-console-head{display:flex;align-items:center;justify-content:space-between;gap:22px;padding-bottom:14px;border-bottom:1px solid rgba(255,255,255,.055)}
+.pbe-network-console-head>div>span{display:block;color:var(--pbe-gold);font:800 8px/1 "JetBrains Mono",monospace;letter-spacing:.19em}
+.pbe-network-console-head>div>strong{display:block;margin-top:6px;color:#fff;font:850 16px/1 "Inter",sans-serif;text-transform:uppercase;letter-spacing:-.015em}
+.pbe-network-primary-link{display:flex;align-items:center;gap:20px;min-height:35px;padding:0 11px;border:1px solid rgba(216,183,91,.25);border-radius:8px;background:rgba(216,183,91,.08);color:#f2d575;text-decoration:none;font:800 9px/1 "JetBrains Mono",monospace;letter-spacing:.07em;text-transform:uppercase;white-space:nowrap;transition:.18s ease}
+.pbe-network-primary-link:hover{border-color:rgba(216,183,91,.42);background:rgba(216,183,91,.12)}
+.pbe-network-primary-link b{font-size:15px;transition:transform .18s ease}
+.pbe-network-primary-link:hover b{transform:translateX(2px)}
+.pbe-network-nfl-links{display:flex;align-items:center;gap:8px 18px;flex-wrap:wrap;padding-top:14px}
+.pbe-network-nfl-links a{color:#aaa49b;text-decoration:none;font-size:11px;line-height:1.35;transition:color .16s ease}
+.pbe-network-nfl-links a:hover{color:#fff}
+.pbe-network-nfl-links a.featured{color:#f0d477;font-weight:750}
+.pbe-network-nfl-links a em{display:inline-block;margin-left:5px;padding:2px 4px;border-radius:999px;background:rgba(85,214,140,.07);color:#78dca2;font:700 7px/1 "JetBrains Mono",monospace;letter-spacing:.08em;font-style:normal;vertical-align:1px}
+
+.pbe-footer-account-card{padding:16px 17px}
+.pbe-footer-account-card-head{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.pbe-footer-account-state{display:flex;align-items:center;gap:10px;min-width:0}
+.pbe-footer-account-state>i{width:8px;height:8px;flex:0 0 auto;border-radius:50%;background:#57534b;box-shadow:0 0 0 4px rgba(255,255,255,.02)}
+.pbe-footer-account-state>i.signed{background:var(--pbe-gold);box-shadow:0 0 14px rgba(216,183,91,.38)}
+.pbe-footer-account-state>i.on{background:var(--pbe-pos);box-shadow:0 0 16px rgba(85,214,140,.5)}
+.pbe-footer-account-state>div{min-width:0}
+.pbe-footer-account-state span{display:block;color:#77736c;font:800 8px/1 "JetBrains Mono",monospace;letter-spacing:.16em}
+.pbe-footer-account-state strong{display:block;margin-top:5px;max-width:190px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff;font:800 12px/1.1 "Inter",sans-serif;text-transform:uppercase}
+.pbe-footer-account-card button{min-height:34px;padding:0 11px;border:1px solid rgba(216,183,91,.28);border-radius:8px;background:rgba(216,183,91,.09);color:#f0d477;font:800 9px/1 "JetBrains Mono",monospace;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;transition:.18s ease}
+.pbe-footer-account-card button:hover{border-color:rgba(216,183,91,.44);background:rgba(216,183,91,.14)}
+.pbe-footer-account-card>p{margin:12px 0 0;color:#77736c;font-size:10px;line-height:1.4}
+.pbe-footer-account-card-links{display:flex;gap:8px 14px;flex-wrap:wrap;margin-top:10px}
+.pbe-footer-account-card-links a{color:#9d978e;text-decoration:none;font-size:10px;transition:color .16s ease}
+.pbe-footer-account-card-links a:hover{color:var(--pbe-gold)}
+
+.pbe-network-footer-ecosystem{display:flex;align-items:center;justify-content:space-between;gap:30px;margin-top:16px;padding:17px 2px;border-top:1px solid rgba(255,255,255,.055);border-bottom:1px solid rgba(255,255,255,.055)}
+.pbe-network-ecosystem-brand{display:flex;align-items:center;gap:11px;min-width:0}
+.pbe-network-ecosystem-brand strong{color:#fff;font:900 13px/1 "Inter",sans-serif;text-transform:uppercase}
+.pbe-network-ecosystem-brand span{color:#706c65;font-size:10px}
+.pbe-network-footer-ecosystem nav{display:flex;align-items:center;justify-content:flex-end;gap:10px 20px;flex-wrap:wrap}
+.pbe-network-footer-ecosystem nav a{color:#9c978e;text-decoration:none;font-size:10px;transition:color .16s ease}
+.pbe-network-footer-ecosystem nav a:hover{color:var(--pbe-gold)}
+.pbe-network-footer-rail{display:flex;align-items:center;justify-content:space-between;gap:8px 20px;flex-wrap:wrap;padding-top:15px;color:#625e58;font-size:9px;line-height:1.45}
+
+@media(max-width:1080px){
+  .pbe-network-footer-intro{align-items:flex-start}
+  .pbe-network-sports{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .pbe-network-sport:nth-child(3){border-right:0}
+  .pbe-network-sport:nth-child(-n+3){border-bottom:1px solid rgba(255,255,255,.065)}
+  .pbe-network-footer-console{grid-template-columns:1fr}
+  .pbe-footer-account-card{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:24px;align-items:center}
+  .pbe-footer-account-card>p{grid-column:1/2}.pbe-footer-account-card-links{grid-column:2/3;grid-row:2}
+}
+@media(max-width:720px){
+  .pbe-network-footer{margin-top:36px}
+  .pbe-network-footer-shell{width:min(100% - 26px,1460px);padding:28px 0 calc(82px + env(safe-area-inset-bottom))}
+  .pbe-network-footer-intro{gap:20px;padding-bottom:21px}
+  .pbe-network-footer-lockup{gap:16px}
+  .pbe-network-footer-logo{width:96px}
+  .pbe-network-footer-copy h2{font-size:25px}
+  .pbe-network-footer-copy p{font-size:11px}
+  .pbe-network-live-mark{display:none}
+  .pbe-network-sports{grid-template-columns:repeat(2,minmax(0,1fr));border-radius:14px}
+  .pbe-network-sport{min-height:82px;padding:13px 14px}
+  .pbe-network-sport:nth-child(odd){border-right:1px solid rgba(255,255,255,.065)}
+  .pbe-network-sport:nth-child(even){border-right:0}
+  .pbe-network-sport:nth-child(-n+4){border-bottom:1px solid rgba(255,255,255,.065)}
+  .pbe-network-sport:nth-child(n+5){border-bottom:0}
+  .pbe-network-sport-top b{font-size:22px}
+  .pbe-network-console-head{align-items:flex-start;flex-direction:column;gap:12px}
+  .pbe-network-primary-link{width:100%;box-sizing:border-box;justify-content:space-between;min-height:40px}
+  .pbe-network-nfl-links{gap:10px 16px}
+  .pbe-footer-account-card{display:block}
+  .pbe-footer-account-card>p,.pbe-footer-account-card-links{grid-column:auto;grid-row:auto}
+  .pbe-network-footer-ecosystem{align-items:flex-start;flex-direction:column;gap:13px}
+  .pbe-network-ecosystem-brand{align-items:flex-start;flex-direction:column;gap:4px}
+  .pbe-network-footer-ecosystem nav{justify-content:flex-start}
+  .pbe-network-footer-rail{align-items:flex-start;flex-direction:column;gap:4px}
+}
+@media(max-width:420px){
+  .pbe-network-footer-shell{width:min(100% - 20px,1460px)}
+  .pbe-network-footer-lockup{display:block}
+  .pbe-network-footer-logo{width:92px;margin-bottom:15px}
+  .pbe-network-footer-copy h2{font-size:23px}
+  .pbe-network-sport{min-height:78px;padding:12px}
+  .pbe-network-sport-top b{font-size:20px}
+  .pbe-network-sport-sub{font-size:9px}
+  .pbe-footer-account-card-head{align-items:flex-start;flex-direction:column}
+  .pbe-footer-account-card button{width:100%;min-height:38px}
+}
