@@ -1,6 +1,7 @@
 /* PropBetEdge NFL — dashboard v7 truth sanitizer.
    Removes only fact cards whose rendered source value is explicitly unavailable.
-   No DOM rewrites, no polling, no self-triggering render loop. */
+   Also boots the additive Best Line Pro model overlay after the base table authority.
+   No polling, no self-triggering render loop. */
 (() => {
   'use strict';
 
@@ -23,7 +24,18 @@
     if (wrap && !wrap.children.length) wrap.remove();
   }
 
+  function loadBestLineModelOverlay() {
+    if (window.PBEBestLineModelOverlay || document.querySelector('script[data-pbe-bestline-model-overlay]')) return;
+    const script = document.createElement('script');
+    script.src = './best-line-model-overlay-v1.js';
+    script.async = false;
+    script.dataset.pbeBestlineModelOverlay = '1';
+    script.addEventListener('error', () => console.error('[PBE] Best Line model overlay failed to load'));
+    document.head.appendChild(script);
+  }
+
   function install() {
+    loadBestLineModelOverlay();
     sanitize();
     const host = document.getElementById('view-container');
     if (!host) return;
