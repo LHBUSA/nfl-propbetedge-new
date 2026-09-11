@@ -11,6 +11,22 @@
   const ACTIVE_KEY='pbe_nfl_cast_active_v6';
   const BAD=/^(?:null|undefined|n\/a|na|—|-|\?)$/i;
 
+  /* ---- PBE TIMEOUT BREAK inventory ----------------------------------------
+     First-party promotion shown in the CURRENT PLAY module while the feed's
+     current play is an Official Timeout. Data, not markup: a paid sponsor is
+     one more row here. Every destination is a live PropBetEdge property; the
+     API/infrastructure slot stays inactive until a production destination for
+     it exists. */
+  const TIMEOUT_CREATIVES=[
+    {id:'pbe-ufc',brand:'UFC PropBetEdge',mark:'UFC',eyebrow:'PBE NETWORK · UFC',badge:'LIVE',headline:'UFC. LIVE. DIFFERENT.',body:'Fight cards, Fight DNA, live markets and combat intelligence.',tags:['FIGHT CARDS','FIGHT DNA','LIVE MARKETS'],cta:'ENTER UFC →',destination:'https://ufc.propbetedge.ai',logo:null,accent:'#e5484d',active:true},
+    {id:'pbe-mlb',brand:'MLB PropBetEdge',mark:'MLB',eyebrow:'PBE NETWORK · MLB',badge:'LIVE',headline:'BASEBALL, THROUGH THE DATA.',body:'PBEcast, models, live baseball intelligence and market context.',tags:['PBECAST','MODELS','MARKET CONTEXT'],cta:'OPEN MLB →',destination:'https://mlb.propbetedge.ai',logo:null,accent:'#3e8ef7',active:true},
+    {id:'pbe-network',brand:'PropBetEdge',mark:'PBE',eyebrow:'PBE NETWORK',badge:'NFL · UFC · MLB',headline:'ONE EDGE. EVERY GAME.',body:'NFL · UFC · MLB · data-driven sports intelligence.',tags:['NFL','UFC','MLB'],cta:'EXPLORE PROPBETEDGE →',destination:'https://propbetedge.ai',logo:null,accent:'#d8b75b',active:true},
+    {id:'pbe-api',brand:'PropBetEdge Data',mark:'API',eyebrow:'PBE DATA',badge:'API',headline:'',body:'',tags:[],cta:'',destination:'',logo:null,accent:'#62dc96',active:false}
+  ];
+  /* One creative holds the card this long before the next crossfades in. The
+     cadence rides the existing lane ticks; there is no timer of its own. */
+  const BREAK_ROTATE_MS=12000;
+  const BREAK_FADE_MS=650;
   const state={
     date:'',scoreboard:null,activeId:null,detail:null,market:null,marketEvent:null,error:null,
     loading:false,poll:null,lastPlayId:null,lastMarketAt:0,sound:false,audioCtx:null,statFilter:'all',installed:false,
@@ -18,7 +34,10 @@
     syncing:false,lastSyncAt:0,playAnchor:null,rejected:0,
     /* the two lanes keep separate views of the game; promoteGame() merges */
     fastGame:null,detailGame:null,fastSource:null,fastAt:0,detailAt:0,
-    lastFastChangeAt:0,lastDetailChangeAt:0
+    lastFastChangeAt:0,lastDetailChangeAt:0,
+    /* Presentation state only. No lane reads it, it is never merged into the
+       game and never persisted: it is derived from the authoritative play. */
+    timeoutBreak:{active:false,playId:null,startedAt:0,creativeIndex:0,lastRotationAt:0,rotations:0,served:0,entries:0,endedAt:0}
   };
 
   const esc=v=>String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
@@ -134,11 +153,58 @@
     return `<section class="cast6-hero"><div class="cast6-hero-head"><div><span class="cast6-live ${fresh.cls}">${sem==='LIVE'?'<i></i>':''}${esc(fresh.label)}</span><b>${esc(sourceLabel(d))}</b></div><small data-cast6-stamp></small></div><div class="cast6-score"><div class="cast6-team">${teamLogo(a)}<span><b>${esc(a.abbreviation||'AWY')}</b><small>${esc(a.display_name||'Away')}${teamRecord(a)?` · ${esc(teamRecord(a))}`:''}</small></span></div><div class="cast6-score-center">${sem==='SCHEDULE'&&kickoffParts(g?.date)?`<strong class="is-kickoff">${esc(kickoffParts(g.date).time)}<small>ET</small></strong><span><em class="cast6-kick-k">Kickoff · </em>${esc(kickoffParts(g.date).day)}</span>`:`<strong>${esc(score(a,sem))}<i>:</i>${esc(score(h,sem))}</strong><span>${esc(statusLabel(g))}</span>`}<small>${esc([g?.venue?.name,[g?.venue?.city,g?.venue?.state].filter(Boolean).join(', ')].filter(Boolean).join(' · '))}</small></div><div class="cast6-team home"><span><b>${esc(h.abbreviation||'HME')}</b><small>${esc(h.display_name||'Home')}${teamRecord(h)?` · ${esc(teamRecord(h))}`:''}</small></span>${teamLogo(h)}</div></div>${facts.length?`<div class="cast6-facts">${facts.map(([k,v])=>`<div><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}</div>`:''}</section>`;
   }
 
+  /* ---- PBE TIMEOUT BREAK -----------------------------------------------------
+     Keyed to the authoritative play id, never to a clock. A new Official
+     Timeout play enters the break once; the same timeout staying current for
+     twenty polls is the same break, not twenty. Any other current play ends it
+     on the very render that paints that play. */
+  function displayedPlay(d){return d?.current_play||d?.game?.situation?.last_play||null}
+  function isOfficialTimeout(p){return String(p?.type||'').trim().toLowerCase()==='official timeout'}
+  function breakInventory(){return TIMEOUT_CREATIVES.filter(c=>c&&c.active&&c.headline&&c.destination)}
+  /* Pure: previous break state + the authoritative play -> next break state. */
+  function timeoutBreakStep(tb,{play,live,now,count}){
+    const next={...tb};
+    const official=!!(live&&count>0&&play&&play.id!=null&&isOfficialTimeout(play));
+    if(official){
+      const id=String(play.id);
+      if(next.playId!==id){
+        next.active=true;next.playId=id;next.startedAt=now;next.lastRotationAt=now;next.rotations=0;
+        next.creativeIndex=(next.served||0)%count;next.served=(next.served||0)+1;next.entries=(next.entries||0)+1;
+      }else if(next.active&&count>1&&now-next.lastRotationAt>=BREAK_ROTATE_MS){
+        next.creativeIndex=(next.creativeIndex+1)%count;next.lastRotationAt=now;next.rotations=(next.rotations||0)+1;
+      }
+    }else if(next.active){next.active=false;next.endedAt=now}
+    return next;
+  }
+  function syncTimeoutBreak(now=Date.now()){
+    state.timeoutBreak=timeoutBreakStep(state.timeoutBreak,{play:displayedPlay(state.detail),live:isLive(),now,count:breakInventory().length});
+    return state.timeoutBreak;
+  }
+  function creativeCard(c,cls,index,count){
+    const mark=c.logo?`<img src="${esc(c.logo)}" alt="" decoding="async">`:`<b>${esc(c.mark||'PBE')}</b>`;
+    const tags=arr(c.tags).slice(0,3);
+    const dots=count>1?`<div class="cast6-tb-dots" aria-hidden="true">${Array.from({length:count},(_,i)=>`<i class="${i===index?'on':''}"></i>`).join('')}</div>`:'';
+    return `<a class="cast6-tb-card ${cls}" href="${esc(c.destination)}" target="_blank" rel="noopener" data-creative-id="${esc(c.id)}" style="--tb-accent:${esc(c.accent||'#d8b75b')}" aria-label="${esc(c.brand)}: ${esc(c.headline)} — ${esc(c.cta)}"><div class="cast6-tb-mark">${mark}<i></i></div><div class="cast6-tb-copy"><span class="cast6-tb-eyebrow">${esc(c.eyebrow||c.brand)}${c.badge?`<em>${esc(c.badge)}</em>`:''}</span><h3>${esc(c.headline)}</h3>${c.body?`<p>${esc(c.body)}</p>`:''}${tags.length?`<div class="cast6-tb-tags">${tags.map(t=>`<span>${esc(t)}</span>`).join('')}</div>`:''}</div><span class="cast6-tb-cta">${esc(c.cta)}</span>${dots}</a>`;
+  }
+  /* The transition classes exist in the markup only inside their window, so
+     the next routine patch renders the settled card and nothing re-animates. */
+  function timeoutBreakHtml(p,now=Date.now()){
+    const tb=state.timeoutBreak,inv=breakInventory(),count=inv.length;if(!count)return'';
+    const i=((tb.creativeIndex%count)+count)%count,cur=inv[i];
+    const fading=tb.rotations>0&&now-tb.lastRotationAt<BREAK_FADE_MS;
+    const entering=now-tb.startedAt<BREAK_FADE_MS;
+    const prevIndex=(i-1+count)%count;
+    return `<div class="cast6-current-body cast6-tb" data-timeout-play="${esc(tb.playId)}"><div class="cast6-tb-head"><div><span class="cast6-tb-kicker">${p?.period?`Q${esc(p.period)} ${esc(p.clock||'')} · `:''}OFFICIAL TIMEOUT</span><strong>PBE TIMEOUT BREAK</strong></div><small>While the field resets, go deeper.</small></div><div class="cast6-tb-stage">${fading?creativeCard(inv[prevIndex],'is-leaving',prevIndex,count):''}${creativeCard(cur,fading||entering?'is-entering':'',i,count)}</div></div>`;
+  }
   function currentActionHtml(){
     const d=state.detail,p=d?.current_play||d?.game?.situation?.last_play||null,actors=dedupeActors(p),drive=d?.current_drive;
+    const tb=state.timeoutBreak,breakOn=!!(tb.active&&p&&String(p.id)===String(tb.playId));
     const playBody=p?`<div class="cast6-play-kicker"><span>${semantics(d)==='LIVE'?'● LIVE SNAPSHOT':'GAME FEED'}</span>${p?.period?`<b>Q${esc(p.period)} ${esc(p.clock||'')}</b>`:''}</div><h2>${esc(clean(p?.type)||'CURRENT PLAY')}</h2><p>${esc(clean(p?.text)||'Waiting for the next published play.')}</p>${actors.length?`<div class="cast6-actors">${actors.map(actorHtml).join('')}</div>`:''}`:`<div class="cast6-empty compact"><b>Waiting for the next published play</b><span>The source has not published a current play.</span></div>`;
     const driveBody=drive?`<div class="cast6-drive-team">${drive?.team?.logo?`<img src="${esc(drive.team.logo)}" alt="" decoding="async">`:''}<b>${esc(drive?.team?.abbreviation||drive?.team?.display_name||'POSSESSION')}</b></div><strong>${esc(clean(drive?.result)||'Drive in progress')}</strong><p>${esc(clean(drive?.description)||'Current possession')}</p><div class="cast6-drive-kpis">${num(drive?.offensive_plays)!==null?`<span><b>${drive.offensive_plays}</b><small>PLAYS</small></span>`:''}${num(drive?.yards)!==null?`<span><b>${drive.yards}</b><small>YARDS</small></span>`:''}${clean(drive?.time_elapsed)?`<span><b>${esc(drive.time_elapsed)}</b><small>TIME</small></span>`:''}</div>`:`<div class="cast6-empty compact"><b>No active drive</b><span>The source is not reporting an active possession.</span></div>`;
-    return `${fieldHtml(d)}<div class="cast6-action-grid"><section class="cast6-module cast6-current"><header><span>CURRENT PLAY</span>${p?.type?`<b>${esc(p.type)}</b>`:''}</header><div class="cast6-current-body">${playBody}</div></section><section class="cast6-module cast6-drive"><header><span>CURRENT DRIVE</span>${drive?.team?.abbreviation?`<b>${esc(drive.team.abbreviation)}</b>`:''}</header><div class="cast6-drive-body">${driveBody}</div></section></div>`;
+    const currentModule=breakOn
+      ? `<section class="cast6-module cast6-current is-timeout-break"><header><span class="cast6-tb-status"><i></i>OFFICIAL TIMEOUT · PBE TIMEOUT BREAK</span></header>${timeoutBreakHtml(p)}</section>`
+      : `<section class="cast6-module cast6-current"><header><span>CURRENT PLAY</span>${p?.type?`<b>${esc(p.type)}</b>`:''}</header><div class="cast6-current-body">${playBody}</div></section>`;
+    return `${fieldHtml(d)}<div class="cast6-action-grid">${currentModule}<section class="cast6-module cast6-drive"><header><span>CURRENT DRIVE</span>${drive?.team?.abbreviation?`<b>${esc(drive.team.abbreviation)}</b>`:''}</header><div class="cast6-drive-body">${driveBody}</div></section></div>`;
   }
 
   function coverageHtml(){
@@ -182,6 +248,7 @@
      signature, so an unchanged play does not touch the DOM at all. */
   function patchLive(){
     const root=document.querySelector('.pbecast6');if(!root||!state.detail)return;
+    syncTimeoutBreak();
     root.dataset.stale=state.error?'true':'false';
     patch(root,'[data-cast6-hero]',heroHtml());
     patch(root,'[data-cast6-action]',currentActionHtml());
@@ -207,7 +274,7 @@
     patch(root,'[data-cast6-hero]',heroHtml());
     patchStamp();
   }
-  function patchAll(){const root=ensureRoot();if(!root)return;root.dataset.stale=state.error?'true':'false';patch(root,'[data-cast6-toolbar]',toolbarHtml());patch(root,'[data-cast6-rail]',railHtml());if(state.detail){patch(root,'[data-cast6-hero]',heroHtml());patch(root,'[data-cast6-action]',currentActionHtml());patch(root,'[data-cast6-telemetry]',coverageHtml());patch(root,'[data-cast6-workspace]',workspaceHtml())}else{patch(root,'[data-cast6-hero]',`<div class="cast6-empty"><b>Loading game package</b><span>Connecting to live drives, player output and play-by-play.</span></div>`);patch(root,'[data-cast6-action]','');patch(root,'[data-cast6-telemetry]','');patch(root,'[data-cast6-workspace]','')}patchStamp()}
+  function patchAll(){const root=ensureRoot();if(!root)return;root.dataset.stale=state.error?'true':'false';if(state.detail)syncTimeoutBreak();patch(root,'[data-cast6-toolbar]',toolbarHtml());patch(root,'[data-cast6-rail]',railHtml());if(state.detail){patch(root,'[data-cast6-hero]',heroHtml());patch(root,'[data-cast6-action]',currentActionHtml());patch(root,'[data-cast6-telemetry]',coverageHtml());patch(root,'[data-cast6-workspace]',workspaceHtml())}else{patch(root,'[data-cast6-hero]',`<div class="cast6-empty"><b>Loading game package</b><span>Connecting to live drives, player output and play-by-play.</span></div>`);patch(root,'[data-cast6-action]','');patch(root,'[data-cast6-telemetry]','');patch(root,'[data-cast6-workspace]','')}patchStamp()}
   function patchStats(){const root=document.querySelector('.pbecast6');if(!root)return;const host=root.querySelector('[data-cast6-workspace]');if(host)patch(root,'[data-cast6-workspace]',workspaceHtml())}
 
   function wireRoot(root){
@@ -553,6 +620,8 @@
        new game's future and reject every real update */
     state.fastGame=null;state.detailGame=null;state.fastSource=null;
     state.fastAt=0;state.detailAt=0;state.lastFastChangeAt=0;state.lastDetailChangeAt=0;
+    /* a different game never inherits the previous game's break */
+    state.timeoutBreak={...state.timeoutBreak,active:false,playId:null,startedAt:0,lastRotationAt:0,rotations:0};
   }
 
   /* Switching games is a deliberate act, not background polling: the previous
@@ -634,6 +703,7 @@
     return true;
   }
 
-  window.PBEcastV6={state,load,refresh,focus,toggleSound,takeFocus,stopLegacyTransports,telemetry};
+  window.PBEcastV6={state,load,refresh,focus,toggleSound,takeFocus,stopLegacyTransports,telemetry,
+    timeoutBreak:{creatives:TIMEOUT_CREATIVES,step:timeoutBreakStep,isOfficialTimeout,rotateMs:BREAK_ROTATE_MS,fadeMs:BREAK_FADE_MS}};
   if(!install())document.addEventListener('DOMContentLoaded',install,{once:true});
 })();
