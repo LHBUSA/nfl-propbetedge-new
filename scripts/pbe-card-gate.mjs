@@ -124,7 +124,28 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 const dir = mkdtempSync(join(tmpdir(), 'pbe-cardgate-'));
 const chrome = spawn(CHROME, [`--remote-debugging-port=${PORT}`, `--user-data-dir=${dir}`, ...(HEADED ? ['--window-size=1440,1000'] : ['--headless=new', '--hide-scrollbars']), '--no-first-run',
   '--no-default-browser-check', '--disable-extensions', '--force-device-scale-factor=1', 'about:blank'], { stdio: 'ignore' });
-function finish(code) { try { chrome.kill(); } catch {} setTimeout(() => { try { rmSync(dir, { recursive: true, force: true }); } catch {} process.exit(code); }, 300); }
+/* The profile holds the session cookie once a real login happened, so it is
+   deleted only after Chrome has exited, with retries: on Windows (and the
+   exFAT temp drive) an immediate delete races the browser's own shutdown. */
+let chromeExited = false;
+chrome.on('exit', () => { chromeExited = true; });
+async function destroyProfile() {
+  for (let i = 0; i < 40 && !chromeExited; i++) await new Promise(r => setTimeout(r, 250));
+  for (let i = 0; i < 12 && existsSync(dir); i++) {
+    try { rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 }); } catch { /* retry */ }
+    if (existsSync(dir)) await new Promise(r => setTimeout(r, 500));
+  }
+  return !existsSync(dir);
+}
+let finishing = false;
+function finish(code) {
+  if (finishing) return; finishing = true;
+  try { chrome.kill(); } catch {}
+  destroyProfile().then(gone => {
+    if (!gone) console.log(`WARNING browser profile could not be deleted: ${dir} — delete it manually`);
+    process.exit(code);
+  });
+}
 setTimeout(() => { console.error('HARD_DEADLINE'); finish(3); }, 2400000).unref?.();
 async function wsUrl() { for (let i = 0; i < 100; i++) { try { const l = await (await fetch(`http://127.0.0.1:${PORT}/json/list`)).json(); const p = l.find(x => x.type === 'page' && x.webSocketDebuggerUrl); if (p) return p.webSocketDebuggerUrl; } catch {} await sleep(200); } throw new Error('devtools_unavailable'); }
 const WS_URL = await wsUrl();
@@ -132,7 +153,15 @@ const PAGE_ID = WS_URL.split('/').pop();
 const ws = new WebSocket(WS_URL);
 await new Promise(r => { ws.onopen = r; });
 let seq = 1; const pending = new Map();
-const send = (method, params = {}) => { const n = seq++; ws.send(JSON.stringify({ id: n, method, params })); return new Promise((res, rej) => pending.set(n, { res, rej })); };
+/* A closed canary window must fail loudly, not leave calls hanging. */
+let browserClosed = false;
+ws.onclose = () => { browserClosed = true; for (const p of pending.values()) p.rej(new Error('browser_closed')); pending.clear(); };
+const send = (method, params = {}) => {
+  if (browserClosed) return Promise.reject(new Error('browser_closed'));
+  const n = seq++;
+  try { ws.send(JSON.stringify({ id: n, method, params })); } catch (e) { return Promise.reject(new Error('browser_closed')); }
+  return new Promise((res, rej) => pending.set(n, { res, rej }));
+};
 
 const MIME = { '.js': 'application/javascript; charset=utf-8', '.mjs': 'application/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.html': 'text/html; charset=utf-8', '.json': 'application/json; charset=utf-8', '.webmanifest': 'application/manifest+json', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.png': 'image/png', '.svg': 'image/svg+xml' };
 function localFile(url) {
@@ -264,13 +293,19 @@ async function realLogin(email, { expectPro }) {
     console.log('LOGIN waiting: open the emailed sign-in link in a new tab of the canary Chrome window (15-minute link).');
   }
   const deadline = requestedAt + LOGIN_TIMEOUT_MS;
-  let state = null;
+  let state = null, lastReport = 0;
   while (Date.now() < deadline) {
+    if (browserClosed) return { ok: false, stage: 'canary_window_closed_before_sign_in' };
     state = await evaluate(SESSION_PROBE);
     if (state?.valid) break;
+    if (Date.now() - lastReport > 60000) {
+      lastReport = Date.now();
+      console.log(`LOGIN still waiting · ${Math.max(0, Math.round((deadline - Date.now()) / 60000))} min left on the link · session stage ${state?.stage || state?.__error || 'unknown'}`);
+    }
     await sleep(3000);
   }
-  if (!state?.valid) return { ok: false, stage: `no_session_before_link_expiry (${state?.stage || 'unknown'})` };
+  if (browserClosed) return { ok: false, stage: 'canary_window_closed_before_sign_in' };
+  if (!state?.valid) return { ok: false, stage: `no_session_before_link_expiry (${state?.stage || state?.__error || 'unknown'})` };
   /* Close any extra tab the operator used; the canary keeps its own. */
   try {
     const targets = await (await fetch(`http://127.0.0.1:${PORT}/json/list`)).json();
@@ -466,15 +501,14 @@ if (!FREE_ONLY) {
       report.stopped = 'signed_in_not_pro';
       writeFileSync(join(OUT, 'report.json'), JSON.stringify(report, null, 2));
       console.log(`\nSTOPPED · ${mask(PRO_EMAIL)} signed in (valid=true) but /api/auth-session reports pro=false (stage ${login.stage}). No gated-card test was run.`);
-      await endSession().catch(() => {});
-      await clearSessionState();
+      if (!browserClosed) { await endSession().catch(() => {}); await clearSessionState().catch(() => {}); }
       finish(5);
       await new Promise(() => {});
     }
     if (!login.ok) {
       writeFileSync(join(OUT, 'report.json'), JSON.stringify(report, null, 2));
       console.log(`\nGATE FAILED · real Pro login did not complete (${login.stage})`);
-      await clearSessionState();
+      if (!browserClosed) await clearSessionState().catch(() => {});
       finish(1);
       await new Promise(() => {});
     }
@@ -575,7 +609,7 @@ for (const who of ['anonymous', 'forged', 'free']) {
   }
 }
 
-if (CANARY) await clearSessionState();
+if (CANARY && !browserClosed) await clearSessionState().catch(() => {});
 report.failed = failed;
 report.incomplete = incomplete;
 writeFileSync(join(OUT, 'report.json'), JSON.stringify(report, null, 2));
