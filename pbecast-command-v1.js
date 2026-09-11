@@ -299,6 +299,15 @@
     const anchor = root.querySelector(pre ? '[data-cast6-hero]' : '[data-cast6-action]');
     if (anchor && moments.previousElementSibling !== anchor) anchor.after(moments);
     write(moments, keyMomentsHtml() || beforeKickoffHtml());
+    /* The original PBE decision on the focused game, straight from the PBE
+       Card store (one server contract; nothing decided here). It sits
+       directly under the hero so the locked call and its live progress are
+       read together. */
+    const g = v6().detail?.game;
+    const pick = hostFor(root, 'pick', '[data-cast6-hero]');
+    const hero = root.querySelector('[data-cast6-hero]');
+    if (hero && pick.previousElementSibling !== hero) hero.after(pick);
+    write(pick, g ? (window.PBECard?.gameModule?.({ away: g.teams?.away?.abbreviation, home: g.teams?.home?.abbreviation, espnId: g.id, surface: 'pbecast' }) || '') : '');
   }
 
   let watched = null;
@@ -336,6 +345,7 @@
     /* [data-game] is handled by v6's own root listener: focus(). */
   });
   window.addEventListener('pbe:route-changed', () => setTimeout(watch, 0));
+  window.addEventListener('pbe:card-ready', () => { if (document.querySelector('.pbecast6')) render(); });
 
   window.PBEcastCommand = { render, state: local, moments, diff };
   if (!install()) document.addEventListener('DOMContentLoaded', install, { once: true });

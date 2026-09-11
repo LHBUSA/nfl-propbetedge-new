@@ -417,6 +417,7 @@ async function gameStates(season) {
       const id = `${g.season}_${String(g.week).padStart(2, '0')}_${nflverseTeam(g.away_team)}_${nflverseTeam(g.home_team)}`;
       out.set(id, {
         espn_id: g.game_id ? String(g.game_id) : null,
+        kickoff: g.kickoff || null,
         state: String(g.semantics || '').toUpperCase() || null,
         detail: g.detail || null,
         away_score: g.away_score, home_score: g.home_score,
@@ -447,13 +448,14 @@ async function loadCard(secret, { withTape }) {
   ]);
   const killedIds = new Set(audits.filter(a => a.event_type === 'pick_killed').map(a => a.pick_id));
   const verified = new Map();
-  await Promise.all(rows.map(async row => { verified.set(row.id, await verifyReceipt(row, receipts.get(row.id))); }));
-  const eligible = eligibleDecisions(rows, { nowMs, killedIds, verified, season, week });
-  const gameIds = [...new Set(eligible.current.map(e => e.row.game_id))];
-  const [tape, games] = await Promise.all([
-    withTape ? tapeFor(secret, gameIds) : Promise.resolve([]),
-    withTape ? gameStates(season) : Promise.resolve(new Map()),
+  const [games] = await Promise.all([
+    gameStates(season),
+    Promise.all(rows.map(async row => { verified.set(row.id, await verifyReceipt(row, receipts.get(row.id))); })),
   ]);
+  /* Lifecycle is decided against nfl-current's real kickoff and game state. */
+  const eligible = eligibleDecisions(rows, { nowMs, killedIds, verified, season, week, games });
+  const gameIds = [...new Set(eligible.current.map(e => e.row.game_id))];
+  const tape = withTape ? await tapeFor(secret, gameIds) : [];
   return { nowMs, state, season, week, rows, receipts, audits, grades, verified, eligible, tape, games };
 }
 
@@ -544,7 +546,7 @@ async function currentView(req, res, secret) {
 async function previewView(res, secret) {
   const ctx = await loadCard(secret, { withTape: false });
   const mode = displayMode({ health: ctx.state.engine_health, trained: ctx.state.champion_trained });
-  const previews = ctx.eligible.current.map(lockedPreview);
+  const previews = ctx.eligible.current.map(({ row, lifecycle }) => lockedPreview({ row, lifecycle, game: ctx.games.get(row.game_id) || null }));
   const lane = ctx.state?.engine_runtime?.lanes?.['nfl-game-picks-orchestrator'] || null;
   const body = {
     contract: CARD_CONTRACT,

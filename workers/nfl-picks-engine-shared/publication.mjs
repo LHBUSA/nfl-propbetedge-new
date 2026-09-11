@@ -110,17 +110,30 @@ const NFLVERSE_CODE = Object.freeze({ LAR: 'LA', WSH: 'WAS' });
 export const displayTeam = code => DISPLAY_CODE[code] || code || null;
 export const nflverseTeam = code => NFLVERSE_CODE[String(code || '').toUpperCase()] || String(code || '').toUpperCase() || null;
 
+/* The lock boundary is the REAL kickoff, which is what the engine itself
+ * issues against (nfl-current). A row's own kickoff_ts is frozen at issuance,
+ * and rows issued before the 2026-09-10 kickoff fix carry a time four hours
+ * early (ET parsed as UTC); locking on it would call a decision LOCKED while
+ * the engine can still replace it. So: a live or final game locks; otherwise
+ * nfl-current's kickoff decides; the row's value is only a fallback.
+ * `game` is { kickoff, state } from nfl-current, or null. */
+export function effectiveKickoff(row, game) {
+  return ms(game?.kickoff) ?? ms(row?.kickoff_ts);
+}
+
 /* Killed ids come from the persisted audit log (event_type = pick_killed),
  * because the grader later stamps a killed row status=graded / result=void and
  * the status column alone can no longer tell a withdrawal from a final. */
-export function lifecycleOf(row, { nowMs, killedIds } = {}) {
+export function lifecycleOf(row, { nowMs, killedIds, game } = {}) {
   const status = String(row?.status || '');
   if (status === 'superseded') return LIFECYCLE.SUPERSEDED;
   if (status === 'killed') return LIFECYCLE.WITHDRAWN;
   if (killedIds && killedIds.has(row?.id)) return LIFECYCLE.WITHDRAWN;
   if (status === 'graded') return LIFECYCLE.FINAL;
   if (status === 'open') {
-    const kick = ms(row?.kickoff_ts);
+    const state = String(game?.state || '').toUpperCase();
+    if (state === 'LIVE' || state === 'FINAL') return LIFECYCLE.LOCKED;
+    const kick = effectiveKickoff(row, game);
     if (kick === null) return null;
     return kick > nowMs ? LIFECYCLE.ACTIVE : LIFECYCLE.LOCKED;
   }
@@ -209,7 +222,7 @@ export async function verifyReceipt(row, receipt) {
  *   verified   Map pick_id -> verifyReceipt() result
  *   week       current NFL week (FINAL rows are shown for this week only)
  */
-export function eligibleDecisions(rows, { nowMs, killedIds = new Set(), verified = new Map(), season, week } = {}) {
+export function eligibleDecisions(rows, { nowMs, killedIds = new Set(), verified = new Map(), season, week, games = new Map() } = {}) {
   const current = [];
   const withdrawn = [];
   const excluded = { superseded: 0, withdrawn: 0, stale_final: 0, attribution: 0, receipt_unverified: 0, scope: 0, duplicate_open: 0, other_season: 0 };
@@ -217,7 +230,7 @@ export function eligibleDecisions(rows, { nowMs, killedIds = new Set(), verified
   for (const row of Array.isArray(rows) ? rows : []) {
     if (row.publication_scope !== SCOPE_TRACKING && row.publication_scope !== SCOPE_OFFICIAL) { excluded.scope += 1; continue; }
     if (season && Number(row.season) !== Number(season)) { excluded.other_season += 1; continue; }
-    const lifecycle = lifecycleOf(row, { nowMs, killedIds });
+    const lifecycle = lifecycleOf(row, { nowMs, killedIds, game: games.get(row.game_id) || null });
     if (lifecycle === LIFECYCLE.SUPERSEDED || lifecycle === null) { excluded.superseded += lifecycle ? 1 : 0; continue; }
     if (lifecycle === LIFECYCLE.WITHDRAWN) {
       excluded.withdrawn += 1;
@@ -246,7 +259,8 @@ export function eligibleDecisions(rows, { nowMs, killedIds = new Set(), verified
     current.push({ row, lifecycle });
   }
   const order = { LOCKED: 0, ACTIVE: 1, FINAL: 2 };
-  current.sort((a, b) => (order[a.lifecycle] - order[b.lifecycle]) || (ms(a.row.kickoff_ts) - ms(b.row.kickoff_ts)) || String(a.row.market).localeCompare(String(b.row.market)));
+  const kickOf = e => effectiveKickoff(e.row, games.get(e.row.game_id)) ?? 0;
+  current.sort((a, b) => (order[a.lifecycle] - order[b.lifecycle]) || (kickOf(a) - kickOf(b)) || String(a.row.game_id).localeCompare(String(b.row.game_id)) || String(a.row.market).localeCompare(String(b.row.market)));
   return { current, withdrawn, excluded };
 }
 
@@ -413,7 +427,7 @@ export const EVENT_TYPES = Object.freeze({
   FINAL: 'FINAL_GRADE',
 });
 
-export function eventsFor(row, { audits = [], market = null, lifecycle, grade = null, nowMs } = {}) {
+export function eventsFor(row, { audits = [], market = null, lifecycle, grade = null, nowMs, game = null } = {}) {
   const out = [];
   const mine = audits.filter(a => a.pick_id === row.id);
   const created = mine.find(a => a.event_type === 'pick_created');
@@ -426,9 +440,9 @@ export function eventsFor(row, { audits = [], market = null, lifecycle, grade = 
     if (a.event_type === 'pick_superseded') out.push({ type: EVENT_TYPES.SUPERSEDED, at: a.occurred_at, source: 'audit:pick_superseded' });
     if (a.event_type === 'pick_killed') out.push({ type: EVENT_TYPES.WITHDRAWN, at: a.occurred_at, source: 'audit:pick_killed' });
   }
-  const kick = ms(row.kickoff_ts);
+  const kick = effectiveKickoff(row, game);
   if ((lifecycle === LIFECYCLE.LOCKED || lifecycle === LIFECYCLE.FINAL) && kick !== null && kick <= nowMs) {
-    out.push({ type: EVENT_TYPES.LOCKED, at: row.kickoff_ts, source: 'row:kickoff_ts' });
+    out.push({ type: EVENT_TYPES.LOCKED, at: new Date(kick).toISOString(), source: game?.kickoff ? 'nfl-current:kickoff' : 'row:kickoff_ts' });
   }
   if (grade) {
     const first = mine.find(a => a.event_type === 'first_grade');
@@ -446,7 +460,7 @@ export function eventsFor(row, { audits = [], market = null, lifecycle, grade = 
 export function proCard({ row, lifecycle, receipt, verification, grade, market, game, audits, nowMs, engineHealthy }) {
   const scope = labelFor(row.publication_scope);
   const matchup = matchupFromGameId(row.game_id);
-  const kick = ms(row.kickoff_ts);
+  const kick = effectiveKickoff(row, game);
   return {
     id: row.id,
     publication_scope: row.publication_scope,
@@ -461,7 +475,11 @@ export function proCard({ row, lifecycle, receipt, verification, grade, market, 
     season: row.season,
     week: row.week,
     matchup: matchup ? { away: displayTeam(matchup.away_team), home: displayTeam(matchup.home_team) } : null,
-    kickoff_ts: row.kickoff_ts,
+    /* Real kickoff from nfl-current; the row's frozen value stays on the
+     * receipt and is reported separately. */
+    kickoff_ts: kick !== null ? new Date(kick).toISOString() : row.kickoff_ts,
+    kickoff_source: game?.kickoff ? 'nfl-current' : 'decision_row',
+    issued_kickoff_ts: row.kickoff_ts,
     seconds_to_kickoff: kick !== null ? Math.round((kick - nowMs) / 1000) : null,
     market: row.market,
     selection: selectionOf(row),
@@ -496,7 +514,7 @@ export function proCard({ row, lifecycle, receipt, verification, grade, market, 
     } : null,
     market_since_issue: market,
     why_cleared: whyCleared(row),
-    game: game ? { espn_id: game.espn_id, state: game.state, detail: game.detail, away_score: finite(game.away_score), home_score: finite(game.home_score) } : null,
+    game: game ? { espn_id: game.espn_id, state: game.state, detail: game.detail, kickoff: game.kickoff || null, away_score: finite(game.away_score), home_score: finite(game.home_score) } : null,
     progress: lifecycle === LIFECYCLE.LOCKED || lifecycle === LIFECYCLE.FINAL ? progressOf(row, game) : null,
     grade: grade ? {
       result: grade.result,
@@ -507,7 +525,7 @@ export function proCard({ row, lifecycle, receipt, verification, grade, market, 
       brier: finite(grade.brier),
       graded_at: grade.graded_at || null,
     } : null,
-    events: eventsFor(row, { audits, market, lifecycle, grade, nowMs }),
+    events: eventsFor(row, { audits, market, lifecycle, grade, nowMs, game }),
   };
 }
 
@@ -528,16 +546,17 @@ export function withdrawnEvent({ row, audits }) {
 
 /* What a free visitor may see about a current decision: that it exists, what
  * game and market it is on, and when it was issued. Nothing actionable. */
-export function lockedPreview({ row, lifecycle }) {
+export function lockedPreview({ row, lifecycle, game = null }) {
   const matchup = matchupFromGameId(row.game_id);
   const scope = labelFor(row.publication_scope);
+  const kick = effectiveKickoff(row, game);
   return {
     publication_scope: row.publication_scope,
     label: scope.label,
     lifecycle,
     game_id: row.game_id,
     matchup: matchup ? { away: displayTeam(matchup.away_team), home: displayTeam(matchup.home_team) } : null,
-    kickoff_ts: row.kickoff_ts,
+    kickoff_ts: kick !== null ? new Date(kick).toISOString() : row.kickoff_ts,
     market: row.market,
     issued_at: row.created_at,
     locked: true,

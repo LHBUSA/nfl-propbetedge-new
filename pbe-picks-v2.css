@@ -255,3 +255,8 @@
 .pbe2-engine-note{margin:10px 0 0;font-size:12px;line-height:1.5;color:rgba(255,255,255,.4)}
 @media(max-width:900px){.pbe2-engine-grid,.pbe2-lanes{grid-template-columns:1fr 1fr}}
 @media(max-width:520px){.pbe2-engine-grid,.pbe2-lanes{grid-template-columns:1fr}.pbe2-engine-head{flex-wrap:wrap}}
+
+/* PBE Card v3 sits above this file's governance deep dive. */
+.pbe2-deep-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:6px 14px;margin:34px 2px 12px;padding-top:18px;border-top:1px solid rgba(255,245,220,.08)}
+.pbe2-deep-head span{font-family:var(--pbe-font-display,Georgia,serif);font-size:24px;font-weight:900;color:#fff}
+.pbe2-deep-head small{font-size:12px;letter-spacing:.04em;color:rgba(255,255,255,.4)}

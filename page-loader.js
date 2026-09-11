@@ -1,7 +1,7 @@
 /* PropBetEdge NFL - ordered page/product upgrade loader v45 recovery */
 (() => {
   'use strict';
-  const VERSION='20260911productdepth1';
+  const VERSION='20260911pbecard3';
   const upgrades=[
     /* Establish the final homepage authority first. v6 replaces the v5 DOM with
        .pbehome6; v7 historically registered itself after that without repainting
@@ -23,6 +23,9 @@
 
        The Sunday Command Center loads before v7 because v7 calls into it
        after every paint; What Changed and Best Line share its sources. */
+    /* Today's PBE Card: the one client owner of the PBE Card server contract.
+       Dashboard, PBE Picks, Matchup and PBEcast all render from its store. */
+    {css:'./pbe-card-v3.css',js:'./pbe-card-v3.js'},
     {css:'./nfl-command-center-v1.css',js:'./nfl-command-center-v1.js'},
     {css:'./what-changed-v1.css',js:'./what-changed-v1.js'},
     {css:'./best-line-v1.css',js:'./best-line-v1.js'},

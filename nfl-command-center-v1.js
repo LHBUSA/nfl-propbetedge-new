@@ -202,6 +202,7 @@
         ${inj.total && !fin ? `<button type="button" class="pbecc-inj" data-route="changes" data-changes-game="${esc(g.id)}">${inj.out ? `${inj.out} OUT` : ''}${inj.out && inj.q ? ' · ' : ''}${inj.q ? `${inj.q} Q` : ''}</button>` : ''}
         <button type="button" class="pbecc-cast" data-cast="${esc(g.id)}">${live ? 'Live PBEcast' : fin ? 'Replay' : 'Preview'} →</button>
       </footer>
+      ${window.PBECard?.gameBadge?.({ away: a.abbreviation, home: h.abbreviation, espnId: g.id }) || ''}
     </article>`;
   }
   function slateHtml() {
@@ -293,9 +294,10 @@
   function pickAffected(c) {
     if (c.severity !== 'HIGH' || c.actionable === false || window.PBEPro?.state?.pro !== true) return '';
     const key = changeGameKey(c); if (!key) return '';
-    const rows = arr(window.PBEPicksV2?.state?.current?.picks);
-    const hit = rows.find(r => pickGameKey(r) === key && !['win', 'loss', 'push'].includes(String(r?.grade?.result || '').toLowerCase()));
-    return hit ? String(hit.market || 'OPEN PICK').toUpperCase() : '';
+    /* The PBE Card store holds decisions only for a verified Pro session. */
+    const rows = arr(window.PBECard?.cards?.());
+    const hit = rows.find(r => pickGameKey(r) === key && r.lifecycle !== 'FINAL');
+    return hit ? `${String(hit.market || 'OPEN').toUpperCase()} · ${hit.selection?.display || ''}`.trim() : '';
   }
 
   /* ---- picks + track record --------------------------------------------- */
@@ -318,7 +320,7 @@
         <div><span>Weeks observed</span><b>${esc(d.distinct_weeks ?? 0)} / ${esc(d.distinct_weeks_required ?? 4)}</b>${bar(d.distinct_weeks, d.distinct_weeks_required || 4)}</div>
       </div>
       <p class="pbecc-note">${gated
-        ? 'Publication stays gated until the validation sample and observation window are both met. No official pick is issued before then, and none is invented to fill this space.'
+        ? 'Official publication stays gated until the validation sample and observation window are both met. Until then the engine’s real pre-game decisions reach NFL Pro as PBE Validation Signals on Today’s PBE Card; none is called official and none enters the Official Track Record.'
         : 'Only the production champion publishes. Every official pick is locked at issuance and graded from final results.'}</p>
       <div class="pbecc-actions"><button type="button" data-route="pbepicks">PBE Picks →</button><button type="button" data-route="trackrecord">Verified track record →</button></div>
     </section>`;
@@ -379,7 +381,7 @@
   function paint() {
     const top = slot('top'), intel = slot('intel');
     if (!top && !intel) return;
-    write(top, `<div class="pbecc">${slateHtml()}</div>`);
+    write(top, `<div class="pbecc">${slateHtml()}${window.PBECard?.dashboardHtml?.() || ''}</div>`);
     write(intel, `<div class="pbecc pbecc-intel">${loopHtml()}<div class="pbecc-cols">${changesHtml()}<div class="pbecc-stack">${picksHtml()}${bestLineHtml()}</div></div></div>`);
   }
 
@@ -416,6 +418,8 @@
     }
   });
   window.addEventListener('pbe:pro-state', () => paint());
+  /* Today's PBE Card and the game badges repaint when the card lands. */
+  window.addEventListener('pbe:card-ready', () => paint());
   /* Remember a fold the reader opened, so the next repaint keeps it open. */
   document.addEventListener('toggle', e => {
     const d = e.target; if (!d?.matches?.('.pbecc [data-cc-fold]')) return;

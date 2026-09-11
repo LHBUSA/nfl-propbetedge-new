@@ -5,7 +5,10 @@
  *   Track Record -> public accountability, official publication only.
  *
  * Truth rules:
- * - tracking/bootstrap rows never render on either customer surface.
+ * - PBE Card v3 (pbe-card-v3.js) owns the decisions: NFL Pro sees current
+ *   tracking rows as PBE VALIDATION SIGNALs, labelled per row; free users see
+ *   locked previews. This file owns the governance deep dive under the card
+ *   and the Official Track Record, which stays official-only.
  * - empty/gated/degraded are distinct states.
  * - receipt hashes are an INTERNAL SHA-256 chained tamper-evidence system,
  *   explicitly not represented as independent third-party notarization.
@@ -164,7 +167,8 @@
     const gated = data?.champion_trained !== true;
     const degraded = healthOf(data) !== 'HEALTHY';
     const mode = degraded ? 'Engine degraded' : gated ? 'Validation mode' : 'Production champion';
-    return `<div class="pbe2-topline"><div class="pbe2-eyebrow"><i class="pbe2-live-dot ${degraded ? 'degraded' : gated ? 'gated' : ''}"></i>${mode} · v${esc(data?.champion_version ?? '—')} · official publication only</div>${switcher(active)}</div>`;
+    const scope = active === 'trackrecord' ? 'official publication only' : gated ? 'Pro validation signals' : 'official picks';
+    return `<div class="pbe2-topline"><div class="pbe2-eyebrow"><i class="pbe2-live-dot ${degraded ? 'degraded' : gated ? 'gated' : ''}"></i>${mode} · v${esc(data?.champion_version ?? '—')} · ${scope}</div>${switcher(active)}</div>`;
   }
 
   /* ---- engine runtime (durable run ledger) ---------------------------- */
@@ -222,74 +226,58 @@
       const line = waiting ? 'Weekly · first run pending' : `${laneStateLabel(l.state)} · last run ${ago(l.last_tick_at)}`;
       return `<div class="pbe2-lane" data-state="${esc(state)}"><i></i><div><strong>${esc(l.label || l.lane)}</strong><span>${esc(line)}</span></div></div>`;
     }).join('');
-    return `<section class="pbe2-engine" aria-label="Picks Engine live progress"><div class="pbe2-engine-head"><span>Live engine · ${esc(data?.current?.season ?? d.season ?? '')} ${esc(data?.current?.season_type || '')} week ${esc(data?.current?.week ?? '—')}</span><b data-state="${esc(healthOf(data))}">${esc(laneStateLabel(healthOf(data)))}</b></div><div class="pbe2-engine-grid">${tiles.map(([label, value, sub]) => `<div class="pbe2-engine-tile"><span>${esc(label)}</span><strong>${esc(value)}</strong>${sub ? `<small>${esc(sub)}</small>` : ''}</div>`).join('')}</div><div class="pbe2-lanes">${laneRows || '<div class="pbe2-lane" data-state="UNKNOWN"><i></i><div><strong>Run ledger</strong><span>unavailable</span></div></div>'}</div><p class="pbe2-engine-note">Tracking decisions are real pregame decisions, frozen before kickoff and graded from the official final. They are never shown as picks and never enter the public record.</p></section>`;
+    return `<section class="pbe2-engine" aria-label="Picks Engine live progress"><div class="pbe2-engine-head"><span>Live engine · ${esc(data?.current?.season ?? d.season ?? '')} ${esc(data?.current?.season_type || '')} week ${esc(data?.current?.week ?? '—')}</span><b data-state="${esc(healthOf(data))}">${esc(laneStateLabel(healthOf(data)))}</b></div><div class="pbe2-engine-grid">${tiles.map(([label, value, sub]) => `<div class="pbe2-engine-tile"><span>${esc(label)}</span><strong>${esc(value)}</strong>${sub ? `<small>${esc(sub)}</small>` : ''}</div>`).join('')}</div><div class="pbe2-lanes">${laneRows || '<div class="pbe2-lane" data-state="UNKNOWN"><i></i><div><strong>Run ledger</strong><span>unavailable</span></div></div>'}</div><p class="pbe2-engine-note">Tracking decisions are real pregame decisions, frozen before kickoff and graded from the official final. NFL Pro sees the current ones as PBE Validation Signals. They are never official picks and never enter the Official Track Record.</p></section>`;
   }
 
-  function validation(data, active = 'pbepicks', banner = '') {
+  function validation(data) {
     const grades = Number(data?.graded_sample || 0), gradeReq = Number(data?.graded_sample_required || 100);
     const weeks = Number(data?.distinct_weeks || 0), weekReq = Number(data?.distinct_weeks_required || 4);
     const gradePct = gradeReq ? clamp(grades / gradeReq * 100, 0, 100) : 0;
     const weekPct = weekReq ? clamp(weeks / weekReq * 100, 0, 100) : 0;
-    return `${topline(active, data)}${banner}<section class="pbe2-stage gated"><div class="pbe2-gridwash"></div><div class="pbe2-validation">
-      <div><div class="pbe2-kicker">PBE Picks Engine</div><h1>Earn the edge.<br><em>Then publish it.</em></h1><p class="pbe2-validation-copy">The production model is evaluating real NFL slates in bootstrap tracking mode. Those decisions can build the learning sample, but they cannot appear as customer picks and can never be retroactively converted into the public record.</p><div class="pbe2-validation-proof"><span>100 finalized decisions</span><span>4 distinct weeks</span><span>champion-only publication</span><span>no backfilled picks</span></div></div>
+    return `<section class="pbe2-stage gated"><div class="pbe2-gridwash"></div><div class="pbe2-validation">
+      <div><div class="pbe2-kicker">PBE Picks Engine</div><h1>Earn the edge.<br><em>Then publish it.</em></h1><p class="pbe2-validation-copy">The production model is evaluating real NFL slates in bootstrap tracking mode. NFL Pro members see those decisions live as PBE Validation Signals. They build the learning sample, but they are not official picks and can never be retroactively converted into the Official Track Record.</p><div class="pbe2-validation-proof"><span>100 finalized decisions</span><span>4 distinct weeks</span><span>champion-only publication</span><span>no backfilled picks</span></div></div>
       <div class="pbe2-gates"><div class="pbe2-ring" style="--p:${gradePct.toFixed(1)}"><div><strong>${grades}</strong><span>of ${gradeReq} grades</span></div></div><div class="pbe2-ring" style="--p:${weekPct.toFixed(1)}"><div><strong>${weeks}</strong><span>of ${weekReq} weeks</span></div></div><div class="pbe2-gate-caption">Official publication remains closed until both gates are satisfied and a trained champion is promoted.</div></div>
     </div></section>${engineProgress(data)}<div class="pbe2-pipeline"><div class="${healthOf(data) === 'HEALTHY' ? 'active' : ''}"><span>01</span><strong>Track live</strong></div><div class="${grades > 0 ? 'active' : ''}"><span>02</span><strong>Grade final</strong></div><div><span>03</span><strong>Validate</strong></div><div><span>04</span><strong>Publish</strong></div></div>`;
   }
 
-  function freeLive(data) {
-    return `${topline('pbepicks', data)}<section class="pbe2-stage"><div class="pbe2-gridwash"></div><div class="pbe2-free-live"><div><div class="pbe2-kicker">PBE Picks · NFL Pro</div><h1>The model made<br><span>the call.</span></h1><p>Official decisions expose the exact issue line and odds, model probability, de-vigged market probability, model edge, fair line, confidence bucket and recommended stake. Those proprietary fields never ship to a free browser.</p><div class="pbe2-btnrow"><button type="button" class="pbe2-btn primary" data-pbe2-upgrade>Unlock NFL Pro</button><button type="button" class="pbe2-btn" data-pbe2-route="trackrecord">Audit the public record</button></div></div><aside class="pbe2-free-card"><span>Current state</span><strong>Official model live</strong><small>Track Record stays public. Pick economics remain server-gated behind the verified NFL Pro session.</small></aside></div></section>`;
-  }
-
-  function passHero(data) {
-    return `${topline('pbepicks', data)}<section class="pbe2-stage"><div class="pbe2-gridwash"></div><div class="pbe2-pass"><div><div class="pbe2-kicker">PBE Picks · Production decision</div><h1>No bet is<br><span>also a decision.</span></h1><p>The trained champion evaluated the current slate and no market cleared the production threshold. We do not manufacture picks to fill a card.</p><div class="pbe2-btnrow" style="margin-top:18px"><button type="button" class="pbe2-btn" data-pbe2-route="propboard">Open Prop Board</button><button type="button" class="pbe2-btn" data-pbe2-route="trackrecord">Track Record</button></div></div><div class="pbe2-pass-stamp"><div><strong>PASS</strong><span>Production model · current slate</span></div></div></div></section>`;
-  }
-
-  function featuredPick(row, index, total) {
-    const bucket = String(row?.confidence_bucket || '—').toUpperCase();
-    return `<section class="pbe2-stage"><div class="pbe2-gridwash"></div><div class="pbe2-feature"><div class="pbe2-feature-left"><div><div class="pbe2-feature-top"><div class="pbe2-feature-label">PBE Pick ${index + 1} of ${total} · ${esc(marketLabel(row.market))}</div><div class="pbe2-confidence" title="Confidence bucket">${esc(bucket)}</div></div><div class="pbe2-matchup">${matchupMarks(row)}<span>${esc(matchup(row))}</span></div><div class="pbe2-pick-selection">${esc(selection(row))}<span>${american(row.market_price)}</span></div></div><div class="pbe2-issue"><span>Issued ${esc(dateTime(row.created_at))}</span><span>Champion v${esc(row.model_version ?? '—')}</span><span>Frozen at issuance</span></div></div><div class="pbe2-feature-right"><div class="pbe2-edge-number"><span>Model edge vs market</span><strong>${edge(row.edge_pct)}</strong></div><div class="pbe2-metrics"><div><span>PBE probability</span><strong>${probability(row.model_prob)}</strong></div><div><span>Market probability</span><strong>${probability(row.market_prob)}</strong></div><div class="good"><span>Model fair line</span><strong>${line(row.model_line)}</strong></div><div><span>Stake</span><strong>${num(row.stake_units) === null ? '—' : `${num(row.stake_units).toFixed(2)}u`}</strong></div></div><div class="pbe2-feature-foot"><span>Original line ${line(row.market_line)} · original price ${american(row.market_price)}</span><b>${row.receipt?.chain_hash ? `RECEIPT ${esc(row.receipt.chain_hash.slice(0, 10))}…` : 'RECEIPT PENDING'}</b></div></div></div></section>`;
-  }
-
-  function ticket(row) {
-    const bucket = String(row?.confidence_bucket || '—').toUpperCase();
-    return `<article class="pbe2-ticket"><div class="pbe2-ticket-top"><span class="pbe2-ticket-market">${esc(marketLabel(row.market))} · ${esc(matchup(row))}</span><b class="pbe2-ticket-grade">${esc(bucket)}</b></div><h3>${esc(selection(row))}<br><span>${american(row.market_price)}</span></h3><div class="pbe2-ticket-matchup">Issued ${esc(dateTime(row.created_at))}</div><div class="pbe2-ticket-stats"><div class="edge"><span>Edge</span><strong>${edge(row.edge_pct)}</strong></div><div><span>PBE</span><strong>${probability(row.model_prob)}</strong></div><div><span>Stake</span><strong>${num(row.stake_units) === null ? '—' : `${num(row.stake_units).toFixed(2)}u`}</strong></div></div><footer><span>v${esc(row.model_version ?? '—')}</span><span>${row.receipt?.chain_hash ? `${esc(row.receipt.chain_hash.slice(0, 8))}…` : 'receipt pending'}</span></footer></article>`;
-  }
-
-  function picksLive(data) {
-    const rows = Array.isArray(data?.picks) ? data.picks : [];
-    if (!rows.length) return passHero(data);
-    return `${topline('pbepicks', data)}<div class="pbe2-card-head"><div><h2>Official PBE Card</h2><p>Champion-only · immutable issue terms · NFL Pro economics</p></div><div class="pbe2-card-count">${rows.length} PLAY${rows.length === 1 ? '' : 'S'}</div></div>${featuredPick(rows[0], 0, rows.length)}${rows.length > 1 ? `<div class="pbe2-ticket-grid">${rows.slice(1).map(ticket).join('')}</div>` : ''}`;
+  /* The card first (pbe-card-v3.js owns it and its entitlement), then the
+   * engine behind it. Health comes first in the deep dive: a degraded engine
+   * is never presented as a healthy validation page. */
+  function paintPicks() {
+    const vc = document.getElementById('view-container'); if (!vc || window.App?.current !== 'pbepicks') return;
+    const governance = state.governance;
+    const card = window.PBECard ? window.PBECard.flagshipHtml() : '';
+    const deep = !governance ? ''
+      : `<div class="pbe2-deep-head"><span>The engine behind the card</span><small>Publication gate, finalized sample and live run ledger</small></div>${healthOf(governance) !== 'HEALTHY' ? degradedBanner(governance) : ''}${governance.champion_trained !== true ? validation(governance) : engineProgress(governance)}`;
+    const html = `<section class="pbe2-wrap">${topline('pbepicks', governance || {})}${card}${deep}</section>`;
+    if (vc.dataset.pbe2Sig === html) return;
+    const open = vc.querySelector('.pbec-history')?.open;
+    vc.innerHTML = html; vc.dataset.pbe2Sig = html;
+    if (open) vc.querySelector('.pbec-history')?.setAttribute('open', '');
+    wire();
   }
 
   async function renderPicks() {
     const vc = document.getElementById('view-container'); if (!vc) return;
     const run = ++state.loadId;
-    vc.innerHTML = '<section class="pbe2-wrap"><div class="pbe2-loading"><div class="pbe2-loading-mark"></div><strong>Loading PBE Picks</strong><span>Verified publication state</span></div></section>';
+    vc.dataset.pbe2Sig = '';
+    vc.innerHTML = '<section class="pbe2-wrap"><div class="pbe2-loading"><div class="pbe2-loading-mark"></div><strong>Loading today&#39;s PBE card</strong><span>Current decisions and publication state</span></div></section>';
     try {
-      const governance = await json(`${API}?view=state`);
+      const [governance] = await Promise.all([json(`${API}?view=state`), window.PBECard?.ensure?.()]);
       if (run !== state.loadId || window.App?.current !== 'pbepicks') return;
       state.governance = governance;
-      let body;
-      /* Health first: a degraded engine is never presented as a healthy
-       * validation page or an honest PASS. */
-      const banner = healthOf(governance) !== 'HEALTHY' ? degradedBanner(governance) : '';
-      if (governance.champion_trained !== true) body = validation(governance, 'pbepicks', banner);
-      else if (banner) body = `${topline('pbepicks', governance)}${banner}${engineProgress(governance)}`;
-      else if (!isPro()) body = freeLive(governance);
-      else {
-        const current = await json(`${API}?view=current`);
-        if (run !== state.loadId || window.App?.current !== 'pbepicks') return;
-        state.current = current;
-        body = picksLive(current);
-      }
-      vc.innerHTML = `<section class="pbe2-wrap">${body}</section>`;
-      wire();
+      state.current = window.PBECard?.store?.data || null;
+      paintPicks();
     } catch (error) {
       if (run !== state.loadId || window.App?.current !== 'pbepicks') return;
-      const gated = error.status === 401 || error.status === 403;
-      vc.innerHTML = `<section class="pbe2-wrap"><section class="pbe2-error"><span>${gated ? 'NFL PRO' : 'SOURCE'}</span><h2>${gated ? 'NFL Pro verification required' : 'Picks Engine unavailable'}</h2><p>${gated ? 'Sign in with an active NFL Pro subscription to load official pick economics.' : 'The page will not turn a backend failure into a fake empty slate.'}</p><button type="button" class="pbe2-btn ${gated ? 'primary' : ''}" ${gated ? 'data-pbe2-upgrade' : 'data-pbe2-retry-picks'}>${gated ? 'Open NFL Pro' : 'Retry'}</button></section></section>`;
+      vc.innerHTML = '<section class="pbe2-wrap"><section class="pbe2-error"><span>SOURCE</span><h2>Picks Engine unavailable</h2><p>The page will not turn a backend failure into a fake empty slate.</p><button type="button" class="pbe2-btn" data-pbe2-retry-picks>Retry</button></section></section>';
       wire();
     }
   }
+  window.addEventListener('pbe:card-ready', () => {
+    state.current = window.PBECard?.store?.data || null;
+    if (window.App?.current === 'pbepicks' && state.governance) paintPicks();
+  });
 
   function filterOptions(rows, key) {
     return [...new Set(rows.map(row => String(row?.[key] ?? '')).filter(Boolean))].sort((a, b) => Number(a) - Number(b));
@@ -519,5 +507,5 @@
   document.addEventListener('DOMContentLoaded', init, { once: true });
   window.addEventListener('pbe:upgrades-ready', init);
   window.addEventListener('pbe:route-changed', event => { installNav(); syncNav(event.detail?.route || window.App?.current || ''); });
-  window.addEventListener('pbe:pro-state', () => { if (window.App?.current === 'pbepicks') renderPicks(); });
+  /* pbe-card-v3 re-reads on a Pro state change and emits pbe:card-ready. */
 })();
