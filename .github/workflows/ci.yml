@@ -31,7 +31,8 @@ jobs:
           node scripts/check-syntax.mjs \
             app-core-v3.js page-loader.js paywall.js paywall-funnel-v2.js ui-v2.js \
             prop-board-v3.js prop-board-v5.js model-lab.js api/*.js \
-            workers/nfl-billing/src/index.js
+            workers/nfl-billing/src/index.js \
+            workers/nfl-picks-engine-shared/publication.mjs
 
       - name: Syntax gate self-test
         shell: bash
@@ -52,6 +53,12 @@ jobs:
 
       - name: Founding Season billing contract
         run: node --test tests/nfl-founding-season-billing.test.mjs
+
+      # PBE Picks V3: which persisted decisions a customer may see. Leak
+      # prevention, superseded/withdrawn filtering, receipt verification and
+      # the official-mode transition, against the real read handler.
+      - name: PBE Card publication contract
+        run: node --test tests/pbe-card-v3.test.mjs tests/pbe-picks-runtime.test.mjs
 
       # research/ holds the contract suites -- odds provider spend, the
       # home-market fallback, and the Prop Board batch merge. No workflow ran
