@@ -1,8 +1,9 @@
-/* PropBetEdge NFL — Founding Season purchase funnel v7
+/* PropBetEdge NFL — Founding Season purchase funnel v8
  *
- * Purchase UI authority for BOTH signed-out and signed-in free users.
- * Auth state remains owned by paywall.js; this file owns plan presentation and
- * purchase initiation so old pricing cannot reappear in a second account state.
+ * Presentation authority for signed-out, signed-in free, AND active Pro users.
+ * Auth/session state remains owned by paywall.js; this file owns the customer-
+ * facing account and purchase experience so old pricing or utility-grade paid
+ * states cannot become the final rendered UI.
  *
  * 2026 Founding Season:
  *   $9.99/month (default / best value)
@@ -128,6 +129,47 @@
     </div>`;
   }
 
+  function accessPeriodCopy(subscription) {
+    const raw = subscription?.current_period_end;
+    if (!raw) return 'Stripe-backed entitlement verified by PropBetEdge.';
+    const date = new Date(raw);
+    if (Number.isNaN(date.getTime())) return 'Stripe-backed entitlement verified by PropBetEdge.';
+    const label = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    return subscription?.cancel_at_period_end ? `Access remains active through ${label}.` : `Current billing period runs through ${label}.`;
+  }
+
+  function activeProMarkup(email, subscription) {
+    return `<div class="pbe-funnel-root pbe-funnel-active" data-funnel-state="active-pro">
+      <div class="pbe-funnel-head">
+        <span>NFL PRO · VERIFIED ACCESS</span>
+        <strong>Your NFL intelligence desk is live.</strong>
+        <p>The premium PBE layer is active across supported NFL surfaces. Market truth stays visible; model intelligence stays separately labeled.</p>
+      </div>
+      <div class="pbe-funnel-user"><span>Verified account</span><strong>${escapeHtml(email || 'NFL Pro member')}</strong></div>
+      <div class="pbe-pro-price-card pbe-funnel-active-card">
+        <div class="pbe-funnel-plan-top">
+          <div>
+            <div class="pbe-pro-plan-label">NFL PRO · ACCESS STATUS</div>
+            <div class="pbe-funnel-plan-badge">ACTIVE</div>
+          </div>
+          <div class="pbe-funnel-check">✓</div>
+        </div>
+        <div class="pbe-funnel-active-title">Pro intelligence is enabled</div>
+        <div class="pbe-pro-renew">${escapeHtml(accessPeriodCopy(subscription))}</div>
+      </div>
+      <div class="pbe-funnel-email-label pbe-funnel-capabilities">
+        <b>Your Pro desk</b>
+        <span>PBE Fair Line · Model Probability · Best Line · PBE Cast · Track Record · premium research as it clears validation.</span>
+      </div>
+      <div class="pbe-pro-auth-state pbe-funnel-auth">
+        <button class="pbe-pro-cta" id="pbe-funnel-open-board" type="button">Open Pro Prop Board</button>
+        <button class="pbe-pro-cta secondary" id="pbe-funnel-refresh" type="button">Refresh verified access</button>
+        <div class="pbe-pro-message" id="pbe-funnel-message"></div>
+      </div>
+      <div class="pbe-pro-secure">◆ NFL Pro active · Stripe-backed entitlement verified by PropBetEdge</div>
+    </div>`;
+  }
+
   function escapeHtml(value) {
     return String(value ?? '')
       .replace(/&/g, '&amp;')
@@ -244,6 +286,11 @@
     if (signin) signin.onclick = signInExisting;
     const refresh = document.getElementById('pbe-funnel-refresh');
     if (refresh) refresh.onclick = refreshExistingAccess;
+    const openBoard = document.getElementById('pbe-funnel-open-board');
+    if (openBoard) openBoard.onclick = () => {
+      window.PBEPro?.close?.();
+      window.App?.nav?.('propboard');
+    };
     const input = document.getElementById('pbe-funnel-email');
     if (input) input.onkeydown = event => { if (event.key === 'Enter') startCheckout(); };
     paintSelection();
@@ -251,16 +298,18 @@
 
   function mountPurchaseState() {
     const s = state();
-    if (s.loading || s.pro) return;
+    if (s.loading) return;
     const host = document.getElementById('pbe-pro-checkout');
     if (!host) return;
 
-    const mode = s.user ? 'signed-in-free' : 'signed-out';
+    const mode = s.pro ? 'active-pro' : s.user ? 'signed-in-free' : 'signed-out';
     const current = host.querySelector('.pbe-funnel-root')?.dataset?.funnelState;
     if (current !== mode) {
-      host.innerHTML = s.user
-        ? signedInFreeMarkup(String(s.user.email || '').toLowerCase())
-        : signedOutMarkup();
+      host.innerHTML = s.pro
+        ? activeProMarkup(String(s.user?.email || '').toLowerCase(), s.subscription)
+        : s.user
+          ? signedInFreeMarkup(String(s.user.email || '').toLowerCase())
+          : signedOutMarkup();
     }
     wire(host);
   }
