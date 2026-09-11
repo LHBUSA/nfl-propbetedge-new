@@ -39,7 +39,7 @@
  *        [--link-delivery manual|resend] [--out dir] [--widths 1440,390]
  * Exit 1 on a failed check, 4 when a required persona could not be run.
  */
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { mkdtempSync, rmSync, readFileSync, existsSync, statSync, writeFileSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, extname, resolve } from 'node:path';
@@ -63,17 +63,25 @@ const OUT = resolve(arg('out', join(REPO, '.pbe-card-gate')));
 const WIDTHS = arg('widths', '1440,390').split(',').map(n => parseInt(n, 10));
 const HEIGHTS = { 390: 844, 1440: 900 };
 const CHROME = process.env.PBE_CHROME || 'C:/Program Files/Google/Chrome/Application/chrome.exe';
-const PORT = 9800 + Math.floor(Math.random() * 90);
+const PORT = Number(process.env.PBE_GATE_PORT) || 9800 + Math.floor(Math.random() * 90);
 const SETTLE = Number(arg('settle', '6500'));
 const COOKIE_NAME = 'pbe_nfl_session_v2';
 
 const PRO_EMAIL = String(process.env.PBE_PRO_EMAIL || arg('pro-email', '')).trim().toLowerCase();
 const FREE_EMAIL = String(process.env.PBE_FREE_EMAIL || '').trim().toLowerCase();
 const LINK_DELIVERY = arg('link-delivery', 'manual');
-const LOGIN_TIMEOUT_MS = 15 * 60 * 1000;   // the emailed link's own lifetime
+/* --harness-selftest proves the canary harness itself (tests/pbe-card-gate-
+   harness.test.mjs) against a local stand-in origin: it runs the real login
+   wait and cleanup, then stops before any card test. It refuses to run
+   against anything but localhost, so it can never shortcut a production run. */
+const SELFTEST = flag('harness-selftest');
+const LOGIN_TIMEOUT_MS = SELFTEST && Number(process.env.PBE_LOGIN_TIMEOUT_MS) > 0
+  ? Number(process.env.PBE_LOGIN_TIMEOUT_MS)
+  : 15 * 60 * 1000;   // the emailed link's own lifetime
 if (CANARY && !FREE_ONLY && !/^\S+@\S+\.\S+$/.test(PRO_EMAIL)) { console.error('canary needs PBE_PRO_EMAIL (the NFL Pro account that signs in through the real flow)'); process.exit(2); }
 /* The operator watches a real window when they have to open the link. */
-const HEADED = CANARY && !FREE_ONLY && LINK_DELIVERY === 'manual';
+const HEADED = CANARY && !FREE_ONLY && LINK_DELIVERY === 'manual' && !flag('headless');
+if (SELFTEST && (!CANARY || !['127.0.0.1', 'localhost'].includes(new URL(TARGET).hostname))) { console.error('--harness-selftest runs only with --canary against a localhost PBE_TARGET'); process.exit(2); }
 const mask = email => String(email).replace(/^(.).*(@.*)$/, '$1***$2');
 /* Nothing this script prints may carry a sign-in token. */
 const redact = url => String(url).replace(/([?&]token=)[^&#\s]+/gi, '$1[redacted]');
@@ -124,11 +132,26 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 const dir = mkdtempSync(join(tmpdir(), 'pbe-cardgate-'));
 const chrome = spawn(CHROME, [`--remote-debugging-port=${PORT}`, `--user-data-dir=${dir}`, ...(HEADED ? ['--window-size=1440,1000'] : ['--headless=new', '--hide-scrollbars']), '--no-first-run',
   '--no-default-browser-check', '--disable-extensions', '--force-device-scale-factor=1', 'about:blank'], { stdio: 'ignore' });
+
+/* ---- lifecycle evidence ----------------------------------------------------
+   Every browser and tab transition is logged, so a run can always be told
+   apart as: browser exited · tab closed · auth never landed · authenticated.
+   URLs are reduced to origin + path and token-redacted. */
+const lifecycle = [];
+const t0 = Date.now();
+const shortUrl = u => { if (/^about:/.test(String(u))) return String(u); try { const x = new URL(u); return redact(`${x.origin}${x.pathname}${/[?&]auth=complete/.test(x.search) ? '?auth=complete' : ''}`); } catch { return String(u || '').slice(0, 40); } };
+function life(event, detail = '') {
+  const line = `+${String(Math.round((Date.now() - t0) / 1000)).padStart(4)}s ${event}${detail ? ` ${detail}` : ''}`;
+  lifecycle.push(line);
+  if (CANARY || SELFTEST) console.log(`LIFECYCLE ${line}`);
+}
+
 /* The profile holds the session cookie once a real login happened, so it is
    deleted only after Chrome has exited, with retries: on Windows (and the
    exFAT temp drive) an immediate delete races the browser's own shutdown. */
 let chromeExited = false;
-chrome.on('exit', () => { chromeExited = true; });
+let browserClosed = false;           // Chrome itself is gone (not merely a tab)
+chrome.on('exit', code => { chromeExited = true; if (!browserClosed) { browserClosed = true; life('BROWSER exited', `(process exit ${code})`); } });
 async function destroyProfile() {
   for (let i = 0; i < 40 && !chromeExited; i++) await new Promise(r => setTimeout(r, 250));
   for (let i = 0; i < 12 && existsSync(dir); i++) {
@@ -137,31 +160,96 @@ async function destroyProfile() {
   }
   return !existsSync(dir);
 }
+/* Any Chrome process still running with this run's profile, after exit. */
+function canaryProcessCount() {
+  try {
+    if (process.platform === 'win32') {
+      const name = dir.split(/[\\/]/).pop();
+      const r = spawnSync('powershell', ['-NoProfile', '-Command', `(Get-CimInstance Win32_Process -Filter "Name='chrome.exe'" | Where-Object { $_.CommandLine -like '*${name}*' } | Measure-Object).Count`], { encoding: 'utf8' });
+      return Number(String(r.stdout).trim()) || 0;
+    }
+    const r = spawnSync('pgrep', ['-f', dir], { encoding: 'utf8' });
+    return String(r.stdout).trim() ? String(r.stdout).trim().split(/\s+/).length : 0;
+  } catch { return -1; }
+}
 let finishing = false;
 function finish(code) {
   if (finishing) return; finishing = true;
-  try { chrome.kill(); } catch {}
-  destroyProfile().then(gone => {
-    if (!gone) console.log(`WARNING browser profile could not be deleted: ${dir} — delete it manually`);
-    process.exit(code);
-  });
+  (async () => {
+    /* Graceful first, so Chrome flushes and exits on its own; then force. */
+    if (!browserClosed) { try { await Promise.race([bsend('Browser.close'), sleep(3000)]); } catch {} }
+    for (let i = 0; i < 20 && !chromeExited; i++) await sleep(250);
+    if (!chromeExited) { try { chrome.kill(); } catch {} }
+    const gone = await destroyProfile();
+    const procs = canaryProcessCount();
+    console.log(`CLEANUP chrome exited: ${chromeExited ? 'yes' : 'NO'} · profile deleted: ${gone ? 'yes' : `NO (${dir})`} · canary chrome processes remaining: ${procs}`);
+    process.exit(code === 0 && (!gone || procs > 0) ? 6 : code);
+  })();
 }
 setTimeout(() => { console.error('HARD_DEADLINE'); finish(3); }, 2400000).unref?.();
-async function wsUrl() { for (let i = 0; i < 100; i++) { try { const l = await (await fetch(`http://127.0.0.1:${PORT}/json/list`)).json(); const p = l.find(x => x.type === 'page' && x.webSocketDebuggerUrl); if (p) return p.webSocketDebuggerUrl; } catch {} await sleep(200); } throw new Error('devtools_unavailable'); }
-const WS_URL = await wsUrl();
-const PAGE_ID = WS_URL.split('/').pop();
-const ws = new WebSocket(WS_URL);
+
+/* ---- DevTools: one browser-level connection -------------------------------
+   The canary attaches to the BROWSER, not to a tab. Tabs are tracked through
+   Target events and driven through flattened sessions, so closing any tab —
+   including the one the run started in — never ends the run. Only Chrome
+   exiting does. */
+async function browserWsUrl() { for (let i = 0; i < 100; i++) { try { const v = await (await fetch(`http://127.0.0.1:${PORT}/json/version`)).json(); if (v?.webSocketDebuggerUrl) return v.webSocketDebuggerUrl; } catch {} await sleep(200); } throw new Error('devtools_unavailable'); }
+const ws = new WebSocket(await browserWsUrl());
 await new Promise(r => { ws.onopen = r; });
 let seq = 1; const pending = new Map();
-/* A closed canary window must fail loudly, not leave calls hanging. */
-let browserClosed = false;
-ws.onclose = () => { browserClosed = true; for (const p of pending.values()) p.rej(new Error('browser_closed')); pending.clear(); };
-const send = (method, params = {}) => {
+ws.onclose = () => {
+  if (!browserClosed) { browserClosed = true; life('BROWSER exited', '(DevTools connection closed)'); }
+  for (const p of pending.values()) p.rej(new Error('browser_closed')); pending.clear();
+};
+function rawSend(method, params = {}, sessionId) {
   if (browserClosed) return Promise.reject(new Error('browser_closed'));
   const n = seq++;
-  try { ws.send(JSON.stringify({ id: n, method, params })); } catch (e) { return Promise.reject(new Error('browser_closed')); }
+  const msg = { id: n, method, params };
+  if (sessionId) msg.sessionId = sessionId;
+  try { ws.send(JSON.stringify(msg)); } catch { return Promise.reject(new Error('browser_closed')); }
   return new Promise((res, rej) => pending.set(n, { res, rej }));
-};
+}
+const bsend = (method, params = {}) => rawSend(method, params);
+
+/* tabs: targetId -> { n, url }. page: the tab currently being driven. */
+const tabs = new Map();
+let tabSeq = 0;
+let page = { targetId: null, sessionId: null };
+let metrics = null;
+let attaching = null;
+const tabLabel = id => `tab#${tabs.get(id)?.n ?? '?'}`;
+async function attachPage(targetId) {
+  const { sessionId } = await bsend('Target.attachToTarget', { targetId, flatten: true });
+  page = { targetId, sessionId };
+  const s = (m, p) => rawSend(m, p, sessionId);
+  await s('Runtime.enable'); await s('Page.enable'); await s('Network.enable');
+  await s('Network.setCacheDisabled', { cacheDisabled: true });
+  await s('Fetch.enable', { patterns: [{ urlPattern: `${ORIGIN}/*`, requestStage: 'Request' }] });
+  if (metrics) await s('Emulation.setDeviceMetricsOverride', metrics);
+  life('DRIVING', `${tabLabel(targetId)} ${shortUrl(tabs.get(targetId)?.url)}`);
+}
+/* Prefer the tab the sign-in landed in, then any tab on the origin, then any
+   tab; open a fresh one only if Chrome is alive with none. */
+async function pickPage() {
+  if (attaching) return attaching;
+  attaching = (async () => {
+    const { targetInfos } = await bsend('Target.getTargets');
+    const pages = targetInfos.filter(t => t.type === 'page');
+    for (const t of pages) if (!tabs.has(t.targetId)) tabs.set(t.targetId, { n: ++tabSeq, url: t.url });
+    const pick = pages.find(t => /[?&]auth=complete/.test(t.url)) || pages.find(t => t.url.startsWith(ORIGIN)) || pages[0];
+    if (pick) { await attachPage(pick.targetId); return; }
+    const { targetId } = await bsend('Target.createTarget', { url: `${ORIGIN}/` });
+    tabs.set(targetId, { n: ++tabSeq, url: `${ORIGIN}/` });
+    life('TAB opened by canary', `${tabLabel(targetId)} (no tab left)`);
+    await attachPage(targetId);
+  })().finally(() => { attaching = null; });
+  return attaching;
+}
+/* Page-level commands go to the tab being driven, re-attaching if it closed. */
+async function send(method, params = {}) {
+  if (!page.sessionId) await pickPage();
+  return rawSend(method, params, page.sessionId);
+}
 
 const MIME = { '.js': 'application/javascript; charset=utf-8', '.mjs': 'application/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.html': 'text/html; charset=utf-8', '.json': 'application/json; charset=utf-8', '.webmanifest': 'application/manifest+json', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.png': 'image/png', '.svg': 'image/svg+xml' };
 function localFile(url) {
@@ -178,19 +266,49 @@ const seen = { errors: [], cardBodies: [] };
 ws.onmessage = async ev => {
   const m = JSON.parse(ev.data);
   if (m.id && pending.has(m.id)) { const p = pending.get(m.id); pending.delete(m.id); m.error ? p.rej(new Error(m.error.message)) : p.res(m.result); return; }
+  const sid = m.sessionId;
+  /* Browser-level tab lifecycle. */
+  if (m.method === 'Target.targetCreated' && m.params.targetInfo.type === 'page') {
+    const t = m.params.targetInfo;
+    if (!tabs.has(t.targetId)) { tabs.set(t.targetId, { n: ++tabSeq, url: t.url }); life('TAB opened', `${tabLabel(t.targetId)} ${shortUrl(t.url)}`); }
+    return;
+  }
+  if (m.method === 'Target.targetInfoChanged' && m.params.targetInfo.type === 'page') {
+    const t = m.params.targetInfo; const tab = tabs.get(t.targetId);
+    if (tab && tab.url !== t.url) {
+      tab.url = t.url;
+      if (/\/api\/auth-verify/.test(t.url)) life('AUTH link opened', `in ${tabLabel(t.targetId)} ${shortUrl(t.url)}`);
+      else if (/[?&]auth=complete/.test(t.url)) life('AUTH landed', `in ${tabLabel(t.targetId)} ${shortUrl(t.url)}`);
+      else if (/[?&]auth=/.test(t.url)) life('AUTH redirect', `in ${tabLabel(t.targetId)} ${shortUrl(t.url)}${(/[?&]auth=([a-z_]+)/i.exec(t.url) || [])[1] ? ` (auth=${/[?&]auth=([a-z_]+)/i.exec(t.url)[1]})` : ''}`);
+    }
+    return;
+  }
+  if (m.method === 'Target.targetDestroyed') {
+    const id = m.params.targetId;
+    if (tabs.has(id)) {
+      const driving = id === page.targetId;
+      life('TAB closed', `${tabLabel(id)}${driving ? ' (was being driven; re-attaching to a surviving tab)' : ''}`);
+      tabs.delete(id);
+      if (driving) page = { targetId: null, sessionId: null };
+    }
+    return;
+  }
+  /* Detach arrives before destroy: drop the session but remember which tab it
+     was, so the close is still attributed to the tab being driven. */
+  if (m.method === 'Target.detachedFromTarget' && m.params.sessionId === page.sessionId) { page = { targetId: page.targetId, sessionId: null }; return; }
   if (m.method === 'Fetch.requestPaused') {
     const { requestId, request } = m.params;
     try {
       const api = !CANARY ? await fixtureApi(request.url, persona) : null;
       if (api) {
         if (request.url.includes('/api/pbe-picks')) seen.cardBodies.push({ url: request.url, status: api.status, body: api.body });
-        await send('Fetch.fulfillRequest', { requestId, responseCode: api.status, responseHeaders: Object.entries(api.headers).map(([name, value]) => ({ name, value })), body: Buffer.from(api.body).toString('base64') });
+        await rawSend('Fetch.fulfillRequest', { requestId, responseCode: api.status, responseHeaders: Object.entries(api.headers).map(([name, value]) => ({ name, value })), body: Buffer.from(api.body).toString('base64') }, sid);
         return;
       }
       const local = localFile(request.url);
-      if (local) { await send('Fetch.fulfillRequest', { requestId, responseCode: 200, responseHeaders: [{ name: 'content-type', value: local.type }, { name: 'cache-control', value: 'no-store' }], body: local.body.toString('base64') }); return; }
+      if (local) { await rawSend('Fetch.fulfillRequest', { requestId, responseCode: 200, responseHeaders: [{ name: 'content-type', value: local.type }, { name: 'cache-control', value: 'no-store' }], body: local.body.toString('base64') }, sid); return; }
     } catch (e) { seen.errors.push(`[gate] ${redact(request.url)} ${e.message}`); }
-    send('Fetch.continueRequest', { requestId }).catch(() => {});
+    rawSend('Fetch.continueRequest', { requestId }, sid).catch(() => {});
     return;
   }
   /* Real sign-in: the status of the sign-in request, from either form. */
@@ -202,17 +320,18 @@ ws.onmessage = async ev => {
   /* Canary: capture every /api/pbe-picks body the page actually received. */
   if (m.method === 'Network.responseReceived' && CANARY && m.params.response.url.includes('/api/pbe-picks')) {
     const { requestId } = m.params; const url = m.params.response.url; const status = m.params.response.status;
-    setTimeout(() => send('Network.getResponseBody', { requestId }).then(r => seen.cardBodies.push({ url, status, body: r.base64Encoded ? Buffer.from(r.body, 'base64').toString() : r.body })).catch(() => {}), 400);
+    setTimeout(() => rawSend('Network.getResponseBody', { requestId }, sid).then(r => seen.cardBodies.push({ url, status, body: r.base64Encoded ? Buffer.from(r.body, 'base64').toString() : r.body })).catch(() => {}), 400);
   }
-  if (m.method === 'Runtime.exceptionThrown') seen.errors.push(String(m.params.exceptionDetails?.exception?.description || m.params.exceptionDetails?.text || '').slice(0, 240));
+  if (m.method === 'Runtime.exceptionThrown' && sid === page.sessionId) seen.errors.push(String(m.params.exceptionDetails?.exception?.description || m.params.exceptionDetails?.text || '').slice(0, 240));
 };
-await send('Runtime.enable'); await send('Page.enable'); await send('Network.enable');
-await send('Network.setCacheDisabled', { cacheDisabled: true });
-await send('Fetch.enable', { patterns: [{ urlPattern: `${ORIGIN}/*`, requestStage: 'Request' }] });
+await bsend('Target.setDiscoverTargets', { discover: true });
+life('BROWSER attached', `(browser-level DevTools${HEADED ? ', visible window' : ', headless'})`);
+await pickPage();
 const evaluate = async (expr, ms = 25000) => { try { const r = await Promise.race([send('Runtime.evaluate', { expression: expr, returnByValue: true, awaitPromise: true }), sleep(ms).then(() => { throw new Error('WEDGED'); })]); return r.result?.value; } catch (e) { return { __error: e.message }; } };
 
 async function clearSessionState() {
   await send('Network.clearBrowserCookies');
+  await bsend('Storage.clearCookies').catch(() => {});
   await send('Storage.clearDataForOrigin', { origin: ORIGIN, storageTypes: 'all' }).catch(() => {});
 }
 /* Canary personas never hold a copied session. 'pro' (and 'free' when
@@ -227,10 +346,11 @@ async function setPersona(p) {
 }
 
 /* ---- real passwordless login ------------------------------------------------
-   Drives the production sign-in UI, then waits until /api/auth-session in this
-   browser reports the expected entitlement. The emailed link is either opened
-   by the operator in this window (manual) or fetched through the Resend API
-   and navigated to here (resend). Only booleans and stages are printed. */
+   Drives the production sign-in UI, then polls the real /api/auth-session
+   until it reports the expected entitlement. The emailed link may be opened
+   in ANY tab of the canary browser, and any tab — including the first — may
+   be closed; the probe always runs in a tab on the target origin. Only
+   booleans, stages and lifecycle events are printed. */
 const SESSION_PROBE = `fetch('/api/auth-session', { credentials: 'same-origin', cache: 'no-store' }).then(r => r.json()).then(s => ({ valid: s.valid === true, pro: s.pro === true, stage: String(s.stage || '') })).catch(e => ({ valid: false, pro: false, stage: 'probe_failed' }))`;
 async function resendLink(email, sinceMs) {
   const key = String(process.env.RESEND_API_KEY || '').trim();
@@ -250,13 +370,27 @@ async function resendLink(email, sinceMs) {
   }
   return { link: null, reason: 'no matching Resend message within 2 minutes' };
 }
+/* The probe must run on the origin: if the driven tab wandered elsewhere (a
+   webmail tab, say), switch to a tab that is on the origin. */
+async function probeSession() {
+  if (browserClosed) return { valid: false, pro: false, stage: 'browser_exited' };
+  const cur = tabs.get(page.targetId);
+  const landed = [...tabs.entries()].find(([, t]) => /[?&]auth=complete/.test(t.url));
+  if (landed && landed[0] !== page.targetId) await attachPage(landed[0]).catch(() => {});
+  else if (!page.sessionId || !cur || !String(cur.url).startsWith(ORIGIN)) {
+    const onOrigin = [...tabs.entries()].find(([, t]) => String(t.url).startsWith(ORIGIN));
+    if (onOrigin) await attachPage(onOrigin[0]).catch(() => {}); else await pickPage().catch(() => {});
+  }
+  return evaluate(SESSION_PROBE);
+}
 async function realLogin(email, { expectPro }) {
   await clearSessionState();
-  await send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false });
+  metrics = { width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false };
+  await send('Emulation.setDeviceMetricsOverride', metrics);
   await send('Page.navigate', { url: `${TARGET}/` });
   await sleep(SETTLE);
   const before = await evaluate(SESSION_PROBE);
-  if (before?.valid) return { ok: false, stage: 'jar_not_empty' };
+  if (before?.valid) return { ok: false, outcome: 'jar_not_empty', stage: 'jar_not_empty' };
   /* The real sign-in form, exactly as a customer uses it. */
   const requestedAt = Date.now();
   seen.authRequest = null;
@@ -271,59 +405,63 @@ async function realLogin(email, { expectPro }) {
     button.click();
     return { ok: true, form: input.id };
   })()`, 30000);
-  if (!submitted?.ok) return { ok: false, stage: submitted?.stage || 'signin_failed' };
+  if (!submitted?.ok) return { ok: false, outcome: 'signin_failed', stage: submitted?.stage || 'signin_failed' };
   /* The two production sign-in paths post to different places (the paywall
      form to /api/auth-email, the funnel form straight to the auth Worker's
      /v1/auth/request); both are observed at the network layer, where the page
      code cannot bypass the check. The response is a status only. */
   for (let i = 0; i < 40 && !seen.authRequest; i++) await sleep(500);
-  if (!seen.authRequest) return { ok: false, stage: 'signin_request_not_observed' };
-  if (seen.authRequest.status !== 200) return { ok: false, stage: `signin_request_${seen.authRequest.status}` };
+  if (!seen.authRequest) return { ok: false, outcome: 'signin_failed', stage: 'signin_request_not_observed' };
+  if (seen.authRequest.status !== 200) return { ok: false, outcome: 'signin_failed', stage: `signin_request_${seen.authRequest.status}` };
   submitted.endpoint = seen.authRequest.endpoint;
+  life('AUTH link requested', `for ${mask(email)} via #${submitted.form} -> ${submitted.endpoint} (200)`);
   console.log(`LOGIN sign-in link requested for ${mask(email)} through the production form #${submitted.form} -> ${submitted.endpoint} (200)`);
 
   if (LINK_DELIVERY === 'resend') {
     const got = await resendLink(email, requestedAt);
-    if (!got.link) return { ok: false, stage: `resend_retrieval_failed: ${got.reason}` };
+    if (!got.link) return { ok: false, outcome: 'auth_never_landed', stage: `resend_retrieval_failed: ${got.reason}` };
     console.log('LOGIN one-time link retrieved from Resend; opening it in the canary browser');
     await send('Page.navigate', { url: got.link });   // never printed
     await sleep(SETTLE);
   } else {
-    await evaluate(`(() => { const b = document.createElement('div'); b.id = 'pbe-canary-banner'; b.style.cssText = 'position:fixed;left:0;right:0;top:0;z-index:2147483647;padding:14px 18px;background:#d4af37;color:#111;font:700 15px Inter,Arial,sans-serif;text-align:center'; b.textContent = 'PBE CANARY — open the PropBetEdge sign-in email and open its link in a NEW TAB of THIS window (paste it into the address bar). Waiting…'; document.body.appendChild(b); })()`);
-    console.log('LOGIN waiting: open the emailed sign-in link in a new tab of the canary Chrome window (15-minute link).');
+    await evaluate(`(() => { const b = document.createElement('div'); b.id = 'pbe-canary-banner'; b.style.cssText = 'position:fixed;left:0;right:0;top:0;z-index:2147483647;padding:14px 18px;background:#d4af37;color:#111;font:700 15px Inter,Arial,sans-serif;text-align:center'; b.textContent = 'PBE CANARY — open the newest PropBetEdge sign-in link in ANY tab of THIS window (Ctrl+T, paste, Enter). You may close this tab. Waiting…'; document.body.appendChild(b); })()`);
+    console.log('LOGIN waiting: open the emailed sign-in link in any tab of the canary Chrome window (15-minute link). Closing tabs is fine; closing the whole window ends the run.');
   }
   const deadline = requestedAt + LOGIN_TIMEOUT_MS;
   let state = null, lastReport = 0;
   while (Date.now() < deadline) {
-    if (browserClosed) return { ok: false, stage: 'canary_window_closed_before_sign_in' };
-    state = await evaluate(SESSION_PROBE);
+    if (browserClosed) return { ok: false, outcome: 'browser_exited', stage: 'browser_exited_before_sign_in' };
+    state = await probeSession();
     if (state?.valid) break;
     if (Date.now() - lastReport > 60000) {
       lastReport = Date.now();
-      console.log(`LOGIN still waiting · ${Math.max(0, Math.round((deadline - Date.now()) / 60000))} min left on the link · session stage ${state?.stage || state?.__error || 'unknown'}`);
+      console.log(`LOGIN still waiting · ${Math.max(0, Math.round((deadline - Date.now()) / 60000))} min left on the link · session stage ${state?.stage || state?.__error || 'unknown'} · open tabs ${tabs.size}`);
     }
     await sleep(3000);
   }
-  if (browserClosed) return { ok: false, stage: 'canary_window_closed_before_sign_in' };
-  if (!state?.valid) return { ok: false, stage: `no_session_before_link_expiry (${state?.stage || state?.__error || 'unknown'})` };
-  /* Close any extra tab the operator used; the canary keeps its own. */
-  try {
-    const targets = await (await fetch(`http://127.0.0.1:${PORT}/json/list`)).json();
-    const mine = PAGE_ID;
-    for (const t of targets.filter(t => t.type === 'page' && t.id !== mine)) await fetch(`http://127.0.0.1:${PORT}/json/close/${t.id}`).catch(() => {});
-  } catch { /* nothing to close */ }
+  if (browserClosed) return { ok: false, outcome: 'browser_exited', stage: 'browser_exited_before_sign_in' };
+  if (!state?.valid) {
+    life('AUTH never landed', `(${state?.stage || state?.__error || 'unknown'} at link expiry)`);
+    return { ok: false, outcome: 'auth_never_landed', stage: `no_session_before_link_expiry (${state?.stage || state?.__error || 'unknown'})` };
+  }
+  life('AUTH session', `valid=${state.valid} pro=${state.pro} stage=${state.stage} (probed in ${tabLabel(page.targetId)})`);
+  /* Keep driving the authenticated tab; close every other tab. */
+  const keep = page.targetId;
+  for (const id of [...tabs.keys()].filter(id => id !== keep)) await bsend('Target.closeTarget', { targetId: id }).catch(() => {});
   await evaluate(`document.getElementById('pbe-canary-banner')?.remove()`);
   const ok = state.valid === true && state.pro === expectPro;
-  return { ok, stage: state.stage, valid: state.valid, pro: state.pro };
+  return { ok, outcome: ok ? 'authenticated' : 'signed_in_not_pro', stage: state.stage, valid: state.valid, pro: state.pro };
 }
 async function endSession() {
   const out = await evaluate(`fetch('/api/auth-logout', { method: 'POST', credentials: 'same-origin' }).then(r => r.status).catch(() => 0)`);
   const after = await evaluate(SESSION_PROBE);
   await clearSessionState();
+  life('SESSION ended', `logout=${out} valid_after=${after?.valid === true}`);
   return { logout_status: out, valid_after_logout: after?.valid === true };
 }
 async function open(path, width) {
-  await send('Emulation.setDeviceMetricsOverride', { width, height: HEIGHTS[width] || 900, deviceScaleFactor: 1, mobile: width <= 768 });
+  metrics = { width, height: HEIGHTS[width] || 900, deviceScaleFactor: 1, mobile: width <= 768 };
+  await send('Emulation.setDeviceMetricsOverride', metrics);
   await send('Page.navigate', { url: 'about:blank' }); await sleep(150);
   await send('Page.navigate', { url: `${TARGET}${path}` });
   await sleep(SETTLE);
@@ -488,9 +626,12 @@ if (!FREE_ONLY) {
   await setPersona('pro');
   if (CANARY) {
     const login = await realLogin(PRO_EMAIL, { expectPro: true });
-    report.login = { persona: 'pro', email: mask(PRO_EMAIL), delivery: LINK_DELIVERY, ok: login.ok, stage: login.stage, valid: login.valid ?? null, pro: login.pro ?? null };
+    report.login = { persona: 'pro', email: mask(PRO_EMAIL), delivery: LINK_DELIVERY, ok: login.ok, outcome: login.outcome, stage: login.stage, valid: login.valid ?? null, pro: login.pro ?? null };
+    report.lifecycle = lifecycle;
+    console.log(`LOGIN outcome: ${login.outcome} (${login.stage})`);
     record('pro/real-login', 0, [
       { name: 'fresh browser context started with an empty cookie jar', ok: login.stage !== 'jar_not_empty' },
+      { name: 'Chrome stayed up for the whole sign-in', ok: login.outcome !== 'browser_exited', detail: login.outcome },
       { name: 'production sign-in flow established a session (/api/auth-session valid=true)', ok: login.valid === true, detail: login.stage },
       { name: '/api/auth-session reports pro=true', ok: login.pro === true, detail: login.stage },
     ]);
@@ -505,9 +646,19 @@ if (!FREE_ONLY) {
       finish(5);
       await new Promise(() => {});
     }
-    if (!login.ok) {
+    if (SELFTEST && login.ok) {
+      const ended = await endSession();
+      report.session_end = ended; report.lifecycle = lifecycle;
       writeFileSync(join(OUT, 'report.json'), JSON.stringify(report, null, 2));
-      console.log(`\nGATE FAILED · real Pro login did not complete (${login.stage})`);
+      console.log(`\nSELFTEST PASSED · outcome ${login.outcome} · logout ${ended.logout_status} · valid after logout ${ended.valid_after_logout}`);
+      await clearSessionState().catch(() => {});
+      finish(ended.logout_status === 200 && ended.valid_after_logout === false ? 0 : 1);
+      await new Promise(() => {});
+    }
+    if (!login.ok) {
+      report.lifecycle = lifecycle;
+      writeFileSync(join(OUT, 'report.json'), JSON.stringify(report, null, 2));
+      console.log(`\nGATE FAILED · real Pro login did not complete (${login.outcome}: ${login.stage})`);
       if (!browserClosed) await clearSessionState().catch(() => {});
       finish(1);
       await new Promise(() => {});
@@ -612,6 +763,7 @@ for (const who of ['anonymous', 'forged', 'free']) {
 if (CANARY && !browserClosed) await clearSessionState().catch(() => {});
 report.failed = failed;
 report.incomplete = incomplete;
+report.lifecycle = lifecycle;
 writeFileSync(join(OUT, 'report.json'), JSON.stringify(report, null, 2));
 if (report.canary?.fields) {
   console.log(`\nCANARY ${report.canary.id} · ${report.canary.game_id} · ${report.canary.market} · ${report.canary.lifecycle}`);

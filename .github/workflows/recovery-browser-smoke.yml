@@ -45,6 +45,14 @@ jobs:
           PBE_CHROME: /usr/bin/google-chrome
         run: node scripts/recovery-browser-smoke.mjs
 
+      # The PBE Card canary harness in real Chrome against a local stand-in
+      # origin: a closed original tab must not end the run, Chrome exiting
+      # must fail fast, and every profile must be destroyed.
+      - name: PBE Card canary harness lifecycle
+        env:
+          PBE_CHROME: /usr/bin/google-chrome
+        run: node --test --test-concurrency=1 tests/pbe-card-gate-harness.test.mjs
+
       - name: Injury Editorial article layout
         env:
           PBE_CHROME: /usr/bin/google-chrome
