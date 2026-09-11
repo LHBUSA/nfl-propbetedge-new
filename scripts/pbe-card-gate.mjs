@@ -49,7 +49,10 @@ const HEIGHTS = { 390: 844, 1440: 900 };
 const CHROME = process.env.PBE_CHROME || 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const PORT = 9800 + Math.floor(Math.random() * 90);
 const SETTLE = Number(arg('settle', '6500'));
-const PRO_COOKIE = String(process.env.PBE_PRO_COOKIE || '').trim().replace(/^pbe_nfl_session_v2=/, '');
+/* The Pro session comes from the environment or from a file the operator
+   saved (PBE_PRO_COOKIE_FILE), so it never has to be typed into a chat. */
+const cookieFile = process.env.PBE_PRO_COOKIE_FILE ? (() => { try { return readFileSync(process.env.PBE_PRO_COOKIE_FILE, 'utf8'); } catch { return ''; } })() : '';
+const PRO_COOKIE = String(process.env.PBE_PRO_COOKIE || cookieFile || '').trim().replace(/^pbe_nfl_session_v2=/, '');
 if (CANARY && !PRO_COOKIE && !FREE_ONLY) { console.error('canary needs PBE_PRO_COOKIE (the pbe_nfl_session_v2 value of a real NFL Pro session)'); process.exit(2); }
 mkdirSync(OUT, { recursive: true });
 
@@ -147,6 +150,14 @@ async function open(path, width) {
   await send('Page.navigate', { url: 'about:blank' }); await sleep(150);
   await send('Page.navigate', { url: `${TARGET}${path}` });
   await sleep(SETTLE);
+  /* A cold first load can still be painting; wait for the card store to land
+     and the route to settle rather than trusting a fixed delay. */
+  for (let i = 0; i < 30; i++) {
+    const ready = await evaluate(`Boolean(window.PBECard?.store?.data || window.PBECard?.store?.error) && !window.PBECard?.store?.busy && getComputedStyle(document.getElementById('view-container') || document.body).opacity === '1'`);
+    if (ready === true) break;
+    await sleep(500);
+  }
+  await sleep(800);
 }
 async function shot(name, width) {
   const h = await evaluate('Math.min(document.documentElement.scrollHeight, 5200)');
@@ -184,7 +195,7 @@ const PRO_PICKS = `(() => {
   const s = d?.summary?.strongest?.id; r.push({ name: 'strongest persisted edge is featured first', ok: !s || cards[0]?.dataset.pbecCard === s });
   r.push({ name: 'no superseded row on the card', ok: (d?.eligibility?.excluded?.superseded ?? 0) >= 0 && picks.every(p => p.status !== 'superseded') });
   r.push({ name: 'receipts verified server-side', ok: picks.every(p => p.receipt?.verified?.payload_hash && p.receipt?.verified?.issued_terms), detail: (d?.eligibility?.receipts?.verified ?? '?') + '/' + (d?.eligibility?.receipts?.checked ?? '?') });
-  return { checks: r, first: picks[0] ? { id: picks[0].id, selection: picks[0].selection?.display, price: picks[0].issue?.price, edge: picks[0].edge_pct, scope: picks[0].publication_scope, chain: picks[0].receipt?.chain_hash, game: picks[0].game_id } : null, activeGame: picks.find(p => p.lifecycle === 'ACTIVE')?.game_id || null };
+  return { checks: r, first: picks[0] ? { id: picks[0].id, game: picks[0].game_id, market: picks[0].market, selection: picks[0].selection?.display, line: picks[0].issue?.line, price: picks[0].issue?.price, issued_at: picks[0].issue?.at, model_prob: picks[0].model?.prob, market_prob: picks[0].market_prob, edge: picks[0].edge_pct, confidence: picks[0].confidence_bucket, stake_units: picks[0].stake_units, model_version: picks[0].model?.version, scope: picks[0].publication_scope, lifecycle: picks[0].lifecycle, chain: picks[0].receipt?.chain_hash, receipt_verified: picks[0].receipt?.verified } : null, activeGame: picks.find(p => p.lifecycle === 'ACTIVE')?.game_id || null };
 })()`;
 const PRO_HOME = `(() => { const r = []; const dash = document.querySelector('.pbec-dash'); r.push({ name: "Dashboard shows Today's PBE Card", ok: !!dash && !dash.classList.contains('is-locked') && dash.querySelectorAll('.pbec-mini').length > 0, detail: (dash?.querySelectorAll('.pbec-mini').length || 0) + ' cards' });
   const badges = document.querySelectorAll('.pbecc-game .pbec-badge:not(.is-locked)'); r.push({ name: 'game cards carry the PBE selection badge', ok: badges.length > 0, detail: badges.length + ' badges' }); return { checks: r }; })()`;
@@ -281,7 +292,10 @@ record('anonymous/api', 0, { checks: [
   { name: 'public preview carries no Pro selection value', ok: anonLeaks.length === 0 && (FREE_ONLY || proSecrets.size > 0) && !keyLeak(String(anon?.preview || '')), detail: `${proSecrets.size} secrets checked · key scan ${keyLeak(String(anon?.preview || '')) || 'clean'}` },
 ] }, null);
 
-report.pro_first_card = proFirst ? { ...proFirst, chain: proFirst.chain ? `${proFirst.chain.slice(0, 16)}…` : null, id: proFirst.id ? `${String(proFirst.id).slice(0, 8)}…` : null } : null;
+/* Canary evidence: the first real card in full, so the operator can check it
+   against the database row (select * from nfl_game_picks where id = …). */
+report.pro_first_card = proFirst ? (CANARY ? proFirst : { ...proFirst, chain: proFirst.chain ? `${proFirst.chain.slice(0, 16)}…` : null, id: proFirst.id ? `${String(proFirst.id).slice(0, 8)}…` : null }) : null;
+if (CANARY && proFirst) console.log(`CANARY first card: ${JSON.stringify(proFirst)}`);
 report.failed = failed;
 writeFileSync(join(OUT, 'report.json'), JSON.stringify(report, null, 2));
 console.log(`\n${failed ? 'GATE FAILED' : 'GATE PASSED'} · ${report.runs.length} runs · ${failed} failed checks · ${OUT}`);
