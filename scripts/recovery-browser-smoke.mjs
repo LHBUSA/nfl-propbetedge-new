@@ -61,7 +61,10 @@ async function activeNav(route){return probe(`(()=>{const all=[...document.query
 /* 2026-09-11: Changes (What Changed) and Best Line joined TODAY as steps of
    the game-day loop. Same assertion strength: each must exist exactly once. */
 const primaryRoutes=['home','games','changes','propboard','bestline','pbecast','marketwatch','picks','pbepicks','trackrecord','matchups','usage','injuries','newsintel','qbdna','wrdna','rbdna','tedna'];
-const researchRoutes=['simulator','sgplab','propchain','teams','standings','stats','seasonhistory','records','hof','sb','prospects','trades'];
+/* standings2025 / stats2025 have been in the ARCHIVE row since the 2026 season
+   authority shipped; this list predated them, so the gate failed on main too
+   (measured 2026-09-11). Same assertion: each exactly once, in its row. */
+const researchRoutes=['simulator','sgplab','propchain','teams','standings','stats','seasonhistory','standings2025','stats2025','records','hof','sb','prospects','trades'];
 const routes=[...primaryRoutes,...researchRoutes,'home'];
 const captureRoutes=new Set(['games','propboard','marketwatch','picks','pbepicks','trackrecord','usage','propchain','pbecast','newsintel','matchups','injuries','home']);
 
