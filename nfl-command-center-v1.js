@@ -8,7 +8,7 @@
  *             snapshot consensus line for games still to kick off
  *   loop      where we are in the week: TODAY -> WHAT CHANGED -> GAME -> MARKET
  *             -> PBE PICK -> LIVE PBECAST -> RESULT -> TRACK RECORD -> REPLAY
- *   changes   the top sourced changes from /api/nfl-changes
+ *   changes   the top sourced changes from the nfl-intel Worker (/api/changes)
  *   picks     the PBE Picks engine's own state, verbatim (gated is gated)
  *   best line where shopping beats the consensus number today
  *
@@ -29,7 +29,7 @@
   /* The community is Discord, not an internal forum. Permanent invite to the
      PropBetEdge.ai server (verified 2026-09-11: no expiry), the same one the
      MLB product links. */
-  const DISCORD = 'https://discord.gg/kb5zCTHbME';
+  const PROPBETEDGE_DISCORD_URL = 'https://discord.gg/kb5zCTHbME';
   const esc = v => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   const arr = v => (Array.isArray(v) ? v : []);
   const num = v => (v === null || v === undefined || v === '' ? NaN : Number(v));
@@ -41,7 +41,11 @@
     bestline: { data: null, error: null, at: 0, busy: null }
   };
   store.open = {};
-  const URLS = { changes: '/api/nfl-changes', picks: '/api/pbe-picks', bestline: '/api/best-line?days=8' };
+  /* What Changed and Best Line are owned Cloudflare Workers (nfl-intel)
+     behind the NFL gateway — no Vercel function in the path. PBE Picks keeps
+     its existing entitlement-aware read path. */
+  const GATEWAY = typeof NFL_API_GATEWAY !== 'undefined' ? NFL_API_GATEWAY : 'https://nfl-api.propbetedge.ai';
+  const URLS = { changes: `${GATEWAY}/api/changes`, picks: '/api/pbe-picks', bestline: `${GATEWAY}/api/best-line?days=8` };
 
   async function getJson(url) {
     const r = await fetch(url, { cache: 'no-store', headers: { accept: 'application/json' } });
@@ -131,7 +135,7 @@
     const [label, copy] = PHASE_COPY[p];
     return `<nav class="pbecc-loop" aria-label="The NFL week">
       <div class="pbecc-loop-phase"><span class="pbecc-eyebrow">${esc(label)}</span><p>${esc(copy)}</p></div>
-      <a class="pbecc-discord" href="${DISCORD}" target="_blank" rel="noopener">Talk the slate in the PropBetEdge Discord ↗</a>
+      <a class="pbecc-discord" href="${PROPBETEDGE_DISCORD_URL}" target="_blank" rel="noopener">Talk the slate in the PropBetEdge Discord ↗</a>
       <ol>${LOOP.map(([route, name, phases], i) => `<li><button type="button" data-route="${route}" class="${phases.includes(p) ? 'is-now' : ''}"${phases.includes(p) ? ' aria-current="step"' : ''}><i>${String(i + 1).padStart(2, '0')}</i>${esc(name)}</button></li>`).join('')}</ol>
     </nav>`;
   }

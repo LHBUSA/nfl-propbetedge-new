@@ -30,11 +30,11 @@ Measured with `scripts/product-loop-gate.mjs --live` (headless Chrome, cache dis
 | § | Shipped | Files |
 |---|---|---|
 | 2 Game-day home | **Sunday Command Center**: the slate above the featured game (LIVE / NEXT KICKOFF / FINAL / LATER, live situation, snapshot consensus line, OUT/Q counts per game). The week as a loop. Top sourced changes, picks engine state verbatim, best-line shopping. The manifesto stays off the dashboard | `nfl-command-center-v1.{js,css}`, `dashboard-v7.js` |
-| 3 What Changed | `#changes` route and `/api/nfl-changes`: ESPN injury designations with ESPN's own update time, game disruptions, market-tape moves (key numbers 3/7/10), NWS weather. Game availability grid. Each row links player → market & research drawer → DNA → PBEcast | `what-changed-v1.{js,css}`, `api/nfl-changes.js`, `api/_changes/core.js` |
+| 3 What Changed | `#changes` route and `/api/changes` (nfl-intel Worker): ESPN injury designations with ESPN's own update time, game disruptions, market-tape moves (key numbers 3/7/10), NWS weather. Game availability grid. Each row links player → market & research drawer → DNA → PBEcast | `what-changed-v1.{js,css}`, `workers/nfl-intel/` |
 | 4 PBEcast | **Sunday board** of every game (score, clock, possession, down & distance, red zone) from v6's existing scoreboard lane. **Around the league** feed diffed from scoreboard frames, stamped with observation time. **Before kickoff** context for scheduled games. The board lane runs at live cadence while any game is live. No geometry | `pbecast-command-v1.{js,css}`, `pbecast-v6.js` (cadence, source label, image dims) |
-| 5 Replay | Replay v0 for FINAL games: scoring / turnover / explosive jumps and a drive chart. **Post-game enrichment**: nflverse EPA / WPA / air yards / YAC / CPOE / passer→receiver joined by ESPN play id, plus a **Biggest swings** jump list. LIVE SOURCE and POST-GAME ENRICHED are labelled separately | `api/replay-enrich.js`, `api/_replay/nflverse.js`, `NFL_REPLAY_ARCHITECTURE.md` |
+| 5 Replay | Replay v0 for FINAL games: scoring / turnover / explosive jumps and a drive chart. **Post-game enrichment**: nflverse EPA / WPA / air yards / YAC / CPOE / passer→receiver joined by ESPN play id, plus a **Biggest swings** jump list. LIVE SOURCE and POST-GAME ENRICHED are labelled separately | `workers/nfl-replay/`, `NFL_REPLAY_ARCHITECTURE.md` |
 | 6 Tools | Roadmap with verified 2026 source availability | `NFL_INTELLIGENCE_TOOLS_ROADMAP.md` |
-| 7 Best Line | `#bestline` route and `/api/best-line`: best available price (best number, then price, named book), market consensus (median line; vig-free from two-sided books only), PBE fair value and model edge as separate columns left blank by design. Book leaderboard, player-prop shopping, snapshot age. Folds per game on phones | `best-line-v1.{js,css}`, `api/best-line.js`, `api/_bestline/core.js` |
+| 7 Best Line | `#bestline` route and `/api/best-line` (nfl-intel Worker): best available price (best number, then price, named book), market consensus (median line; vig-free from two-sided books only), PBE fair value and model edge as separate columns left blank by design. Book leaderboard, player-prop shopping, snapshot age. Folds per game on phones | `best-line-v1.{js,css}`, `workers/nfl-intel/src/bestline-core.js` |
 | 8/9 Picks + Track Record | Home shows the engine's own state, the official counts and the gate progress, with direct paths to PBE Picks and Track Record. The loop strip on every loop surface puts Track Record and Replay one tap away. "PBE PICK AFFECTED" flags a HIGH change in the game of an open official pick (Pro session only; the join is on game identity) | `nfl-command-center-v1.js`, `what-changed-v1.js` |
 | 10 Alerts | Designed (triggers, anti-spam, delivery, fan-out) | roadmap § Alerts |
 | 11 News | Trust guard retained. Player → drawer linking from What Changed. Id-first entity resolution designed | roadmap § News |
@@ -77,9 +77,8 @@ Deleted (unreferenced): dashboard-v5/v6, PBEcast v4/v5/v5-renderer, Prop Board v
 responsive-v5, and 3.7 MB of stadium JPEGs superseded by the WebP set. Images the new surfaces
 render carry intrinsic dimensions, and the v6/v7 news and PBEcast images gained them too.
 
-Bytes: the branch transfers more per home load in the local gate because `/api/nfl-changes`
-(~226 KB) and `/api/best-line` (~118 KB) are served uncompressed by the in-process handler. On
-Vercel both are compressed and shared-cached (`s-maxage` 120 s / 60 s).
+Bytes: `/api/changes` and `/api/best-line` are served by the Worker with Brotli compression and
+`max-age=60`.
 
 ## 5 · QA
 
@@ -89,53 +88,98 @@ overflow, no broken images, no text under 10 px, and per-route contracts (comman
 above the hero, every change row names source and time, the four best-line terms defined
 separately, single `.pbecast6` root, the Sunday board mounted, no geometry elements).
 
-## 6 · Status
+## 6 · Runtime architecture (Milestone 1.1 — Cloudflare-owned)
+
+Owner ruling 2026-09-11: GitHub Actions = CI/tests only · Vercel = frontend hosting/build/preview ·
+Cloudflare Workers = API/runtime · Cloudflare Cron / Queues / Workflows = scheduled/background
+work · KV / R2 / D1 / Supabase = persistence. The prototype Vercel routes `api/nfl-changes.js`,
+`api/best-line.js` and `api/replay-enrich.js` were **deleted**, not kept as proxies. The frontend
+calls the NFL gateway (`nfl-api.propbetedge.ai`), which routes to two new Workers through
+service bindings:
+
+```
+browser ─► nfl-api.propbetedge.ai (nfl-gateway)
+             ├─ /api/changes, /api/best-line ─► nfl-intel  (KV NFL_INTEL; bindings nfl-current, nfl-odds)
+             │     cron */10: injuries lane  — ESPN core API, 32 team lists + every record, athletes cached
+             │                market lane    — new nfl-odds batch → consensus history (zero provider credits)
+             │                weather lane   — NWS + Open-Meteo per game, every 30 min (PBE Breaking thresholds)
+             └─ /api/replay/* ─────────────────► nfl-replay (R2 nfl-replay; Workflow nfl-replay-ingest)
+                   cron 20 */3: nflverse asset changed? → one idempotent Workflow instance →
+                                stream gunzip+CSV, one game in memory → R2 replay/<season>/<game>.json + index
+```
+
+**Why the injury source changed.** ESPN's `site.api` (the one-call league report) refuses
+Cloudflare egress. The core API does not and serves the same records (status, ESPN `date`,
+attributed note, details). Measured: ESPN's site report shows each team's **25 most recent**
+records (800 = 32 × 25). The core API keeps every current record: 1,883 in the first run, with **0**
+of the site report's restrictive designations missing. Designations older than 14 days are shown
+with their update date so an old note never reads as fresh. Two ingest traps were found and fixed:
+negative injury ids (e.g. `-2000004`) and team lists that keep records for players rostered
+elsewhere (the athlete's own current team decides).
+
+**Why market movement no longer needs Supabase.** nfl-intel records cross-book consensus per
+nfl-odds batch in its own KV, keyed by batch id, through the nfl-odds service binding. History
+starts at the first capture (2026-09-11 12:00 UTC batch). A move needs two captures, and until
+then the page says so (`one_capture_so_far_a_move_needs_two`).
+
+**Ledger seed.** Each injury run also stores the designation seen per athlete and appends a
+transition when it changes between two of our own observations. It is stored, not displayed.
+The product still says **UPDATED**, never CHANGED FROM, until the ledger milestone publishes
+transitions.
+
+**Replay.** Ingest once, read many: the Workflow streamed the full 2025 file (98 MB CSV, 285 games,
+48,771 plays) in 1.8 s wall / 2.3 s CPU in the local simulation, output byte-identical to the
+whole-file extractor. In production the first ingest wrote 2026's two published games. A read is
+one R2 object (≈45 KB). The bounded 8 MB direct read survives only for a season with no index,
+and answers `POST_GAME_ENRICHMENT_UNAVAILABLE` over the bound. The bound is not to be raised.
+
+**Deployed versions and rollback**
+
+| Worker | Version | Previous (rollback) |
+|---|---|---|
+| nfl-gateway | `e2c05c4b-08d1-4afd-9913-b5cfb2643639` | `95d5a419-c563-4452-ab24-625abf09e0ce` (`wrangler rollback` in workers/nfl-gateway) |
+| nfl-intel | see `wrangler deployments list` (new Worker) | none — remove the gateway routes to disable |
+| nfl-replay | see `wrangler deployments list` (new Worker) | none — remove the gateway route to disable |
+
+## 7 · Status
 
 **PROVEN**
-- Branch cut from current main (`07f6725`); main unchanged; every commit pushed.
+- Branch cut from current main (`07f6725`); main unchanged until the approved merge; every commit
+  pushed.
 - Home answers "what is happening now": slate, loop, changes, engine state, best line, all above
   the news wire. Measured request reduction (§4).
-- What Changed live on real ESPN data: 800 report entries → material rows with source times;
-  game availability for 14 open games.
-- Best Line live on the real snapshot: 15 games, 11 books, consensus and vig-free from two-sided
-  books only; unit-tested.
+- What Changed on the Cloudflare runtime against real ESPN core-API records (1,883 records, 32/32
+  teams, 0 site-report restrictive designations missing); game disruptions from nfl-current; NWS +
+  forecast weather from the Worker's own snapshot.
+- Best Line on the Cloudflare runtime against the real snapshot: 15 games, 11 books; consensus and
+  vig-free only from two-sided books; fair value and edge null.
+- Replay enrichment on the Cloudflare runtime: SF @ LA served from R2 (`R2_INGESTED`, 157 plays);
+  TB @ CIN `NOT_YET_PUBLISHED`; the Workflow completes and is idempotent per asset version.
 - PBEcast Sunday board, around-the-league diffing, before-kickoff context; Replay v0 on SF @ LA
   (6 scoring plays = 27–7, 4 turnovers, 19 drives).
-- Post-game enrichment on real nflverse data: 147/169 ESPN plays joined by key (the 22 unjoined
-  are all stoppages); EPA/WPA/air/YAC shown only on the final game, labelled.
-- Gate: all routes pass at 1440/1280/1024/390/360 on the working tree, and 1440/390 on the
-  deployed preview.
-- Existing regression gates: `pbecast-refresh-gate` on the deployed preview, 17/17 hard refreshes
-  with one owner (v6) and 0 duplicate PBEcast polls. `pbecast-nav-gate`: 31 steps, 0 problems with
-  this tree against production APIs; on the deployed preview, 1 timing flag (`qbdna` sampled at
-  3 s on a cold function — it renders 2,629 chars at 8 s). `mobile-nav-gate`: passed, 0 failures.
-  `recovery-browser-smoke`: PASS, 33 routes alive, 0 exceptions. Its research-route list was stale
-  and failed on untouched main too; it was corrected.
-- Unit tests: 79/79 in `tests/`. Full suite (`tests/` + `research/`): 339 tests, 335 pass, 3 skipped,
-  1 fail — `archive teamCrest`, which fails identically on untouched main.
+- Tests: full suite (`tests/` + `research/`) 355 tests, 352 pass, 3 skipped, **0 fail**. The
+  `archive teamCrest` failure was not a product failure. The test's function extraction matched LF
+  only, and a Windows checkout with `core.autocrlf=true` is CRLF; CI on Linux would have passed. The
+  extraction is now line-ending agnostic with the same assertions, and it still rejects a synthetic
+  shield (proven with a mutated copy).
 
 **IN PROGRESS / DESIGNED**
-- Change ledger worker (status transitions, depth-chart diffs) — designed, not built.
+- Durable change ledger (publishing transitions, depth-chart diffs from nflverse `depth_charts`,
+  D1 event table). Seeded in KV now, not displayed.
 - Alerts — designed; delivery depends on the ledger.
-- Replay production pipeline (Cloudflare Workflow → R2 per game) — designed; the prototype read
-  path is bounded at 8 MB gzipped (estimated to be reached around week 8).
-- Usage Shift / Volume Watch / Red Zone Lab — sources verified, not built.
+- Usage Shift / Volume Watch / Red Zone Lab — sources verified, deliberately not built until the
+  ledger and replay persistence are established.
 
 **BLOCKED**
-- Market movement on previews: `nfl_odds_snapshots` is service-role only, and previews carry no
-  `SUPABASE_SERVICE_ROLE_KEY`. It shows UNAVAILABLE with that reason. It needs production (or the
-  key added to preview env — an owner decision).
-- PBE Picks on previews: `/api/pbe-picks` returns `picks_backend_unavailable` for the same reason.
-  The home panel shows the failure, not "no picks".
+- PBE Picks and Track Record on previews: the existing entitlement-aware `/api/pbe-picks`
+  (pre-existing Vercel route with the service-role key) returns `picks_backend_unavailable` on
+  previews. Production is unaffected.
 - Game-day inactives: no verified structured public source.
-- Production deploy / merge: awaiting approval.
 
 **UNVERIFIED**
-- Market-move detection against the real tape (logic unit-tested on tape-shaped fixtures; never
-  run against production rows).
-- PBE PICK AFFECTED against a real official pick. There are 0 official picks while the engine is
-  gated.
-- Live-game behaviour of the Sunday board and around-the-league feed. No game was live during this
-  session (next kickoff Sun 2026-09-13 17:00 UTC); only scheduled and final states were exercised.
-- The existing PBEcast refresh / nav / resilience / latency gates were not re-run during a live
-  game.
+- Market moves on real data: history began at the 2026-09-11 12:00 UTC batch, and the first
+  comparison needs the next ingest (13:00 / 18:00 ET).
+- PBE PICK AFFECTED against a real official pick — 0 official picks while the engine is gated.
+- Live PBEcast behaviour (status transitions, cadence, around-the-league, scoring transitions,
+  source delay, audio cues, recovery). No game was live; it stays UNVERIFIED until the first live
+  slate is observed.

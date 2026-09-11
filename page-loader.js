@@ -45,7 +45,10 @@
        rather than on every page (12 fewer requests on every other route).
        Their stylesheets are inserted at this manifest position when they do
        load, so the cascade they were designed against is unchanged. */
-    {css:'./standings-v2.css',js:'./standings-v2.js',lazy:'standings2025'},
+    /* standings-v2.css stays eager: standings-2026-v1 (the LIVE standings
+       route) renders with its .pbe7-* classes, and the dashboard shares
+       .pbe7-hero / .pbe7-empty. Only the 2025 archive script is lazy. */
+    {css:'./standings-v2.css',js:'./standings-v2.js',lazy:'standings2025',cssEager:true},
     {css:'./season-archive-v2.css',js:'./season-archive-v2.js',lazy:'seasonhistory'},
     {css:'./hof-v2.css',js:'./hof-v2.js',lazy:'hof'},
     {css:'./records-v2.css',js:'./records-v2.js',lazy:'records'},
@@ -254,7 +257,7 @@
   function nextEagerLink(item){
     const i=upgrades.indexOf(item);
     for(const next of upgrades.slice(i+1)){
-      if(!next.css||next.lazy)continue;
+      if(!next.css||(next.lazy&&!next.cssEager))continue;
       const link=document.querySelector(`link[data-pbe-upgrade="${next.css}"]`);
       if(link)return link;
     }
@@ -339,7 +342,7 @@
   }
 
   async function load(){
-    upgrades.forEach(item=>{if(item.css&&!item.lazy)addCss(item.css)});
+    upgrades.forEach(item=>{if(item.css&&(!item.lazy||item.cssEager))addCss(item.css)});
     installLazyRoutes();
     try{
       for(const item of upgrades){

@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import {
   normalizeStatus, injurySeverity, parseScoreboard, teamGameIndex, gameStatusChanges,
   parseInjuryReport, recentInjuryChanges, availabilityByGame, marketMoves, tapeSeries, rankChanges
-} from '../api/_changes/core.js';
+} from '../workers/nfl-intel/src/changes-core.js';
 import { nflverseGameId, nflverseCode } from '../workers/nfl-picks-engine-shared/current-slate.mjs';
 
 const NOW = Date.parse('2026-09-11T13:00:00Z');

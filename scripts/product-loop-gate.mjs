@@ -43,13 +43,10 @@ const WIDTHS=arg('widths','1440,390').split(',').map(n=>parseInt(n,10));
 const HEIGHTS={360:780,390:844,430:932,768:1024,1024:768,1280:800,1440:900};
 const SETTLE=Number(arg('settle','7000'));
 
-/* Branch-only API handlers, executed locally. Everything else under /api goes
-   to the target untouched. */
-const LOCAL_API={
-  '/api/nfl-changes':'api/nfl-changes.js',
-  '/api/best-line':'api/best-line.js',
-  '/api/replay-enrich':'api/replay-enrich.js'
-};
+/* Branch-only API handlers, executed locally. Empty: What Changed, Best Line
+   and Replay enrichment are Cloudflare Workers behind the NFL gateway, so the
+   gate exercises the real runtime. Kept for future branch-only routes. */
+const LOCAL_API={};
 
 mkdirSync(OUT,{recursive:true});
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));

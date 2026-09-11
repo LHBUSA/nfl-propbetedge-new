@@ -1,0 +1,32 @@
+name = "nfl-replay"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+account_id = "fd3a233edadd0a60916413c1199f71ee"
+workers_dev = true
+
+# PBE Replay post-game enrichment. Ingest once per nflverse update (Workflow ->
+# one R2 object per game); requests read one small object.
+# Deploy: wrangler deploy (from this directory). Secret: REPLAY_ADMIN_TOKEN.
+
+[[r2_buckets]]
+binding = "REPLAY_R2"
+bucket_name = "nfl-replay"
+
+[[workflows]]
+name = "nfl-replay-ingest"
+binding = "INGEST"
+class_name = "ReplayIngest"
+
+# Checks the release asset every 3 hours; a new Last-Modified starts one
+# idempotent Workflow instance. Nothing is re-ingested for an unchanged file.
+[triggers]
+crons = ["20 */3 * * *"]
+
+# The ingest step gunzips and parses the season CSV in one pass (~100 MB of
+# text by January). Streaming keeps memory to one game; CPU needs headroom.
+[limits]
+cpu_ms = 300000
+
+[observability]
+enabled = true
+head_sampling_rate = 1

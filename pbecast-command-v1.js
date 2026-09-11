@@ -61,7 +61,10 @@
     if (!season || !week || !away || !home) return;
     local.enrich.set(id, { state: 'loading' });
     const qs = new URLSearchParams({ event: id, season, week, type, away, home });
-    fetch(`/api/replay-enrich?${qs}`, { headers: { accept: 'application/json' } })
+    /* nfl-replay Worker: one small R2 object per game, ingested once per
+       nflverse update. The browser never downloads a season file. */
+    const gateway = typeof NFL_API_GATEWAY !== 'undefined' ? NFL_API_GATEWAY : 'https://nfl-api.propbetedge.ai';
+    fetch(`${gateway}/api/replay/enrich?${qs}`, { headers: { accept: 'application/json' } })
       .then(r => r.json().then(body => ({ ok: r.ok, body })))
       .then(({ body }) => local.enrich.set(id, body?.available ? { state: 'ok', data: body } : { state: 'unavailable', reason: body?.reason || body?.error || 'unavailable', data: body }))
       .catch(e => local.enrich.set(id, { state: 'error', reason: String(e?.message || e) }))
@@ -243,7 +246,7 @@
       return `<span class="pbekm-enriched">POST-GAME ENRICHED · nflverse play-by-play (CC-BY-4.0)${when ? ` · published ${esc(when)}` : ''} · ${esc(joined)} of ${esc(ids.length)} ESPN plays joined by play id. EPA, WPA (for the team with the ball), air yards, YAC and CPOE are post-game values, not live.</span>`;
     }
     const why = en.reason === 'NOT_YET_PUBLISHED' ? 'nflverse has not published this game yet — it usually lands the next day'
-      : en.reason === 'ENRICHMENT_PIPELINE_REQUIRED' ? 'the season file has outgrown the prototype read path; the per-game pipeline serves it'
+      : en.reason === 'POST_GAME_ENRICHMENT_UNAVAILABLE' ? 'unavailable — the season has not been ingested and the source file exceeds the safe transitional bound'
       : `unavailable (${en.reason || 'unknown'})`;
     return `<span class="pbekm-pending">POST-GAME ENRICHMENT · ${esc(why)}. Nothing is shown until it is published.</span>`;
   }
@@ -266,7 +269,7 @@
       <header><div><span class="pbecb-eye">BEFORE KICKOFF</span><h2>What this game rests on</h2></div><div class="pbekm-tabs"><button type="button" data-route="changes">What Changed →</button><button type="button" data-route="bestline">Best Line →</button></div></header>
       <div class="pbekm-pre">
         <div><span class="pbecb-eye">MARKET CONSENSUS · SNAPSHOT</span>${ev ? `<b>${fav ? `${esc(favAbbr)} ${esc(fav.consensus.line)}` : 'Pick’em'}${tot?.consensus?.line != null ? ` · O/U ${esc(tot.consensus.line)}` : ''}</b><small>${esc(ev.books)} books · captured ${esc(cc?.store?.bestline?.data?.captured_at_et || '')}</small>` : `<b>—</b><small>${cc?.store?.bestline?.data ? 'No market for this game in the snapshot.' : 'Market snapshot not loaded.'}</small>`}</div>
-        <div><span class="pbecb-eye">AVAILABILITY · ESPN INJURY REPORT</span>${changes ? (rows.length ? `<ul>${rows.slice(0, 10).map(r => `<li><em class="s-${esc(r.status.toLowerCase())}">${esc(r.status)}</em> ${esc(r.player.name)} <small>${esc([r.player.position, r.team.abbreviation].filter(Boolean).join(' · '))}</small></li>`).join('')}</ul>${rows.length > 10 ? `<small>+${rows.length - 10} more on What Changed</small>` : ''}` : '<small>No restrictive designations on the report.</small>') : '<small>Injury report not loaded.</small>'}${wx.length ? `<p class="pbekm-alert">${esc(wx[0].headline)}</p>` : ''}</div>
+        <div><span class="pbecb-eye">AVAILABILITY · ESPN INJURY REPORT</span>${changes ? (rows.length ? `<ul>${rows.slice(0, 10).map(r => `<li><em class="s-${esc(r.status.toLowerCase())}">${esc(r.status)}</em> ${esc(r.player.name)} <small>${esc([r.player.position, r.team.abbreviation].filter(Boolean).join(' · '))}${Date.now() - Date.parse(r.updated_at || '') > 14 * 86400000 ? ` · last updated ${esc(etDay(r.updated_at))}` : ''}</small></li>`).join('')}</ul>${rows.length > 10 ? `<small>+${rows.length - 10} more on What Changed</small>` : ''}` : '<small>No restrictive designations on the report.</small>') : '<small>Injury report not loaded.</small>'}${wx.length ? `<p class="pbekm-alert">${esc(wx[0].headline)}</p>` : ''}</div>
       </div>
     </section>`;
   }

@@ -1,0 +1,35 @@
+name = "nfl-intel"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+# api/_breaking/weather.js (shared with the PBE Breaking rail) imports node:fs /
+# node:path for its Vercel path. The Worker injects the venue table instead and
+# never calls them, but the imports must resolve.
+compatibility_flags = ["nodejs_compat"]
+account_id = "fd3a233edadd0a60916413c1199f71ee"
+workers_dev = true
+
+# What Changed and Best Line. Reads compose persisted state; the cron lanes
+# (injuries, market, weather) are the only things that contact a source.
+# Deploy: wrangler deploy (from this directory). Secret: INTEL_ADMIN_TOKEN.
+
+[[kv_namespaces]]
+binding = "INTEL_KV"
+id = "4e9c622b0013426092bb1d7d08bc8d98"
+
+# nfl-current is the season / game-state authority. Consumed, never deployed
+# from here (frozen; see its own worker directory).
+[[services]]
+binding = "NFL_CURRENT"
+service = "nfl-current"
+
+# The one odds provider authority. Reading its KV snapshot spends no credits.
+[[services]]
+binding = "NFL_ODDS"
+service = "nfl-odds"
+
+[triggers]
+crons = ["*/10 * * * *"]
+
+[observability]
+enabled = true
+head_sampling_rate = 1

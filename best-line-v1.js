@@ -11,7 +11,7 @@
  *   PBE FAIR VALUE        the model's number — not published on this surface
  *   MODEL EDGE            exists only against a published fair value
  *
- * Game lines come from /api/best-line (the nfl-odds snapshot, reshaped server
+ * Game lines come from the nfl-intel Worker's /api/best-line (the nfl-odds snapshot, reshaped
  * side). Player props come from the gateway board for the one game the reader
  * opens; nothing polls. Every price is a scheduled capture and says so.
  */

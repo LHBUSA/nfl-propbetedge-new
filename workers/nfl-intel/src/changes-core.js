@@ -18,7 +18,7 @@
  *   - It never invents a game for a player: a team without a game on the
  *     current scoreboard is reported with game=null.
  *
- * No I/O here — api/nfl-changes.js fetches, this file decides.
+ * No I/O here — the nfl-intel Worker fetches and persists, this file decides.
  */
 
 export const PROP_POSITIONS = new Set(['QB', 'RB', 'FB', 'WR', 'TE', 'K']);
@@ -135,6 +135,41 @@ export function parseScoreboard(payload) {
     });
   }
   return games;
+}
+
+/* The same game shape from nfl-current's /api/current-games — the season
+   authority the picks engine also reads. It carries ESPN's status text as
+   `detail`, not the status name, so a disruption is recognised only when that
+   text itself says postponed / delayed / suspended / canceled. */
+const DISRUPTION_TEXT = [
+  [/postpon/i, 'POSTPONED'], [/delay/i, 'DELAYED'], [/suspend/i, 'SUSPENDED'],
+  [/cancel/i, 'CANCELED'], [/forfeit/i, 'FORFEIT']
+];
+export function gamesFromCurrent(payload) {
+  const out = [];
+  for (const g of Array.isArray(payload?.games) ? payload.games : []) {
+    const away = g?.away || {}, home = g?.home || {};
+    if (!away.abbreviation || !home.abbreviation || !g.id) continue;
+    const detail = clean(g.detail);
+    const hit = detail ? DISRUPTION_TEXT.find(([rx]) => rx.test(detail)) : null;
+    const team = t => ({ id: clean(t.id), abbreviation: clean(t.abbreviation), name: clean(t.display_name), logo: t.abbreviation ? `https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/${String(t.abbreviation).toLowerCase()}.png` : null, score: t.score === undefined || t.score === null ? null : Number(t.score) });
+    const sem = String(g.semantics || '').toUpperCase();
+    out.push({
+      id: String(g.id),
+      matchup: `${away.abbreviation} @ ${home.abbreviation}`,
+      kickoff: iso(g.kickoff),
+      season: Number(g.season) || Number(payload?.season) || null,
+      season_type: String(g.season_type || payload?.season_type || 'REG').toUpperCase(),
+      week: Number(g.week) || null,
+      status_name: null,
+      detail,
+      semantics: sem === 'LIVE' || sem === 'FINAL' ? sem : 'SCHEDULE',
+      disrupted: hit ? hit[1] : null,
+      away: team(away),
+      home: team(home)
+    });
+  }
+  return out;
 }
 
 /* team abbreviation -> that team's game on the scoreboard. When a team has

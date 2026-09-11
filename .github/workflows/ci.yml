@@ -74,7 +74,7 @@ jobs:
           grep -q "const BATCH_SIZE = 5;" prop-board-v3.js
           grep -q "/api/odds/board" prop-board-v3.js
           grep -q "/api/picks/pass" prop-board-v3.js
-          for f in prop-board-v3.js model-lab.js dashboard-v7.js pbecast-v6.js nfl-command-center-v1.js what-changed-v1.js best-line-v1.js pbecast-command-v1.js api/nfl-changes.js api/best-line.js api/_changes/core.js api/_bestline/core.js; do
+          for f in prop-board-v3.js model-lab.js dashboard-v7.js pbecast-v6.js nfl-command-center-v1.js what-changed-v1.js best-line-v1.js pbecast-command-v1.js workers/nfl-intel/src/index.js workers/nfl-intel/src/changes-core.js workers/nfl-intel/src/bestline-core.js workers/nfl-intel/src/injuries.js workers/nfl-intel/src/market.js workers/nfl-intel/src/weather.js workers/nfl-replay/src/index.js workers/nfl-replay/src/nflverse.js; do
             ! grep -q "Math.random" "$f"
             ! grep -Eqi "synthetic[_ -]?fallback[[:space:]]*[:=][[:space:]]*true|fake[[:space:]_-]*live" "$f"
           done

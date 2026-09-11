@@ -7,7 +7,10 @@ const media = read('nfl-brand-media-v2.js');
 const archive = read('archive/utils.js');
 
 test('archive teamCrest renders real NFL image assets instead of synthetic shields', () => {
-  const body = archive.match(/function teamCrest\([\s\S]*?\n}\n/)?.[0] || '';
+  /* Line-ending agnostic: the committed file is LF, but a Windows checkout with
+     core.autocrlf=true has CRLF, and an LF-only closing-brace extraction then
+     matched nothing and failed an otherwise-correct teamCrest. Same assertions. */
+  const body = archive.match(/function teamCrest\([\s\S]*?\r?\n}\r?\n/)?.[0] || '';
   assert.match(archive, /a\.espncdn\.com\/i\/teamlogos\/nfl\/500/);
   assert.match(body, /pbe-official-team-logo/);
   assert.doesNotMatch(body, /<svg|<path|<text/);

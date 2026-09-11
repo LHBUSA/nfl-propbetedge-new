@@ -4,10 +4,13 @@
  * source has just moved, tied to the player, team and game it touches and one
  * tap from the prop, the game and PBEcast.
  *
- *   injury designations   ESPN league injury report     (/api/nfl-changes)
- *   game disruptions      ESPN scoreboard status        (/api/nfl-changes)
- *   market moves          PropBetEdge market tape       (/api/nfl-changes)
- *   weather               NWS alerts + forecast bands   (/api/weather-watch)
+ *   injury designations   ESPN injury records (core API), ingested by nfl-intel
+ *   game disruptions      nfl-current game state
+ *   market moves          nfl-intel market history (consensus per odds ingest)
+ *   weather               NWS alerts + forecast bands, snapshotted by nfl-intel
+ *
+ * All four arrive in one response from the nfl-intel Cloudflare Worker
+ * (/api/changes through the NFL gateway).
  *
  * The change data is shared with the dashboard's command center through
  * PBECommandCenter.refresh('changes'): one request serves both surfaces.
@@ -25,14 +28,12 @@
 
   const esc = v => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   const arr = v => (Array.isArray(v) ? v : []);
-  const WEATHER_TTL = 600000;
   const GAME_KEY = 'pbe.changes.game';
   const DNA = { QB: 'qbdna', WR: 'wrdna', RB: 'rbdna', TE: 'tedna' };
 
   const narrow = () => window.matchMedia?.('(max-width: 768px)').matches;
   const ui = { kind: 'all', scope: 'material', game: 'all', propOnly: false, limit: 0 };
   const pageSize = () => (narrow() ? 20 : 60);
-  const weather = { data: null, error: null, at: 0, busy: null };
 
   const ET = { timeZone: 'America/New_York' };
   const etTime = v => { const d = new Date(v); return Number.isNaN(d.getTime()) ? '' : d.toLocaleTimeString('en-US', { ...ET, hour: 'numeric', minute: '2-digit' }); };
@@ -49,15 +50,9 @@
   const changesStore = () => cc()?.store?.changes || { data: null, error: 'command_center_not_loaded' };
   const active = () => window.App?.current === 'changes' && Boolean(document.querySelector('.pbewc'));
 
-  async function loadWeather(force = false) {
-    if (weather.busy) return weather.busy;
-    if (!force && weather.at && Date.now() - weather.at < WEATHER_TTL) return weather.data;
-    weather.busy = fetch('/api/weather-watch', { cache: 'no-store', headers: { accept: 'application/json' } })
-      .then(async r => { if (!r.ok) throw new Error(String(r.status)); weather.data = await r.json(); weather.error = null; })
-      .catch(e => { weather.error = e instanceof Error ? e.message : String(e); })
-      .finally(() => { weather.at = Date.now(); weather.busy = null; if (active()) paint(); });
-    return weather.busy;
-  }
+  /* Weather is part of the /api/changes payload: the nfl-intel Worker keeps
+     the snapshots (and the prior one a WEATHER SHIFT is measured against). */
+  const weatherData = () => changesStore().data?.weather || null;
 
   /* ---- rows --------------------------------------------------------------- */
   const STATUS_CLASS = { OUT: 'neg', SUSPENDED: 'neg', DOUBTFUL: 'neg', INJURED_RESERVE: 'neg', QUESTIONABLE: 'warn', ACTIVE: 'pos', DELAYED: 'neg', POSTPONED: 'neg', CANCELED: 'neg', KEY_NUMBER: 'model', MOVED: 'model', WEATHER_ALERT: 'warn', WEATHER_WATCH: 'warn', WEATHER_SHIFT: 'warn' };
@@ -100,7 +95,9 @@
 
   function weatherItems() {
     const games = arr(changesStore().data?.games);
-    return arr(weather.data?.events).map(ev => {
+    const wx = weatherData();
+    if (!wx?.available) return [];
+    return arr(wx.events).map(ev => {
       const g = games.find(x => String(x.id) === String(ev?.game?.event_id || ev?.game?.game_id));
       return {
         id: `wx:${ev.event_key}`,
@@ -109,7 +106,7 @@
         /* An alert for a fixed-roof venue is real and stays visible, but the
            conditions do not reach the field, so it is never material. */
         severity: ev.game?.roof?.weather_applies === false ? 'LOW' : ev.official && /severe|extreme/i.test(ev.severity || '') ? 'HIGH' : 'MEDIUM',
-        observed_at: ev.effective || weather.data?.fetched_at,
+        observed_at: ev.effective || ev.observed_at || wx.fetched_at,
         observed_basis: ev.effective ? 'SOURCE_TIMESTAMP' : 'OBSERVED_BY_PBE',
         source: { label: ev.provenance?.source || (ev.official ? 'National Weather Service' : 'Open-Meteo forecast') },
         headline: ev.headline,
@@ -159,6 +156,12 @@
   }
 
   /* ---- availability by game ---------------------------------------------- */
+  /* ESPN's own report shows each team's 25 most recent records; the core API
+     keeps every current record, so some designations here were last touched
+     weeks ago. They are ESPN's current designation and stay listed — with
+     their update date, so an old note never reads as fresh. */
+  const AGED_MS = 14 * 86400000;
+  const aged = r => Date.now() - Date.parse(r.updated_at || '') > AGED_MS;
   function availabilityHtml(data) {
     const games = arr(data?.games).filter(g => g.semantics !== 'FINAL' && (ui.game === 'all' || String(g.id) === ui.game));
     const avail = data?.availability || {};
@@ -167,7 +170,7 @@
       <div class="pbewc-avail-grid">${games.map(g => {
         const rows = arr(avail[g.id]).filter(r => !ui.propOnly || r.player?.prop_relevant);
         return `<article class="pbewc-game"><header><b>${esc(g.matchup)}</b><span>${esc(etDay(g.kickoff))} · ${esc(etTime(g.kickoff))} ET</span></header>
-          ${rows.length ? `<ul>${rows.map(r => `<li>${badge(r.status)}<span><b>${esc(r.player.name)}</b><small>${esc([r.player.position, r.team.abbreviation].filter(Boolean).join(' · '))}</small></span></li>`).join('')}</ul>` : '<p class="pbewc-none">No restrictive designations on the report.</p>'}
+          ${rows.length ? `<ul>${rows.map(r => `<li class="${aged(r) ? 'is-aged' : ''}">${badge(r.status)}<span><b>${esc(r.player.name)}</b><small>${esc([r.player.position, r.team.abbreviation].filter(Boolean).join(' · '))}${aged(r) ? ` · last updated ${esc(etDay(r.updated_at))}` : ''}</small></span></li>`).join('')}</ul>` : '<p class="pbewc-none">No restrictive designations on the report.</p>'}
           <footer><button type="button" data-wc-cast="${esc(g.id)}">PBEcast →</button></footer></article>`;
       }).join('')}</div></section>`;
   }
@@ -176,7 +179,8 @@
   function sourceChips(data) {
     const s = data?.sources || {};
     const chip = (label, x, extra = '') => `<span class="pbewc-chip ${x?.available ? 'ok' : 'off'}" title="${esc(x?.reason || x?.error || '')}">${esc(label)} · ${x?.available ? `${esc(etTime(x.fetched_at))} ET${extra}` : 'UNAVAILABLE'}</span>`;
-    const wx = weather.data ? { available: true, fetched_at: weather.data.fetched_at } : { available: false, reason: weather.error };
+    const wxd = weatherData();
+    const wx = wxd?.available ? { available: true, fetched_at: wxd.fetched_at } : { available: false, reason: wxd?.reason || 'not_in_payload' };
     return `<div class="pbewc-chips">${chip('ESPN INJURY REPORT', s.injuries, s.injuries?.entries ? ` · ${s.injuries.entries} entries` : '')}${chip('SCOREBOARD', s.scoreboard)}${chip('MARKET TAPE', s.market, s.market?.batches ? ` · ${s.market.batches} captures` : '')}${chip('WEATHER', wx)}</div>`;
   }
   function markup() {
@@ -218,7 +222,7 @@
     try { const g = sessionStorage.getItem(GAME_KEY); if (g) { ui.game = g; sessionStorage.removeItem(GAME_KEY); } } catch (_) {}
     if (window.App?.params?.game) ui.game = String(window.App.params.game);
     paint();
-    await Promise.all([cc()?.refresh?.('changes'), loadWeather()]);
+    await cc()?.refresh?.('changes');
     paint();
   }
 
@@ -238,7 +242,7 @@
       else location.hash = `propboard?player=${encodeURIComponent(prop.dataset.wcProp)}`;
       return;
     }
-    if (e.target.closest('[data-wc-retry]')) { cc()?.refresh?.('changes', true); loadWeather(true); return; }
+    if (e.target.closest('[data-wc-retry]')) { cc()?.refresh?.('changes', true).then(paint); return; }
     const route = e.target.closest('[data-route]');
     if (route) window.App?.nav?.(route.dataset.route);
   });
