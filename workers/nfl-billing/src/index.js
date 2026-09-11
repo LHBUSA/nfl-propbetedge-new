@@ -1,23 +1,24 @@
 /* PropBetEdge NFL billing — Cloudflare Worker
  *
- * Runtime contract:
+ * Production contract:
  *   Stripe webhook -> Cloudflare Worker -> Supabase entitlement truth
- *   Access email   -> propbetedge-nfl-auth Worker -> Resend
+ *   purchase email -> propbetedge-nfl-auth Worker -> Resend
  *
- * Vercel is intentionally absent from this path.
+ * Vercel is frontend hosting only and is intentionally absent from this path.
+ * GitHub stores this source; it does not schedule or execute billing work.
  *
  * Supported acquisition prices:
- *   legacy weekly  $9.99/wk   price_1U9QUZF3CaVzg4OR3QNfwWCS
- *   founding weekly $3.99/wk  price_1UEWAOF3CaVzg4ORjkWpwOz9
- *   founding monthly $9.99/mo price_1UEWAXF3CaVzg4ORGlsgboLq
- *   legacy season pass $99 one-time price_1U9oVzF3CaVzg4ORnk5NiJFA
+ *   legacy weekly    $9.99/wk  price_1U9QUZF3CaVzg4OR3QNfwWCS
+ *   founding weekly  $3.99/wk  price_1UEWAOF3CaVzg4ORjkWpwOz9
+ *   founding monthly $9.99/mo  price_1UEWAXF3CaVzg4ORGlsgboLq
+ *   legacy pass      $99 once  price_1U9oVzF3CaVzg4ORnk5NiJFA
  *
- * Existing customers stay on their existing Stripe price. This Worker only
- * mirrors Stripe truth into nfl_subscriptions; it never migrates a subscription.
+ * Existing subscriptions are NEVER migrated by this Worker. It mirrors Stripe
+ * state only. Old customers keep the price/term they already purchased.
  */
 
 const SERVICE = 'propbetedge-nfl-billing';
-const VERSION = 'v1.0.0';
+const VERSION = 'v1.1.0';
 const DEFAULT_SUPABASE_URL = 'https://tkmlnhmylqnttmnsnief.supabase.co';
 const APP_ORIGIN = 'https://nfl.propbetedge.ai';
 const AUTH_WORKER_URL = 'https://propbetedge-nfl-auth.sales-fd3.workers.dev';
@@ -29,13 +30,11 @@ const PRICE = Object.freeze({
   foundingMonthly: 'price_1UEWAXF3CaVzg4ORGlsgboLq',
   legacySeasonPass: 'price_1U9oVzF3CaVzg4ORnk5NiJFA',
 });
-
 const RECURRING_PRICE_IDS = new Set([
   PRICE.legacyWeekly,
   PRICE.foundingWeekly,
   PRICE.foundingMonthly,
 ]);
-
 const LEGACY_WEEKLY_PAYMENT_LINK = 'plink_1U9QUtF3CaVzg4ORqbkp3b2c';
 const PRODUCT_TAG = 'propbetedge_nfl';
 const ALLOWED_STATUS = new Set([
@@ -53,6 +52,7 @@ export default {
         service: SERVICE,
         version: VERSION,
         runtime: 'cloudflare-workers',
+        trigger: 'stripe-webhook',
         supabase: 'system-of-record',
         accepted_prices: {
           legacy_weekly: PRICE.legacyWeekly,
@@ -66,7 +66,6 @@ export default {
     if (request.method !== 'POST' || url.pathname !== '/webhook') {
       return json({ error: 'not_found', service: SERVICE, version: VERSION }, 404);
     }
-
     return handleWebhook(request, env);
   },
 };
@@ -77,8 +76,9 @@ async function handleWebhook(request, env) {
 
   const raw = await request.text();
   const signature = request.headers.get('stripe-signature') || '';
-  const valid = await validStripeSignature(raw, signature, env.STRIPE_WEBHOOK_SECRET);
-  if (!valid) return json({ error: 'invalid_signature' }, 400);
+  if (!(await validStripeSignature(raw, signature, env.STRIPE_WEBHOOK_SECRET))) {
+    return json({ error: 'invalid_signature' }, 400);
+  }
 
   let event;
   try { event = JSON.parse(raw); }
@@ -86,7 +86,7 @@ async function handleWebhook(request, env) {
 
   const eventId = typeof event?.id === 'string' ? event.id : null;
   const eventType = typeof event?.type === 'string' ? event.type : 'unknown';
-  const eventCreated = Number.isFinite(Number(event?.created)) ? Number(event.created) : null;
+  const eventCreated = finiteNumber(event?.created);
   if (!eventId) return json({ error: 'missing_event_id' }, 400);
 
   try {
@@ -109,8 +109,8 @@ async function handleWebhook(request, env) {
       result = await handleInvoice(env, object, eventType, eventId, eventCreated);
     }
 
-    /* Record only after the entitlement mutation succeeds. A 5xx before this
-     * point lets Stripe retry safely; every mutation below is idempotent. */
+    /* Idempotency ledger comes AFTER the mutation. If anything above fails,
+     * Stripe receives 5xx and may retry; no failed event is falsely marked done. */
     await recordEvent(env, eventId, eventType, eventCreated);
     return json({ received: true, applied: result.applied, reason: result.reason });
   } catch (error) {
@@ -124,16 +124,13 @@ async function handleCheckoutCompleted(env, session, eventId, eventCreated) {
   const checkoutId = idOf(session);
   const paymentLinkId = idOf(session?.payment_link);
   const subscriptionId = idOf(session?.subscription);
-  const email = normalizeEmail(
-    session?.customer_details?.email || session?.customer_email || metadata?.email
-  );
+  const email = normalizeEmail(session?.customer_details?.email || session?.customer_email || metadata?.email);
   const userId = typeof metadata?.user_id === 'string' && metadata.user_id ? metadata.user_id : null;
 
   const isNfl =
     metadata?.acquired_sport === 'nfl' ||
     metadata?.product === PRODUCT_TAG ||
     paymentLinkId === LEGACY_WEEKLY_PAYMENT_LINK;
-
   if (!isNfl) return { applied: false, reason: 'not_nfl' };
   if (!checkoutId) throw new Error('nfl_checkout_missing_session_id');
 
@@ -143,37 +140,13 @@ async function handleCheckoutCompleted(env, session, eventId, eventCreated) {
     metadata?.billing_mode === 'one_time';
 
   if (oneTime) {
-    const priceId = metadata?.price_id || null;
-    if (priceId !== PRICE.legacySeasonPass) throw new Error(`season_pass_price_mismatch:${priceId || 'none'}`);
-    if (!userId && !email) throw new Error('season_pass_missing_identity');
-
-    const expiresAt = typeof metadata?.expires_at === 'string' ? metadata.expires_at : '';
-    const expiresMs = Date.parse(expiresAt);
-    if (!expiresAt || !Number.isFinite(expiresMs)) throw new Error('season_pass_invalid_expiry');
-
-    await upsert(env, 'nfl_subscriptions', {
-      user_id: userId,
-      customer_email: email,
-      stripe_customer_id: idOf(session?.customer),
-      stripe_subscription_id: null,
-      stripe_checkout_session_id: checkoutId,
-      stripe_price_id: PRICE.legacySeasonPass,
-      status: 'active',
-      current_period_end: new Date(expiresMs).toISOString(),
-      cancel_at_period_end: false,
-      last_stripe_event_id: eventId,
-      last_stripe_event_created: eventCreated,
-      updated_at: new Date().toISOString(),
-    }, 'stripe_checkout_session_id');
-
-    await sendAccessEmailOnce(env, email, `checkout:${checkoutId}`, eventId);
-    return { applied: true, reason: 'legacy_season_pass' };
+    return handleLegacySeasonPass(env, {
+      session, metadata, checkoutId, email, userId, eventId, eventCreated,
+    });
   }
 
   if (!subscriptionId) throw new Error('recurring_checkout_missing_subscription');
 
-  /* Payment Links copy price_id into Checkout Session metadata. Legacy weekly
-   * predates that convention, so it is allowed to fall back to the legacy id. */
   let priceId = metadata?.price_id || null;
   if (!RECURRING_PRICE_IDS.has(priceId) && paymentLinkId === LEGACY_WEEKLY_PAYMENT_LINK) {
     priceId = PRICE.legacyWeekly;
@@ -182,39 +155,112 @@ async function handleCheckoutCompleted(env, session, eventId, eventCreated) {
     throw new Error(`unsupported_nfl_recurring_price:${priceId || 'none'}`);
   }
 
+  const existing = await findSubscription(env, subscriptionId);
+  const incoming = eventCreated || 0;
+  const stored = Number(existing?.last_stripe_event_created || 0);
+  const checkoutIsCurrent = !existing || !stored || !incoming || incoming >= stored;
   const paymentComplete = session?.payment_status === 'paid' || session?.payment_status === 'no_payment_required';
-  await upsert(env, 'nfl_subscriptions', {
+
+  if (existing) {
+    /* Identity/check-out linkage is safe even when this event arrives after a
+     * newer lifecycle event. Lifecycle truth is only changed when this event is
+     * not stale, so a delayed checkout can never resurrect a canceled sub. */
+    const patchRecord = {
+      customer_email: email || existing.customer_email || null,
+      stripe_customer_id: idOf(session?.customer) || existing.stripe_customer_id || null,
+      stripe_checkout_session_id: checkoutId,
+      stripe_price_id: priceId,
+      updated_at: new Date().toISOString(),
+    };
+    if (userId) patchRecord.user_id = userId;
+    if (checkoutIsCurrent) {
+      patchRecord.status = paymentComplete ? 'active' : (existing.status || 'incomplete');
+      patchRecord.last_stripe_event_id = eventId;
+      patchRecord.last_stripe_event_created = eventCreated;
+      /* Deliberately do not write current_period_end here. If subscription.created
+       * already supplied it, checkout must not erase it with null. */
+    }
+    await patch(env, 'nfl_subscriptions', `stripe_subscription_id=eq.${encodeURIComponent(subscriptionId)}`, patchRecord);
+  } else {
+    await insert(env, 'nfl_subscriptions', {
+      user_id: userId,
+      customer_email: email,
+      stripe_customer_id: idOf(session?.customer),
+      stripe_subscription_id: subscriptionId,
+      stripe_checkout_session_id: checkoutId,
+      stripe_price_id: priceId,
+      status: paymentComplete ? 'active' : 'incomplete',
+      current_period_end: null,
+      cancel_at_period_end: false,
+      last_stripe_event_id: eventId,
+      last_stripe_event_created: eventCreated,
+      updated_at: new Date().toISOString(),
+    });
+  }
+
+  await sendAccessEmailOnce(env, email, `subscription:${subscriptionId}`, eventId);
+  return { applied: true, reason: planForPrice(priceId) };
+}
+
+async function handleLegacySeasonPass(env, ctx) {
+  const { session, metadata, checkoutId, email, userId, eventId, eventCreated } = ctx;
+  const priceId = metadata?.price_id || null;
+  if (priceId !== PRICE.legacySeasonPass) {
+    throw new Error(`season_pass_price_mismatch:${priceId || 'none'}`);
+  }
+  if (!userId && !email) throw new Error('season_pass_missing_identity');
+
+  const expiresAt = typeof metadata?.expires_at === 'string' ? metadata.expires_at : '';
+  const expiresMs = Date.parse(expiresAt);
+  if (!expiresAt || !Number.isFinite(expiresMs)) throw new Error('season_pass_invalid_expiry');
+
+  const rows = await sbSelect(env,
+    `nfl_subscriptions?select=id,last_stripe_event_created&stripe_checkout_session_id=eq.${encodeURIComponent(checkoutId)}&limit=1`
+  );
+  const existing = rows[0] || null;
+  const record = {
     user_id: userId,
     customer_email: email,
     stripe_customer_id: idOf(session?.customer),
-    stripe_subscription_id: subscriptionId,
+    stripe_subscription_id: null,
     stripe_checkout_session_id: checkoutId,
-    stripe_price_id: priceId,
-    status: paymentComplete ? 'active' : 'incomplete',
-    /* subscription.created/updated supplies the authoritative period end. */
-    current_period_end: null,
+    stripe_price_id: PRICE.legacySeasonPass,
+    status: 'active',
+    current_period_end: new Date(expiresMs).toISOString(),
     cancel_at_period_end: false,
     last_stripe_event_id: eventId,
     last_stripe_event_created: eventCreated,
     updated_at: new Date().toISOString(),
-  }, 'stripe_subscription_id');
+  };
 
-  await sendAccessEmailOnce(env, email, `subscription:${subscriptionId}`, eventId);
-  return { applied: true, reason: planForPrice(priceId) };
+  /* stripe_checkout_session_id is protected by a partial unique index, not a
+   * normal UNIQUE constraint, so use explicit select->update/insert instead of
+   * PostgREST on_conflict inference. */
+  if (existing) {
+    const incoming = eventCreated || 0;
+    const stored = Number(existing.last_stripe_event_created || 0);
+    if (!stored || !incoming || incoming >= stored) {
+      await patch(env, 'nfl_subscriptions', `id=eq.${encodeURIComponent(existing.id)}`, record);
+    }
+  } else {
+    await insert(env, 'nfl_subscriptions', record);
+  }
+
+  await sendAccessEmailOnce(env, email, `checkout:${checkoutId}`, eventId);
+  return { applied: true, reason: 'legacy_season_pass' };
 }
 
 async function handleSubscriptionLifecycle(env, subscription, eventType, eventId, eventCreated) {
   const subscriptionId = idOf(subscription);
   if (!subscriptionId) return { applied: false, reason: 'missing_subscription_id' };
 
-  const priceId = recurringPriceFromSubscription(subscription);
+  const recognizedPriceId = recurringPriceFromSubscription(subscription);
   const existing = await findSubscription(env, subscriptionId);
 
-  /* New + legacy NFL prices are recognized explicitly. For safety, an existing
-   * NFL row also remains ours even if Stripe later changes the item to a price
-   * not yet known by this build; we preserve lifecycle truth instead of orphaning
-   * a paid customer. */
-  if (!priceId && !existing) return { applied: false, reason: 'not_nfl' };
+  /* Price recognition identifies new rows. Once a subscription has a row in the
+   * NFL ledger it stays ours even if Stripe later changes its item to a price a
+   * newer build has not learned yet. That prevents orphaning a paid customer. */
+  if (!recognizedPriceId && !existing) return { applied: false, reason: 'not_nfl' };
 
   const incoming = eventCreated || 0;
   const stored = Number(existing?.last_stripe_event_created || 0);
@@ -230,7 +276,7 @@ async function handleSubscriptionLifecycle(env, subscription, eventType, eventId
   const record = {
     stripe_subscription_id: subscriptionId,
     stripe_customer_id: idOf(subscription?.customer),
-    stripe_price_id: priceId || existing?.stripe_price_id || null,
+    stripe_price_id: recognizedPriceId || existing?.stripe_price_id || null,
     status,
     current_period_end: periodEnd(subscription),
     cancel_at_period_end: Boolean(subscription?.cancel_at_period_end),
@@ -242,7 +288,7 @@ async function handleSubscriptionLifecycle(env, subscription, eventType, eventId
   if (existing) {
     await patch(env, 'nfl_subscriptions', `stripe_subscription_id=eq.${encodeURIComponent(subscriptionId)}`, record);
   } else {
-    await upsert(env, 'nfl_subscriptions', record, 'stripe_subscription_id');
+    await insert(env, 'nfl_subscriptions', record);
   }
 
   return { applied: true, reason: `${planForPrice(record.stripe_price_id)}:${status}` };
@@ -256,14 +302,14 @@ async function handleInvoice(env, invoice, eventType, eventId, eventCreated) {
   if (!existing) return { applied: false, reason: 'not_nfl' };
 
   const incoming = eventCreated || 0;
-  const stored = Number(existing?.last_stripe_event_created || 0);
+  const stored = Number(existing.last_stripe_event_created || 0);
   if (stored > incoming && incoming > 0) return { applied: false, reason: 'stale' };
 
-  const email = normalizeEmail(invoice?.customer_email || existing?.customer_email);
+  const email = normalizeEmail(invoice?.customer_email || existing.customer_email);
   const status = eventType === 'invoice.payment_failed' ? 'past_due' : 'active';
   await patch(env, 'nfl_subscriptions', `stripe_subscription_id=eq.${encodeURIComponent(subscriptionId)}`, {
     status,
-    customer_email: email || existing?.customer_email || null,
+    customer_email: email || existing.customer_email || null,
     last_stripe_event_id: eventId,
     last_stripe_event_created: eventCreated,
     updated_at: new Date().toISOString(),
@@ -292,26 +338,24 @@ function planForPrice(priceId) {
   return 'unknown_nfl_plan';
 }
 
-function normalizeStatus(status) {
-  return ALLOWED_STATUS.has(status) ? status : null;
-}
-
+function normalizeStatus(status) { return ALLOWED_STATUS.has(status) ? status : null; }
 function normalizeEmail(value) {
   const email = String(value || '').trim().toLowerCase();
   return /^\S+@\S+\.\S+$/.test(email) && email.length <= 254 ? email : null;
 }
-
+function finiteNumber(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
 function idOf(value) {
   if (typeof value === 'string') return value;
   if (value && typeof value === 'object' && typeof value.id === 'string') return value.id;
   return null;
 }
-
 function unixIso(value) {
   const n = Number(value);
   return Number.isFinite(n) && n > 0 ? new Date(n * 1000).toISOString() : null;
 }
-
 function periodEnd(subscription) {
   if (subscription?.current_period_end) return unixIso(subscription.current_period_end);
   const values = (subscription?.items?.data || [])
@@ -319,7 +363,6 @@ function periodEnd(subscription) {
     .filter(n => Number.isFinite(n) && n > 0);
   return values.length ? unixIso(Math.max(...values)) : null;
 }
-
 function invoiceSubscriptionId(invoice) {
   return idOf(invoice?.subscription) ||
     idOf(invoice?.parent?.subscription_details?.subscription) ||
@@ -343,7 +386,7 @@ async function recordEvent(env, eventId, eventType, stripeCreated) {
 
 async function findSubscription(env, subscriptionId) {
   const rows = await sbSelect(env,
-    `nfl_subscriptions?select=id,customer_email,stripe_price_id,last_stripe_event_created&stripe_subscription_id=eq.${encodeURIComponent(subscriptionId)}&limit=1`
+    `nfl_subscriptions?select=id,user_id,customer_email,stripe_customer_id,stripe_price_id,status,current_period_end,cancel_at_period_end,last_stripe_event_created&stripe_subscription_id=eq.${encodeURIComponent(subscriptionId)}&limit=1`
   );
   return rows[0] || null;
 }
@@ -358,15 +401,11 @@ async function sendAccessEmailOnce(env, emailRaw, deliveryKey, eventId) {
   if (existing.length) return false;
 
   try {
-    await sbWrite(env, 'nfl_access_email_deliveries', {
-      method: 'POST',
-      headers: { prefer: 'return=minimal' },
-      body: JSON.stringify({
-        delivery_key: deliveryKey,
-        customer_email: email,
-        stripe_event_id: eventId,
-        provider: 'resend',
-      }),
+    await insert(env, 'nfl_access_email_deliveries', {
+      delivery_key: deliveryKey,
+      customer_email: email,
+      stripe_event_id: eventId,
+      provider: 'resend',
     });
   } catch (error) {
     if (String(error?.message || '').includes('23505')) return false;
@@ -374,21 +413,20 @@ async function sendAccessEmailOnce(env, emailRaw, deliveryKey, eventId) {
   }
 
   try {
-    const target = 'https://auth/v1/auth/request';
     const init = {
       method: 'POST',
       headers: { 'content-type': 'application/json', accept: 'application/json', origin: APP_ORIGIN },
       body: JSON.stringify({ email, purpose: 'purchase' }),
     };
     const response = env.AUTH
-      ? await env.AUTH.fetch(target, init)
+      ? await env.AUTH.fetch('https://auth/v1/auth/request', init)
       : await fetch(`${AUTH_WORKER_URL}/v1/auth/request`, init);
     const text = await response.text();
     if (!response.ok) throw new Error(`access_email_${response.status}:${text.slice(0, 180)}`);
     return true;
   } catch (error) {
-    /* Reservation is removed only when delivery fails, so Stripe retry can try
-     * the email again without ever sending two successful purchase emails. */
+    /* Only a failed delivery removes its reservation, allowing Stripe's retry to
+     * make another attempt without duplicating a successful email. */
     await sbWrite(env,
       `nfl_access_email_deliveries?delivery_key=eq.${encodeURIComponent(deliveryKey)}`,
       { method: 'DELETE', headers: { prefer: 'return=minimal' } }
@@ -400,7 +438,6 @@ async function sendAccessEmailOnce(env, emailRaw, deliveryKey, eventId) {
 function supabaseUrl(env) {
   return String(env.SUPABASE_URL || DEFAULT_SUPABASE_URL).replace(/\/$/, '');
 }
-
 function sbHeaders(env, extra = {}) {
   return {
     apikey: env.SUPABASE_SERVICE_ROLE_KEY,
@@ -409,7 +446,6 @@ function sbHeaders(env, extra = {}) {
     ...extra,
   };
 }
-
 async function sbSelect(env, path) {
   const response = await fetch(`${supabaseUrl(env)}/rest/v1/${path}`, {
     method: 'GET', headers: sbHeaders(env), cache: 'no-store',
@@ -418,25 +454,20 @@ async function sbSelect(env, path) {
   const body = await response.json().catch(() => []);
   return Array.isArray(body) ? body : [];
 }
-
-async function sbWrite(env, path, init) {
+async function sbWrite(env, path, init = {}) {
   const response = await fetch(`${supabaseUrl(env)}/rest/v1/${path}`, {
     ...init,
-    headers: sbHeaders(env, { 'content-type': 'application/json; charset=utf-8', ...(init?.headers || {}) }),
+    headers: sbHeaders(env, { 'content-type': 'application/json; charset=utf-8', ...(init.headers || {}) }),
     cache: 'no-store',
   });
   if (!response.ok) throw new Error(`supabase_${response.status}:${(await response.text()).slice(0, 240)}`);
   return response;
 }
-
-function upsert(env, table, record, onConflict) {
-  return sbWrite(env, `${table}?on_conflict=${encodeURIComponent(onConflict)}`, {
-    method: 'POST',
-    headers: { prefer: 'resolution=merge-duplicates,return=minimal' },
-    body: JSON.stringify(record),
+function insert(env, table, record) {
+  return sbWrite(env, table, {
+    method: 'POST', headers: { prefer: 'return=minimal' }, body: JSON.stringify(record),
   });
 }
-
 function patch(env, table, filter, record) {
   return sbWrite(env, `${table}?${filter}`, {
     method: 'PATCH', headers: { prefer: 'return=minimal' }, body: JSON.stringify(record),
@@ -456,19 +487,18 @@ async function validStripeSignature(raw, header, secret) {
   const key = await crypto.subtle.importKey(
     'raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
   );
-  const payload = `${timestamp}.${raw}`;
-  const digest = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payload));
+  const digest = await crypto.subtle.sign(
+    'HMAC', key, new TextEncoder().encode(`${timestamp}.${raw}`)
+  );
   const expected = [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, '0')).join('');
   return signatures.some(signature => timingSafeEqual(signature, expected));
 }
-
 function timingSafeEqual(a, b) {
   if (a.length !== b.length) return false;
   let diff = 0;
   for (let i = 0; i < a.length; i += 1) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
   return diff === 0;
 }
-
 function json(body, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
