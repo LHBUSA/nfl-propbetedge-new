@@ -75,7 +75,7 @@
           </div>
           <div class="pbe-network-link-group">
             <span class="pbe-network-link-label">NETWORK</span>
-            <a href="https://propbetedge.ai">PropBetEdge</a><a href="https://mlb.propbetedge.ai" target="_blank" rel="noopener">MLB Intelligence</a><a href="https://ufc.propbetedge.ai" target="_blank" rel="noopener">UFC Fight Intelligence <em class="pbe-network-new">New</em></a><a href="https://propsports.proptechusa.ai" target="_blank" rel="noopener">PropSports API</a><a href="https://proptechusa.ai" target="_blank" rel="noopener">PropTechUSA.ai</a>
+            <a href="https://propbetedge.ai">PropBetEdge</a><a href="https://mlb.propbetedge.ai" target="_blank" rel="noopener">MLB Intelligence</a><a href="https://ufc.propbetedge.ai" target="_blank" rel="noopener">UFC Fight Intelligence <em class="pbe-network-new">New</em></a><a href="https://propsports.proptechusa.ai" target="_blank" rel="noopener">PropSports API</a><a href="https://proptechusa.ai" target="_blank" rel="noopener">PropTechUSA.ai</a><a href="https://discord.gg/kb5zCTHbME" target="_blank" rel="noopener">PropBetEdge Discord ↗</a>
           </div>
         </section>
 

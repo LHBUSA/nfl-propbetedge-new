@@ -26,6 +26,10 @@
   'use strict';
 
   const TTL = { changes: 120000, picks: 300000, bestline: 300000 };
+  /* The community is Discord, not an internal forum. Permanent invite to the
+     PropBetEdge.ai server (verified 2026-09-11: no expiry), the same one the
+     MLB product links. */
+  const DISCORD = 'https://discord.gg/kb5zCTHbME';
   const esc = v => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   const arr = v => (Array.isArray(v) ? v : []);
   const num = v => (v === null || v === undefined || v === '' ? NaN : Number(v));
@@ -127,6 +131,7 @@
     const [label, copy] = PHASE_COPY[p];
     return `<nav class="pbecc-loop" aria-label="The NFL week">
       <div class="pbecc-loop-phase"><span class="pbecc-eyebrow">${esc(label)}</span><p>${esc(copy)}</p></div>
+      <a class="pbecc-discord" href="${DISCORD}" target="_blank" rel="noopener">Talk the slate in the PropBetEdge Discord ↗</a>
       <ol>${LOOP.map(([route, name, phases], i) => `<li><button type="button" data-route="${route}" class="${phases.includes(p) ? 'is-now' : ''}"${phases.includes(p) ? ' aria-current="step"' : ''}><i>${String(i + 1).padStart(2, '0')}</i>${esc(name)}</button></li>`).join('')}</ol>
     </nav>`;
   }

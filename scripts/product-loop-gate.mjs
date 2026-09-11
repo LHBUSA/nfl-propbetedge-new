@@ -47,7 +47,8 @@ const SETTLE=Number(arg('settle','7000'));
    to the target untouched. */
 const LOCAL_API={
   '/api/nfl-changes':'api/nfl-changes.js',
-  '/api/best-line':'api/best-line.js'
+  '/api/best-line':'api/best-line.js',
+  '/api/replay-enrich':'api/replay-enrich.js'
 };
 
 mkdirSync(OUT,{recursive:true});

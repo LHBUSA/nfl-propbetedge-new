@@ -40,7 +40,49 @@
   const etDay = v => { const d = new Date(v); return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-US', { ...ET, weekday: 'short', month: 'short', day: 'numeric' }); };
   const clock = t => new Date(t).toLocaleTimeString('en-US', { ...ET, hour: 'numeric', minute: '2-digit', second: '2-digit' });
 
-  const local = { frame: null, feed: [], moment: 'scoring', openDrive: null, seeded: false, boardOpen: null };
+  const local = { frame: null, feed: [], moment: 'scoring', openDrive: null, seeded: false, boardOpen: null, enrich: new Map() };
+
+  /* ---- post-game enrichment (nflverse, next day) ---------------------------
+     Fetched once per FINAL game, never polled. Keyed by ESPN play id, so it
+     attaches to the plays v6 already holds without any matching. */
+  function loadEnrich() {
+    const d = v6().detail, g = d?.game;
+    if (!g || sem(g) !== 'FINAL') return;
+    const id = String(g.id);
+    if (local.enrich.has(id)) return;
+    const board = games().find(x => String(x.id) === id) || {};
+    const season = board?.season?.year || g?.season?.year;
+    const type = Number(board?.season?.type || g?.season?.type) === 3 ? 'POST' : 'REG';
+    const week = board?.week;
+    const away = (board.teams || g.teams)?.away?.abbreviation, home = (board.teams || g.teams)?.home?.abbreviation;
+    /* The scoreboard lane (which carries the week) may land after the detail
+       lane. Nothing is cached until the identity is complete, so the next
+       render retries instead of remembering a race as a fact. */
+    if (!season || !week || !away || !home) return;
+    local.enrich.set(id, { state: 'loading' });
+    const qs = new URLSearchParams({ event: id, season, week, type, away, home });
+    fetch(`/api/replay-enrich?${qs}`, { headers: { accept: 'application/json' } })
+      .then(r => r.json().then(body => ({ ok: r.ok, body })))
+      .then(({ body }) => local.enrich.set(id, body?.available ? { state: 'ok', data: body } : { state: 'unavailable', reason: body?.reason || body?.error || 'unavailable', data: body }))
+      .catch(e => local.enrich.set(id, { state: 'error', reason: String(e?.message || e) }))
+      .finally(() => render());
+  }
+  const enrichFor = () => local.enrich.get(String(v6().activeId || ''));
+  const sign = (n, d = 2) => `${n > 0 ? '+' : ''}${Number(n).toFixed(d)}`;
+  function enrichChips(p) {
+    const e = enrichFor()?.data?.plays?.[String(p?.id)];
+    if (!e) return '';
+    const who = [e.passer_player_name, e.receiver_player_name].filter(Boolean).join(' → ') || e.rusher_player_name || '';
+    const chips = [
+      who ? `<b>${esc(who)}</b>` : '',
+      e.epa != null ? `<span>EPA ${esc(sign(e.epa))}</span>` : '',
+      e.wpa != null ? `<span>WPA ${esc(sign(e.wpa * 100, 1))}%</span>` : '',
+      e.air_yards != null ? `<span>AIR ${esc(e.air_yards)}</span>` : '',
+      e.yards_after_catch != null ? `<span>YAC ${esc(e.yards_after_catch)}</span>` : '',
+      e.cpoe != null ? `<span>CPOE ${esc(sign(e.cpoe, 1))}</span>` : ''
+    ].filter(Boolean).join('');
+    return chips ? `<div class="pbekm-enr" title="Post-game enrichment · nflverse">${chips}</div>` : '';
+  }
   const FEED_MAX = 24;
 
   /* ---- Sunday board -------------------------------------------------------- */
@@ -143,7 +185,7 @@
   function playLine(p) {
     const meta = [p?.period ? `Q${p.period}` : null, p?.clock, p?.start?.down_distance_text].filter(Boolean).join(' · ');
     const score = p?.away_score != null && p?.home_score != null ? `${p.away_score}–${p.home_score}` : '';
-    return `<li><span class="pbekm-meta">${esc(meta)}</span><p><b>${esc(p?.type || 'Play')}</b> ${esc(p?.text || '')}</p>${score ? `<em>${esc(score)}</em>` : ''}</li>`;
+    return `<li><span class="pbekm-meta">${esc(meta)}</span><p><b>${esc(p?.type || 'Play')}</b> ${esc(p?.text || '')}</p>${score ? `<em>${esc(score)}</em>` : ''}${enrichChips(p)}</li>`;
   }
   function driveChart(d) {
     const drives = arr(d?.drives);
@@ -171,17 +213,39 @@
     if (!g || sem(g) === 'SCHEDULE') return '';
     const final = sem(g) === 'FINAL';
     const m = moments(d);
-    const tabs = [['scoring', 'Scoring', m.scoring], ['turnovers', 'Turnovers', m.turnovers], ['explosive', 'Explosive 20+', m.explosive], ['drives', 'Drive chart', arr(d?.drives)]];
+    if (final) loadEnrich();
+    const en = final ? enrichFor() : null;
+    const ePlays = en?.state === 'ok' ? en.data.plays : null;
+    /* Biggest swings exist only when win-probability deltas were published
+       post-game; the live feed never had them. */
+    const swings = ePlays ? arr(d?.plays).filter(p => Number.isFinite(ePlays[String(p.id)]?.wpa))
+      .sort((a, b) => Math.abs(ePlays[String(b.id)].wpa) - Math.abs(ePlays[String(a.id)].wpa)).slice(0, 8) : [];
+    const tabs = [['scoring', 'Scoring', m.scoring], ['turnovers', 'Turnovers', m.turnovers], ['explosive', 'Explosive 20+', m.explosive], ...(swings.length ? [['swings', 'Biggest swings', swings]] : []), ['drives', 'Drive chart', arr(d?.drives)]];
     const cur = tabs.find(t => t[0] === local.moment) || tabs[0];
     const body = cur[0] === 'drives' ? driveChart(d)
+      : cur[0] === 'swings' ? `<ol class="pbekm-list">${cur[2].map(playLine).join('')}</ol>`
       : cur[2].length ? `<ol class="pbekm-list">${[...cur[2]].reverse().map(playLine).join('')}</ol>`
       : `<p class="pbekm-none">No ${esc(cur[1].toLowerCase())} plays in the published log${final ? '' : ' yet'}.</p>`;
     return `<section class="pbekm${final ? ' is-replay' : ''}" aria-label="${final ? 'PBE Replay' : 'Key moments'}">
       <header><div><span class="pbecb-eye">${final ? 'PBE REPLAY · FINAL · LIVE-SOURCE GAME LOG' : 'KEY MOMENTS · LIVE'}</span><h2>${final ? 'How this game was decided' : 'Jump to what mattered'}</h2></div>
         <div class="pbekm-tabs" role="tablist">${tabs.map(([k, l, rows]) => `<button type="button" role="tab" aria-selected="${cur[0] === k}" class="${cur[0] === k ? 'is-on' : ''}" data-km-tab="${k}">${esc(l)} <i>${esc(rows.length)}</i></button>`).join('')}</div></header>
       ${body}
-      <footer class="pbekm-foot"><span class="pbekm-src">SOURCE · ESPN published play-by-play · ${esc(arr(d?.plays).length)} plays · ${esc(arr(d?.drives).length)} drives</span>${final ? '<span class="pbekm-pending">POST-GAME ENRICHMENT · PENDING — structured passer/rusher/receiver, EPA, air yards and win-probability deltas from nflverse arrive after the game and are not shown until they do.</span>' : '<span class="pbekm-src">Explosive = 20+ yards stated in the play text.</span>'}</footer>
+      <footer class="pbekm-foot"><span class="pbekm-src">LIVE SOURCE · ESPN published play-by-play · ${esc(arr(d?.plays).length)} plays · ${esc(arr(d?.drives).length)} drives</span>${final ? enrichNote(en, d) : '<span class="pbekm-src">Explosive = 20+ yards stated in the play text.</span>'}</footer>
     </section>`;
+  }
+
+  function enrichNote(en, d) {
+    if (!en || en.state === 'loading') return '<span class="pbekm-pending">POST-GAME ENRICHMENT · checking nflverse…</span>';
+    if (en.state === 'ok') {
+      const ids = arr(d?.plays).map(p => String(p.id));
+      const joined = ids.filter(id => en.data.plays[id]).length;
+      const when = en.data.source?.last_modified ? new Date(en.data.source.last_modified).toLocaleString('en-US', { ...ET, month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' ET' : '';
+      return `<span class="pbekm-enriched">POST-GAME ENRICHED · nflverse play-by-play (CC-BY-4.0)${when ? ` · published ${esc(when)}` : ''} · ${esc(joined)} of ${esc(ids.length)} ESPN plays joined by play id. EPA, WPA (for the team with the ball), air yards, YAC and CPOE are post-game values, not live.</span>`;
+    }
+    const why = en.reason === 'NOT_YET_PUBLISHED' ? 'nflverse has not published this game yet — it usually lands the next day'
+      : en.reason === 'ENRICHMENT_PIPELINE_REQUIRED' ? 'the season file has outgrown the prototype read path; the per-game pipeline serves it'
+      : `unavailable (${en.reason || 'unknown'})`;
+    return `<span class="pbekm-pending">POST-GAME ENRICHMENT · ${esc(why)}. Nothing is shown until it is published.</span>`;
   }
 
   /* ---- before kickoff (scheduled game) -------------------------------------- */
