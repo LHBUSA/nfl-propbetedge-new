@@ -1,19 +1,24 @@
-/* PropBetEdge NFL — Founding Season purchase funnel v5
- * New customer: choose plan -> email -> Stripe Payment Link -> webhook -> access email.
- * Existing subscriber: email -> Cloudflare auth Worker -> Resend.
+/* PropBetEdge NFL — Founding Season purchase funnel v6
  *
- * Pricing is intentionally acquisition-first for the 2026 Founding Season:
+ * Purchase UI authority for BOTH signed-out and signed-in free users.
+ * Auth state remains owned by paywall.js; this file owns plan presentation and
+ * purchase initiation so old pricing cannot reappear in a second account state.
+ *
+ * 2026 Founding Season:
  *   $9.99/month (default / best value)
  *   $3.99/week  (flexible)
- * No free trial. Existing legacy subscriptions are not migrated here.
+ * No free trial. Existing legacy subscriptions are never migrated here.
  *
- * Vercel serves this file. It is not in the payment, entitlement, or email runtime.
+ * Runtime:
+ *   Vercel serves this frontend file.
+ *   Browser -> Stripe-hosted Checkout.
+ *   Stripe -> Cloudflare billing Worker -> Supabase entitlement truth.
  */
 (() => {
   'use strict';
 
   const AUTH_WORKER = 'https://propbetedge-nfl-auth.sales-fd3.workers.dev';
-  const STORAGE = 'pbe_nfl_pending_plan_v5';
+  const STORAGE = 'pbe_nfl_pending_plan_v6';
   const PLANS = {
     monthly: {
       label: 'Monthly',
@@ -49,32 +54,6 @@
     paintSelection();
   }
 
-  function signedOutMarkup() {
-    const selected = selectedKey();
-    return `<div class="pbe-funnel-head">
-      <span>FOUNDING SEASON · NFL PRO</span>
-      <strong>Unlock the intelligence layer.</strong>
-      <p>Premium NFL model intelligence at introductory 2026 pricing. Pick your access, use one email, and you are in.</p>
-    </div>
-    <div class="pbe-pro-plans pbe-funnel-plans" role="radiogroup" aria-label="NFL Pro plans">
-      ${planCard('monthly', selected)}
-      ${planCard('weekly', selected)}
-    </div>
-    <div class="pbe-funnel-email-label">
-      <b>Your access email</b>
-      <span>We tie this email to checkout so your Pro access unlocks automatically.</span>
-    </div>
-    <div class="pbe-pro-auth-state pbe-funnel-auth">
-      <input class="pbe-pro-email" id="pbe-funnel-email" type="email" autocomplete="email" inputmode="email" placeholder="you@example.com" aria-label="Email address">
-      <button class="pbe-pro-cta" id="pbe-funnel-checkout" type="button"></button>
-      <div class="pbe-funnel-charge">Charged today · No free trial · Cancel anytime</div>
-      <div class="pbe-funnel-divider"><span>Already have NFL Pro?</span></div>
-      <button class="pbe-pro-cta secondary" id="pbe-funnel-signin" type="button">Sign in to NFL Pro</button>
-      <div class="pbe-pro-message" id="pbe-funnel-message"></div>
-    </div>
-    <div class="pbe-pro-secure">◆ Secure checkout by Stripe · Passwordless PropBetEdge access</div>`;
-  }
-
   function planCard(key, selected) {
     const p = PLANS[key];
     const on = selected === key;
@@ -92,7 +71,69 @@
     </button>`;
   }
 
+  function signedOutMarkup() {
+    const selected = selectedKey();
+    return `<div class="pbe-funnel-root" data-funnel-state="signed-out">
+      <div class="pbe-funnel-head">
+        <span>FOUNDING SEASON · NFL PRO</span>
+        <strong>Unlock the intelligence layer.</strong>
+        <p>Premium NFL model intelligence at introductory 2026 pricing. Pick your access, use one email, and you are in.</p>
+      </div>
+      <div class="pbe-pro-plans pbe-funnel-plans" role="radiogroup" aria-label="NFL Pro plans">
+        ${planCard('monthly', selected)}
+        ${planCard('weekly', selected)}
+      </div>
+      <div class="pbe-funnel-email-label">
+        <b>Your access email</b>
+        <span>We tie this email to checkout so your Pro access unlocks automatically.</span>
+      </div>
+      <div class="pbe-pro-auth-state pbe-funnel-auth">
+        <input class="pbe-pro-email" id="pbe-funnel-email" type="email" autocomplete="email" inputmode="email" placeholder="you@example.com" aria-label="Email address">
+        <button class="pbe-pro-cta" id="pbe-funnel-checkout" type="button"></button>
+        <div class="pbe-funnel-charge">Charged today · No free trial · Cancel anytime</div>
+        <div class="pbe-funnel-divider"><span>Already have NFL Pro?</span></div>
+        <button class="pbe-pro-cta secondary" id="pbe-funnel-signin" type="button">Sign in to NFL Pro</button>
+        <div class="pbe-pro-message" id="pbe-funnel-message"></div>
+      </div>
+      <div class="pbe-pro-secure">◆ Secure checkout by Stripe · Passwordless PropBetEdge access</div>
+    </div>`;
+  }
+
+  function signedInFreeMarkup(email) {
+    const selected = selectedKey();
+    return `<div class="pbe-funnel-root" data-funnel-state="signed-in-free">
+      <div class="pbe-funnel-head">
+        <span>FOUNDING SEASON · NFL PRO</span>
+        <strong>Your account is ready. Choose Pro.</strong>
+        <p>Upgrade the verified email below. No new account setup and no free-trial handoff.</p>
+      </div>
+      <div class="pbe-funnel-user"><span>Signed in as</span><strong>${escapeHtml(email)}</strong></div>
+      <div class="pbe-pro-plans pbe-funnel-plans" role="radiogroup" aria-label="NFL Pro plans">
+        ${planCard('monthly', selected)}
+        ${planCard('weekly', selected)}
+      </div>
+      <div class="pbe-pro-auth-state pbe-funnel-auth">
+        <button class="pbe-pro-cta" id="pbe-funnel-checkout" type="button"></button>
+        <div class="pbe-funnel-charge">Charged today · No free trial · Cancel anytime</div>
+        <button class="pbe-pro-cta secondary" id="pbe-funnel-refresh" type="button">Already paid? Refresh access</button>
+        <div class="pbe-pro-message" id="pbe-funnel-message"></div>
+      </div>
+      <div class="pbe-pro-secure">◆ Secure checkout by Stripe · Entitlement verified by PropBetEdge</div>
+    </div>`;
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   function emailValue() {
+    const signedIn = String(state()?.user?.email || '').trim().toLowerCase();
+    if (signedIn) return signedIn;
     return String(document.getElementById('pbe-funnel-email')?.value || '').trim().toLowerCase();
   }
   function validEmail(email) { return /^\S+@\S+\.\S+$/.test(email) && email.length <= 254; }
@@ -105,7 +146,7 @@
 
   function paintSelection() {
     const selected = selectedKey();
-    document.querySelectorAll('[data-funnel-plan]').forEach(card => {
+    document.querySelectorAll('#pbe-pro-checkout [data-funnel-plan]').forEach(card => {
       const on = card.dataset.funnelPlan === selected;
       card.classList.toggle('selected', on);
       card.setAttribute('aria-pressed', on ? 'true' : 'false');
@@ -166,12 +207,22 @@
     }
   }
 
-  function mountSignedOut() {
-    const s = state();
-    if (s.loading || s.user) return;
-    const host = document.getElementById('pbe-pro-checkout');
-    if (!host) return;
-    if (!host.querySelector('.pbe-funnel-head')) host.innerHTML = signedOutMarkup();
+  async function refreshExistingAccess() {
+    const btn = document.getElementById('pbe-funnel-refresh');
+    if (btn) btn.disabled = true;
+    message('Checking NFL Pro access…');
+    try {
+      const pro = await window.PBEPro?.refreshAccess?.();
+      if (pro || state()?.pro) message('NFL Pro is active.', 'success');
+      else message('NFL Pro is not active on this email yet. If you just paid, wait a few seconds and try again.');
+    } catch (error) {
+      message(error?.message || 'Could not refresh NFL Pro access.', 'error');
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  function wire(host) {
     host.querySelectorAll('[data-funnel-plan]').forEach(card => {
       card.onclick = () => setSelected(card.dataset.funnelPlan);
     });
@@ -179,25 +230,47 @@
     if (checkout) checkout.onclick = startCheckout;
     const signin = document.getElementById('pbe-funnel-signin');
     if (signin) signin.onclick = signInExisting;
+    const refresh = document.getElementById('pbe-funnel-refresh');
+    if (refresh) refresh.onclick = refreshExistingAccess;
     const input = document.getElementById('pbe-funnel-email');
-    if (input) input.onkeydown = e => { if (e.key === 'Enter') startCheckout(); };
+    if (input) input.onkeydown = event => { if (event.key === 'Enter') startCheckout(); };
     paintSelection();
+  }
+
+  function mountPurchaseState() {
+    const s = state();
+    if (s.loading || s.pro) return;
+    const host = document.getElementById('pbe-pro-checkout');
+    if (!host) return;
+
+    const mode = s.user ? 'signed-in-free' : 'signed-out';
+    const current = host.querySelector('.pbe-funnel-root')?.dataset?.funnelState;
+    if (current !== mode) {
+      host.innerHTML = s.user
+        ? signedInFreeMarkup(String(s.user.email || '').toLowerCase())
+        : signedOutMarkup();
+    }
+    wire(host);
   }
 
   function checkoutReturnMessage() {
     const params = new URLSearchParams(location.search);
     if (params.get('checkout') !== 'success') return;
     const s = state();
-    if (s.user) return;
+    if (s.pro) return;
     setTimeout(() => {
       const el = document.getElementById('pbe-funnel-message');
       if (!el) return;
       el.className = 'pbe-pro-message success';
-      el.textContent = 'Payment received. Your NFL Pro access is activating now. If needed, sign in with the same email you used at checkout.';
+      el.textContent = 'Payment received. Your NFL Pro access is activating now. If needed, refresh or sign in with the same email used at checkout.';
     }, 100);
   }
 
-  function apply() { queued = false; mountSignedOut(); checkoutReturnMessage(); }
+  function apply() {
+    queued = false;
+    mountPurchaseState();
+    checkoutReturnMessage();
+  }
   function queue() {
     if (queued) return;
     queued = true;
@@ -205,14 +278,21 @@
   }
   function install() {
     window.addEventListener('pbe:pro-state', queue);
-    document.addEventListener('click', e => {
-      if (e.target?.closest?.('.pbe-pro-account,[data-pbe-open-pro],[data-pro]')) setTimeout(queue, 20);
+    document.addEventListener('click', event => {
+      if (event.target?.closest?.('.pbe-pro-account,[data-pbe-open-pro],[data-pro]')) setTimeout(queue, 20);
     });
     const modal = document.getElementById('pbe-pro-backdrop') || document.body;
     const observer = new MutationObserver(queue);
     observer.observe(modal, { childList: true, subtree: true });
     queue();
-    window.PBECheckoutFunnel = { apply, setSelected, startCheckout, signInExisting, plans: PLANS };
+    window.PBECheckoutFunnel = {
+      apply,
+      setSelected,
+      startCheckout,
+      signInExisting,
+      refreshExistingAccess,
+      plans: PLANS
+    };
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', install, { once: true });
   else install();
