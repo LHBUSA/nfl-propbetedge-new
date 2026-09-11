@@ -1,4 +1,4 @@
-/* PropBetEdge NFL — Founding Season purchase funnel v6
+/* PropBetEdge NFL — Founding Season purchase funnel v7
  *
  * Purchase UI authority for BOTH signed-out and signed-in free users.
  * Auth state remains owned by paywall.js; this file owns plan presentation and
@@ -18,13 +18,14 @@
   'use strict';
 
   const AUTH_WORKER = 'https://propbetedge-nfl-auth.sales-fd3.workers.dev';
-  const STORAGE = 'pbe_nfl_pending_plan_v6';
+  const STORAGE = 'pbe_nfl_pending_plan_v7';
   const PLANS = {
     monthly: {
       label: 'Monthly',
       badge: 'Best value',
       price: '$9.99',
       detail: '/ month',
+      priceId: 'price_1UEWAXF3CaVzg4ORGlsgboLq',
       term: 'Founding Season rate · Renews monthly · Cancel anytime',
       url: 'https://buy.stripe.com/eVqeVd1rUcyG5tz2gb7wA0y'
     },
@@ -33,6 +34,7 @@
       badge: 'Flexible',
       price: '$3.99',
       detail: '/ week',
+      priceId: 'price_1UEWAOF3CaVzg4ORjkWpwOz9',
       term: 'Founding Season rate · Renews weekly · Cancel anytime',
       url: 'https://buy.stripe.com/9B628rb2udCK5tzf2X7wA0x'
     }
@@ -42,6 +44,10 @@
   let checkoutRunning = false;
 
   function state() { return window.PBEPro?.state || {}; }
+  function planKey(ref) {
+    if (PLANS[ref]) return ref;
+    return Object.keys(PLANS).find(key => PLANS[key].priceId === ref || PLANS[key].url === ref) || null;
+  }
   function selectedKey() {
     try {
       const key = localStorage.getItem(STORAGE);
@@ -170,17 +176,23 @@
     return url.toString();
   }
 
-  function startCheckout() {
-    if (checkoutRunning) return;
+  function startCheckout(ref = null) {
+    if (checkoutRunning) return false;
     const email = emailValue();
-    if (!validEmail(email)) return message('Enter the email you want tied to NFL Pro.', 'error');
-    const key = selectedKey();
+    if (!validEmail(email)) {
+      message('Enter the email you want tied to NFL Pro.', 'error');
+      return false;
+    }
+    const requested = planKey(ref);
+    const key = requested || selectedKey();
     const plan = PLANS[key] || PLANS.monthly;
+    if (requested) setSelected(requested);
     checkoutRunning = true;
     const btn = document.getElementById('pbe-funnel-checkout');
     if (btn) btn.disabled = true;
     message('Opening secure Stripe checkout…');
     window.location.assign(stripeUrl(plan, email));
+    return true;
   }
 
   async function signInExisting() {
@@ -227,7 +239,7 @@
       card.onclick = () => setSelected(card.dataset.funnelPlan);
     });
     const checkout = document.getElementById('pbe-funnel-checkout');
-    if (checkout) checkout.onclick = startCheckout;
+    if (checkout) checkout.onclick = () => startCheckout();
     const signin = document.getElementById('pbe-funnel-signin');
     if (signin) signin.onclick = signInExisting;
     const refresh = document.getElementById('pbe-funnel-refresh');
@@ -266,8 +278,54 @@
     }, 100);
   }
 
+  function updateStructuredData() {
+    for (const node of document.querySelectorAll('script[type="application/ld+json"]')) {
+      try {
+        const data = JSON.parse(node.textContent || '{}');
+        if (data?.name !== 'PropBetEdge NFL') continue;
+        data.offers = [
+          {
+            '@type': 'Offer',
+            name: 'NFL Pro Founding Season Monthly',
+            price: '9.99',
+            priceCurrency: 'USD',
+            description: 'Founding Season NFL Pro access billed monthly. No free trial. Cancel anytime.',
+            url: 'https://nfl.propbetedge.ai/'
+          },
+          {
+            '@type': 'Offer',
+            name: 'NFL Pro Founding Season Weekly',
+            price: '3.99',
+            priceCurrency: 'USD',
+            description: 'Founding Season NFL Pro access billed weekly. No free trial. Cancel anytime.',
+            url: 'https://nfl.propbetedge.ai/'
+          }
+        ];
+        node.textContent = JSON.stringify(data);
+        break;
+      } catch (_) {}
+    }
+  }
+
+  function publishPurchaseContract() {
+    if (!window.PBEPro) return;
+    window.PBEPro.prices = {
+      monthly: PLANS.monthly.priceId,
+      weekly: PLANS.weekly.priceId
+    };
+    window.PBEPro.paymentLinks = {
+      monthly: PLANS.monthly.url,
+      weekly: PLANS.weekly.url
+    };
+    /* The legacy auth-state file still contains its old /api/checkout helper.
+     * Replace the public purchase contract after this terminal authority loads,
+     * so every caller goes browser -> Stripe rather than browser -> Vercel API. */
+    window.PBEPro.checkout = ref => startCheckout(ref);
+  }
+
   function apply() {
     queued = false;
+    publishPurchaseContract();
     mountPurchaseState();
     checkoutReturnMessage();
   }
@@ -277,6 +335,8 @@
     requestAnimationFrame(apply);
   }
   function install() {
+    updateStructuredData();
+    publishPurchaseContract();
     window.addEventListener('pbe:pro-state', queue);
     document.addEventListener('click', event => {
       if (event.target?.closest?.('.pbe-pro-account,[data-pbe-open-pro],[data-pro]')) setTimeout(queue, 20);
