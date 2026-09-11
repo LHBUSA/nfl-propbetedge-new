@@ -164,6 +164,12 @@ ws.onmessage = async ev => {
     send('Fetch.continueRequest', { requestId }).catch(() => {});
     return;
   }
+  /* Real sign-in: the status of the sign-in request, from either form. */
+  if (m.method === 'Network.requestWillBeSent') { seen.methods = seen.methods || new Map(); seen.methods.set(m.params.requestId, m.params.request.method); }
+  if (m.method === 'Network.responseReceived' && /\/api\/auth-email$|\/v1\/auth\/(request|email)$/.test(m.params.response.url.split('?')[0])
+    && seen.methods?.get(m.params.requestId) === 'POST') {
+    seen.authRequest = { status: m.params.response.status, endpoint: new URL(m.params.response.url).pathname };
+  }
   /* Canary: capture every /api/pbe-picks body the page actually received. */
   if (m.method === 'Network.responseReceived' && CANARY && m.params.response.url.includes('/api/pbe-picks')) {
     const { requestId } = m.params; const url = m.params.response.url; const status = m.params.response.status;
@@ -224,24 +230,28 @@ async function realLogin(email, { expectPro }) {
   if (before?.valid) return { ok: false, stage: 'jar_not_empty' };
   /* The real sign-in form, exactly as a customer uses it. */
   const requestedAt = Date.now();
+  seen.authRequest = null;
   const submitted = await evaluate(`(async () => {
     window.PBEPro?.open?.('signin');
     for (let i = 0; i < 40 && !document.querySelector('#pbe-funnel-email, #pbe-pro-email'); i++) await new Promise(r => setTimeout(r, 250));
     const input = [...document.querySelectorAll('#pbe-funnel-email, #pbe-pro-email')].find(el => el.offsetParent !== null) || document.querySelector('#pbe-funnel-email, #pbe-pro-email');
     if (!input) return { ok: false, stage: 'signin_form_missing' };
     const button = input.id === 'pbe-funnel-email' ? document.getElementById('pbe-funnel-signin') : document.getElementById('pbe-pro-signin');
+    if (!button) return { ok: false, stage: 'signin_button_missing' };
     input.focus(); input.value = ${JSON.stringify(email)}; input.dispatchEvent(new Event('input', { bubbles: true }));
-    const sent = new Promise(resolve => {
-      const orig = window.fetch;
-      window.fetch = async (...args) => { const r = await orig(...args); try { if (String(args[0]).includes('/api/auth-email')) resolve(r.status); } catch (_) {} return r; };
-      setTimeout(() => resolve(null), 20000);
-    });
-    button?.click();
-    const status = await sent;
-    return { ok: status === 200, stage: status === 200 ? 'link_sent' : 'auth_email_' + status, form: input.id };
+    button.click();
+    return { ok: true, form: input.id };
   })()`, 30000);
   if (!submitted?.ok) return { ok: false, stage: submitted?.stage || 'signin_failed' };
-  console.log(`LOGIN sign-in link requested for ${mask(email)} through ${submitted.form} (production /api/auth-email)`);
+  /* The two production sign-in paths post to different places (the paywall
+     form to /api/auth-email, the funnel form straight to the auth Worker's
+     /v1/auth/request); both are observed at the network layer, where the page
+     code cannot bypass the check. The response is a status only. */
+  for (let i = 0; i < 40 && !seen.authRequest; i++) await sleep(500);
+  if (!seen.authRequest) return { ok: false, stage: 'signin_request_not_observed' };
+  if (seen.authRequest.status !== 200) return { ok: false, stage: `signin_request_${seen.authRequest.status}` };
+  submitted.endpoint = seen.authRequest.endpoint;
+  console.log(`LOGIN sign-in link requested for ${mask(email)} through the production form #${submitted.form} -> ${submitted.endpoint} (200)`);
 
   if (LINK_DELIVERY === 'resend') {
     const got = await resendLink(email, requestedAt);
