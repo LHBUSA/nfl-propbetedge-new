@@ -8,16 +8,26 @@
  *                        real handler run in-process against the fixture slate
  *                        (tests/fixtures/pbe-card-v3.fixture.mjs); sessions
  *                        are minted exactly like the auth Worker's.
- *   --canary             REAL data, production APIs end to end. Sessions come
- *                        from files the operator saved; they are only ever sent
- *                        to the target origin and never printed:
- *                          PBE_PRO_COOKIE_FILE   pbe_nfl_session_v2 of an NFL Pro account
- *                          PBE_FREE_COOKIE_FILE  pbe_nfl_session_v2 of a signed-in free account
- *                        (PBE_PRO_COOKIE / PBE_FREE_COOKIE env values also work.)
+ *   --canary             REAL data, production APIs end to end. The Pro
+ *                        persona signs in through the real passwordless flow
+ *                        in a fresh browser profile with an empty cookie jar:
+ *                          sign-in form -> /api/auth-email -> emailed one-time
+ *                          link -> /api/auth-verify -> HttpOnly session cookie
+ *                        The session stays opaque browser state: the script
+ *                        never reads, prints or stores the cookie or the link
+ *                        token, and signs out and deletes the profile at the end.
+ *                          PBE_PRO_EMAIL          the NFL Pro account email (required)
+ *                          --link-delivery manual (default) the operator opens the
+ *                                                 emailed link in the canary window
+ *                          --link-delivery resend fetch the email through the Resend
+ *                                                 API with RESEND_API_KEY from the
+ *                                                 operator's environment
  *   --live               use the deployed static files instead of this checkout
  *   --free-only          skip the Pro persona (public half of the canary)
- *   --no-free-account    no signed-in free session exists; the free 403 is
+ *   --no-free-account    no signed-in free account exists; the free 403 is
  *                        covered by the real-handler tests, not reported missing
+ *                        (PBE_FREE_EMAIL runs the free persona through the same
+ *                        real login flow instead)
  *
  * The canary proves one real decision end to end:
  *   persisted nfl_game_picks row (view=decision, Pro)  ->  card response
@@ -25,7 +35,8 @@
  * field by field, and that the same record is unavailable to every non-Pro
  * persona in the DOM, in the page HTML and in every API response.
  *
- *   node scripts/pbe-card-gate.mjs [--canary] [--live] [--free-only] [--out dir] [--widths 1440,390]
+ *   node scripts/pbe-card-gate.mjs [--canary] [--live] [--free-only] [--no-free-account]
+ *        [--link-delivery manual|resend] [--out dir] [--widths 1440,390]
  * Exit 1 on a failed check, 4 when a required persona could not be run.
  */
 import { spawn } from 'node:child_process';
@@ -56,14 +67,16 @@ const PORT = 9800 + Math.floor(Math.random() * 90);
 const SETTLE = Number(arg('settle', '6500'));
 const COOKIE_NAME = 'pbe_nfl_session_v2';
 
-function cookieFrom(envValue, envFile) {
-  let v = String(process.env[envValue] || '').trim();
-  if (!v && process.env[envFile]) { try { v = readFileSync(process.env[envFile], 'utf8').trim(); } catch { v = ''; } }
-  return v.replace(new RegExp(`^${COOKIE_NAME}=`), '').replace(/;.*$/, '').trim();
-}
-const PRO_COOKIE = cookieFrom('PBE_PRO_COOKIE', 'PBE_PRO_COOKIE_FILE');
-const FREE_COOKIE = cookieFrom('PBE_FREE_COOKIE', 'PBE_FREE_COOKIE_FILE');
-if (CANARY && !FREE_ONLY && !PRO_COOKIE) { console.error('canary needs PBE_PRO_COOKIE_FILE (a file holding the pbe_nfl_session_v2 value of a real NFL Pro session)'); process.exit(2); }
+const PRO_EMAIL = String(process.env.PBE_PRO_EMAIL || arg('pro-email', '')).trim().toLowerCase();
+const FREE_EMAIL = String(process.env.PBE_FREE_EMAIL || '').trim().toLowerCase();
+const LINK_DELIVERY = arg('link-delivery', 'manual');
+const LOGIN_TIMEOUT_MS = 15 * 60 * 1000;   // the emailed link's own lifetime
+if (CANARY && !FREE_ONLY && !/^\S+@\S+\.\S+$/.test(PRO_EMAIL)) { console.error('canary needs PBE_PRO_EMAIL (the NFL Pro account that signs in through the real flow)'); process.exit(2); }
+/* The operator watches a real window when they have to open the link. */
+const HEADED = CANARY && !FREE_ONLY && LINK_DELIVERY === 'manual';
+const mask = email => String(email).replace(/^(.).*(@.*)$/, '$1***$2');
+/* Nothing this script prints may carry a sign-in token. */
+const redact = url => String(url).replace(/([?&]token=)[^&#\s]+/gi, '$1[redacted]');
 mkdirSync(OUT, { recursive: true });
 
 /* A well-formed session token with a signature nobody signed. */
@@ -109,12 +122,14 @@ async function fixtureApi(url, persona) {
 /* ---- chrome --------------------------------------------------------------- */
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const dir = mkdtempSync(join(tmpdir(), 'pbe-cardgate-'));
-const chrome = spawn(CHROME, [`--remote-debugging-port=${PORT}`, `--user-data-dir=${dir}`, '--headless=new', '--no-first-run',
-  '--no-default-browser-check', '--disable-extensions', '--hide-scrollbars', '--force-device-scale-factor=1', 'about:blank'], { stdio: 'ignore' });
+const chrome = spawn(CHROME, [`--remote-debugging-port=${PORT}`, `--user-data-dir=${dir}`, ...(HEADED ? ['--window-size=1440,1000'] : ['--headless=new', '--hide-scrollbars']), '--no-first-run',
+  '--no-default-browser-check', '--disable-extensions', '--force-device-scale-factor=1', 'about:blank'], { stdio: 'ignore' });
 function finish(code) { try { chrome.kill(); } catch {} setTimeout(() => { try { rmSync(dir, { recursive: true, force: true }); } catch {} process.exit(code); }, 300); }
-setTimeout(() => { console.error('HARD_DEADLINE'); finish(3); }, 1200000).unref?.();
+setTimeout(() => { console.error('HARD_DEADLINE'); finish(3); }, 2400000).unref?.();
 async function wsUrl() { for (let i = 0; i < 100; i++) { try { const l = await (await fetch(`http://127.0.0.1:${PORT}/json/list`)).json(); const p = l.find(x => x.type === 'page' && x.webSocketDebuggerUrl); if (p) return p.webSocketDebuggerUrl; } catch {} await sleep(200); } throw new Error('devtools_unavailable'); }
-const ws = new WebSocket(await wsUrl());
+const WS_URL = await wsUrl();
+const PAGE_ID = WS_URL.split('/').pop();
+const ws = new WebSocket(WS_URL);
 await new Promise(r => { ws.onopen = r; });
 let seq = 1; const pending = new Map();
 const send = (method, params = {}) => { const n = seq++; ws.send(JSON.stringify({ id: n, method, params })); return new Promise((res, rej) => pending.set(n, { res, rej })); };
@@ -145,7 +160,7 @@ ws.onmessage = async ev => {
       }
       const local = localFile(request.url);
       if (local) { await send('Fetch.fulfillRequest', { requestId, responseCode: 200, responseHeaders: [{ name: 'content-type', value: local.type }, { name: 'cache-control', value: 'no-store' }], body: local.body.toString('base64') }); return; }
-    } catch (e) { seen.errors.push(`[gate] ${request.url} ${e.message}`); }
+    } catch (e) { seen.errors.push(`[gate] ${redact(request.url)} ${e.message}`); }
     send('Fetch.continueRequest', { requestId }).catch(() => {});
     return;
   }
@@ -161,12 +176,106 @@ await send('Network.setCacheDisabled', { cacheDisabled: true });
 await send('Fetch.enable', { patterns: [{ urlPattern: `${ORIGIN}/*`, requestStage: 'Request' }] });
 const evaluate = async (expr, ms = 25000) => { try { const r = await Promise.race([send('Runtime.evaluate', { expression: expr, returnByValue: true, awaitPromise: true }), sleep(ms).then(() => { throw new Error('WEDGED'); })]); return r.result?.value; } catch (e) { return { __error: e.message }; } };
 
+async function clearSessionState() {
+  await send('Network.clearBrowserCookies');
+  await send('Storage.clearDataForOrigin', { origin: ORIGIN, storageTypes: 'all' }).catch(() => {});
+}
+/* Canary personas never hold a copied session. 'pro' (and 'free' when
+   PBE_FREE_EMAIL is given) come from realLogin(); 'forged' gets a token
+   nobody signed; 'anonymous' gets nothing. */
 async function setPersona(p) {
   persona = p;
-  await send('Network.clearBrowserCookies');
-  if (!CANARY) return;
-  const value = p === 'pro' ? PRO_COOKIE : p === 'free' ? FREE_COOKIE : p === 'forged' ? FORGED : '';
-  if (value) await send('Network.setCookie', { name: COOKIE_NAME, value, url: ORIGIN, secure: true, httpOnly: true, sameSite: 'Lax' });
+  if (!CANARY) { await send('Network.clearBrowserCookies'); return; }
+  if (p === 'pro' || p === 'free') return;
+  await clearSessionState();
+  if (p === 'forged') await send('Network.setCookie', { name: COOKIE_NAME, value: FORGED, url: ORIGIN, secure: true, httpOnly: true, sameSite: 'Lax' });
+}
+
+/* ---- real passwordless login ------------------------------------------------
+   Drives the production sign-in UI, then waits until /api/auth-session in this
+   browser reports the expected entitlement. The emailed link is either opened
+   by the operator in this window (manual) or fetched through the Resend API
+   and navigated to here (resend). Only booleans and stages are printed. */
+const SESSION_PROBE = `fetch('/api/auth-session', { credentials: 'same-origin', cache: 'no-store' }).then(r => r.json()).then(s => ({ valid: s.valid === true, pro: s.pro === true, stage: String(s.stage || '') })).catch(e => ({ valid: false, pro: false, stage: 'probe_failed' }))`;
+async function resendLink(email, sinceMs) {
+  const key = String(process.env.RESEND_API_KEY || '').trim();
+  if (!key) return { link: null, reason: 'RESEND_API_KEY not in the environment' };
+  const headers = { authorization: `Bearer ${key}`, accept: 'application/json' };
+  for (let i = 0; i < 40; i++) {
+    try {
+      const list = await (await fetch('https://api.resend.com/emails?limit=25', { headers })).json();
+      const hit = (list?.data || []).find(m => (Array.isArray(m.to) ? m.to : [m.to]).map(x => String(x).toLowerCase()).includes(email) && Date.parse(m.created_at) >= sinceMs - 5000);
+      if (hit) {
+        const full = await (await fetch(`https://api.resend.com/emails/${encodeURIComponent(hit.id)}`, { headers })).json();
+        const m = /https:\/\/nfl\.propbetedge\.ai\/api\/auth-verify\?token=[^"'\s<>]+/.exec(`${full?.html || ''} ${full?.text || ''}`);
+        if (m) return { link: m[0].replace(/&amp;/g, '&'), reason: null };
+      }
+    } catch { /* keep polling */ }
+    await sleep(3000);
+  }
+  return { link: null, reason: 'no matching Resend message within 2 minutes' };
+}
+async function realLogin(email, { expectPro }) {
+  await clearSessionState();
+  await send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false });
+  await send('Page.navigate', { url: `${TARGET}/` });
+  await sleep(SETTLE);
+  const before = await evaluate(SESSION_PROBE);
+  if (before?.valid) return { ok: false, stage: 'jar_not_empty' };
+  /* The real sign-in form, exactly as a customer uses it. */
+  const requestedAt = Date.now();
+  const submitted = await evaluate(`(async () => {
+    window.PBEPro?.open?.('signin');
+    for (let i = 0; i < 40 && !document.querySelector('#pbe-funnel-email, #pbe-pro-email'); i++) await new Promise(r => setTimeout(r, 250));
+    const input = [...document.querySelectorAll('#pbe-funnel-email, #pbe-pro-email')].find(el => el.offsetParent !== null) || document.querySelector('#pbe-funnel-email, #pbe-pro-email');
+    if (!input) return { ok: false, stage: 'signin_form_missing' };
+    const button = input.id === 'pbe-funnel-email' ? document.getElementById('pbe-funnel-signin') : document.getElementById('pbe-pro-signin');
+    input.focus(); input.value = ${JSON.stringify(email)}; input.dispatchEvent(new Event('input', { bubbles: true }));
+    const sent = new Promise(resolve => {
+      const orig = window.fetch;
+      window.fetch = async (...args) => { const r = await orig(...args); try { if (String(args[0]).includes('/api/auth-email')) resolve(r.status); } catch (_) {} return r; };
+      setTimeout(() => resolve(null), 20000);
+    });
+    button?.click();
+    const status = await sent;
+    return { ok: status === 200, stage: status === 200 ? 'link_sent' : 'auth_email_' + status, form: input.id };
+  })()`, 30000);
+  if (!submitted?.ok) return { ok: false, stage: submitted?.stage || 'signin_failed' };
+  console.log(`LOGIN sign-in link requested for ${mask(email)} through ${submitted.form} (production /api/auth-email)`);
+
+  if (LINK_DELIVERY === 'resend') {
+    const got = await resendLink(email, requestedAt);
+    if (!got.link) return { ok: false, stage: `resend_retrieval_failed: ${got.reason}` };
+    console.log('LOGIN one-time link retrieved from Resend; opening it in the canary browser');
+    await send('Page.navigate', { url: got.link });   // never printed
+    await sleep(SETTLE);
+  } else {
+    await evaluate(`(() => { const b = document.createElement('div'); b.id = 'pbe-canary-banner'; b.style.cssText = 'position:fixed;left:0;right:0;top:0;z-index:2147483647;padding:14px 18px;background:#d4af37;color:#111;font:700 15px Inter,Arial,sans-serif;text-align:center'; b.textContent = 'PBE CANARY — open the PropBetEdge sign-in email and open its link in a NEW TAB of THIS window (paste it into the address bar). Waiting…'; document.body.appendChild(b); })()`);
+    console.log('LOGIN waiting: open the emailed sign-in link in a new tab of the canary Chrome window (15-minute link).');
+  }
+  const deadline = requestedAt + LOGIN_TIMEOUT_MS;
+  let state = null;
+  while (Date.now() < deadline) {
+    state = await evaluate(SESSION_PROBE);
+    if (state?.valid) break;
+    await sleep(3000);
+  }
+  if (!state?.valid) return { ok: false, stage: `no_session_before_link_expiry (${state?.stage || 'unknown'})` };
+  /* Close any extra tab the operator used; the canary keeps its own. */
+  try {
+    const targets = await (await fetch(`http://127.0.0.1:${PORT}/json/list`)).json();
+    const mine = PAGE_ID;
+    for (const t of targets.filter(t => t.type === 'page' && t.id !== mine)) await fetch(`http://127.0.0.1:${PORT}/json/close/${t.id}`).catch(() => {});
+  } catch { /* nothing to close */ }
+  await evaluate(`document.getElementById('pbe-canary-banner')?.remove()`);
+  const ok = state.valid === true && state.pro === expectPro;
+  return { ok, stage: state.stage, valid: state.valid, pro: state.pro };
+}
+async function endSession() {
+  const out = await evaluate(`fetch('/api/auth-logout', { method: 'POST', credentials: 'same-origin' }).then(r => r.status).catch(() => 0)`);
+  const after = await evaluate(SESSION_PROBE);
+  await clearSessionState();
+  return { logout_status: out, valid_after_logout: after?.valid === true };
 }
 async function open(path, width) {
   await send('Emulation.setDeviceMetricsOverride', { width, height: HEIGHTS[width] || 900, deviceScaleFactor: 1, mobile: width <= 768 });
@@ -332,6 +441,22 @@ const noOverflow = c => ({ name: 'no horizontal overflow', ok: (c?.overflowX ?? 
 let canaryId = null, replacementId = null, activeGame = null; const secrets = new Set();
 if (!FREE_ONLY) {
   await setPersona('pro');
+  if (CANARY) {
+    const login = await realLogin(PRO_EMAIL, { expectPro: true });
+    report.login = { persona: 'pro', email: mask(PRO_EMAIL), delivery: LINK_DELIVERY, ok: login.ok, stage: login.stage, valid: login.valid ?? null, pro: login.pro ?? null };
+    record('pro/real-login', 0, [
+      { name: 'fresh browser context started with an empty cookie jar', ok: login.stage !== 'jar_not_empty' },
+      { name: 'production sign-in flow established a session (/api/auth-session valid=true)', ok: login.valid === true, detail: login.stage },
+      { name: '/api/auth-session reports pro=true', ok: login.pro === true, detail: login.stage },
+    ]);
+    if (!login.ok) {
+      writeFileSync(join(OUT, 'report.json'), JSON.stringify(report, null, 2));
+      console.log(`\nGATE FAILED · real Pro login did not complete (${login.stage})`);
+      await clearSessionState();
+      finish(1);
+      await new Promise(() => {});
+    }
+  }
   for (const width of WIDTHS) {
     seen.errors.length = 0;
     await open('/#pbepicks', width);
@@ -370,18 +495,33 @@ if (!FREE_ONLY) {
   }
 }
 
+/* The Pro session ends here: sign out, clear the jar and site storage. */
+if (CANARY && !FREE_ONLY) {
+  const ended = await endSession();
+  report.session_end = ended;
+  record('pro/session-destroyed', 0, [
+    { name: 'production logout accepted', ok: ended.logout_status === 200, detail: String(ended.logout_status) },
+    { name: 'session no longer valid after logout', ok: ended.valid_after_logout === false },
+  ]);
+}
+
 /* NON-PRO: anonymous, forged cookie, signed-in free account */
 const expected = { anonymous: 401, forged: 401, free: 403 };
 for (const who of ['anonymous', 'forged', 'free']) {
-  if (who === 'free' && CANARY && !FREE_COOKIE) {
+  if (who === 'free' && CANARY && FREE_EMAIL) {
+    const login = await realLogin(FREE_EMAIL, { expectPro: false });
+    record('free/real-login', 0, [{ name: 'free account signed in through the real flow (valid=true, pro=false)', ok: login.ok, detail: login.stage }]);
+    if (!login.ok) continue;
+  }
+  if (who === 'free' && CANARY && !FREE_EMAIL) {
     if (NO_FREE_ACCOUNT) {
       report.personas.free = 'covered by tests/pbe-card-v3.test.mjs: a signed-in free session gets 403 from view=current, view=validation-history and view=decision, and no selection value in any body';
       console.log('NOTE free — no signed-in free account; the 403 is covered by the real-handler contract suite');
       continue;
     }
     incomplete += 1;
-    report.personas.free = 'NOT RUN — PBE_FREE_COOKIE_FILE not supplied';
-    console.log('SKIP free — signed-in free account cookie not supplied (PBE_FREE_COOKIE_FILE)');
+    report.personas.free = 'NOT RUN — no PBE_FREE_EMAIL and no --no-free-account';
+    console.log('SKIP free — set PBE_FREE_EMAIL or pass --no-free-account');
     continue;
   }
   await setPersona(who);
@@ -413,6 +553,7 @@ for (const who of ['anonymous', 'forged', 'free']) {
   }
 }
 
+if (CANARY) await clearSessionState();
 report.failed = failed;
 report.incomplete = incomplete;
 writeFileSync(join(OUT, 'report.json'), JSON.stringify(report, null, 2));
