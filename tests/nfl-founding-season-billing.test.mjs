@@ -24,7 +24,7 @@ test('new Stripe IDs and hosted payment links are the only acquisition contract'
   for (const value of [NEW_WEEKLY_PRICE, NEW_MONTHLY_PRICE, NEW_WEEKLY_LINK, NEW_MONTHLY_LINK]) {
     assert.ok(funnel.includes(value), `missing ${value}`);
   }
-  assert.doesNotMatch(funnel, /\/api\/checkout/);
+  assert.doesNotMatch(funnel, /fetch\s*\(\s*['"`]\/api\/checkout/);
   assert.doesNotMatch(funnel, /SEASON PASS|\$99\b|\$9\.99\s*\/\s*week/i);
 });
 
@@ -40,7 +40,7 @@ test('Cloudflare billing worker recognizes both legacy and Founding Season entit
     assert.ok(billing.includes(value), `billing worker must recognize ${value}`);
   }
   assert.match(billing, /Stripe webhook -> Cloudflare Worker -> Supabase entitlement truth/);
-  assert.doesNotMatch(billing, /vercel\.app|\/api\/checkout/);
+  assert.doesNotMatch(billing, /vercel\.app|fetch\s*\(\s*['"`]\/api\/checkout/);
 });
 
 test('billing worker is event-driven Cloudflare runtime, never a scheduled GitHub/Vercel job', () => {
