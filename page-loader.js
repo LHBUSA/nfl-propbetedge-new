@@ -40,12 +40,17 @@
     {css:'./stats-v2.css',js:'./stats-v2.js'},
     /* 2025 archives. These no longer own the standings/stats routes; they
        register standings2025 / stats2025 and are reached from Archives. */
-    {css:'./standings-v2.css',js:'./standings-v2.js'},
-    {css:'./season-archive-v2.css',js:'./season-archive-v2.js'},
-    {css:'./hof-v2.css',js:'./hof-v2.js'},
-    {css:'./records-v2.css',js:'./records-v2.js'},
-    {css:'./super-bowls-v2.css',js:'./super-bowls-v2.js'},
-    {css:'./draft-review-v2.css',js:'./draft-review-v2.js'},
+    /* LAZY: each of these six is the sole registrant of one archive route and
+       is referenced by nothing else, so it loads when its route is opened
+       rather than on every page (12 fewer requests on every other route).
+       Their stylesheets are inserted at this manifest position when they do
+       load, so the cascade they were designed against is unchanged. */
+    {css:'./standings-v2.css',js:'./standings-v2.js',lazy:'standings2025'},
+    {css:'./season-archive-v2.css',js:'./season-archive-v2.js',lazy:'seasonhistory'},
+    {css:'./hof-v2.css',js:'./hof-v2.js',lazy:'hof'},
+    {css:'./records-v2.css',js:'./records-v2.js',lazy:'records'},
+    {css:'./super-bowls-v2.css',js:'./super-bowls-v2.js',lazy:'sb'},
+    {css:'./draft-review-v2.css',js:'./draft-review-v2.js',lazy:'prospects'},
     {css:'./newsroom-v2.css',js:'./newsroom-v2.js'},
     {css:'./news-intelligence-v2.css',js:'./news-intelligence-v2.js'},
 
@@ -230,13 +235,53 @@
 
   let proSyncRun=0;
 
-  function addCss(href){
+  function addCss(href,before=null){
     if(document.querySelector(`link[data-pbe-upgrade="${href}"]`))return;
     const link=document.createElement('link');
     link.rel='stylesheet';
     link.href=`${href}?v=${VERSION}`;
     link.dataset.pbeUpgrade=href;
-    document.head.appendChild(link);
+    if(before&&before.parentNode)before.parentNode.insertBefore(link,before);
+    else document.head.appendChild(link);
+  }
+
+  /* ---- Lazy archive routes ------------------------------------------------
+     The stub is a real view: it paints the loading state, fetches the
+     module once, and the module's own App.VIEWS registration replaces the
+     stub and replays the route through app-core's proxy. A deep link to an
+     archive route therefore boots on the stub instead of waiting for the
+     manifest. */
+  function nextEagerLink(item){
+    const i=upgrades.indexOf(item);
+    for(const next of upgrades.slice(i+1)){
+      if(!next.css||next.lazy)continue;
+      const link=document.querySelector(`link[data-pbe-upgrade="${next.css}"]`);
+      if(link)return link;
+    }
+    return null;
+  }
+  function installLazyRoutes(){
+    if(!window.App?.VIEWS)return;
+    for(const item of upgrades){
+      if(!item.lazy||typeof window.App.VIEWS[item.lazy]==='function')continue;
+      let pending=null;
+      const stub=()=>{
+        const vc=document.getElementById('view-container');
+        if(vc&&!vc.querySelector(`[data-pbe-pending-route="${item.lazy}"]`))vc.innerHTML=`<div class="view-loading" data-pbe-pending-route="${item.lazy}"><div><div class="loading-mark"></div><div class="loading-text">Loading archive…</div></div></div>`;
+        if(!pending){
+          if(item.css)addCss(item.css,nextEagerLink(item));
+          pending=addScript(item.js).catch(error=>{
+            pending=null;
+            console.error('[pbe-lazy-route]',item.lazy,error?.message||error);
+            const host=document.getElementById('view-container');
+            if(host&&window.App?.current===item.lazy)host.innerHTML='<section class="pbe-v2-dashboard"><div class="pbe-v2-market-empty">This archive failed to load. Refresh to retry.</div></section>';
+          });
+        }
+        return pending;
+      };
+      stub.pbeLazy=item.js;
+      window.App.VIEWS[item.lazy]=stub;
+    }
   }
 
   function addScript(src,attempt=0){
@@ -294,9 +339,11 @@
   }
 
   async function load(){
-    upgrades.forEach(item=>{if(item.css)addCss(item.css)});
+    upgrades.forEach(item=>{if(item.css&&!item.lazy)addCss(item.css)});
+    installLazyRoutes();
     try{
       for(const item of upgrades){
+        if(item.lazy)continue;
         await addScript(item.js);
         /* v7 is authoritative, but its legacy install check did not include the
            transient .pbehome6 DOM. Force the handoff immediately on initial home. */
