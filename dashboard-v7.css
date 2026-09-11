@@ -737,7 +737,7 @@ body::after{
 .pbe7-tool-top span{
   padding:2px 5px!important;
   border-radius:var(--r-xs)!important;
-  font-size:9px!important;
+  font-size:10px!important; /* design-system floor: nothing renders below 10px */
   letter-spacing:.1em!important;
 }
 .pbe7-tool>b{

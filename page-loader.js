@@ -1,7 +1,7 @@
 /* PropBetEdge NFL - ordered page/product upgrade loader v45 recovery */
 (() => {
   'use strict';
-  const VERSION='20260831injuryreadability1';
+  const VERSION='20260911productdepth1';
   const upgrades=[
     /* Establish the final homepage authority first. v6 replaces the v5 DOM with
        .pbehome6; v7 historically registered itself after that without repainting
@@ -14,8 +14,18 @@
     {css:'./season-state-v1.css',js:'./season-state-v1.js'},
     /* Trust guard must be installed before any surface renders news copy. */
     {js:'./pbe-news-trust.js'},
-    {css:'./dashboard-v5.css',js:'./dashboard-v5.js'},
-    {css:'./dashboard-v6.css',js:'./dashboard-v6.js'},
+    /* Dashboard v5 and v6 are out of the runtime. Both registered
+       App.VIEWS.home and both ran a full scoreboard + event + news round on
+       every boot of the home route, before v7 replaced them: three dashboards
+       fetching for one screen (measured: 28 /api/nfl-live and 14
+       /api/news-feed requests in a cold dashboard's first 12 seconds). v7
+       never needed them — it only seeded its state from theirs.
+
+       The Sunday Command Center loads before v7 because v7 calls into it
+       after every paint; What Changed and Best Line share its sources. */
+    {css:'./nfl-command-center-v1.css',js:'./nfl-command-center-v1.js'},
+    {css:'./what-changed-v1.css',js:'./what-changed-v1.js'},
+    {css:'./best-line-v1.css',js:'./best-line-v1.js'},
     {css:'./dashboard-v7.css',js:'./dashboard-v7.js'},
     {css:'./dashboard-v8-enhance.css',js:'./dashboard-v8-enhance.js'},
     {js:'./dashboard-v7-sanitize.js'},
@@ -87,6 +97,10 @@
        never registers a route or renders the container itself. */
     {css:'./pbecast-v6.css',js:'./pbecast-v6.js'},
     {css:'./pbecast-v7-enhance.css',js:'./pbecast-v7-enhance.js'},
+    /* Additive like v7: the Sunday board, around-the-league feed, key
+       moments / replay v0 and before-kickoff context. No transport, no timer,
+       no route registration. */
+    {css:'./pbecast-command-v1.css',js:'./pbecast-command-v1.js'},
     {css:'./stadium-selector-v1.css',js:'./stadium-selector-v1.js'},
     {css:'./production-polish-v2.css',js:'./production-polish-v2.js'},
 

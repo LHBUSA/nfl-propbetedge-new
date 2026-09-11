@@ -248,6 +248,7 @@
   const lanes={state:{gen:0,timer:null,busy:false,ctrl:null},live:{gen:0,timer:null,busy:false,ctrl:null},detail:{gen:0,timer:null,busy:false,ctrl:null},board:{gen:0,timer:null,busy:false,ctrl:null}};
 
   const mounted=()=>!!document.querySelector('.pbecast6');
+  const anyLive=()=>games().some(g=>String(g?.status?.semantics||'').toUpperCase()==='LIVE');
   const visible=()=>document.visibilityState!=='hidden';
 
   function clockSeconds(v){const m=/^(\d+):(\d{2})$/.exec(String(v??'').trim());return m?Number(m[1])*60+Number(m[2]):null}
@@ -472,7 +473,11 @@
        is not enough on its own: a request already in flight when the tab is
        hidden re-arms its lane as it settles. */
     if(!mounted()||!visible())return;
-    l.timer=setTimeout(()=>{if(mounted()&&visible())fn()},isLive()?CADENCE[name].on:CADENCE[name].off);
+    /* The board lane serves the whole slate, so it runs at the live cadence
+       while ANY game is live — not only the focused one. A finished featured
+       game used to leave eleven live games refreshing every 30s. */
+    const hot=name==='board'?(isLive()||anyLive()):isLive();
+    l.timer=setTimeout(()=>{if(mounted()&&visible())fn()},hot?CADENCE[name].on:CADENCE[name].off);
   }
 
   /* Fast state. Deliberately the smallest request PBEcast makes (~2KB) and the

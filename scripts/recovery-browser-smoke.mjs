@@ -58,7 +58,9 @@ async function activeNav(route){return probe(`(()=>{const all=[...document.query
    present -- it passed through the Sep 7 rollback because production had lost
    those routes. The assertion is unchanged in strength: every expected primary
    route must still exist, exactly once, with exactly one active. */
-const primaryRoutes=['home','games','propboard','pbecast','marketwatch','picks','pbepicks','trackrecord','matchups','usage','injuries','newsintel','qbdna','wrdna','rbdna','tedna'];
+/* 2026-09-11: Changes (What Changed) and Best Line joined TODAY as steps of
+   the game-day loop. Same assertion strength: each must exist exactly once. */
+const primaryRoutes=['home','games','changes','propboard','bestline','pbecast','marketwatch','picks','pbepicks','trackrecord','matchups','usage','injuries','newsintel','qbdna','wrdna','rbdna','tedna'];
 const researchRoutes=['simulator','sgplab','propchain','teams','standings','stats','seasonhistory','records','hof','sb','prospects','trades'];
 const routes=[...primaryRoutes,...researchRoutes,'home'];
 const captureRoutes=new Set(['games','propboard','marketwatch','picks','pbepicks','trackrecord','usage','propchain','pbecast','newsintel','matchups','injuries','home']);

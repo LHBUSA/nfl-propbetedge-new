@@ -16,6 +16,8 @@
     tedna:['TE DNA','Red zone role · QB connection · props · conditions'],
     'te-dna':['TE DNA','Red zone role · QB connection · props · conditions'],
     games:['Games & Schedule','2026 factual schedule · event handoff · score semantics'],
+    changes:['What Changed','Injury designations · game status · market moves · weather'],
+    bestline:['Best Line','Price shopping across books · scheduled market snapshot'],
     propboard:['Prop Board','Current sportsbook pricing · free market layer'],
     marketwatch:['Market Watch','Cross-book dispersion · local baseline movement · NFL Pro'],
     matchups:['Matchup Research','Selected-event market · news · historical context'],

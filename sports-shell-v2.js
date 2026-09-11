@@ -62,8 +62,12 @@
   const NAV_ROWS=[
     [
       ['TODAY',[
-        ['home','Dashboard',''],['games','Games',''],
-        ['propboard','Props',''],['pbecast','PBEcast','cast']
+        /* Changes and Best Line are steps of the game-day loop (what moved,
+           where the number is), so they sit in TODAY. The row wraps PLAYER DNA
+           to a second line at 1440 by design — see the wrap note in
+           sports-shell-v3.css — rather than hiding a destination. */
+        ['home','Dashboard',''],['games','Games',''],['changes','Changes',''],
+        ['propboard','Props',''],['bestline','Best Line',''],['pbecast','PBEcast','cast']
       ]],
       ['INTELLIGENCE',[
         ['marketwatch','Market Watch',''],['picks','Model Lab',''],

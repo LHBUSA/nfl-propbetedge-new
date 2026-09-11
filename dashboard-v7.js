@@ -71,7 +71,10 @@
     const candidates = imagesOf(x);
     const primary = candidates[0] || STADIUM;
     const fallback = candidates[1] || STADIUM;
-    return `<img class="${cls}" src="${esc(primary)}" data-fallback="${esc(fallback)}" data-stadium="${esc(STADIUM)}" alt="${esc(x?.image_alt || titleOf(x) || 'NFL newsroom')}" ${eager ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async">`;
+    /* Intrinsic dimensions reserve the box before the image arrives; CSS
+       still sizes both variants to their frame (width/height 100%, cover). */
+    const dims = eager ? 'width="1200" height="800"' : 'width="252" height="168"';
+    return `<img class="${cls}" src="${esc(primary)}" ${dims} data-fallback="${esc(fallback)}" data-stadium="${esc(STADIUM)}" alt="${esc(x?.image_alt || titleOf(x) || 'NFL newsroom')}" ${eager ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async">`;
   }
 
   function fmtDate(value) {
@@ -132,7 +135,7 @@
     const name = team?.display_name || team?.name || (side === 'away' ? 'Away' : 'Home');
     const abbr = team?.abbreviation || name.slice(0, 3).toUpperCase();
     return `<div class="pbe7-team ${side}">
-      <div class="pbe7-team-logo">${team?.logo ? `<img src="${esc(team.logo)}" alt="${esc(name)} logo" decoding="async">` : `<b>${esc(abbr)}</b>`}</div>
+      <div class="pbe7-team-logo">${team?.logo ? `<img src="${esc(team.logo)}" width="96" height="96" alt="${esc(name)} logo" decoding="async">` : `<b>${esc(abbr)}</b>`}</div>
       <div class="pbe7-team-copy"><strong>${esc(abbr)}</strong><span>${esc(name)}</span><small>${esc(teamRecord(team))}</small></div>
     </div>`;
   }
@@ -152,7 +155,7 @@
     const rows = leaders().filter(row => row?.athlete?.name);
     if (!rows.length) return '';
     return `<div class="pbe7-leaders">${rows.map(row => `<div class="pbe7-leader">
-      ${row?.athlete?.headshot ? `<img src="${esc(row.athlete.headshot)}" alt="${esc(row.athlete.name)}" decoding="async">` : ''}
+      ${row?.athlete?.headshot ? `<img src="${esc(row.athlete.headshot)}" width="44" height="44" alt="${esc(row.athlete.name)}" loading="lazy" decoding="async">` : ''}
       <div><span>${esc(row.display_name || row.category || 'Game leader')}</span><b>${esc(row.athlete.name)}</b><strong>${esc(row.value || '')}</strong></div>
     </div>`).join('')}</div>`;
   }
@@ -183,7 +186,8 @@
     const home = game?.teams?.home || {};
     const venue = [game?.venue?.name, [game?.venue?.city, game?.venue?.state].filter(Boolean).join(', '), arr(game?.broadcast).join(' / ')]
       .filter(Boolean).join(' · ');
-    const source = state.detail?.source?.provider || state.scoreboard?.source?.provider || 'NFL live source';
+    const provider = String(state.detail?.source?.provider || state.scoreboard?.source?.provider || '');
+    const source = /espn/i.test(provider) ? 'ESPN' : provider ? provider.replace(/_/g, ' ').toUpperCase() : 'NFL live source';
 
     return `<section class="pbe7-hero" style="--pbe7-away:#${esc(String(away?.color || '15263d').replace('#',''))};--pbe7-home:#${esc(String(home?.color || '31233f').replace('#',''))}">
       <div class="pbe7-hero-noise"></div>
@@ -258,15 +262,22 @@
   }
 
   function markup() {
-    return `<section class="pbehome7" data-stale="${state.error ? 'true' : 'false'}">${hero()}<div class="pbe7-main">${news()}${tools()}</div></section>`;
+    /* Two slots owned by the Sunday Command Center (nfl-command-center-v1.js):
+       the slate above the featured game, and What Changed / PBE Picks / Best
+       Line below it. They are empty here; the command center fills them from
+       its own state after every paint, so this markup signature — and the
+       repaint decision it drives — is unaffected by what they contain. */
+    return `<section class="pbehome7" data-stale="${state.error ? 'true' : 'false'}"><div class="pbecc-slot" data-cc-slot="top"></div>${hero()}<div class="pbecc-slot" data-cc-slot="intel"></div><div class="pbe7-main">${news()}${tools()}</div></section>`;
   }
 
   function wire(root) {
     root.querySelectorAll('[data-route]').forEach(el => el.addEventListener('click', () => window.App?.nav?.(el.dataset.route)));
-    root.querySelectorAll('[data-cast]').forEach(el => el.addEventListener('click', () => {
-      const id = el.dataset.cast;
+    /* PBEcast v4/v5 are out of the runtime, so focusing through them silently
+       opened whatever game PBEcast chose. v6 consumes a one-shot session
+       handoff on mount (the same one PBE Breaking uses). */
+    root.querySelectorAll('.pbe7-hero [data-cast]').forEach(el => el.addEventListener('click', () => {
+      try { sessionStorage.setItem('pbe.pbecast.focus', JSON.stringify({ game_id: el.dataset.cast })); } catch (_) {}
       window.App?.nav?.('pbecast');
-      setTimeout(() => window.PBEcastV5?.focus?.(id) || window.PBEcastV4?.focus?.(id), 180);
     }));
     root.querySelector('[data-pro]')?.addEventListener('click', () => window.PBEPro?.open?.('account'));
 
@@ -316,9 +327,45 @@
     container.innerHTML = html;
     state.lastMarkup = html;
     wire(container.querySelector('.pbehome7'));
+    window.PBECommandCenter?.mount?.();
   }
 
-  async function load() {
+  /* load() is called from several boot paths on the same page load — the
+     loader's explicit handoff, install(), the route replay after every module
+     and pbe:upgrades-ready. Each used to start its own scoreboard + event +
+     news round, so a cold dashboard spent ~28 /api/nfl-live and ~14
+     /api/news-feed requests in its first twelve seconds. Concurrent calls now
+     share one round, and a round younger than FRESH_MS repaints from state
+     instead of refetching. The 20s poll is the only thing that refetches. */
+  const FRESH_MS = 15000;
+  let inflight = null;
+  let lastRoundAt = 0;
+  function load(options = {}) {
+    if (inflight) return inflight;
+    if (!options.poll && state.scoreboard && Date.now() - lastRoundAt < FRESH_MS) {
+      render();
+      schedule();
+      return Promise.resolve();
+    }
+    inflight = round().finally(() => { inflight = null; });
+    return inflight;
+  }
+
+  /* A hidden tab holds no dashboard poll; returning to it refreshes once. */
+  function schedule() {
+    clearTimeout(state.poll);
+    state.poll = setTimeout(() => {
+      if (!document.querySelector('.pbehome7')) return;
+      if (document.visibilityState === 'hidden') return;
+      load({ poll: true });
+    }, 20000);
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') { clearTimeout(state.poll); return; }
+    if (document.querySelector('.pbehome7')) load({ poll: true });
+  });
+
+  async function round() {
     clearTimeout(state.poll);
     state.error = null;
     try {
@@ -337,11 +384,10 @@
       state.error = error instanceof Error ? error.message : String(error);
       render();
     }
+    lastRoundAt = Date.now();
+    window.PBECommandCenter?.tick?.();
     /* Nothing to refresh once the dashboard is no longer on screen. */
-    clearTimeout(state.poll);
-    state.poll = setTimeout(() => {
-      if (document.querySelector('.pbehome7')) load();
-    }, 20000);
+    schedule();
   }
 
   function install() {
