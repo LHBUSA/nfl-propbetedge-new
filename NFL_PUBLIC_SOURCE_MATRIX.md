@@ -3,7 +3,7 @@
 Branch `prototype/nfl-data-harvest`, cut from the **actual production commit
 `2360156`** (verified from the Vercel deployment with `target: production`, not
 from `main`, which is still behind at `dc60e60`). Isolated git worktree at
-`C:/Workers/nfl-data-harvest`. `prototype/arcade-replay` untouched. No production
+`D:/Workers/nfl-data-harvest`. `prototype/arcade-replay` untouched. No production
 writes, no purchases, no vendor contact, no credentialed or paywalled endpoint,
 no CAPTCHA or auth bypass.
 
