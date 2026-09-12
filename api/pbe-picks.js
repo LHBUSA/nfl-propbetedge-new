@@ -561,6 +561,11 @@ async function modelEvaluations() {
     return {
       available: true,
       contract: body?.contract ?? null,
+      /* The engine's own dispersion. Without it the surface cannot re-state the
+       * latent margin at the best executable line and silently falls back to the
+       * evaluated line, which pairs a consensus-line probability with a
+       * best-line price — the one combination that is not an edge at all. */
+      spread_sigma: body?.spread_sigma ?? null,
       evaluated_at: body?.evaluated_at ?? null,
       tape_captured_at: body?.tape_captured_at ?? null,
       season: body?.season ?? null,
