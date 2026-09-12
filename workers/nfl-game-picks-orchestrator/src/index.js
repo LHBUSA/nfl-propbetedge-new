@@ -112,6 +112,16 @@ export default {
       return engineState(req, env, origin);
     }
 
+    /* Ops-only manual run. POST only: a GET must never mutate the ledger, and
+     * there is deliberately no CORS allowance — this is a server-to-server
+     * curl path, not a browser one. */
+    if (url.pathname === '/v1/engine/run-now') {
+      if (req.method !== 'POST') {
+        return json({ error: 'method_not_allowed', allow: 'POST', service: SERVICE, version: VERSION }, 405, origin, env);
+      }
+      return runNow(req, env, origin);
+    }
+
     return json({ error: 'not_found', service: SERVICE, version: VERSION }, 404, origin, env);
   },
 
@@ -166,6 +176,105 @@ async function scheduledTick(env, event) {
 async function latestTapeCapturedAt(env) {
   const rows = await select(env, 'nfl_odds_snapshots', 'select=captured_at&order=captured_at.desc&limit=1');
   return Array.isArray(rows) && rows[0] ? rows[0].captured_at : null;
+}
+
+/* ---------------------------------------------------------------------------
+ * Manual run (ops)
+ *
+ * Why this exists: the cron honours a cadence (6h off-hours), so triggering the
+ * scheduled path while debugging usually records `skipped/not_due` and does not
+ * refresh last_work. This endpoint bypasses the CADENCE and NOTHING ELSE. It
+ * calls the same runOrchestration() the cron calls, so every champion,
+ * publication, integrity, anomaly and totals gate applies unchanged.
+ *
+ * Auth is a dedicated Worker secret, PICKS_ADMIN_TOKEN, presented as
+ * `Authorization: Bearer <token>`. Unset => fail closed (503): an unconfigured
+ * secret must never mean "open". The token is never echoed in any response.
+ * ------------------------------------------------------------------------ */
+
+const RUN_NOW_LOCK_KEY = `lock:run-now:${SERVICE}`;
+/* Guards a hung run from admitting a second one. */
+const RUN_NOW_LOCK_TTL_S = 300;
+/* Cooldown written once a run settles. 60s is the KV minimum expirationTtl. */
+const RUN_NOW_COOLDOWN_S = 60;
+
+function adminAuth(req, env) {
+  const token = String(env.PICKS_ADMIN_TOKEN || '').trim();
+  /* Fail closed. An absent secret is a misconfiguration, not permission. */
+  if (!token) return { ok: false, status: 503, error: 'admin_token_not_configured' };
+  const header = String(req.headers.get('authorization') || '').trim();
+  const match = /^Bearer\s+(.+)$/i.exec(header);
+  const presented = match ? match[1].trim() : '';
+  if (!presented) return { ok: false, status: 401, error: 'missing_bearer_token' };
+  if (presented.length !== token.length) return { ok: false, status: 403, error: 'invalid_token' };
+  let diff = 0;
+  for (let i = 0; i < token.length; i += 1) diff |= token.charCodeAt(i) ^ presented.charCodeAt(i);
+  if (diff !== 0) return { ok: false, status: 403, error: 'invalid_token' };
+  return { ok: true };
+}
+
+async function runNow(req, env, origin) {
+  const auth = adminAuth(req, env);
+  if (!auth.ok) {
+    return json({ error: auth.error, service: SERVICE, version: VERSION }, auth.status, origin, env);
+  }
+  if (!env.PICKS_KV) {
+    return json({ error: 'picks_kv_unavailable', service: SERVICE, version: VERSION }, 503, origin, env);
+  }
+
+  /* Duplicate-run guard. Two manual runs racing would both reconcile the same
+   * games against the same tape. */
+  const held = await env.PICKS_KV.get(RUN_NOW_LOCK_KEY).catch(() => null);
+  if (held) {
+    return json({
+      error: 'run_already_in_progress', service: SERVICE, version: VERSION, locked_at: held,
+    }, 429, origin, env);
+  }
+  await env.PICKS_KV.put(RUN_NOW_LOCK_KEY, new Date().toISOString(), { expirationTtl: RUN_NOW_LOCK_TTL_S });
+
+  const startedAt = new Date();
+  const base = {
+    version: VERSION,
+    cron: null,
+    trigger: 'manual_admin',
+    started_at: startedAt.toISOString(),
+    tier: 'manual',
+    cadence_reason: 'manual_admin',
+  };
+
+  try {
+    /* nfl-current remains the only slate authority for a manual run too. */
+    const slate = await loadSlate(env);
+    const record = await runOrchestration(env, slate, base);
+    return json({
+      service: SERVICE,
+      version: VERSION,
+      trigger: 'manual_admin',
+      status: record?.status ?? null,
+      reason: record?.reason ?? null,
+      error_class: record?.error_class ?? null,
+      counts: record?.counts ?? null,
+      source_freshness: record?.source_freshness ?? null,
+      started_at: base.started_at,
+      finished_at: record?.finished_at ?? null,
+      detail: record?.detail?.public ?? null,
+    }, 200, origin, env);
+  } catch (error) {
+    const cls = errorClass(error);
+    await recordRun(env, SERVICE, {
+      ...base, status: 'failed', reason: 'current_state_unavailable', error_class: cls,
+    });
+    return json({
+      service: SERVICE, version: VERSION, trigger: 'manual_admin',
+      status: 'failed', reason: 'current_state_unavailable', error_class: cls,
+    }, 502, origin, env);
+  } finally {
+    /* Release the run guard but keep a short cooldown so a fat-fingered repeat
+     * does not immediately re-run. */
+    await env.PICKS_KV
+      .put(RUN_NOW_LOCK_KEY, new Date().toISOString(), { expirationTtl: RUN_NOW_COOLDOWN_S })
+      .catch(() => {});
+  }
 }
 
 /* ---------------------------------------------------------------------------
@@ -344,7 +453,19 @@ async function runOrchestration(env, slate, base) {
   let issuance = null;
   let newestTape = null;
   try {
-    const champion = await latestPromotedWeights(env);
+    /* latestPromotedWeights THROWS 'no_promoted_model' when the table holds no
+     * promoted row. That is a publication gate, not a source failure, so it is
+     * converted to a null champion here — at this call site only, and for that
+     * exact message only. Every other error (Supabase 5xx, network, bad query)
+     * is rethrown so it still lands in the catch below as a runtime failure.
+     * A blanket `.catch(() => null)` would hide real outages behind the gate. */
+    let champion;
+    try {
+      champion = await latestPromotedWeights(env);
+    } catch (error) {
+      if (String(error?.message || error) !== 'no_promoted_model') throw error;
+      champion = null;
+    }
 
     /* ISSUANCE SCOPE. Decided from the champion row's own state before any
      * slate work. An untrained champion still evaluates real slates and
@@ -352,14 +473,40 @@ async function runOrchestration(env, slate, base) {
      * official customer-facing pick. */
     issuance = issuanceScope(champion);
 
+    /* RUNTIME vs DECISION. Reaching this line means the Worker ran, its
+     * bindings resolved and Supabase answered with the champion row — the
+     * runtime did its job. "No promoted champion" is a PUBLICATION gate, not a
+     * runtime fault, so it records status 'ok' and carries the gate in
+     * detail.public. Recording it as 'degraded' pinned laneHealth to DEGRADED
+     * forever (runs.mjs laneHealth), which made a correctly-gated engine
+     * indistinguishable from a broken one. The gate itself is untouched:
+     * nothing is issued below. */
     if (!issuance.canIssue) {
       health.engine_state = issuance.state;
-      await recordRun(env, SERVICE, {
-        ...base, status: 'degraded', reason: `issuance_blocked:${issuance.reason}`,
-        counts, detail: { public: { tier: base.tier, engine_state: issuance.state } },
-      });
-      console.log(`[${SERVICE}] issuance blocked ${issuance.reason} — emitting nothing`);
-      return;
+      const record = {
+        ...base, status: 'ok', reason: `decision_gated:${issuance.reason}`,
+        counts,
+        source_freshness: {
+          current_state_updated: slate.last_updated,
+          current_state_freshness: slate.freshness?.state || null,
+        },
+        detail: {
+          public: {
+            tier: base.tier,
+            cadence_reason: base.cadence_reason ?? null,
+            engine_state: issuance.state,
+            issuance_mode: issuance.mode,
+            decision_state: 'GATED',
+            decision_reason: issuance.reason,
+            publication: 'GATED',
+            season: slate.season,
+            week: slate.week,
+          },
+        },
+      };
+      await recordRun(env, SERVICE, record);
+      console.log(`[${SERVICE}] decision gated ${issuance.reason} — runtime ok, emitting nothing`);
+      return record;
     }
 
     /* Season and week come from nfl-current. So does eligibility: a game is
@@ -376,11 +523,12 @@ async function runOrchestration(env, slate, base) {
       health.engine_state = issuance.scope === SCOPE_TRACKING
         ? UNTRAINED_STATE
         : 'ENGINE WAITING — upcoming slate not ready';
-      await recordRun(env, SERVICE, {
+      const record = {
         ...base, status: 'ok', reason: 'no_issuable_games', counts,
         detail: { public: { tier: base.tier, engine_state: health.engine_state, next_game: null } },
-      });
-      return;
+      };
+      await recordRun(env, SERVICE, record);
+      return record;
     }
 
     const ratings = await teamRatings(env, season);
@@ -524,7 +672,7 @@ async function runOrchestration(env, slate, base) {
     } catch (_) { /* the ledger write below still records the run */ }
 
     const next = games[0];
-    await recordRun(env, SERVICE, {
+    const record = {
       ...base,
       status: couldNotLook ? 'degraded' : 'ok',
       reason: couldNotLook
@@ -560,18 +708,22 @@ async function runOrchestration(env, slate, base) {
           ratings_blocked_reasons: [...blockedReasons].slice(0, 5),
         },
       },
-    });
+    };
+    await recordRun(env, SERVICE, record);
+    return record;
   } catch (error) {
     health.engine_state = 'ENGINE DEGRADED — source unavailable';
     health.last_error_class = errorClass(error);
     console.error(`[${SERVICE}] orchestration failed class=${health.last_error_class}`);
-    await recordRun(env, SERVICE, {
+    const record = {
       ...base,
       status: 'failed',
       error_class: health.last_error_class,
       counts,
       detail: { public: { tier: base?.tier, engine_state: health.engine_state } },
-    });
+    };
+    await recordRun(env, SERVICE, record);
+    return record;
   }
 }
 

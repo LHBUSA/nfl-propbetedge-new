@@ -18,6 +18,12 @@
  */
 
 export const UNTRAINED_STATE = 'ENGINE GATED — MODEL VALIDATION IN PROGRESS';
+/* No promoted champion is a PUBLICATION gate, not a source problem: the
+ * database answered, it simply holds no promoted row. Reporting it as
+ * "source unavailable" made a correctly-gated engine read as a broken one. */
+export const GATED_NO_CHAMPION_STATE = 'ENGINE GATED — NO PROMOTED CHAMPION';
+/* Reserved for GENUINE source failures — Supabase/network/query errors. Those
+ * must stay DEGRADED and must never be reached by the null-champion path. */
 export const DEGRADED_STATE = 'ENGINE DEGRADED — source unavailable';
 
 /* The two publication classes. A prediction declares which it is at issuance
@@ -34,7 +40,7 @@ export function isTrainedChampion(champion) {
 /* The single authority the orchestrator consults before emitting anything. */
 export function championPublishable(champion) {
   if (!champion) {
-    return { publishable: false, state: DEGRADED_STATE, reason: 'no_promoted_champion' };
+    return { publishable: false, state: GATED_NO_CHAMPION_STATE, reason: 'no_promoted_champion' };
   }
   if (champion.promoted === false) {
     return { publishable: false, state: UNTRAINED_STATE, reason: `not_promoted:v${champion.version ?? '?'}` };
@@ -60,13 +66,25 @@ export function championPublishable(champion) {
  * scope; it is a pure function of the champion row's own state.
  */
 export function issuanceScope(champion) {
-  if (!champion || champion.promoted === false) {
+  /* No promoted champion at all: a publication gate, reported as GATED. */
+  if (!champion) {
     return {
       canIssue: false,
       scope: null,
-      mode: 'DEGRADED',
-      state: DEGRADED_STATE,
-      reason: champion ? `not_promoted:v${champion.version ?? '?'}` : 'no_promoted_champion',
+      mode: 'GATED',
+      state: GATED_NO_CHAMPION_STATE,
+      reason: 'no_promoted_champion',
+    };
+  }
+  /* A row that exists but was explicitly un-promoted is also a gate, named for
+   * the version so an operator can see which model was withdrawn. */
+  if (champion.promoted === false) {
+    return {
+      canIssue: false,
+      scope: null,
+      mode: 'GATED',
+      state: GATED_NO_CHAMPION_STATE,
+      reason: `not_promoted:v${champion.version ?? '?'}`,
     };
   }
   if (!isTrainedChampion(champion)) {

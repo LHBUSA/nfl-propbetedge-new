@@ -31,6 +31,19 @@ crons = ["*/15 * * * *"]
 #     token and applies either way.
 #     Do not provision one until a caller actually presents the header; at that
 #     point the SAME value must be set on both sides in the same change.
+#
+#   PICKS_ADMIN_TOKEN          - OPS ONLY. Authorises POST /v1/engine/run-now,
+#     the supported manual "run now" path used when debugging production so an
+#     operator does not have to wait out the 6h off-hours cadence. Presented as
+#     `Authorization: Bearer <token>`.
+#     It bypasses the CADENCE ONLY. Champion, publication, integrity, anomaly
+#     and totals gates all still apply — it calls the same runOrchestration()
+#     the cron calls.
+#     Unset => the endpoint fails CLOSED with 503 admin_token_not_configured.
+#     An absent secret never means open.
+#     Set it with, and only with:
+#       npx wrangler secret put PICKS_ADMIN_TOKEN --config <this file>
+#     Never in this file, never in git, never a GitHub secret.
 
 # Durable run ledger (run:tick|work|ok|err:<lane>). Isolate memory is not
 # evidence that a cron ran; this namespace is.

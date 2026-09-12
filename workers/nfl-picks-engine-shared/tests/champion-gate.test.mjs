@@ -12,7 +12,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 import {
-  championPublishable, isTrainedChampion, UNTRAINED_STATE,
+  championPublishable, isTrainedChampion, UNTRAINED_STATE, DEGRADED_STATE,
 } from '../champion.mjs';
 
 /* Exactly the row the migration seeds. */
@@ -85,11 +85,20 @@ test('an unpromoted challenger cannot publish even when trained', () => {
   assert.match(gate.reason, /not_promoted/);
 });
 
-test('no champion at all is DEGRADED, not gated and not "no picks"', () => {
+test('no champion at all is GATED, and never dressed up as "no picks"', () => {
+  /* This used to assert DEGRADED. That conflated a PUBLICATION gate with a
+   * runtime fault: Supabase answers fine, the table simply holds no promoted
+   * row, and reporting it as "source unavailable" made a correctly-gated
+   * engine indistinguishable from an outage. The invariant that matters is
+   * unchanged — nothing may publish, the reason is explicit, and it is never
+   * presented to a customer as "no qualified picks today". */
   const gate = championPublishable(null);
   assert.equal(gate.publishable, false);
   assert.equal(gate.reason, 'no_promoted_champion');
-  assert.ok(/DEGRADED/.test(gate.state));
+  assert.ok(/GATED/.test(gate.state), gate.state);
+  assert.ok(!/no picks|no qualified/i.test(gate.state), gate.state);
+  /* A genuine source failure keeps its own, different state. */
+  assert.notEqual(gate.state, DEGRADED_STATE);
 });
 
 /* ------------------------------------------------------------------------
@@ -145,7 +154,10 @@ test('the orchestrator returns early when it cannot issue at all, writing nothin
     src.indexOf('const season = slate.season', start),
   );
   assert.ok(/if \(!issuance\.canIssue\)/.test(gateBlock), 'no canIssue check');
-  assert.ok(/\breturn;/.test(gateBlock), 'blocked path must return early');
+  /* The blocked path now returns its run record (so a manual run can report
+   * the gate) rather than a bare `return;`. What matters is unchanged: it
+   * returns BEFORE any slate work, which the no-write assertion pins down. */
+  assert.ok(/\breturn(;| record;)/.test(gateBlock), 'blocked path must return early');
   // Nothing in the blocked branch may write.
   assert.equal(/insert\(|patch\(|upsert\(/.test(gateBlock), false,
     'blocked branch must not write any row');
