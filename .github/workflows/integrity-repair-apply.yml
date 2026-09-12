@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'scripts/apply-nfl-picks-integrity-repair.mjs'
+      - 'scripts/apply-nfl-picks-market-anchor-v2.mjs'
       - '.github/workflows/integrity-repair-apply.yml'
 
 permissions:
@@ -23,7 +24,9 @@ jobs:
           node-version: '22'
 
       - name: Apply integrity repair
-        run: node scripts/apply-nfl-picks-integrity-repair.mjs
+        run: |
+          node scripts/apply-nfl-picks-integrity-repair.mjs
+          node scripts/apply-nfl-picks-market-anchor-v2.mjs
 
       - name: Syntax gate
         run: |
@@ -33,6 +36,7 @@ jobs:
             workers/nfl-weight-tuner/src/index.js \
             workers/nfl-picks-engine-shared/pick-math.mjs \
             workers/nfl-picks-engine-shared/publication.mjs \
+            workers/nfl-picks-engine-shared/tests/acceptance.test.mjs \
             api/pbe-picks.js api/pbe-validation.js
 
       - name: Picks engine regression suite
@@ -54,6 +58,7 @@ jobs:
             workers/nfl-weight-tuner/src/index.js \
             workers/nfl-picks-engine-shared/pick-math.mjs \
             workers/nfl-picks-engine-shared/publication.mjs \
+            workers/nfl-picks-engine-shared/tests/acceptance.test.mjs \
             api/pbe-picks.js api/pbe-validation.js
           git commit -m 'Repair NFL picks probability integrity'
           git push origin HEAD:main
