@@ -1,6 +1,7 @@
-/* nfl-intel — What Changed and Best Line, owned by Cloudflare.
+/* nfl-intel — What Changed, Injury Board and Best Line, owned by Cloudflare.
  *
  *   GET  /api/changes?window_hours=48   sourced changes + game availability
+ *   GET  /api/injuries                  all 32 teams + every current reported injury
  *   GET  /api/best-line?days=8&event=   price shopping over the market snapshot
  *   GET  /api/intel/health              lane health from the durable run ledger
  *   POST /api/intel/run?lane=…          manual lane run (Bearer INTEL_ADMIN_TOKEN)
@@ -25,11 +26,12 @@ import {
 } from './changes-core.js';
 import { summarizeEvent, bookLeaderboard } from './bestline-core.js';
 import { ingestInjuries, KV_KEYS } from './injuries.js';
+import { buildInjuryBoard } from './injury-board.js';
 import { captureMarket, recentRows } from './market.js';
 import { refreshWeather, WX_KEY, WX_MAX_AGE_MS } from './weather.js';
 import { nflverseCode, nflverseGameId } from '../../nfl-picks-engine-shared/current-slate.mjs';
 
-const VERSION = 'nfl-intel/1.0.0';
+const VERSION = 'nfl-intel/1.1.0';
 const INJURY_STALE_MS = 30 * 60000;
 const CORS = {
   'access-control-allow-origin': '*',
@@ -95,6 +97,24 @@ async function runAll(env, { force = false } = {}) {
     });
   }
   return { ms: Date.now() - t, results };
+}
+
+/* ---- GET /api/injuries ---------------------------------------------------- */
+async function injuries(env) {
+  const now = Date.now();
+  const snapshot = await env.INTEL_KV.get(KV_KEYS.report, 'json');
+  if (!snapshot?.report) {
+    return json({
+      ok: false,
+      semantics: 'UNAVAILABLE',
+      error: 'first_ingest_pending',
+      source: { provider: 'espn_core_api_injuries', available: false },
+      runtime: VERSION,
+      generated_at: new Date(now).toISOString()
+    }, 503);
+  }
+  const rows = parseInjuryReport(snapshot.report);
+  return json({ ...buildInjuryBoard(rows, snapshot, { now, staleMs: INJURY_STALE_MS }), runtime: VERSION }, 200, 60);
 }
 
 /* ---- GET /api/changes ------------------------------------------------------ */
@@ -265,6 +285,7 @@ export default {
         return json(await runAll(env, { force: true }));
       }
       if (req.method !== 'GET') return json({ error: 'method_not_allowed' }, 405);
+      if (path === '/api/injuries') return await injuries(env);
       if (path === '/api/changes') return await changes(env, url);
       if (path === '/api/best-line') return await bestLine(env, url);
       if (path === '/api/intel/health' || path === '/health') return await health(env);
