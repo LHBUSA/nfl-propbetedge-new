@@ -1,0 +1,60 @@
+name: NFL Picks Integrity Repair
+
+on:
+  push:
+    branches: [nfl-picks-integrity-repair-v1]
+    paths:
+      - 'scripts/apply-nfl-picks-integrity-repair.mjs'
+      - '.github/workflows/integrity-repair-apply.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply-and-validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: nfl-picks-integrity-repair-v1
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Apply integrity repair
+        run: node scripts/apply-nfl-picks-integrity-repair.mjs
+
+      - name: Syntax gate
+        run: |
+          node scripts/check-syntax.mjs \
+            workers/nfl-game-picks-orchestrator/src/index.js \
+            workers/nfl-game-grader/src/index.js \
+            workers/nfl-weight-tuner/src/index.js \
+            workers/nfl-picks-engine-shared/pick-math.mjs \
+            workers/nfl-picks-engine-shared/publication.mjs \
+            api/pbe-picks.js api/pbe-validation.js
+
+      - name: Picks engine regression suite
+        run: |
+          node --test workers/nfl-picks-engine-shared/tests/*.test.mjs
+          node --test tests/pbe-card-v3.test.mjs tests/pbe-picks-runtime.test.mjs
+
+      - name: Commit generated repair
+        run: |
+          if git diff --quiet; then
+            echo 'No generated changes to commit.'
+            exit 0
+          fi
+          git config user.name 'NFL Integrity Repair'
+          git config user.email 'sales@localhomebuyersusa.com'
+          git add \
+            workers/nfl-game-picks-orchestrator/src/index.js \
+            workers/nfl-game-grader/src/index.js \
+            workers/nfl-weight-tuner/src/index.js \
+            workers/nfl-picks-engine-shared/pick-math.mjs \
+            workers/nfl-picks-engine-shared/publication.mjs \
+            api/pbe-picks.js api/pbe-validation.js
+          git commit -m 'Repair NFL picks probability integrity'
+          git push origin HEAD:nfl-picks-integrity-repair-v1
