@@ -49,7 +49,7 @@ test('matchup comes from the nflverse id, not a schedule lookup', () => {
 
 test('the state views expose decision COUNTS only, never tracking decision content', () => {
   const src = readFileSync(new URL('../api/pbe-picks.js', import.meta.url), 'utf8');
-  const q = src.match(/sb\('nfl_game_picks', 'select=([^&']+)/)[1];
+  const q = src.match(/sb\('nfl_game_picks', '[^']*select=([^&']+)/)[1];
   assert.deepEqual(q.split(',').sort(), ['created_at', 'publication_scope', 'season', 'status']);
   const prop = readFileSync(new URL('../api/pbe-prop-picks.js', import.meta.url), 'utf8');
   assert.match(prop, /select=season,status,publication_scope&limit=5000/);

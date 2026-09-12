@@ -67,7 +67,7 @@ export default async function handler(req, res) {
 
   try {
     const [observationsRaw, receiptsRaw, auditRaw, oddsRaw, championRaw] = await Promise.all([
-      sb('nfl_learning_observations', 'publication_scope=eq.tracking&is_final=eq.true&select=finalized_at,season,week,clv_beat,result,units_delta,brier&order=finalized_at.desc&limit=5000', key),
+      sb('nfl_learning_observations', 'publication_scope=eq.tracking&integrity_status=eq.eligible&is_final=eq.true&select=finalized_at,season,week,clv_beat,result,units_delta,brier&order=finalized_at.desc&limit=5000', key),
       sb('nfl_pick_receipts', 'publication_scope=eq.tracking&select=seq,issued_at,receipt_version,chain_hash&order=seq.desc&limit=1000', key),
       sb('nfl_pick_audit_events', 'select=occurred_at,event_type,model_version&order=occurred_at.desc&limit=12', key),
       sb('nfl_odds_snapshots', 'select=captured_at,market,book&order=captured_at.desc&limit=12', key),

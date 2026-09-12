@@ -48,7 +48,7 @@ const RATINGS = new Map([
   ['NE', { status: 'ok', off_epa_play: -0.04, def_epa_play: 0.02, proe: -0.01, pace: 61, qb_tier: 2 }],
 ]);
 
-const strongQuote = { side: 'SEA -2.5', line: -2.5, price: -110, opposite_price: -110, line_move: 0, selected_is_home: true };
+const strongQuote = { side: 'SEA -2.5', line: -2.5, price: -110, opposite_price: -110, line_move: 0, selected_is_home: true, team: 'SEA', over_under: null };
 
 function observation(over, { week = 1, season = 2026, clvBeat = true, outcome = 1, prob = 0.6 } = {}) {
   return {
@@ -151,19 +151,17 @@ test('[2] a de-vigged fair market yields no edge and therefore no pick', () => {
   assert.equal(d.stake_units, 0);
 });
 
-test('[2] moneyline needs 3% where spread needs 2% — same edge, different verdict', () => {
-  const mk = market => evaluate({
-    game: GAME, market,
-    quote: { ...strongQuote, price: -110, opposite_price: -110 },
-    ratings: RATINGS, weather: null, champion: CHAMPION, season: 2026, week: 1,
-  });
-  const spread = mk('spread');
-  const ml = mk('moneyline');
-  assert.equal(spread.edge_pct.toFixed(6), ml.edge_pct.toFixed(6));
-  if (spread.edge_pct >= 0.02 && spread.edge_pct < 0.03) {
-    assert.equal(spread.qualifies, true);
-    assert.equal(ml.qualifies, false);
-  }
+test('[2] spread and moneyline come from one coherent latent margin', () => {
+  const anchor = { home_win_prob: 0.60, source: 'fixture' };
+  const common = { game: { ...GAME, rest_home: 7, rest_away: 7 }, ratings: RATINGS, weather: null, champion: CHAMPION, season: 2026, week: 1, marketAnchor: anchor };
+  const ml = evaluate({ ...common, market: 'moneyline', quote: { side: 'SEA ML', line: null, price: -150, opposite_price: 130, selected_is_home: true, team: 'SEA', over_under: null } });
+  const spread = evaluate({ ...common, market: 'spread', quote: { side: 'SEA -3.5', line: -3.5, price: -110, opposite_price: -110, selected_is_home: true, team: 'SEA', over_under: null } });
+  assert.ok(spread.model_prob <= ml.model_prob + 1e-6, 'covering -3.5 cannot exceed winning outright');
+
+  const dogMl = evaluate({ ...common, market: 'moneyline', quote: { side: 'NE ML', line: null, price: 130, opposite_price: -150, selected_is_home: false, team: 'NE', over_under: null } });
+  const dogSpread = evaluate({ ...common, market: 'spread', quote: { side: 'NE +3.5', line: 3.5, price: -110, opposite_price: -110, selected_is_home: false, team: 'NE', over_under: null } });
+  assert.ok(dogSpread.model_prob + 1e-6 >= dogMl.model_prob, 'covering +3.5 cannot be less likely than winning outright');
+  assert.ok(Math.abs((ml.model_prob + dogMl.model_prob) - 1) < 1e-6, 'opposite moneylines must be complements');
 });
 
 test('[2] an issued pick records the market terms it was actually taken at', () => {
@@ -480,7 +478,7 @@ test('[inputs] an outdoor venue does record wind and cold flags', () => {
 });
 
 /* --------------------------------------------------------------------------
- * Side attribution end-to-end (launch blocker)
+ * Integrity v2 — canonical perspective, total hold, attribution
  * ----------------------------------------------------------------------- */
 
 const awayQuote = {
@@ -492,49 +490,45 @@ const totalQuote = {
   selected_is_home: false, team: null, over_under: 'OVER',
 };
 
-test('[side] an AWAY selection sets home=0 and uses the away team ratings', () => {
+test('[integrity] home and away selections share one canonical HOME feature snapshot', () => {
   const gameWithRest = { ...GAME, rest_home: 7, rest_away: 4 };
-  const away = evaluate({
-    game: gameWithRest, market: 'spread', quote: awayQuote,
-    ratings: RATINGS, weather: null, champion: CHAMPION, season: 2026, week: 2,
-  });
-  assert.equal(away.features.home, 0);
-  // Away team is on 4 days rest vs home 7 -> negative differential.
-  assert.equal(away.features.rest_diff, -3);
-  assert.equal(away.side, 'NE +2.5');
-});
-
-test('[side] the same game scored for HOME differs from AWAY', () => {
-  const gameWithRest = { ...GAME, rest_home: 7, rest_away: 4 };
-  const common = { game: gameWithRest, market: 'spread', ratings: RATINGS,
-    weather: null, champion: CHAMPION, season: 2026, week: 2 };
+  const anchor = { home_win_prob: 0.58, source: 'fixture' };
+  const common = { game: gameWithRest, market: 'spread', ratings: RATINGS, weather: null, champion: CHAMPION, season: 2026, week: 2, marketAnchor: anchor };
   const home = evaluate({ ...common, quote: { ...strongQuote, team: 'SEA', selected_is_home: true } });
   const away = evaluate({ ...common, quote: awayQuote });
-
+  assert.deepEqual(home.features, away.features, 'quote direction must not change latent team-strength features');
   assert.equal(home.features.home, 1);
-  assert.equal(away.features.home, 0);
   assert.equal(home.features.rest_diff, 3);
-  assert.equal(away.features.rest_diff, -3);
-  // EPA differentials are mirrored, not identical.
-  assert.notEqual(home.features.off_epa_diff, away.features.off_epa_diff);
+  assert.equal(home.selection_team, 'SEA');
+  assert.equal(away.selection_team, 'NE');
+  assert.equal(away.side_is_home, false);
 });
 
-test('[side] a TOTAL carries no team identity and is never marked home', () => {
-  const t = evaluate({
+test('[integrity] totals fail closed until a dedicated expected-total model exists', () => {
+  const over = evaluate({
     game: { ...GAME, rest_home: 7, rest_away: 7 }, market: 'total', quote: totalQuote,
     ratings: RATINGS, weather: null, champion: CHAMPION, season: 2026, week: 2,
   });
-  assert.equal(t.features.home, 0);
-  assert.equal(t.side, 'OVER 44.5');
-  assert.equal(t.market_line, 44.5);
-});
-
-test('[side] a quote missing attribution is never treated as home', () => {
-  const noAttribution = { ...awayQuote, selected_is_home: undefined };
-  const d = evaluate({
-    game: { ...GAME, rest_home: 7, rest_away: 7 }, market: 'spread', quote: noAttribution,
+  const under = evaluate({
+    game: { ...GAME, rest_home: 7, rest_away: 7 }, market: 'total',
+    quote: { ...totalQuote, side: 'UNDER 44.5', over_under: 'UNDER' },
     ratings: RATINGS, weather: null, champion: CHAMPION, season: 2026, week: 2,
   });
-  // Strict === true check means undefined can never become home=1.
-  assert.equal(d.features.home, 0);
+  for (const d of [over, under]) {
+    assert.equal(d.qualifies, false);
+    assert.equal(d.integrity_status, 'MODEL_DISABLED');
+    assert.equal(d.integrity_reason, 'dedicated_total_model_required');
+    assert.equal(d.stake_units, 0);
+  }
+});
+
+test('[integrity] missing team attribution is quarantined, never treated as away', () => {
+  const d = evaluate({
+    game: { ...GAME, rest_home: 7, rest_away: 7 }, market: 'spread',
+    quote: { ...awayQuote, selected_is_home: undefined }, ratings: RATINGS, weather: null,
+    champion: CHAMPION, season: 2026, week: 2, marketAnchor: { home_win_prob: 0.55, source: 'fixture' },
+  });
+  assert.equal(d.integrity_status, 'ANOMALY_REVIEW');
+  assert.equal(d.integrity_reason, 'missing_side_attribution');
+  assert.equal(d.qualifies, false);
 });

@@ -25,7 +25,8 @@ import {
 } from '../../nfl-picks-engine-shared/pick-math.mjs';
 
 const SERVICE = 'nfl-weight-tuner';
-const VERSION = 'v1.0.0';
+const VERSION = 'v1.1.0';
+const INTEGRITY_TUNER_HOLD = true;
 
 export const MIN_GRADED_PICKS = 100;
 export const MIN_DISTINCT_WEEKS = 4;
@@ -104,9 +105,15 @@ async function scheduledTuning(env, event) {
 async function runTuning(env) {
   health.last_cron_run = new Date().toISOString();
   try {
+    if (INTEGRITY_TUNER_HOLD) {
+      health.gate = { graded: 0, distinct_weeks: 0, open: false, reason: 'integrity_v2_training_corpus_pending' };
+      health.last_result = 'gated:integrity_v2_training_corpus_pending';
+      health.last_error_class = null;
+      return;
+    }
     const observations = await select(
       env, 'nfl_learning_observations',
-      'is_final=is.true&select=*&order=season.desc,week.desc&limit=5000',
+      'integrity_status=eq.eligible&is_final=is.true&select=*&order=season.desc,week.desc&limit=5000',
     ) || [];
 
     const gate = gateStatus(observations);

@@ -124,6 +124,70 @@ export function normalQuantile(p) {
 export const SPREAD_SIGMA = 13.86;
 export const TOTAL_SIGMA = 10.5;
 
+/* Integrity v2: ML and spread must come from one latent margin distribution.
+ * A selected team's cover probability is therefore monotone with its straight-
+ * up win probability by construction, not by a UI-level patch. */
+export const EDGE_ANOMALY_WARN = 0.08;
+export const EDGE_ANOMALY_HARD = 0.15;
+
+export function normalCdf(x) {
+  const z = Number(x);
+  if (!Number.isFinite(z)) throw new Error('bad_z');
+  const sign = z < 0 ? -1 : 1;
+  const a = Math.abs(z) / Math.sqrt(2);
+  const t = 1 / (1 + 0.3275911 * a);
+  const erf = 1 - (((((1.061405429 * t - 1.453152027) * t + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t) * Math.exp(-a * a);
+  return 0.5 * (1 + sign * erf);
+}
+
+export function shrinkProbability(prob, factor = 1) {
+  const p = Number(prob), f = Number(factor);
+  if (!(p > 0 && p < 1) || !Number.isFinite(f) || f < 0 || f > 1) throw new Error('bad_shrink');
+  return 0.5 + (p - 0.5) * f;
+}
+
+export function expectedMarginFromWinProbability(homeWinProb, sigma = SPREAD_SIGMA) {
+  const p = Math.max(1e-6, Math.min(1 - 1e-6, Number(homeWinProb)));
+  if (!Number.isFinite(p)) throw new Error('bad_prob');
+  return normalQuantile(p) * sigma;
+}
+
+export function selectedWinProbability(homeWinProb, selectedIsHome) {
+  const p = Number(homeWinProb);
+  if (!(p > 0 && p < 1)) throw new Error('bad_prob');
+  return selectedIsHome ? p : 1 - p;
+}
+
+export function spreadCoverProbability({ homeWinProb, selectedIsHome, line, sigma = SPREAD_SIGMA }) {
+  const l = Number(line);
+  if (!Number.isFinite(l)) throw new Error('bad_line');
+  const homeMargin = expectedMarginFromWinProbability(homeWinProb, sigma);
+  const selectedMargin = selectedIsHome ? homeMargin : -homeMargin;
+  return normalCdf((selectedMargin + l) / sigma);
+}
+
+export function fairSpreadFromMargin({ homeWinProb, selectedIsHome, sigma = SPREAD_SIGMA }) {
+  const homeMargin = expectedMarginFromWinProbability(homeWinProb, sigma);
+  const selectedMargin = selectedIsHome ? homeMargin : -homeMargin;
+  return -selectedMargin;
+}
+
+export function edgeAnomaly(edge) {
+  const e = Number(edge);
+  if (!Number.isFinite(e)) return { hard: true, warn: true, reason: 'edge_not_finite' };
+  if (e > EDGE_ANOMALY_HARD) return { hard: true, warn: true, reason: 'edge_above_15pp' };
+  if (e > EDGE_ANOMALY_WARN) return { hard: false, warn: true, reason: 'edge_above_8pp' };
+  return { hard: false, warn: false, reason: null };
+}
+
+export function monotonicityValid({ winProb, coverProb, line, tolerance = 1e-6 }) {
+  const w = Number(winProb), c = Number(coverProb), l = Number(line);
+  if (![w, c, l].every(Number.isFinite)) return false;
+  if (l < 0) return c <= w + tolerance;
+  if (l > 0) return c + tolerance >= w;
+  return Math.abs(c - w) <= tolerance;
+}
+
 /* Fair spread for the side whose cover probability is `prob`, expressed the
  * way the side is written (favourite negative). */
 export function probToFairSpread(prob, sigma = SPREAD_SIGMA) {

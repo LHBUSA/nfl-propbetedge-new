@@ -83,6 +83,10 @@ orchestrator = replaceOnce(
 
 const anomalyHelper = `async function queueAnomaly(env, { game, market, champion, decisions, season, week }) {\n  const first = decisions[0] || {};\n  const type = first.integrity_reason || 'decision_integrity_failure';\n  try {\n    const existing = await select(\n      env, 'nfl_pick_anomalies',\n      \`game_id=eq.\${encodeURIComponent(game.game_id)}&market=eq.\${market}&model_version=eq.\${champion.version}&anomaly_type=eq.\${encodeURIComponent(type)}&status=eq.open&select=id&limit=1\`,\n    ) || [];\n    if (existing.length) return;\n    await insert(env, 'nfl_pick_anomalies', {\n      game_id: game.game_id, season, week, market, model_version: champion.version,\n      anomaly_type: type, status: 'open',\n      detail: {\n        matchup: \`\${game.away_team} @ \${game.home_team}\`,\n        candidates: decisions.map(d => ({\n          side: d.side, line: d.market_line, model_prob: d.model_prob, market_prob: d.market_prob,\n          edge_pct: d.edge_pct, reason: d.integrity_reason, warning: d.integrity_warning || null,\n        })),\n      },\n    });\n  } catch (error) {\n    console.error(\`[\${SERVICE}] anomaly queue failed class=\${errorClass(error)}\`);\n  }\n}\n\n`;
 orchestrator = replaceOnce(orchestrator, '/* ---------------------------------------------------------------------------\n * Inputs', anomalyHelper + '/* ---------------------------------------------------------------------------\n * Inputs', 'anomaly queue helper');
+orchestrator = replaceOnce(orchestrator,
+  `      env, 'nfl_learning_observations', 'select=week,season,publication_scope&limit=5000',`,
+  `      env, 'nfl_learning_observations', 'integrity_status=eq.eligible&select=week,season,publication_scope&limit=5000',`,
+  'engine state eligible observations');
 write(orchestratorPath, orchestrator);
 
 // ---------------------------------------------------------------------------
@@ -117,10 +121,6 @@ api = replaceOnce(api,
   `    sb('nfl_game_picks', 'select=season,status,publication_scope,created_at&order=created_at.desc&limit=5000', secret)`,
   `    sb('nfl_game_picks', 'integrity_status=eq.eligible&select=season,status,publication_scope,created_at&order=created_at.desc&limit=5000', secret)`,
   'governance eligible decisions');
-api = replaceOnce(api,
-  `      env, 'nfl_learning_observations', 'select=week,season,publication_scope&limit=5000',`,
-  `      env, 'nfl_learning_observations', 'integrity_status=eq.eligible&select=week,season,publication_scope&limit=5000',`,
-  'engine state eligible observations');
 api = replaceOnce(api,
   `  'publication_scope','features','created_text:created_at::text'\n`,
   `  'publication_scope','integrity_status','integrity_reason','features','created_text:created_at::text'\n`,
