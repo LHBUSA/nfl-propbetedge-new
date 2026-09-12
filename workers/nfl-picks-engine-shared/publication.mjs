@@ -225,9 +225,10 @@ export async function verifyReceipt(row, receipt) {
 export function eligibleDecisions(rows, { nowMs, killedIds = new Set(), verified = new Map(), season, week, games = new Map() } = {}) {
   const current = [];
   const withdrawn = [];
-  const excluded = { superseded: 0, withdrawn: 0, stale_final: 0, attribution: 0, receipt_unverified: 0, scope: 0, duplicate_open: 0, other_season: 0 };
+  const excluded = { superseded: 0, withdrawn: 0, stale_final: 0, attribution: 0, receipt_unverified: 0, scope: 0, duplicate_open: 0, other_season: 0, integrity: 0 };
   const openByKey = new Map();
   for (const row of Array.isArray(rows) ? rows : []) {
+    if ((row.integrity_status || 'eligible') !== 'eligible') { excluded.integrity += 1; continue; }
     if (row.publication_scope !== SCOPE_TRACKING && row.publication_scope !== SCOPE_OFFICIAL) { excluded.scope += 1; continue; }
     if (season && Number(row.season) !== Number(season)) { excluded.other_season += 1; continue; }
     const lifecycle = lifecycleOf(row, { nowMs, killedIds, game: games.get(row.game_id) || null });

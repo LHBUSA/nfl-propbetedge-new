@@ -76,10 +76,10 @@ function decisionCounts(rows, season) {
 async function governance(secret) {
   const [weights, observations, current, runtime, decisionRows] = await Promise.all([
     sb('nfl_model_weights', 'promoted=eq.true&select=version,weights,notes,created_at,promoted_at,backtest_clv_beat_pct,backtest_brier,backtest_units&order=version.desc&limit=1', secret),
-    sb('nfl_learning_observations', 'select=season,week,publication_scope&order=finalized_at.desc&limit=5000', secret),
+    sb('nfl_learning_observations', 'integrity_status=eq.eligible&select=season,week,publication_scope&order=finalized_at.desc&limit=5000', secret),
     currentSeason().catch(() => null),
     engineRuntime(GAME_LANES),
-    sb('nfl_game_picks', 'select=season,status,publication_scope,created_at&order=created_at.desc&limit=5000', secret)
+    sb('nfl_game_picks', 'integrity_status=eq.eligible&select=season,status,publication_scope,created_at&order=created_at.desc&limit=5000', secret)
   ]);
   const champion = Array.isArray(weights) && weights.length ? weights[0] : null;
   const trained = isTrained(champion);
@@ -332,7 +332,7 @@ const PICK_COLUMNS = [
   'id','game_id','season','week','kickoff_ts','market','side','market_line','market_price',
   'model_line','model_prob','market_prob','edge_pct','stake_units','confidence_bucket','model_version',
   'selection_team','selection_over_under','side_is_home','status','superseded_by','created_at',
-  'publication_scope','features','created_text:created_at::text'
+  'publication_scope','integrity_status','integrity_reason','features','created_text:created_at::text'
 ].join(',');
 
 /* A verified NFL Pro session, or a response already sent. Fails closed: an
@@ -618,7 +618,7 @@ async function validationHistoryView(req, res, secret) {
   const [state, schedule] = await Promise.all([governance(secret), seasonContext()]);
   const rows = (await sb(
     'nfl_game_picks',
-    `publication_scope=eq.tracking&season=eq.${schedule.season}&status=in.(graded,killed,superseded)&select=${PICK_COLUMNS}&order=kickoff_ts.desc&limit=2000`,
+    `publication_scope=eq.tracking&integrity_status=eq.eligible&season=eq.${schedule.season}&status=in.(graded,killed,superseded)&select=${PICK_COLUMNS}&order=kickoff_ts.desc&limit=2000`,
     secret
   )) || [];
   /* A replaced decision's successor may still be open: read it too. */
