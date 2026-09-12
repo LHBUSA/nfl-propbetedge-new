@@ -2,7 +2,7 @@ name: NFL Picks Integrity Repair
 
 on:
   push:
-    branches: [nfl-picks-integrity-repair-v1]
+    branches: [main]
     paths:
       - 'scripts/apply-nfl-picks-integrity-repair.mjs'
       - '.github/workflows/integrity-repair-apply.yml'
@@ -17,7 +17,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: nfl-picks-integrity-repair-v1
           fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
@@ -41,7 +40,7 @@ jobs:
           node --test workers/nfl-picks-engine-shared/tests/*.test.mjs
           node --test tests/pbe-card-v3.test.mjs tests/pbe-picks-runtime.test.mjs
 
-      - name: Commit generated repair
+      - name: Commit generated repair to main
         run: |
           if git diff --quiet; then
             echo 'No generated changes to commit.'
@@ -57,4 +56,4 @@ jobs:
             workers/nfl-picks-engine-shared/publication.mjs \
             api/pbe-picks.js api/pbe-validation.js
           git commit -m 'Repair NFL picks probability integrity'
-          git push origin HEAD:nfl-picks-integrity-repair-v1
+          git push origin HEAD:main
