@@ -47,7 +47,6 @@ export default {
       if (path.startsWith('/api/stats'))      return await env.NFL_CURRENT.fetch(req);
       if (path.startsWith('/api/picks'))      return await env.NFL_PICKS.fetch(req);
       if (path.startsWith('/api/odds'))       return await env.NFL_ODDS.fetch(req);
-      if (path.startsWith('/api/injuries'))   return await env.NFL_INJURIES.fetch(req);
       if (path.startsWith('/api/schedule'))   return await env.NFL_SCHEDULE.fetch(req);
       if (path.startsWith('/api/news'))       return await env.NFL_NEWS.fetch(req);
       if (path.startsWith('/api/historical')) return await env.NFL_HISTORICAL.fetch(req);
@@ -56,15 +55,16 @@ export default {
       // reads for "what season, week and game state is it"; standings and
       // current-season stats are derived from it on a schedule, never from
       // page traffic and never from another season's numbers.
-      if (path.startsWith('/api/season'))        return await env.NFL_CURRENT.fetch(req);
-      if (path.startsWith('/api/standings'))     return await env.NFL_CURRENT.fetch(req);
+      if (path.startsWith('/api/season'))         return await env.NFL_CURRENT.fetch(req);
+      if (path.startsWith('/api/standings'))      return await env.NFL_CURRENT.fetch(req);
       if (path.startsWith('/api/current-stats'))  return await env.NFL_CURRENT.fetch(req);
       if (path.startsWith('/api/current-player')) return await env.NFL_CURRENT.fetch(req);
-      if (path.startsWith('/api/current/'))      return await env.NFL_CURRENT.fetch(req);
+      if (path.startsWith('/api/current/'))       return await env.NFL_CURRENT.fetch(req);
 
-      // Product intelligence (2026-09-11). What Changed and Best Line are
-      // nfl-intel; PBE Replay's post-game enrichment is nfl-replay. Both are
-      // owned Cloudflare Workers that read persisted state — no Vercel relay.
+      // Product intelligence. Injuries, What Changed and Best Line all read
+      // nfl-intel's persisted scheduled snapshots; page traffic never fans out
+      // to the source. PBE Replay remains owned by nfl-replay.
+      if (path.startsWith('/api/injuries'))      return await env.NFL_INTEL.fetch(req);
       if (path.startsWith('/api/changes'))       return await env.NFL_INTEL.fetch(req);
       if (path.startsWith('/api/best-line'))     return await env.NFL_INTEL.fetch(req);
       if (path.startsWith('/api/replay/'))       return await env.NFL_REPLAY.fetch(req);
