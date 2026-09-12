@@ -17,10 +17,11 @@ test('overlay fills both Best Line model columns', () => {
   assert.match(src, /modelHtml\(event, market, side\)/);
 });
 
-test('non-Pro and missing-signal states are explicit and fail closed', () => {
+test('inactive model markets use one canonical dash while access errors stay explicit', () => {
   assert.match(src, /Model layer locked/);
-  assert.match(src, /No active signal/);
-  assert.match(src, /Best Line will not invent one/);
+  assert.match(src, /pbebl-na\">—/);
+  assert.doesNotMatch(src, /No active signal/);
+  assert.doesNotMatch(src, /Best Line will not invent one/);
   assert.match(src, /No model value is guessed/);
 });
 

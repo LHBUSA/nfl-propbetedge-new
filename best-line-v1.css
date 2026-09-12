@@ -87,3 +87,12 @@
   .pbebl-propbar label{width:100%}.pbebl-propbar select{min-width:0;width:100%}
 }
 @media (max-width:420px){.pbebl-legend{grid-template-columns:1fr}}
+
+/* Explicit slate boundaries and market-specific coverage notes. */
+.pbebl-week{display:grid;gap:var(--s-3,12px)}
+.pbebl-week+.pbebl-week{margin-top:var(--s-4,16px);padding-top:var(--s-4,16px);border-top:1px solid var(--pbe-line-strong)}
+.pbebl-week-head{display:flex;align-items:center;gap:8px;min-height:28px;padding:0 2px;font:700 var(--fs-micro,10px)/1.2 var(--pbe-font-data);letter-spacing:.12em;text-transform:uppercase;color:var(--pbe-faint)}
+.pbebl-week-head b{color:var(--pbe-gold);font:800 12px/1.2 var(--pbe-font-data);letter-spacing:.14em}
+.pbebl-week-head span{border-left:1px solid var(--pbe-line-strong);padding-left:8px}
+.pbebl-table td[data-label="Range"] small{max-width:340px}
+@media (max-width:768px){.pbebl-week+.pbebl-week{margin-top:8px;padding-top:14px}.pbebl-table td[data-label="Range"] small{max-width:none}}

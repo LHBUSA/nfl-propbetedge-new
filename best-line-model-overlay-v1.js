@@ -119,9 +119,9 @@
     if (state !== 'ready') return stateHtml(state);
 
     const card = currentCard(event, market);
-    if (!card) return {
-      fair: '<span class="pbebl-na">No active signal</span><small>No issued PBE value for this market</small>',
-      edge: '<span class="pbebl-na">No active signal</span><small>Best Line will not invent one</small>'
+    if (!card || card.active === false) return {
+      fair: '<span class="pbebl-na">—</span>',
+      edge: '<span class="pbebl-na">—</span>'
     };
 
     const selected = sideSelected(card, market, side);

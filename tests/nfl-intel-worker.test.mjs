@@ -148,19 +148,27 @@ test('GET /api/changes without any ingest says why, not "no changes"', async () 
   assert.equal(body.sources.injuries.reason, 'first_ingest_pending');
 });
 
-test('GET /api/best-line keeps fair value and edge empty and names the snapshot age', async () => {
+test('GET /api/best-line carries week boundaries and explains market-specific book coverage', async () => {
   const snap = { semantics: 'LAST_VERIFIED_MARKET', captured_at: '2026-09-11T12:00:00Z', captured_at_et: 'Sep 11, 8:00 AM ET', age_seconds: 3600, ingest: { status: 'OK' }, events: [
     { id: 'e1', commence_time: new Date(Date.now() + 2 * 86400000).toISOString(), away_team: 'Tampa Bay Buccaneers', home_team: 'Cincinnati Bengals', bookmakers: [
-      { key: 'dk', title: 'DraftKings', markets: [{ key: 'h2h', outcomes: [{ name: 'Tampa Bay Buccaneers', price: 150 }, { name: 'Cincinnati Bengals', price: -175 }] }] }
+      { key: 'dk', title: 'DraftKings', markets: [{ key: 'h2h', outcomes: [{ name: 'Tampa Bay Buccaneers', price: 150 }, { name: 'Cincinnati Bengals', price: -175 }] }] },
+      { key: 'lowvig', title: 'LowVig.ag', markets: [{ key: 'spreads', outcomes: [{ name: 'Tampa Bay Buccaneers', point: 0, price: -110 }, { name: 'Cincinnati Bengals', point: 0, price: -110 }] }] }
     ] }
   ] };
-  const env = { NFL_ODDS: { fetch: async () => respond(snap) } };
+  const env = { NFL_ODDS: { fetch: async () => respond(snap) }, NFL_CURRENT: currentBinding };
   const res = await worker.fetch(new Request('https://x/api/best-line'), env, {});
   const body = await res.json();
   assert.equal(body.window_days, 8, 'absent days is the default window, not one day');
   assert.equal(body.price_semantics, 'SCHEDULED_SNAPSHOT_NOT_LIVE');
+  assert.equal(body.current_week, 1);
+  assert.equal(body.events[0].week, 1);
+  assert.equal(body.events[0].books, 2, 'event header counts every book represented in the snapshot');
   const side = body.events[0].markets.moneyline['Tampa Bay Buccaneers'];
   assert.equal(side.best.price, 150);
+  assert.equal(side.book_count, 1);
+  assert.equal(side.coverage.event_book_count, 2);
+  assert.equal(side.coverage.market_book_count, 1);
+  assert.deepEqual(side.coverage.pickem_spread_books, ['LowVig.ag']);
   assert.equal(side.pbe_fair, null);
   assert.equal(side.model_edge, null);
 });

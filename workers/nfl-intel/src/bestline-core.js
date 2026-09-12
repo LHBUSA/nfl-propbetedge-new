@@ -103,6 +103,18 @@ function bookNoVig(quotes, book, side, other, line) {
 
 export function summarizeMarket(quotes, market, sides) {
   const out = {};
+  const eventBooks = [...new Set(quotes.map(q => q.book))];
+  const marketBooks = [...new Set(quotes.filter(q => q.market === market).map(q => q.book))];
+  const missingBooks = eventBooks.filter(book => !marketBooks.includes(book));
+  const pickemSpreadBooks = market === 'moneyline'
+    ? missingBooks.filter(book => quotes.some(q => q.market === 'spread' && q.book === book && Number(q.line) === 0))
+    : [];
+  const coverage = {
+    event_book_count: eventBooks.length,
+    market_book_count: marketBooks.length,
+    missing_books: missingBooks,
+    pickem_spread_books: pickemSpreadBooks,
+  };
   for (const side of sides) {
     const other = sides.find(s => s !== side);
     const mine = quotes.filter(q => q.market === market && q.side === side);
@@ -131,6 +143,7 @@ export function summarizeMarket(quotes, market, sides) {
       line_range: lines.length ? { low: Math.min(...lines), high: Math.max(...lines) } : null,
       price_range: { low: Math.min(...mine.map(q => q.price)), high: Math.max(...mine.map(q => q.price)) },
       book_count: books.length,
+      coverage,
       quotes: mine
         .map(q => ({ book: q.book, line: q.line, price: q.price, last_update: q.last_update }))
         .sort((a, b) => (lineScore(market, side, b.line ?? 0) - lineScore(market, side, a.line ?? 0)) || (payout(b.price) - payout(a.price))),

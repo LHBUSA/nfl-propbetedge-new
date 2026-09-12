@@ -195,12 +195,25 @@ async function bestLine(env, url) {
   } catch (e) {
     return json({ ok: false, semantics: 'UNAVAILABLE', error: 'odds_snapshot_unreachable', detail: String(e?.message || e), runtime: VERSION }, 502);
   }
+  let slateBody = null;
+  try { slateBody = await currentGames(env); } catch (_) { /* market price shopping remains available */ }
+  const slateGames = slateBody ? gamesFromCurrent(slateBody) : [];
+  const teamKey = value => String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  const matchupKey = (away, home) => `${teamKey(away)}|${teamKey(home)}`;
+  const slateByMatchup = new Map(slateGames.map(g => [matchupKey(g.away?.name, g.home?.name), g]));
   const horizon = now + days * 86400000;
   const events = (Array.isArray(snap?.events) ? snap.events : [])
     .filter(e => (only ? String(e.id) === only : true))
     .filter(e => { const k = Date.parse(e?.commence_time || ''); return Number.isFinite(k) && k <= horizon && k > now - 5 * 3600000; })
-    .map(e => summarizeEvent(e, { now }))
+    .map(e => {
+      const summary = summarizeEvent(e, { now });
+      const slate = slateByMatchup.get(matchupKey(e?.away_team, e?.home_team));
+      return { ...summary, season: slate?.season ?? null, week: slate?.week ?? null };
+    })
     .sort((a, b) => Date.parse(a.kickoff) - Date.parse(b.kickoff));
+  const currentWeekRaw = slateBody?.current_week ?? slateBody?.week;
+  const currentWeek = Number.isFinite(Number(currentWeekRaw)) ? Number(currentWeekRaw)
+    : events.map(e => Number(e.week)).filter(Number.isFinite).sort((a, b) => a - b)[0] ?? null;
   return json({
     ok: true,
     runtime: VERSION,
@@ -212,6 +225,7 @@ async function bestLine(env, url) {
     ingest: snap?.ingest || null,
     source: { provider: snap?.source?.provider || 'the_odds_api', authority: 'nfl-odds scheduled ingest', read_path: 'service-binding kv-snapshot', region: snap?.source?.region || 'us' },
     window_days: days,
+    current_week: currentWeek,
     definitions: {
       best: 'Most favourable number, then best price at it, from one named sportsbook.',
       consensus: 'Median line across books; vig-free probability averaged over books quoting both sides at that line.',
