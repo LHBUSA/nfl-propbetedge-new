@@ -9,7 +9,7 @@ test('status buckets keep restrictive designations together', () => {
   assert.equal(statusBucket('ACTIVE'), 'ACTIVE');
 });
 
-test('board always accounts for all 32 teams and preserves source rows', () => {
+test('board always accounts for all 32 teams, canonicalizes clubs and surfaces stale source state', () => {
   const rows = [
     {
       report_id:'a', status:'OUT', status_label:'Out', updated_at:'2026-09-12T20:00:00.000Z', note:'Will not play.',
@@ -24,17 +24,22 @@ test('board always accounts for all 32 teams and preserves source rows', () => {
       team:{id:'9',abbreviation:'GB',name:'GB'}
     }
   ];
-  const board = buildInjuryBoard(rows, { fetched_at:'2026-09-12T20:05:00.000Z', failed_teams:[], record_failures:0 }, { now:Date.parse('2026-09-12T20:10:00.000Z') });
+  const board = buildInjuryBoard(rows, { fetched_at:'2026-09-12T20:05:00.000Z', failed_teams:['BAL'], record_failures:1 }, { now:Date.parse('2026-09-12T20:10:00.000Z') });
   assert.equal(board.teams.length, 32);
   assert.equal(board.counts.total, 2);
   assert.equal(board.counts.out, 1);
   assert.equal(board.counts.questionable, 1);
+  assert.equal(board.counts.stale_teams, 1);
   assert.equal(board.source.age_seconds, 300);
   assert.equal(board.source.stale, false);
+  assert.equal(board.source.partial, true);
   const min = board.teams.find(team => team.abbreviation === 'MIN');
   assert.equal(min.name, 'Minnesota Vikings');
+  assert.equal(min.injuries[0].team.name, 'Minnesota Vikings');
   assert.equal(min.injuries[0].player.name, 'Alpha Runner');
   assert.equal(min.injuries[0].injury.label, 'Hamstring');
-  const empty = board.teams.find(team => team.abbreviation === 'BAL');
-  assert.deepEqual(empty.injuries, []);
+  const bal = board.teams.find(team => team.abbreviation === 'BAL');
+  assert.equal(bal.source_stale, true);
+  assert.equal(bal.source_status, 'STALE_PREVIOUS_SNAPSHOT');
+  assert.deepEqual(bal.injuries, []);
 });
