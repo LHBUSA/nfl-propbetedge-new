@@ -1,14 +1,31 @@
 /* PropBetEdge NFL — Injury availability readability v5
- * Presentation-only authority. Converts the existing source-disciplined
- * availability board into a true five-column reading surface without changing
- * any injury, status, team, or timeline facts.
- * No mutation observers: route/upgrades events plus a bounded render burst only.
+ * Presentation authority for the editorial availability rows, plus the bounded
+ * bootstrap for the league-wide Injury Command Center. The command center owns
+ * its own transport and DOM and remains additive to the editorial surface.
+ * No mutation observers: route/upgrades events plus bounded render bursts only.
  */
 (() => {
   'use strict';
 
   let burstToken = 0;
   const HEADERS = ['PLAYER','TEAM','INJURY','STATUS','REPORTED TIMELINE'];
+
+  function ensureCommandCenterAssets() {
+    if (!document.querySelector('link[data-pbe-injury-command-css]')) {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = './injury-command-center-v1.css';
+      link.dataset.pbeInjuryCommandCss = '1';
+      document.head.appendChild(link);
+    }
+    if (!window.PBEInjuryCommandCenterV1 && !document.querySelector('script[data-pbe-injury-command-js]')) {
+      const script = document.createElement('script');
+      script.src = './injury-command-center-v1.js';
+      script.async = false;
+      script.dataset.pbeInjuryCommandJs = '1';
+      document.head.appendChild(script);
+    }
+  }
 
   /* The board is a five-column grid, so every row must contribute five cells.
      This used to bail when a row carried no team span, which left that row with
@@ -41,7 +58,9 @@
 
   function enhance() {
     if (window.App?.current !== 'injuries') return false;
+    ensureCommandCenterAssets();
     try { window.PBEInjuryIntelV2?.enhance?.(); } catch {}
+    try { window.PBEInjuryCommandCenterV1?.enhance?.(); } catch {}
 
     const root = document.querySelector('.pbe13-news.pbe13-injury-editorial');
     const board = root?.querySelector('.pbe13-availability-board');
@@ -66,6 +85,7 @@
   }
 
   function burst() {
+    ensureCommandCenterAssets();
     const token = ++burstToken;
     [0,70,180,420,900,1600,2800,4600].forEach(delay => setTimeout(() => {
       if (token === burstToken) enhance();
@@ -77,5 +97,5 @@
   document.addEventListener('DOMContentLoaded', burst, { once: true });
   if (document.readyState !== 'loading') burst();
 
-  window.PBEInjuryReadabilityV5 = { enhance, burst, splitTeamColumn };
+  window.PBEInjuryReadabilityV5 = { enhance, burst, splitTeamColumn, ensureCommandCenterAssets };
 })();

@@ -27,6 +27,10 @@ jobs:
           node --check page-loader.js
           node --check injury-intel-v2.js
           node --check scripts/injury-layout-smoke.mjs
+          node scripts/check-syntax.mjs \
+            injury-command-center-v1.js injury-readability-v5.js \
+            workers/nfl-intel/src/index.js workers/nfl-intel/src/injury-board.js \
+            workers/nfl-gateway/index.js
 
       - name: Observer safety across active runtime
         run: node scripts/scan-observers.mjs
