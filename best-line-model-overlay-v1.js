@@ -114,48 +114,117 @@
     };
   }
 
+  /* ---- evaluations: the model layer Best Line actually renders -------------
+   * Sourced from PBECard.store.data.model_evaluations, which the Pro backend
+   * fetched from the orchestrator's own evaluate() snapshot. A market does NOT
+   * need an issued pick to show fair value; it needs a successful ELIGIBLE
+   * evaluation. Nothing here derives a model number from consensus. */
+
+  function evaluations() {
+    return window.PBECard?.store?.data?.model_evaluations || null;
+  }
+
+  function evalGame(event) {
+    const ev = evaluations();
+    if (!ev?.available) return null;
+    const away = code(event?.away), home = code(event?.home);
+    if (!away || !home) return null;
+    return arr(ev.games).find(g => code(g.away) === away && code(g.home) === home) || null;
+  }
+
+  function evalSide(event, market, side) {
+    const g = evalGame(event);
+    if (!g) return null;
+    const want = code(side?.side);
+    return arr(g.markets).find(m => {
+      if (String(m.market) !== market) return false;
+      if (market === 'total') {
+        return String(m.over_under || '').toUpperCase() === String(side?.side || '').toUpperCase();
+      }
+      return code(m.team) === want || code(m.side) === want;
+    }) || null;
+  }
+
+  /* Freshness: the evaluation instant, and whether the market has moved since. */
+  function staleNote(ev, m) {
+    const evalAt = ev?.evaluated_at || m?.evaluated_at || null;
+    const evalTape = m?.tape_captured_at || ev?.tape_captured_at || null;
+    const shownTape = window.PBECommandCenter?.store?.bestline?.data?.captured_at || null;
+    const moved = evalTape && shownTape && Date.parse(shownTape) > Date.parse(evalTape);
+    return {
+      at: evalAt ? when(evalAt) : '',
+      moved: Boolean(moved),
+      label: moved ? 'market moved since evaluation' : 'evaluated at this tape',
+    };
+  }
+
+  function statusHtml(m) {
+    if (m.integrity_status === 'MODEL_DISABLED') return {
+      fair: '<b>MODEL DISABLED</b><small>Dedicated total model required</small>',
+      edge: '<b>NOT MODELED</b><small>No total model is published</small>'
+    };
+    if (m.integrity_status === 'ANOMALY_REVIEW') return {
+      fair: '<b>QUARANTINED</b><small>Under review · no value published</small>',
+      edge: `<b>REVIEW</b><small>${esc(m.integrity_reason || 'decision integrity')}</small>`
+    };
+    if (m.integrity_status === 'INPUT_UNAVAILABLE') return {
+      fair: '<b>UNAVAILABLE</b><small>Model input missing · nothing estimated</small>',
+      edge: '<b>UNAVAILABLE</b><small>No value is guessed</small>'
+    };
+    return null;
+  }
+
   function modelHtml(event, market, side) {
     const state = accessState();
     if (state !== 'ready') return stateHtml(state);
 
-    const card = currentCard(event, market);
-    if (!card || card.active === false) return {
-      fair: '<span class="pbebl-na">—</span>',
-      edge: '<span class="pbebl-na">—</span>'
-    };
+    const ev = evaluations();
+    const m = evalSide(event, market, side);
 
-    const selected = sideSelected(card, market, side);
-    const selectedProb = n(card?.model?.prob);
-    const selectedMarketProb = n(card?.market_prob);
-    if (!Number.isFinite(selectedProb) || !Number.isFinite(selectedMarketProb)) return stateHtml('unavailable');
+    if (m) {
+      const status = statusHtml(m);
+      if (status) return status;
 
-    const modelProb = selected ? selectedProb : 1 - selectedProb;
-    const marketProb = selected ? selectedMarketProb : 1 - selectedMarketProb;
-    const edge = modelProb - marketProb;
-    const scope = card?.publication_scope === 'official' ? 'OFFICIAL' : 'VALIDATION';
-    const version = esc(card?.model?.version || card?.model_version || '—');
-    const issued = when(card?.issue?.at);
-    const sideNote = selected ? 'SIGNAL SIDE' : 'PAIRED SIDE';
+      if (m.integrity_status === 'ELIGIBLE') {
+        const modelProb = n(m.model_prob);
+        const marketProb = n(m.market_prob);
+        if (!Number.isFinite(modelProb)) return stateHtml('unavailable');
+        const fresh = staleNote(ev, m);
+        const version = esc(ev?.model_version ?? '—');
+        const scope = ev?.trained === true ? 'OFFICIAL' : 'VALIDATION';
 
-    let fair = pct(modelProb);
-    let detail = `PBE probability · ${sideNote}`;
-    const fairLine = n(card?.model?.fair_line);
-    if (market === 'spread' && Number.isFinite(fairLine)) {
-      const value = selected ? fairLine : -fairLine;
-      fair = `${code(side?.side)} ${Math.abs(value) < 0.05 ? 'PK' : signed(value)}`;
-      detail = `${pct(modelProb)} model · ${sideNote}`;
-    } else if (market === 'moneyline') {
-      fair = american(probToAmerican(modelProb));
-      detail = `${pct(modelProb)} model · ${sideNote}`;
-    } else if (market === 'total') {
-      const issueLine = n(card?.issue?.line);
-      detail = `${sideNote}${Number.isFinite(issueLine) ? ` · at issued ${issueLine}` : ''}`;
+        let fair = pct(modelProb);
+        let detail = 'PBE probability';
+        const fairLine = n(m.model_line);
+        if (market === 'spread' && Number.isFinite(fairLine)) {
+          fair = `${code(side?.side)} ${Math.abs(fairLine) < 0.05 ? 'PK' : signed(fairLine)}`;
+          detail = `${pct(modelProb)} model`;
+        } else if (market === 'moneyline') {
+          fair = american(probToAmerican(modelProb));
+          detail = `${pct(modelProb)} model`;
+        }
+
+        /* Edge is the stored model edge when the evaluation and the displayed
+         * tape agree. When the market has moved on, the stored edge is labelled
+         * as of its own snapshot rather than silently compared across tapes. */
+        const storedEdge = n(m.edge_pct);
+        const edgeMain = Number.isFinite(storedEdge) ? pp(storedEdge) : '—';
+        const edgeNote = fresh.moved
+          ? `vs ${pct(marketProb)} at evaluation · ${esc(fresh.label)}`
+          : `vs ${pct(marketProb)} vig-free market`;
+
+        return {
+          fair: `<b>${esc(fair)}</b><small>${esc(detail)}</small><small>${esc(`PBE MODEL · ${scope} v${version}${fresh.at ? ` · ${fresh.at}` : ''}`)}</small>`,
+          edge: `<b>${esc(edgeMain)}</b><small>${edgeNote}</small>`
+        };
+      }
     }
 
-    const meta = `ISSUED MODEL · ${scope} v${version}${issued ? ` · ${esc(issued)}` : ''}`;
+    /* No evaluation for this market yet (engine has not run against this tape). */
+    if (ev && ev.available === false) return stateHtml('unavailable');
     return {
-      fair: `<b>${esc(fair)}</b><small>${esc(detail)}</small><small>${meta}</small>`,
-      edge: `<b>${esc(pp(edge))}</b><small>vs ${esc(pct(marketProb))} issue market · frozen at issue</small>`
+      fair: '<span class="pbebl-na">Not evaluated</span><small>No current model evaluation for this market</small>',
+      edge: '<span class="pbebl-na">Not evaluated</span>'
     };
   }
 
@@ -171,8 +240,12 @@
     ensureProStore();
 
     const data = window.PBECommandCenter?.store?.bestline?.data;
+    const state = accessState();
     for (const event of arr(data?.events)) {
-      const game = document.getElementById(`bl-${CSS.escape(String(event.id || ''))}`);
+      /* getElementById takes a RAW id. CSS.escape is for selectors and escapes a
+       * leading digit (95c0... -> \39 5c0...), so every event id starting with a
+       * digit silently failed to match and its cells were never written. */
+      const game = document.getElementById(`bl-${String(event.id || '')}`);
       if (!game) continue;
       const rows = [...game.querySelectorAll('.pbebl-table > tbody > .pbebl-row')];
       const ordered = [
@@ -185,15 +258,15 @@
         const row = rows[i];
         if (!row) return;
         const model = modelHtml(event, market, side);
-        const sig = `${accessState()}|${event.id}|${market}|${side?.side}|${model.fair}|${model.edge}`;
+        const sig = `${state}|${event.id}|${market}|${side?.side}|${model.fair}|${model.edge}`;
         setCell(row.querySelector('[data-label="PBE fair"]'), model.fair, `fair|${sig}`);
         setCell(row.querySelector('[data-label="Model edge"]'), model.edge, `edge|${sig}`);
       });
     }
 
     const terms = document.querySelectorAll('.pbebl-legend [data-term="fair"] p, .pbebl-legend [data-term="edge"] p');
-    if (terms[0]) terms[0].textContent = 'NFL Pro shows the model value frozen with the current PBE signal. Never estimated from consensus.';
-    if (terms[1]) terms[1].textContent = 'Issue-time PBE probability minus the issue market probability. Current market movement remains separate.';
+    if (terms[0]) terms[0].textContent = 'NFL Pro shows the PBE model value from the current engine evaluation. Never estimated from consensus.';
+    if (terms[1]) terms[1].textContent = 'PBE model probability minus the vig-free market probability at evaluation. Totals are not modelled.';
   }
 
   function queue() {
@@ -211,6 +284,16 @@
     window.addEventListener('pbe:pro-state', queue);
     window.addEventListener('pbe:route-changed', queue);
     window.addEventListener('pbe:upgrades-ready', queue);
+    window.addEventListener('hashchange', queue);
+    /* The rows, the entitlement and the evaluations resolve independently, and
+     * an event can land before the table exists. A short bounded settle keeps a
+     * cell from being left as whatever the table first rendered. */
+    let settles = 0;
+    const settle = setInterval(() => {
+      settles += 1;
+      queue();
+      if (settles >= 20) clearInterval(settle);
+    }, 500);
     queue();
     window.PBEBestLineModelOverlay = { apply, currentCard, modelHtml, accessState };
   }

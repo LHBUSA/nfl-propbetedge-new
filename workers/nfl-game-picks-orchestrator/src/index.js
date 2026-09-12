@@ -112,6 +112,17 @@ export default {
       return engineState(req, env, origin);
     }
 
+    /* Internal model read for the authenticated Pro backend. GET only, no CORS:
+     * the browser never calls this and never holds the token. Separate secret
+     * from PICKS_ADMIN_TOKEN on purpose — a read credential must not be able to
+     * trigger a run, and an ops credential must not be spread to a web tier. */
+    if (url.pathname === '/v1/evaluations/current') {
+      if (req.method !== 'GET') {
+        return json({ error: 'method_not_allowed', allow: 'GET', service: SERVICE, version: VERSION }, 405, origin, env);
+      }
+      return currentEvaluations(req, env, origin);
+    }
+
     /* Ops-only manual run. POST only: a GET must never mutate the ledger, and
      * there is deliberately no CORS allowance — this is a server-to-server
      * curl path, not a browser one. */
@@ -176,6 +187,44 @@ async function scheduledTick(env, event) {
 async function latestTapeCapturedAt(env) {
   const rows = await select(env, 'nfl_odds_snapshots', 'select=captured_at&order=captured_at.desc&limit=1');
   return Array.isArray(rows) && rows[0] ? rows[0].captured_at : null;
+}
+
+/* ---------------------------------------------------------------------------
+ * Internal evaluations read (Phase 4B)
+ *
+ * Serves the sanitized Best Line model snapshot to ONE caller: the
+ * authenticated NFL Pro backend in api/pbe-picks.js. Auth is
+ * PICKS_INTERNAL_TOKEN as the x-pbe-internal-token header — the same secret
+ * isInternal() already documents, now with a real consumer.
+ *
+ * Unset => 503, fail closed. An unconfigured secret is a misconfiguration, not
+ * permission. The token is never echoed and never reaches a browser: the
+ * browser talks to Vercel, Vercel talks to this endpoint.
+ * ------------------------------------------------------------------------ */
+
+async function currentEvaluations(req, env, origin) {
+  const token = String(env.PICKS_INTERNAL_TOKEN || '').trim();
+  if (!token) {
+    return json({ error: 'internal_token_not_configured', service: SERVICE, version: VERSION }, 503, origin, env);
+  }
+  if (!isInternal(req, env)) {
+    const presented = String(req.headers.get('x-pbe-internal-token') || '').trim();
+    return json({
+      error: presented ? 'invalid_internal_token' : 'missing_internal_token',
+      service: SERVICE, version: VERSION,
+    }, presented ? 403 : 401, origin, env);
+  }
+  if (!env.PICKS_KV) {
+    return json({ error: 'picks_kv_unavailable', service: SERVICE, version: VERSION }, 503, origin, env);
+  }
+  const snapshot = await env.PICKS_KV.get(BESTLINE_EVAL_KEY, { type: 'json' }).catch(() => null);
+  if (!snapshot) {
+    return json({
+      service: SERVICE, version: VERSION, contract: 'bestline-model-v2',
+      evaluated_at: null, games: [], reason: 'no_evaluation_snapshot',
+    }, 200, origin, env);
+  }
+  return json({ service: SERVICE, version: VERSION, ...snapshot }, 200, origin, env);
 }
 
 /* ---------------------------------------------------------------------------
@@ -447,6 +496,54 @@ async function engineState(req, env, origin) {
  * caller's copy with finished_at undefined — which is why POST /v1/engine/run-now
  * reported a null completion time for a run that had plainly finished. One
  * timestamp, one object: the response and the durable ledger cannot disagree. */
+/* ---------------------------------------------------------------------------
+ * Best Line model snapshot (Phase 4A)
+ *
+ * Derived from the SAME evaluate() outputs the orchestration loop already
+ * produced. There is no second model path here and no recalculation: this only
+ * reshapes what evaluate() returned into the minimum Best Line needs.
+ *
+ * Deliberately NOT stored: features, raw ratings, coefficient vectors, secrets,
+ * admin metadata. A fair value is carried ONLY for an ELIGIBLE evaluation —
+ * ANOMALY_REVIEW, MODEL_DISABLED and INPUT_UNAVAILABLE keep their status and
+ * reason so the surface can explain itself, but carry no model numbers at all.
+ * ------------------------------------------------------------------------ */
+
+const BESTLINE_EVAL_KEY = 'eval:bestline:v2:current';
+
+function sanitizeEvaluation(d, { market, tapeAt, evaluatedAt }) {
+  const base = {
+    market,
+    side: d.side ?? null,
+    team: d.selection_team ?? null,
+    over_under: d.selection_over_under ?? null,
+    side_is_home: d.side_is_home ?? null,
+    integrity_status: d.integrity_status ?? null,
+    integrity_reason: d.integrity_reason ?? null,
+    integrity_warning: d.integrity_warning ?? null,
+    market_line: d.market_line ?? null,
+    market_price: d.market_price ?? null,
+    evaluated_at: evaluatedAt,
+    tape_captured_at: tapeAt,
+  };
+  /* Model numbers travel only with an ELIGIBLE evaluation. */
+  if (d.integrity_status !== 'ELIGIBLE') {
+    return { ...base, model_prob: null, model_line: null, market_prob: null, edge_pct: null };
+  }
+  return {
+    ...base,
+    model_prob: finiteOrNull(d.model_prob),
+    model_line: finiteOrNull(d.model_line),
+    market_prob: finiteOrNull(d.market_prob),
+    edge_pct: finiteOrNull(d.edge_pct),
+  };
+}
+
+function finiteOrNull(v) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
 async function persistRun(env, record) {
   record.finished_at = record.finished_at || new Date().toISOString();
   await recordRun(env, SERVICE, record);
@@ -456,6 +553,10 @@ async function persistRun(env, record) {
 async function runOrchestration(env, slate, base) {
   resetHealth();
   const evaluations = [];
+  /* Sanitized Best Line model snapshot, built from the same evaluate() calls. */
+  const blGames = [];
+  /* One evaluation instant for the whole run, so every stored side agrees. */
+  const evaluatedAtIso = new Date().toISOString();
   const counts = {
     eligible_games: 0, evaluated_games: 0, no_tape: 0, stale_tape: 0,
     emitted: 0, kept: 0, killed: 0, superseded: 0, pass: 0, ratings_blocked: 0, scope_drain: 0,
@@ -569,7 +670,18 @@ async function runOrchestration(env, slate, base) {
       };
       evaluations.push(record);
 
-      if (!odds.size) { counts.no_tape += 1; record.outcome = 'no_market_tape'; continue; }
+      const blGame = {
+        game_id: game.game_id,
+        away: game.away_team,
+        home: game.home_team,
+        kickoff_ts: game.kickoff_ts,
+        tape_captured_at: tapeAt,
+        books: odds.books || 0,
+        markets: [],
+      };
+      blGames.push(blGame);
+
+      if (!odds.size) { counts.no_tape += 1; record.outcome = 'no_market_tape'; blGame.outcome = 'no_market_tape'; continue; }
       /* Never decide on a market we have not observed recently. */
       if (!tapeAt || now - Date.parse(tapeAt) > TAPE_MAX_AGE_MS) {
         counts.stale_tape += 1;
@@ -590,6 +702,13 @@ async function runOrchestration(env, slate, base) {
 
         const evaluated = quotes.map(quote =>
           evaluate({ game, market, quote, ratings, weather, champion, season, week, marketAnchor }));
+
+        /* Snapshot EVERY evaluated side — issued or not. Best Line shows model
+         * value whenever the engine evaluated the market successfully; it does
+         * not require the edge to have qualified for issuance. */
+        for (const d of evaluated) {
+          blGame.markets.push(sanitizeEvaluation(d, { market, tapeAt, evaluatedAt: evaluatedAtIso }));
+        }
 
         const disabled = evaluated.find(d => d.integrity_status === 'MODEL_DISABLED');
         if (disabled) {
@@ -679,6 +798,23 @@ async function runOrchestration(env, slate, base) {
         at: new Date().toISOString(), scope: issuance.scope, season, games: evaluations,
       }), { expirationTtl: 30 * 86400 });
     } catch (_) { /* the ledger write below still records the run */ }
+
+    /* Best Line model snapshot: the sanitized, stable contract. Same evaluate()
+     * outputs as above, reshaped — never recomputed. Read back only through the
+     * internal-token endpoint, never served publicly. */
+    try {
+      await env.PICKS_KV?.put(BESTLINE_EVAL_KEY, JSON.stringify({
+        contract: 'bestline-model-v2',
+        evaluated_at: evaluatedAtIso,
+        tape_captured_at: newestTape,
+        season,
+        week: slate.week,
+        model_version: champion?.version ?? null,
+        trained: isTrainedChampion(champion),
+        issuance_scope: issuance.scope,
+        games: blGames,
+      }), { expirationTtl: 7 * 86400 });
+    } catch (_) { /* non-fatal: Best Line falls back to its locked state */ }
 
     const next = games[0];
     const record = {

@@ -529,6 +529,54 @@ function eligibilityReport(ctx, { withIds = false } = {}) {
   return report;
 }
 
+/* ---------------------------------------------------------------------------
+ * Model evaluations for Best Line (Phase 4C)
+ *
+ * The orchestrator is the ONE model authority. It writes a sanitized snapshot
+ * of its own evaluate() output to PICKS_KV after every run; this reads it back
+ * over the internal-token endpoint. Nothing here computes or adjusts a model
+ * number, and no fair value is ever derived from consensus.
+ *
+ * Attached to PRO responses only. The internal token stays server-side: the
+ * browser holds a Pro session, this backend holds the token.
+ * ------------------------------------------------------------------------ */
+
+const ENGINE_URL = String(process.env.PICKS_ENGINE_URL || 'https://nfl-game-picks-orchestrator.sales-fd3.workers.dev').replace(/\/$/, '');
+
+async function modelEvaluations() {
+  const token = String(process.env.PICKS_INTERNAL_TOKEN || '').trim();
+  /* No token configured: Best Line shows its locked state rather than a
+   * fabricated one. Never a reason to fail the whole card. */
+  if (!token) return { available: false, reason: 'internal_token_not_configured' };
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 4000);
+  try {
+    const response = await fetch(`${ENGINE_URL}/v1/evaluations/current`, {
+      cache: 'no-store',
+      headers: { accept: 'application/json', 'x-pbe-internal-token': token },
+      signal: controller.signal,
+    });
+    if (!response.ok) return { available: false, reason: `engine_${response.status}` };
+    const body = await response.json();
+    return {
+      available: true,
+      contract: body?.contract ?? null,
+      evaluated_at: body?.evaluated_at ?? null,
+      tape_captured_at: body?.tape_captured_at ?? null,
+      season: body?.season ?? null,
+      week: body?.week ?? null,
+      model_version: body?.model_version ?? null,
+      trained: body?.trained ?? null,
+      issuance_scope: body?.issuance_scope ?? null,
+      games: Array.isArray(body?.games) ? body.games : [],
+    };
+  } catch (error) {
+    return { available: false, reason: error?.name === 'AbortError' ? 'engine_timeout' : 'engine_unreachable' };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function currentView(req, res, secret) {
   const auth = await requirePro(req, res);
   if (!auth) return;
@@ -554,11 +602,16 @@ async function currentView(req, res, secret) {
     health: ctx.state.engine_health, trained: ctx.state.champion_trained, hasPicks: cards.length > 0, gatedState: UNTRAINED_STATE,
   });
 
+  /* Best Line's model layer. Pro-only, by construction: this function is only
+   * reached after requirePro() succeeded. */
+  const evaluations = await modelEvaluations();
+
   return send(res, 200, {
     ...ctx.state,
     contract: CARD_CONTRACT,
     engine_state: engineState,
     display_mode: mode,
+    model_evaluations: evaluations,
     generated_at: new Date(ctx.nowMs).toISOString(),
     season: ctx.season,
     week: ctx.week,

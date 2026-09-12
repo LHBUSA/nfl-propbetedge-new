@@ -18,19 +18,19 @@ crons = ["*/15 * * * *"]
 # Secrets (wrangler secret put):
 #   SUPABASE_SERVICE_ROLE_KEY  - database access. SET.
 #
-#   PICKS_INTERNAL_TOKEN       - NOT SET, and deliberately so. This gates only
-#     the Pro-field enrichment in isInternal() (src/index.js:189). As of
-#     2026-09-12 NOTHING presents the x-pbe-internal-token header: api/pbe-picks.js
-#     reads Supabase directly with the service role key, and api/_pbe-engine-runtime.js
-#     calls only the unauthenticated /v1/engine/runs. No matching variable exists
-#     in the Vercel project either. The earlier claim of an active Vercel proxy
-#     integration here was wrong.
-#     Unset is the correct, fail-closed state: isInternal() returns false, so
-#     /v1/picks/current serves entitlement="public". The customer-facing filter
-#     (publication_scope=eq.official + isCustomerFacing) does NOT depend on this
-#     token and applies either way.
-#     Do not provision one until a caller actually presents the header; at that
-#     point the SAME value must be set on both sides in the same change.
+#   PICKS_INTERNAL_TOKEN       - SET. The model-read credential.
+#     Authorises GET /v1/evaluations/current, which serves the sanitized Best
+#     Line model snapshot to exactly one caller: the authenticated NFL Pro
+#     backend in api/pbe-picks.js. Presented as `x-pbe-internal-token`.
+#     The same value is set on this Worker AND in Vercel production. The browser
+#     never receives it: browser -> Vercel (Pro session) -> this Worker -> KV.
+#     Unset => 503 internal_token_not_configured. Fail closed; an unconfigured
+#     secret never means open.
+#     Kept SEPARATE from PICKS_ADMIN_TOKEN on purpose: a read credential must
+#     not be able to trigger a run, and an ops credential must not be spread to
+#     the web tier.
+#     (Until 2026-09-12 this was deliberately unset because nothing presented
+#     the header. Best Line's model layer is now that caller.)
 #
 #   PICKS_ADMIN_TOKEN          - OPS ONLY. Authorises POST /v1/engine/run-now,
 #     the supported manual "run now" path used when debugging production so an
