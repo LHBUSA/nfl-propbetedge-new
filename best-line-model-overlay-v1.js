@@ -49,6 +49,36 @@
     return namedByLast?.[1] || upper;
   }
 
+  /* Transforms of the STORED v2 latent state. These are byte-equal to
+   * pick-math.mjs (normalCdf, americanToImpliedProb) and are pinned to it by
+   * test. They introduce no model: the latent margin comes from the engine's
+   * own evaluation, and only the NUMBER it is evaluated against changes. */
+  function normalCdf(x) {
+    const z = Number(x);
+    if (!Number.isFinite(z)) return NaN;
+    const sign = z < 0 ? -1 : 1;
+    const a = Math.abs(z) / Math.sqrt(2);
+    const t = 1 / (1 + 0.3275911 * a);
+    const erf = 1 - (((((1.061405429 * t - 1.453152027) * t + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t) * Math.exp(-a * a);
+    return 0.5 * (1 + sign * erf);
+  }
+
+  /* Break-even: the probability the listed price demands. Vig included, because
+   * this is what the bettor must actually beat at that number. */
+  function breakEven(price) {
+    const p = n(price);
+    if (!Number.isFinite(p) || p === 0) return NaN;
+    return p > 0 ? 100 / (p + 100) : Math.abs(p) / (Math.abs(p) + 100);
+  }
+
+  /* Model cover probability at an arbitrary spread number, from the stored
+   * latent margin. spreadCoverProbability() is normalCdf((margin + line)/sigma). */
+  function coverAt(margin, line, sigma) {
+    const m = n(margin), l = n(line), sd = n(sigma);
+    if (!Number.isFinite(m) || !Number.isFinite(l) || !Number.isFinite(sd) || sd <= 0) return NaN;
+    return normalCdf((m + l) / sd);
+  }
+
   function probToAmerican(prob) {
     const p = n(prob);
     if (!Number.isFinite(p) || p <= 0 || p >= 1) return NaN;
@@ -187,35 +217,66 @@
 
       if (m.integrity_status === 'ELIGIBLE') {
         const modelProb = n(m.model_prob);
-        const marketProb = n(m.market_prob);
         if (!Number.isFinite(modelProb)) return stateHtml('unavailable');
         const fresh = staleNote(ev, m);
         const version = esc(ev?.model_version ?? '—');
         const scope = ev?.trained === true ? 'OFFICIAL' : 'VALIDATION';
+        const sigma = n(ev?.spread_sigma);
 
+        /* THE EXECUTABLE NUMBER. This is Best Line: the question a row answers
+         * is "what is the PBE edge at the best price actually on offer here",
+         * not "how does the model compare to a consensus nobody can bet". */
+        const bestLine = n(side?.best?.line);
+        const bestPrice = n(side?.best?.price);
+        const bestBook = side?.best?.book || '';
+
+        /* Model probability AT the best number. For a spread that means
+         * re-stating the stored latent margin against that exact line; for a
+         * moneyline the model's win probability is already number-independent. */
+        let probAtBest = modelProb;
+        let atLabel = '';
+        if (market === 'spread') {
+          const margin = n(m.latent_margin);
+          const c = coverAt(margin, bestLine, sigma);
+          if (Number.isFinite(c)) {
+            probAtBest = c;
+            atLabel = `cover at ${signed(bestLine)}${Number.isFinite(bestPrice) ? ` ${american(bestPrice)}` : ''}`;
+          } else {
+            /* No latent state to re-state safely: fall back to the evaluated
+             * number and say so rather than implying the best line was used. */
+            atLabel = `cover at ${signed(n(m.market_line))} (evaluated line)`;
+          }
+        } else if (market === 'moneyline') {
+          atLabel = `win probability${Number.isFinite(bestPrice) ? ` · at ${american(bestPrice)}` : ''}`;
+        }
+
+        /* PBE FAIR stays pure model truth: the model's own fair number. */
         let fair = pct(modelProb);
-        let detail = 'PBE probability';
         const fairLine = n(m.model_line);
         if (market === 'spread' && Number.isFinite(fairLine)) {
           fair = `${code(side?.side)} ${Math.abs(fairLine) < 0.05 ? 'PK' : signed(fairLine)}`;
-          detail = `${pct(modelProb)} model`;
         } else if (market === 'moneyline') {
           fair = american(probToAmerican(modelProb));
-          detail = `${pct(modelProb)} model`;
         }
+        const detail = `${pct(probAtBest)} ${atLabel}`;
 
-        /* Edge is the stored model edge when the evaluation and the displayed
-         * tape agree. When the market has moved on, the stored edge is labelled
-         * as of its own snapshot rather than silently compared across tapes. */
-        const storedEdge = n(m.edge_pct);
-        const edgeMain = Number.isFinite(storedEdge) ? pp(storedEdge) : '—';
-        const edgeNote = fresh.moved
-          ? `vs ${pct(marketProb)} at evaluation · ${esc(fresh.label)}`
-          : `vs ${pct(marketProb)} vig-free market`;
+        /* PRIMARY: edge against the executable price. SECONDARY: consensus,
+         * kept as a market benchmark and clearly named as one. */
+        const be = breakEven(bestPrice);
+        const edgeAtBest = Number.isFinite(be) ? probAtBest - be : NaN;
+        const consensusEdge = n(m.edge_pct);
+
+        const edgeMain = Number.isFinite(edgeAtBest) ? pp(edgeAtBest) : '—';
+        const beNote = Number.isFinite(be)
+          ? `vs ${pct(be)} break-even at ${american(bestPrice)}${bestBook ? ` · ${esc(bestBook)}` : ''}`
+          : 'no executable price on this row';
+        const consensusNote = Number.isFinite(consensusEdge)
+          ? `Consensus edge: ${pp(consensusEdge)}`
+          : '';
 
         return {
-          fair: `<b>${esc(fair)}</b><small>${esc(detail)}</small><small>${esc(`PBE MODEL · ${scope} v${version}${fresh.at ? ` · ${fresh.at}` : ''}`)}</small>`,
-          edge: `<b>${esc(edgeMain)}</b><small>${edgeNote}</small>`
+          fair: `<b>${esc(fair)}</b><small>${esc(detail)}</small><small>${esc(`PBE MODEL · ${scope} v${version}${fresh.at ? ` · ${fresh.at}` : ''}${fresh.moved ? ' · market moved since evaluation' : ''}`)}</small>`,
+          edge: `<b>${esc(edgeMain)}</b><small>EDGE AT BEST · ${esc(beNote)}</small>${consensusNote ? `<small>${esc(consensusNote)}</small>` : ''}`
         };
       }
     }

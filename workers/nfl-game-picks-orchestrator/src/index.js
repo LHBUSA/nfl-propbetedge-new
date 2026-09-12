@@ -530,10 +530,18 @@ function sanitizeEvaluation(d, { market, tapeAt, evaluatedAt }) {
   if (d.integrity_status !== 'ELIGIBLE') {
     return { ...base, model_prob: null, model_line: null, market_prob: null, edge_pct: null };
   }
+  /* latent_margin is the model's expected margin for THIS side, carried so the
+   * surface can state cover probability at a different number (the best
+   * executable line) without re-deriving anything from the market.
+   * fairSpreadFromMargin() returns -selectedMargin, so the stored fair line is
+   * the latent state already: margin = -model_line. This is a sign flip on an
+   * existing model output, not a second calculation. */
+  const fair = finiteOrNull(d.model_line);
   return {
     ...base,
     model_prob: finiteOrNull(d.model_prob),
-    model_line: finiteOrNull(d.model_line),
+    model_line: fair,
+    latent_margin: market === 'spread' && fair !== null ? -fair : null,
     market_prob: finiteOrNull(d.market_prob),
     edge_pct: finiteOrNull(d.edge_pct),
   };
@@ -805,6 +813,8 @@ async function runOrchestration(env, slate, base) {
     try {
       await env.PICKS_KV?.put(BESTLINE_EVAL_KEY, JSON.stringify({
         contract: 'bestline-model-v2',
+        /* The model's own dispersion. Published so no surface invents its own. */
+        spread_sigma: SPREAD_SIGMA,
         evaluated_at: evaluatedAtIso,
         tape_captured_at: newestTape,
         season,
