@@ -1,0 +1,31 @@
+name: Deploy NFL Intel Best Line Once
+
+on:
+  push:
+    branches: [ops/deploy-nfl-intel-bestline]
+    paths:
+      - '.github/workflows/deploy-nfl-intel-bestline-once.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax and worker contract tests
+        run: |
+          node scripts/check-syntax.mjs workers/nfl-intel/src/index.js workers/nfl-intel/src/bestline-core.js
+          node --test tests/nfl-intel-worker.test.mjs
+      - name: Deploy nfl-intel to Cloudflare
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: fd3a233edadd0a60916413c1199f71ee
+          workingDirectory: workers/nfl-intel
+          command: deploy
