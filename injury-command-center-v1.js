@@ -1,6 +1,6 @@
-/* PropBetEdge NFL — League Injury Command Center v1
- * Additive injuries-route surface. It does not replace editorial coverage;
- * it puts the current league-wide injury board first, grouped by all 32 teams.
+/* PropBetEdge NFL — Injury Explorer v2
+ * Selector-driven injury experience. Full data remains available, but the
+ * default view never expands the entire league into one wall of rows.
  */
 (() => {
   'use strict';
@@ -8,16 +8,20 @@
   const GATEWAY = typeof NFL_API_GATEWAY !== 'undefined' ? NFL_API_GATEWAY : 'https://nfl-api.propbetedge.ai';
   const API = GATEWAY + '/api/injuries';
   const ROOT_ID = 'pbe-injury-command-center';
+
   const state = {
     loading: false,
     loaded: false,
     error: null,
     data: null,
+    selectedTeam: 'AUTO',
+    status: 'IMPACT',
+    position: 'ALL',
     query: '',
-    conference: 'ALL',
-    status: 'ALL',
+    expanded: false,
     request: 0
   };
+
   let burstToken = 0;
 
   const esc = value => String(value ?? '')
@@ -37,15 +41,87 @@
     return `${Math.floor(hr / 24)}d ago`;
   }
 
-  function statusLabel(status, fallback) {
+  function statusLabel(row) {
     const map = {
-      INJURED_RESERVE: 'IR', PUP: 'PUP', NFI: 'NFI', SUSPENDED: 'Suspended',
-      QUESTIONABLE: 'Questionable', DOUBTFUL: 'Doubtful', OUT: 'Out', ACTIVE: 'Active'
+      INJURED_RESERVE: 'IR',
+      PUP: 'PUP',
+      NFI: 'NFI',
+      SUSPENDED: 'Suspended',
+      QUESTIONABLE: 'Questionable',
+      DOUBTFUL: 'Doubtful',
+      OUT: 'Out',
+      ACTIVE: 'Active'
     };
-    return map[status] || clean(fallback) || clean(status).replace(/_/g,' ') || 'Reported';
+    return map[row?.status] || clean(row?.status_label) || clean(row?.status).replace(/_/g,' ') || 'Reported';
   }
 
-  function statusTone(row) {
+  function injuryLabel(row) {
+    const injury = row?.injury || {};
+    return clean(injury.type) || clean(injury.label) || clean(injury.location) || 'Not specified';
+  }
+
+  function isImpact(row) {
+    return row?.bucket !== 'ACTIVE';
+  }
+
+  function bucketRank(row) {
+    return ({ OUT: 0, DOUBTFUL: 1, QUESTIONABLE: 2, OTHER: 3, ACTIVE: 4 })[row?.bucket] ?? 5;
+  }
+
+  function teamImpactCount(team) {
+    const rows = Array.isArray(team?.injuries) ? team.injuries : [];
+    return rows.reduce((n, row) => n + (isImpact(row) ? 1 : 0), 0);
+  }
+
+  function teams() {
+    return Array.isArray(state.data?.teams) ? state.data.teams : [];
+  }
+
+  function selectedTeams() {
+    if (state.selectedTeam === 'AUTO') return [];
+    if (state.selectedTeam === 'ALL') return teams();
+    return teams().filter(team => team.abbreviation === state.selectedTeam);
+  }
+
+  function positionsForTeam(team) {
+    const set = new Set();
+    (team?.injuries || []).forEach(row => {
+      const pos = clean(row?.player?.position).toUpperCase();
+      if (pos) set.add(pos);
+    });
+    return [...set].sort();
+  }
+
+  function matchesStatus(row) {
+    if (state.status === 'ALL') return true;
+    if (state.status === 'IMPACT') return isImpact(row);
+    return row?.bucket === state.status;
+  }
+
+  function matchesPosition(row) {
+    return state.position === 'ALL' || clean(row?.player?.position).toUpperCase() === state.position;
+  }
+
+  function matchesQuery(row) {
+    const q = state.query.toLowerCase();
+    if (!q) return true;
+    const hay = [
+      row?.player?.name,
+      row?.player?.position,
+      injuryLabel(row),
+      statusLabel(row),
+      row?.note
+    ].map(clean).join(' ').toLowerCase();
+    return hay.includes(q);
+  }
+
+  function filteredRows(team) {
+    return (Array.isArray(team?.injuries) ? team.injuries : [])
+      .filter(row => matchesStatus(row) && matchesPosition(row) && matchesQuery(row))
+      .sort((a,b) => bucketRank(a) - bucketRank(b) || Date.parse(b.updated_at || 0) - Date.parse(a.updated_at || 0));
+  }
+
+  function tone(row) {
     if (row?.bucket === 'OUT') return 'is-out';
     if (row?.bucket === 'DOUBTFUL') return 'is-doubtful';
     if (row?.bucket === 'QUESTIONABLE') return 'is-questionable';
@@ -53,173 +129,214 @@
     return 'is-other';
   }
 
-  function injuryLabel(row) {
-    const injury = row?.injury || {};
-    const bits = [injury.type, injury.location, injury.detail]
-      .map(clean).filter(Boolean)
-      .filter((value,index,array) => array.findIndex(other => other.toLowerCase() === value.toLowerCase()) === index);
-    return bits[0] || clean(injury.label) || 'Not specified';
-  }
-
-  function matchStatus(row) {
-    if (state.status === 'ALL') return true;
-    if (state.status === 'OUT') return row.bucket === 'OUT';
-    if (state.status === 'DOUBTFUL') return row.bucket === 'DOUBTFUL';
-    if (state.status === 'QUESTIONABLE') return row.bucket === 'QUESTIONABLE';
-    if (state.status === 'ACTIVE') return row.bucket === 'ACTIVE';
-    return row.bucket === 'OTHER';
-  }
-
-  function matchQuery(team, row) {
-    const q = state.query.toLowerCase();
-    if (!q) return true;
-    const hay = [
-      team.name, team.abbreviation, team.conference, team.division,
-      row?.player?.name, row?.player?.position, injuryLabel(row),
-      row?.status_label, row?.status, row?.note
-    ].map(clean).join(' ').toLowerCase();
-    return hay.includes(q);
-  }
-
-  function filteredTeams() {
-    const teams = Array.isArray(state.data?.teams) ? state.data.teams : [];
-    return teams
-      .filter(team => state.conference === 'ALL' || team.conference === state.conference)
-      .map(team => ({
-        ...team,
-        visible: (Array.isArray(team.injuries) ? team.injuries : []).filter(row => matchStatus(row) && matchQuery(team,row))
-      }))
-      .filter(team => {
-        if (!state.query && state.status === 'ALL') return true;
-        if (team.visible.length) return true;
-        if (!state.query) return false;
-        const teamHay = `${team.name} ${team.abbreviation} ${team.conference} ${team.division}`.toLowerCase();
-        return teamHay.includes(state.query.toLowerCase()) && state.status === 'ALL';
-      });
-  }
-
-  function metric(label, value, tone='') {
-    return `<div class="pbeinj-metric ${tone}"><strong>${esc(value)}</strong><span>${esc(label)}</span></div>`;
-  }
-
-  function teamIndex(teams) {
-    return `<nav class="pbeinj-team-index" aria-label="Jump to team">
-      ${teams.map(team => `<button type="button" class="${team.source_stale ? 'is-stale' : ''}" data-team-jump="${esc(team.abbreviation)}" title="${esc(team.name)}${team.source_stale ? ' — source refresh stale' : ''}">
-        <img src="${esc(team.logo)}" alt="" loading="lazy" decoding="async" onerror="this.remove()">
-        <span>${esc(team.abbreviation)}</span>
-        <b>${esc(team.counts?.total ?? 0)}</b>
-      </button>`).join('')}
-    </nav>`;
-  }
-
-  function playerRow(row) {
-    const player = row.player || {};
-    const updated = row.updated_at ? timeAgo(row.updated_at) : 'source time unavailable';
-    const headshot = clean(player.headshot);
-    return `<article class="pbeinj-player ${statusTone(row)}" data-player-status="${esc(row.bucket || 'OTHER')}">
-      <div class="pbeinj-player-id">
-        <div class="pbeinj-headshot">${headshot ? `<img src="${esc(headshot)}" alt="" loading="lazy" decoding="async" onerror="this.remove()">` : `<span>${esc((player.position || 'NFL').slice(0,3))}</span>`}</div>
-        <div><strong>${esc(player.name || 'Unknown player')}</strong><span>${esc(player.position || 'Position n/a')}</span></div>
-      </div>
-      <div class="pbeinj-injury"><span class="pbeinj-mobile-label">INJURY</span><strong>${esc(injuryLabel(row))}</strong>${row.injury?.side ? `<small>${esc(row.injury.side)}</small>` : ''}</div>
-      <div class="pbeinj-status"><span class="pbeinj-mobile-label">STATUS</span><b>${esc(statusLabel(row.status,row.status_label))}</b></div>
-      <div class="pbeinj-update"><span class="pbeinj-mobile-label">UPDATED</span><strong>${esc(updated)}</strong>${row.note ? `<small>${esc(row.note)}</small>` : ''}</div>
-    </article>`;
-  }
-
-  function teamCard(team) {
-    const rows = team.visible || [];
-    const stale = !!team.source_stale;
-    const zeroFiltered = rows.length === 0 && ((team.counts?.total || 0) > 0);
-    const countText = stale
-      ? `${team.counts?.total || 0} retained · source stale`
-      : state.status === 'ALL' && !state.query
-        ? `${team.counts?.total || 0} reported`
-        : `${rows.length} matching`;
-    const emptyTitle = stale
-      ? 'Team source refresh failed'
-      : zeroFiltered ? 'No injuries match these filters' : 'No current injuries reported';
-    const emptyCopy = stale
-      ? 'The last good team snapshot is retained when available. This club is flagged stale rather than treated as a healthy roster.'
-      : zeroFiltered ? 'Change the status or search filter to reveal this team’s current entries.' : 'This team is still shown so the league board always accounts for all 32 clubs.';
-    return `<section class="pbeinj-team ${stale ? 'is-source-stale' : ''}" id="pbeinj-team-${esc(team.abbreviation)}" data-team="${esc(team.abbreviation)}">
-      <header class="pbeinj-team-head">
-        <div class="pbeinj-team-brand">
-          <div class="pbeinj-team-logo"><img src="${esc(team.logo)}" alt="${esc(team.name)} logo" loading="lazy" decoding="async" onerror="this.remove()"></div>
-          <div><span>${esc(team.conference)} ${esc(team.division)}${stale ? ' · SOURCE STALE' : ''}</span><h3>${esc(team.name)}</h3></div>
-        </div>
-        <div class="pbeinj-team-counts">
-          <strong>${esc(countText)}</strong>
-          <span>${team.counts?.out || 0} out/IR · ${team.counts?.questionable || 0} Q · ${team.counts?.doubtful || 0} D</span>
-        </div>
-      </header>
-      ${rows.length ? `<div class="pbeinj-table-head" aria-hidden="true"><span>PLAYER</span><span>INJURY</span><span>STATUS</span><span>UPDATED / SOURCE NOTE</span></div><div class="pbeinj-roster">${rows.map(playerRow).join('')}</div>`
-        : `<div class="pbeinj-empty-team"><strong>${esc(emptyTitle)}</strong><span>${esc(emptyCopy)}</span></div>`}
-    </section>`;
+  function metric(label, value, toneClass='') {
+    return `<div class="pbeinj-metric ${toneClass}"><strong>${esc(value)}</strong><span>${esc(label)}</span></div>`;
   }
 
   function controls() {
-    const statusButtons = [
-      ['ALL','All'], ['OUT','Out / IR'], ['DOUBTFUL','Doubtful'],
-      ['QUESTIONABLE','Questionable'], ['ACTIVE','Active'], ['OTHER','Other']
+    const allTeams = teams();
+    const selected = state.selectedTeam === 'AUTO' ? null : allTeams.find(t => t.abbreviation === state.selectedTeam);
+    const positions = selected ? positionsForTeam(selected) : [];
+    const statuses = [
+      ['IMPACT','Injured / Questionable'],
+      ['OUT','Out / IR'],
+      ['QUESTIONABLE','Questionable'],
+      ['DOUBTFUL','Doubtful'],
+      ['ACTIVE','Active / Cleared'],
+      ['ALL','All Reports']
     ];
+
     return `<div class="pbeinj-controls">
-      <label class="pbeinj-search"><span>SEARCH</span><input type="search" data-injury-search value="${esc(state.query)}" placeholder="Player, team, position or injury" autocomplete="off"></label>
-      <div class="pbeinj-segment" role="group" aria-label="Conference">
-        ${['ALL','AFC','NFC'].map(value => `<button type="button" data-conference="${value}" class="${state.conference===value?'is-active':''}">${value}</button>`).join('')}
-      </div>
-      <div class="pbeinj-status-filter" role="group" aria-label="Injury status">
-        ${statusButtons.map(([value,label]) => `<button type="button" data-status="${value}" class="${state.status===value?'is-active':''}">${label}</button>`).join('')}
-      </div>
+      <label class="pbeinj-field">
+        <span>TEAM</span>
+        <select data-team-select>
+          <option value="AUTO"${state.selectedTeam === 'AUTO' ? ' selected' : ''}>Choose a team</option>
+          ${allTeams.map(team => `<option value="${esc(team.abbreviation)}"${state.selectedTeam === team.abbreviation ? ' selected' : ''}>${esc(team.name)} · ${teamImpactCount(team)} impact</option>`).join('')}
+          <option value="ALL"${state.selectedTeam === 'ALL' ? ' selected' : ''}>All teams — compact results</option>
+        </select>
+      </label>
+
+      <label class="pbeinj-field">
+        <span>STATUS</span>
+        <select data-status-select>
+          ${statuses.map(([value,label]) => `<option value="${value}"${state.status === value ? ' selected' : ''}>${label}</option>`).join('')}
+        </select>
+      </label>
+
+      <label class="pbeinj-field">
+        <span>POSITION</span>
+        <select data-position-select ${selected ? '' : 'disabled'}>
+          <option value="ALL">All positions</option>
+          ${positions.map(pos => `<option value="${esc(pos)}"${state.position === pos ? ' selected' : ''}>${esc(pos)}</option>`).join('')}
+        </select>
+      </label>
+
+      <label class="pbeinj-field pbeinj-search">
+        <span>SEARCH</span>
+        <input type="search" data-injury-search value="${esc(state.query)}" placeholder="Player or injury" autocomplete="off">
+      </label>
     </div>`;
+  }
+
+  function leaguePicker() {
+    const sorted = [...teams()].sort((a,b) =>
+      teamImpactCount(b) - teamImpactCount(a) ||
+      String(a.name).localeCompare(String(b.name))
+    );
+
+    return `<section class="pbeinj-picker">
+      <div class="pbeinj-picker-head">
+        <div>
+          <span>SELECT A TEAM</span>
+          <h3>Start with the club you care about</h3>
+        </div>
+        <p>Impact count excludes Active / cleared entries so the first number is actually useful.</p>
+      </div>
+      <div class="pbeinj-team-picker">
+        ${sorted.map(team => {
+          const impact = teamImpactCount(team);
+          return `<button type="button" data-pick-team="${esc(team.abbreviation)}" class="${impact ? '' : 'is-clear'}">
+            <img src="${esc(team.logo)}" alt="" loading="lazy" decoding="async" onerror="this.remove()">
+            <span><strong>${esc(team.abbreviation)}</strong><small>${esc(team.name)}</small></span>
+            <b>${impact}</b>
+          </button>`;
+        }).join('')}
+      </div>
+    </section>`;
+  }
+
+  function playerRow(row) {
+    const player = row?.player || {};
+    const headshot = clean(player.headshot);
+    const note = clean(row?.note);
+    return `<article class="pbeinj-player ${tone(row)}">
+      <div class="pbeinj-player-id">
+        <div class="pbeinj-headshot">
+          ${headshot ? `<img src="${esc(headshot)}" alt="" loading="lazy" decoding="async" onerror="this.remove()">` : `<span>${esc((player.position || 'NFL').slice(0,3))}</span>`}
+        </div>
+        <div>
+          <strong>${esc(player.name || 'Unknown player')}</strong>
+          <span>${esc(player.position || 'Position n/a')}</span>
+        </div>
+      </div>
+      <div class="pbeinj-injury">
+        <span class="pbeinj-mobile-label">INJURY</span>
+        <strong>${esc(injuryLabel(row))}</strong>
+        ${row?.injury?.side ? `<small>${esc(row.injury.side)}</small>` : ''}
+      </div>
+      <div class="pbeinj-status">
+        <span class="pbeinj-mobile-label">STATUS</span>
+        <b>${esc(statusLabel(row))}</b>
+      </div>
+      <div class="pbeinj-update">
+        <span class="pbeinj-mobile-label">UPDATED</span>
+        <strong>${esc(timeAgo(row?.updated_at))}</strong>
+        ${note ? `<small>${esc(note)}</small>` : ''}
+      </div>
+    </article>`;
+  }
+
+  function teamPanel(team, compact=false) {
+    const rows = filteredRows(team);
+    const limit = compact ? 6 : 12;
+    const shown = state.expanded ? rows : rows.slice(0, limit);
+    const stale = !!team?.source_stale;
+
+    return `<section class="pbeinj-team ${stale ? 'is-source-stale' : ''}">
+      <header class="pbeinj-team-head">
+        <div class="pbeinj-team-brand">
+          <div class="pbeinj-team-logo"><img src="${esc(team.logo)}" alt="" onerror="this.remove()"></div>
+          <div>
+            <span>${esc(team.conference)} ${esc(team.division)}${stale ? ' · SOURCE STALE' : ''}</span>
+            <h3>${esc(team.name)}</h3>
+          </div>
+        </div>
+        <div class="pbeinj-team-counts">
+          <strong>${rows.length} matching</strong>
+          <span>${team.counts?.out || 0} out/IR · ${team.counts?.questionable || 0} Q · ${team.counts?.doubtful || 0} D</span>
+        </div>
+      </header>
+
+      ${shown.length
+        ? `<div class="pbeinj-table-head" aria-hidden="true"><span>PLAYER</span><span>INJURY</span><span>STATUS</span><span>UPDATED / NOTE</span></div>
+           <div class="pbeinj-roster">${shown.map(playerRow).join('')}</div>`
+        : `<div class="pbeinj-empty-team"><strong>No matching injury entries</strong><span>Try another status, position, or search.</span></div>`}
+
+      ${rows.length > limit
+        ? `<div class="pbeinj-show-more"><button type="button" data-toggle-expanded>${state.expanded ? 'Show fewer' : `Show all ${rows.length}`}</button></div>`
+        : ''}
+    </section>`;
+  }
+
+  function resultsBody() {
+    if (state.selectedTeam === 'AUTO') return leaguePicker();
+
+    if (state.selectedTeam === 'ALL') {
+      const list = teams()
+        .map(team => ({ team, rows: filteredRows(team) }))
+        .filter(item => item.rows.length)
+        .sort((a,b) => b.rows.length - a.rows.length);
+
+      return `<section class="pbeinj-all-results">
+        <div class="pbeinj-all-head">
+          <strong>${list.length} teams match</strong>
+          <span>Compact league view. Choose a team above for full detail.</span>
+        </div>
+        <div class="pbeinj-all-grid">
+          ${list.map(({team,rows}) => `<button type="button" data-pick-team="${esc(team.abbreviation)}">
+            <img src="${esc(team.logo)}" alt="" loading="lazy" onerror="this.remove()">
+            <span><strong>${esc(team.name)}</strong><small>${rows.length} matching · ${team.counts?.out || 0} out/IR</small></span>
+            <b>View</b>
+          </button>`).join('')}
+        </div>
+      </section>`;
+    }
+
+    const team = teams().find(item => item.abbreviation === state.selectedTeam);
+    return team ? teamPanel(team) : leaguePicker();
   }
 
   function loadingShell() {
     return `<section id="${ROOT_ID}" class="pbeinj-command is-loading" aria-live="polite">
-      <div class="pbeinj-kicker">LEAGUE INJURY BOARD</div>
-      <div class="pbeinj-loading"><span></span><div><strong>Loading all 32 teams</strong><small>Building the current injury board…</small></div></div>
+      <div class="pbeinj-loading"><span></span><div><strong>Loading injury data</strong><small>Preparing the team selector…</small></div></div>
     </section>`;
   }
 
   function errorShell() {
     return `<section id="${ROOT_ID}" class="pbeinj-command is-error" aria-live="polite">
-      <div class="pbeinj-kicker">LEAGUE INJURY BOARD</div>
-      <div class="pbeinj-error"><div><strong>League injury feed is temporarily unavailable</strong><span>${esc(state.error || 'Source unavailable')}</span></div><button type="button" data-injury-retry>Retry</button></div>
+      <div class="pbeinj-error">
+        <div><strong>Injury feed is temporarily unavailable</strong><span>${esc(state.error || 'Source unavailable')}</span></div>
+        <button type="button" data-injury-retry>Retry</button>
+      </div>
     </section>`;
   }
 
   function boardShell() {
     const data = state.data || {};
     const counts = data.counts || {};
-    const teams = filteredTeams();
-    const totalVisible = teams.reduce((sum,team)=>sum+team.visible.length,0);
     const partial = !!data.source?.partial;
     const failedTeams = Array.isArray(data.source?.failed_teams) ? data.source.failed_teams : [];
-    const freshness = data.source?.fetched_at ? `Source updated ${timeAgo(data.source.fetched_at)}` : 'Source time unavailable';
-    const freshnessText = partial
-      ? `${freshness} · partial refresh${failedTeams.length ? ` · stale: ${failedTeams.join(', ')}` : ''}`
-      : `${freshness} · ESPN injury report`;
-    const sourceNote = clean(data.source?.note) || 'Current reported designations only; no inferred timelines.';
-    return `<section id="${ROOT_ID}" class="pbeinj-command" aria-label="NFL league injury board">
+    const freshness = data.source?.fetched_at ? `Updated ${timeAgo(data.source.fetched_at)}` : 'Source time unavailable';
+
+    return `<section id="${ROOT_ID}" class="pbeinj-command" aria-label="NFL injury explorer">
       <header class="pbeinj-hero">
-        <div class="pbeinj-hero-copy">
-          <span class="pbeinj-kicker">NFL · ALL 32 TEAMS · CURRENT REPORTED DESIGNATIONS</span>
-          <h2>League Injury Board</h2>
-          <p>Every currently reported injury entry, organized by team. Search the league, isolate a conference or status, then jump straight to any club.</p>
-          <div class="pbeinj-fresh ${partial ? 'is-partial' : ''}"><i></i><span>${esc(freshnessText)}</span></div>
+        <div>
+          <span class="pbeinj-kicker">NFL INJURY INTELLIGENCE</span>
+          <h2>Injury Explorer</h2>
+          <p>Pick a team and status. Full league data stays available without dumping hundreds of rows onto the page.</p>
+          <div class="pbeinj-fresh ${partial ? 'is-partial' : ''}">
+            <i></i><span>${esc(freshness)}${partial ? ` · partial source${failedTeams.length ? ` · stale: ${failedTeams.join(', ')}` : ''}` : ''}</span>
+          </div>
         </div>
         <div class="pbeinj-metrics">
-          ${metric('reported players',counts.total ?? 0)}
+          ${metric('reported',counts.total ?? 0)}
           ${metric('out / IR',counts.out ?? 0,'is-critical')}
           ${metric('questionable',counts.questionable ?? 0,'is-watch')}
-          ${metric(partial ? 'stale teams' : 'doubtful',partial ? (counts.stale_teams ?? failedTeams.length) : (counts.doubtful ?? 0),partial ? 'is-watch' : '')}
         </div>
       </header>
       ${controls()}
-      <div class="pbeinj-board-meta"><span><strong>${esc(teams.length)}</strong> teams shown · <strong>${esc(totalVisible)}</strong> matching injury entries</span><span>${partial ? 'Partial source refresh · stale clubs retain last good entries' : 'Current source designations only · no inferred timelines'}</span></div>
-      ${teamIndex(teams)}
-      <div class="pbeinj-team-grid">${teams.map(teamCard).join('')}</div>
-      <footer class="pbeinj-source">${esc(sourceNote)}</footer>
+      ${resultsBody()}
+      <footer class="pbeinj-source">${esc(clean(data.source?.note) || 'Current reported designations only; no inferred timelines.')}</footer>
     </section>`;
   }
 
@@ -237,66 +354,108 @@
     if (!root) return null;
     let host = document.getElementById(ROOT_ID);
     if (host && root.contains(host)) return host;
-    const anchor = anchorFor(root);
+
     const shell = document.createElement('section');
     shell.id = ROOT_ID;
+    const anchor = anchorFor(root);
     if (anchor) anchor.insertAdjacentElement('afterend', shell);
     else root.prepend(shell);
     return shell;
   }
 
-  function render({preserveFocus=false}={}) {
+  function render({ preserveFocus=false }={}) {
     const host = ensureHost();
     if (!host) return false;
+
     const active = preserveFocus ? document.activeElement : null;
     const selection = active?.matches?.('[data-injury-search]') ? [active.selectionStart,active.selectionEnd] : null;
-    host.outerHTML = state.loading && !state.data ? loadingShell() : state.error && !state.data ? errorShell() : boardShell();
+
+    host.outerHTML = state.loading && !state.data
+      ? loadingShell()
+      : state.error && !state.data
+        ? errorShell()
+        : boardShell();
+
     wire();
+
     if (selection) {
       const input = document.querySelector(`#${ROOT_ID} [data-injury-search]`);
-      input?.focus({preventScroll:true});
+      input?.focus({ preventScroll:true });
       try { input?.setSelectionRange(selection[0],selection[1]); } catch {}
     }
     return true;
   }
 
-  function jumpToTeam(abbr) {
-    const target = document.getElementById(`pbeinj-team-${abbr}`);
-    if (!target) return;
-    target.scrollIntoView({behavior:'smooth',block:'start'});
-    target.classList.add('is-jumped');
-    setTimeout(()=>target.classList.remove('is-jumped'),900);
+  function resetTeamFilters() {
+    state.position = 'ALL';
+    state.query = '';
+    state.expanded = false;
+  }
+
+  function selectTeam(abbr) {
+    state.selectedTeam = abbr || 'AUTO';
+    resetTeamFilters();
+    render();
+    document.getElementById(ROOT_ID)?.scrollIntoView({ behavior:'smooth', block:'start' });
   }
 
   function wire() {
     const root = document.getElementById(ROOT_ID);
     if (!root) return;
+
+    root.querySelector('[data-team-select]')?.addEventListener('change', event => {
+      selectTeam(event.target.value);
+    });
+
+    root.querySelector('[data-status-select]')?.addEventListener('change', event => {
+      state.status = event.target.value || 'IMPACT';
+      state.expanded = false;
+      render();
+    });
+
+    root.querySelector('[data-position-select]')?.addEventListener('change', event => {
+      state.position = event.target.value || 'ALL';
+      state.expanded = false;
+      render();
+    });
+
     root.querySelector('[data-injury-search]')?.addEventListener('input', event => {
       state.query = clean(event.target.value);
-      render({preserveFocus:true});
+      state.expanded = false;
+      render({ preserveFocus:true });
     });
-    root.querySelectorAll('[data-conference]').forEach(button => button.addEventListener('click', () => {
-      state.conference = button.dataset.conference || 'ALL'; render();
+
+    root.querySelectorAll('[data-pick-team]').forEach(button => button.addEventListener('click', () => {
+      selectTeam(button.dataset.pickTeam);
     }));
-    root.querySelectorAll('[data-status]').forEach(button => button.addEventListener('click', () => {
-      state.status = button.dataset.status || 'ALL'; render();
-    }));
-    root.querySelectorAll('[data-team-jump]').forEach(button => button.addEventListener('click', () => jumpToTeam(button.dataset.teamJump)));
+
+    root.querySelector('[data-toggle-expanded]')?.addEventListener('click', () => {
+      state.expanded = !state.expanded;
+      render();
+    });
+
     root.querySelector('[data-injury-retry]')?.addEventListener('click', () => load(true));
   }
 
   async function load(force=false) {
     if (window.App?.current !== 'injuries') return false;
     ensureHost();
-    if ((state.loading || state.loaded) && !force) { render(); return true; }
+    if ((state.loading || state.loaded) && !force) {
+      render();
+      return true;
+    }
+
     const request = ++state.request;
     state.loading = true;
     state.error = null;
     render();
+
     try {
-      const response = await fetch(API, { headers:{accept:'application/json'}, cache:'no-store' });
-      const body = await response.json().catch(()=>null);
-      if (!response.ok || !body?.ok || !Array.isArray(body?.teams)) throw new Error(body?.error || `injury_board_${response.status}`);
+      const response = await fetch(API, { headers:{ accept:'application/json' }, cache:'no-store' });
+      const body = await response.json().catch(() => null);
+      if (!response.ok || !body?.ok || !Array.isArray(body?.teams)) {
+        throw new Error(body?.error || `injury_board_${response.status}`);
+      }
       if (request !== state.request) return false;
       state.data = body;
       state.loaded = true;
@@ -307,6 +466,7 @@
     } finally {
       if (request === state.request) state.loading = false;
     }
+
     render();
     return !state.error;
   }
