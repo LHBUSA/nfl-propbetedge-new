@@ -1,0 +1,70 @@
+name: NFL Integrity Repair Preflight
+
+on:
+  push:
+    branches: [fix/bestline-integrity-ui-v1]
+    paths:
+      - 'scripts/fix-nfl-integrity-repair-bootstrap.mjs'
+      - '.github/workflows/integrity-repair-preflight.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  repair-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/bestline-integrity-ui-v1
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Fix repair bootstrap
+        run: node scripts/fix-nfl-integrity-repair-bootstrap.mjs
+
+      - name: Apply full integrity repair
+        run: |
+          node scripts/apply-nfl-picks-integrity-repair.mjs
+          node scripts/apply-nfl-picks-market-anchor-v2.mjs
+
+      - name: Syntax gate
+        run: |
+          node scripts/check-syntax.mjs \
+            scripts/apply-nfl-picks-integrity-repair.mjs \
+            scripts/apply-nfl-picks-market-anchor-v2.mjs \
+            workers/nfl-game-picks-orchestrator/src/index.js \
+            workers/nfl-game-grader/src/index.js \
+            workers/nfl-weight-tuner/src/index.js \
+            workers/nfl-picks-engine-shared/pick-math.mjs \
+            workers/nfl-picks-engine-shared/publication.mjs \
+            workers/nfl-picks-engine-shared/tests/acceptance.test.mjs \
+            api/pbe-picks.js api/pbe-validation.js
+
+      - name: Picks engine regression suite
+        run: |
+          node --test workers/nfl-picks-engine-shared/tests/*.test.mjs
+          node --test tests/pbe-card-v3.test.mjs tests/pbe-picks-runtime.test.mjs
+
+      - name: Commit tested integrity repair
+        run: |
+          if git diff --quiet; then
+            echo 'No integrity changes to commit.'
+            exit 0
+          fi
+          git config user.name 'NFL Integrity Repair'
+          git config user.email 'sales@localhomebuyersusa.com'
+          git add \
+            scripts/apply-nfl-picks-integrity-repair.mjs \
+            workers/nfl-game-picks-orchestrator/src/index.js \
+            workers/nfl-game-grader/src/index.js \
+            workers/nfl-weight-tuner/src/index.js \
+            workers/nfl-picks-engine-shared/pick-math.mjs \
+            workers/nfl-picks-engine-shared/publication.mjs \
+            workers/nfl-picks-engine-shared/tests/acceptance.test.mjs \
+            api/pbe-picks.js api/pbe-validation.js
+          git commit -m 'Complete NFL picks integrity repair'
+          git push origin HEAD:fix/bestline-integrity-ui-v1
