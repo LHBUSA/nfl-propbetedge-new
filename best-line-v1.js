@@ -91,14 +91,28 @@
     if (market === 'total') return s.side === 'OVER' ? b < c : b > c;
     return b > c;
   }
-  function row(market, s) {
+  function coverageNote(e, market, s) {
+    const coverage = s?.coverage || {};
+    const eventBooks = Number.isFinite(num(coverage.event_book_count)) ? num(coverage.event_book_count) : num(e?.books);
+    const marketBooks = Number.isFinite(num(coverage.market_book_count)) ? num(coverage.market_book_count) : num(s?.book_count);
+    if (!Number.isFinite(eventBooks) || !Number.isFinite(marketBooks) || marketBooks >= eventBooks) return '';
+    const missing = Math.max(0, eventBooks - marketBooks);
+    const pickem = arr(coverage.pickem_spread_books);
+    if (market === 'moneyline' && pickem.length) {
+      const who = pickem.length <= 4 ? `: ${pickem.join(', ')}` : '';
+      return `${pickem.length} ${pickem.length === 1 ? 'book prices' : 'books price'} this matchup as PK/0 spread instead of an explicit moneyline${who}`;
+    }
+    return `${missing} ${missing === 1 ? 'snapshot book does' : 'snapshot books do'} not quote this market`;
+  }
+  function row(e, market, s) {
     if (!s) return '';
     const range = s.line_range && s.line_range.low !== s.line_range.high ? `${market === 'spread' ? signed(s.line_range.low) : s.line_range.low} to ${market === 'spread' ? signed(s.line_range.high) : s.line_range.high}` : s.line_range ? 'All books agree' : `${american(s.price_range.low)} to ${american(s.price_range.high)}`;
+    const coverage = coverageNote(e, market, s);
     return `<tr class="pbebl-row${beats(market, s) ? ' is-better' : ''}">
       <th scope="row"><span>${esc(market === 'moneyline' ? 'Moneyline' : market === 'spread' ? 'Spread' : 'Total')}</span>${esc(sideLabel(market, s))}</th>
       <td data-label="Best available">${bestCell(market, s)}${beats(market, s) ? '<em class="pbebl-flag">BEATS CONSENSUS</em>' : ''}</td>
       <td data-label="Consensus">${market === 'moneyline' ? american(s.consensus.price) : `<b>${market === 'spread' ? signed(s.consensus.line) : s.consensus.line}</b> <span class="pbebl-price">${american(s.consensus.price)}</span>`}<small>${s.consensus.no_vig_probability != null ? `${pct(s.consensus.no_vig_probability)} vig-free · ${esc(s.consensus.no_vig_books)} bk` : 'no two-sided books at this line'}</small></td>
-      <td data-label="Range">${esc(range)}<small>${esc(s.book_count)} books</small></td>
+      <td data-label="Range">${esc(range)}<small>${esc(s.book_count)} books${coverage ? ` · ${esc(coverage)}` : ''}</small></td>
       <td data-label="PBE fair" class="pbebl-model"><span class="pbebl-na">—</span></td>
       <td data-label="Model edge" class="pbebl-model"><span class="pbebl-na">—</span></td>
     </tr>`;
@@ -106,10 +120,10 @@
   function gameCard(e) {
     const m = e.markets || {};
     const order = [['spread', m.spread], ['total', m.total], ['moneyline', m.moneyline]];
-    const rows = order.flatMap(([k, sides]) => Object.values(sides || {}).filter(Boolean).map(s => row(k, s))).join('');
+    const rows = order.flatMap(([k, sides]) => Object.values(sides || {}).filter(Boolean).map(s => row(e, k, s))).join('');
     const ladders = order.map(([k, sides]) => Object.values(sides || {}).filter(Boolean).map(s => `<div class="pbebl-ladder"><h4>${esc(k)} · ${esc(sideLabel(k, s))}</h4><ol>${arr(s.quotes).map((q, i) => `<li class="${i === 0 ? 'is-top' : ''}"><span>${esc(q.book)}</span><b>${k === 'moneyline' ? '' : `${k === 'spread' ? signed(q.line) : q.line} `}${american(q.price)}</b></li>`).join('')}</ol></div>`).join('')).join('');
     return `<article class="pbebl-game${e.started ? ' is-started' : ''}" id="bl-${esc(e.id)}">
-      <header><div><b>${esc(abbr(e.away))} @ ${esc(abbr(e.home))}</b><span>${esc(e.away)} at ${esc(e.home)}</span></div><div class="pbebl-game-meta"><span>${esc(when(e.kickoff))}</span><span>${esc(e.books)} books</span>${e.started ? '<span class="pbebl-started">KICKED OFF · PRE-GAME CAPTURE, NOT A CURRENT PRICE</span>' : ''}<button type="button" data-bl-props="${esc(e.id)}">Player props →</button></div></header>
+      <header><div><b>${esc(abbr(e.away))} @ ${esc(abbr(e.home))}</b><span>${esc(e.away)} at ${esc(e.home)}</span></div><div class="pbebl-game-meta"><span>${esc(when(e.kickoff))}</span><span>${esc(e.books)} books in snapshot</span>${e.started ? '<span class="pbebl-started">KICKED OFF · PRE-GAME CAPTURE, NOT A CURRENT PRICE</span>' : ''}<button type="button" data-bl-props="${esc(e.id)}">Player props →</button></div></header>
       <details class="pbebl-body"${narrow() && !openGames.has(e.id) ? '' : ' open'} data-bl-game="${esc(e.id)}"><summary>${esc(summaryLine(e))}</summary>
       <div class="pbebl-scroll"><table class="pbebl-table"><thead><tr><th scope="col">Market</th><th scope="col">Best available</th><th scope="col">Consensus</th><th scope="col">Line range</th><th scope="col" class="pbebl-model">PBE fair</th><th scope="col" class="pbebl-model">Model edge</th></tr></thead><tbody>${rows}</tbody></table></div>
       <details class="pbebl-books"><summary>Every book, every number</summary><div class="pbebl-ladders">${ladders}</div></details></details>
@@ -124,7 +138,27 @@
   function gamesHtml(d) {
     const events = arr(d?.events);
     if (!events.length) return '<div class="pbebl-unavailable"><b>No games in the snapshot window</b><span>The market snapshot carries no NFL games in the next eight days.</span></div>';
-    return `<div class="pbebl-layout"><div class="pbebl-games">${events.map(gameCard).join('')}</div>${leaderboard(d)}</div>`;
+    const currentWeek = Number.isFinite(num(d?.current_week)) ? num(d.current_week) : null;
+    const groups = new Map();
+    for (const e of events) {
+      const week = Number.isFinite(num(e?.week)) ? num(e.week) : null;
+      const key = week === null ? 'snapshot' : String(week);
+      if (!groups.has(key)) groups.set(key, { week, events: [] });
+      groups.get(key).events.push(e);
+    }
+    const ordered = [...groups.values()].sort((a, b) => {
+      if (a.week === null) return 1;
+      if (b.week === null) return -1;
+      return a.week - b.week;
+    });
+    const cards = ordered.map(group => {
+      const label = group.week === null ? 'SNAPSHOT' : `WEEK ${group.week}`;
+      const context = group.week === null || currentWeek === null ? ''
+        : group.week === currentWeek ? 'CURRENT SLATE'
+          : group.week > currentWeek ? 'LOOKAHEAD' : 'PREVIOUS WEEK';
+      return `<section class="pbebl-week" data-week="${group.week ?? 'unknown'}"><div class="pbebl-week-head"><b>${esc(label)}</b>${context ? `<span>${esc(context)}</span>` : ''}</div>${group.events.map(gameCard).join('')}</section>`;
+    }).join('');
+    return `<div class="pbebl-layout"><div class="pbebl-games">${cards}</div>${leaderboard(d)}</div>`;
   }
 
   /* ---- player props ------------------------------------------------------- */
