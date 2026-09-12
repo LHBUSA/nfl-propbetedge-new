@@ -104,7 +104,7 @@
 
   function teamIndex(teams) {
     return `<nav class="pbeinj-team-index" aria-label="Jump to team">
-      ${teams.map(team => `<button type="button" data-team-jump="${esc(team.abbreviation)}" title="${esc(team.name)}">
+      ${teams.map(team => `<button type="button" class="${team.source_stale ? 'is-stale' : ''}" data-team-jump="${esc(team.abbreviation)}" title="${esc(team.name)}${team.source_stale ? ' — source refresh stale' : ''}">
         <img src="${esc(team.logo)}" alt="" loading="lazy" decoding="async" onerror="this.remove()">
         <span>${esc(team.abbreviation)}</span>
         <b>${esc(team.counts?.total ?? 0)}</b>
@@ -129,15 +129,24 @@
 
   function teamCard(team) {
     const rows = team.visible || [];
+    const stale = !!team.source_stale;
     const zeroFiltered = rows.length === 0 && ((team.counts?.total || 0) > 0);
-    const countText = state.status === 'ALL' && !state.query
-      ? `${team.counts?.total || 0} reported`
-      : `${rows.length} matching`;
-    return `<section class="pbeinj-team" id="pbeinj-team-${esc(team.abbreviation)}" data-team="${esc(team.abbreviation)}">
+    const countText = stale
+      ? `${team.counts?.total || 0} retained · source stale`
+      : state.status === 'ALL' && !state.query
+        ? `${team.counts?.total || 0} reported`
+        : `${rows.length} matching`;
+    const emptyTitle = stale
+      ? 'Team source refresh failed'
+      : zeroFiltered ? 'No injuries match these filters' : 'No current injuries reported';
+    const emptyCopy = stale
+      ? 'The last good team snapshot is retained when available. This club is flagged stale rather than treated as a healthy roster.'
+      : zeroFiltered ? 'Change the status or search filter to reveal this team’s current entries.' : 'This team is still shown so the league board always accounts for all 32 clubs.';
+    return `<section class="pbeinj-team ${stale ? 'is-source-stale' : ''}" id="pbeinj-team-${esc(team.abbreviation)}" data-team="${esc(team.abbreviation)}">
       <header class="pbeinj-team-head">
         <div class="pbeinj-team-brand">
           <div class="pbeinj-team-logo"><img src="${esc(team.logo)}" alt="${esc(team.name)} logo" loading="lazy" decoding="async" onerror="this.remove()"></div>
-          <div><span>${esc(team.conference)} ${esc(team.division)}</span><h3>${esc(team.name)}</h3></div>
+          <div><span>${esc(team.conference)} ${esc(team.division)}${stale ? ' · SOURCE STALE' : ''}</span><h3>${esc(team.name)}</h3></div>
         </div>
         <div class="pbeinj-team-counts">
           <strong>${esc(countText)}</strong>
@@ -145,7 +154,7 @@
         </div>
       </header>
       ${rows.length ? `<div class="pbeinj-table-head" aria-hidden="true"><span>PLAYER</span><span>INJURY</span><span>STATUS</span><span>UPDATED / SOURCE NOTE</span></div><div class="pbeinj-roster">${rows.map(playerRow).join('')}</div>`
-        : `<div class="pbeinj-empty-team"><strong>${zeroFiltered ? 'No injuries match these filters' : 'No current injuries reported'}</strong><span>${zeroFiltered ? 'Change the status or search filter to reveal this team’s current entries.' : 'This team is still shown so the league board always accounts for all 32 clubs.'}</span></div>`}
+        : `<div class="pbeinj-empty-team"><strong>${esc(emptyTitle)}</strong><span>${esc(emptyCopy)}</span></div>`}
     </section>`;
   }
 
@@ -184,27 +193,33 @@
     const counts = data.counts || {};
     const teams = filteredTeams();
     const totalVisible = teams.reduce((sum,team)=>sum+team.visible.length,0);
+    const partial = !!data.source?.partial;
+    const failedTeams = Array.isArray(data.source?.failed_teams) ? data.source.failed_teams : [];
     const freshness = data.source?.fetched_at ? `Source updated ${timeAgo(data.source.fetched_at)}` : 'Source time unavailable';
+    const freshnessText = partial
+      ? `${freshness} · partial refresh${failedTeams.length ? ` · stale: ${failedTeams.join(', ')}` : ''}`
+      : `${freshness} · ESPN injury report`;
+    const sourceNote = clean(data.source?.note) || 'Current reported designations only; no inferred timelines.';
     return `<section id="${ROOT_ID}" class="pbeinj-command" aria-label="NFL league injury board">
       <header class="pbeinj-hero">
         <div class="pbeinj-hero-copy">
           <span class="pbeinj-kicker">NFL · ALL 32 TEAMS · CURRENT REPORTED DESIGNATIONS</span>
           <h2>League Injury Board</h2>
           <p>Every currently reported injury entry, organized by team. Search the league, isolate a conference or status, then jump straight to any club.</p>
-          <div class="pbeinj-fresh"><i></i><span>${esc(freshness)} · ESPN injury report</span></div>
+          <div class="pbeinj-fresh ${partial ? 'is-partial' : ''}"><i></i><span>${esc(freshnessText)}</span></div>
         </div>
         <div class="pbeinj-metrics">
           ${metric('reported players',counts.total ?? 0)}
           ${metric('out / IR',counts.out ?? 0,'is-critical')}
           ${metric('questionable',counts.questionable ?? 0,'is-watch')}
-          ${metric('doubtful',counts.doubtful ?? 0)}
+          ${metric(partial ? 'stale teams' : 'doubtful',partial ? (counts.stale_teams ?? failedTeams.length) : (counts.doubtful ?? 0),partial ? 'is-watch' : '')}
         </div>
       </header>
       ${controls()}
-      <div class="pbeinj-board-meta"><span><strong>${esc(teams.length)}</strong> teams shown · <strong>${esc(totalVisible)}</strong> matching injury entries</span><span>Current source designations only · no inferred timelines</span></div>
+      <div class="pbeinj-board-meta"><span><strong>${esc(teams.length)}</strong> teams shown · <strong>${esc(totalVisible)}</strong> matching injury entries</span><span>${partial ? 'Partial source refresh · stale clubs retain last good entries' : 'Current source designations only · no inferred timelines'}</span></div>
       ${teamIndex(teams)}
       <div class="pbeinj-team-grid">${teams.map(teamCard).join('')}</div>
-      <footer class="pbeinj-source">Source: ESPN injury report. PropBetEdge groups and filters the reported records; it does not infer return dates, practice participation, or game-day inactive status.</footer>
+      <footer class="pbeinj-source">${esc(sourceNote)}</footer>
     </section>`;
   }
 
