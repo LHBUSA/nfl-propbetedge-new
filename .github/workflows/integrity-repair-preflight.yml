@@ -5,6 +5,7 @@ on:
     branches: [fix/bestline-integrity-ui-v1]
     paths:
       - 'scripts/fix-nfl-integrity-repair-bootstrap.mjs'
+      - 'scripts/fix-integrity-acceptance-fixtures.mjs'
       - '.github/workflows/integrity-repair-preflight.yml'
 
 permissions:
@@ -30,6 +31,7 @@ jobs:
         run: |
           node scripts/apply-nfl-picks-integrity-repair.mjs
           node scripts/apply-nfl-picks-market-anchor-v2.mjs
+          node scripts/fix-integrity-acceptance-fixtures.mjs
 
       - name: Syntax gate
         run: |
