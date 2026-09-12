@@ -414,6 +414,8 @@ async function gradeOne(env, pick, final) {
      * was known — and recording its class keeps the tuner's sample auditable
      * rather than silently mixing bootstrap and official history. */
     publication_scope: pick.publication_scope || 'tracking',
+    integrity_status: pick.integrity_status || 'eligible',
+    integrity_reason: pick.integrity_reason || null,
     model_prob: pick.model_prob,
     clv_beat: grade.clv_beat,
     clv_prob: grade.clv_prob,

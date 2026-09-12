@@ -17,7 +17,9 @@ import {
 import {
   devigTwoWay, modelProbability, buildFeatureVector,
   confidenceBucket, qualifies, quarterKellyUnits, edgeThreshold,
-  probToFairSpread, probToAmerican, KILL_THRESHOLD,
+  probToAmerican, KILL_THRESHOLD, selectedWinProbability, normalCdf,
+  spreadCoverProbability, fairSpreadFromMargin, edgeAnomaly, monotonicityValid,
+  expectedMarginFromWinProbability, SPREAD_SIGMA,
 } from '../../nfl-picks-engine-shared/pick-math.mjs';
 import {
   isIndoor, venueFor, restDaysBySchedule,
@@ -35,7 +37,11 @@ import {
 } from '../../nfl-picks-engine-shared/champion.mjs';
 
 const SERVICE = 'nfl-game-picks-orchestrator';
-const VERSION = 'v1.1.0';
+const VERSION = 'v1.2.0';
+const BOOTSTRAP_PROBABILITY_SHRINK = 0.20;
+const MAX_BOOTSTRAP_MARGIN_RESIDUAL = 3.0;
+const SIDE_FLIP_MIN_PROB_SHIFT = 0.05;
+const SIDE_FLIP_MIN_LINE_SHIFT = 1.5;
 const PICK_HORIZON_DAYS = 7;
 /* The market tape is refreshed by the scheduled nfl-odds ingest (08/13/18 ET),
  * so the longest normal gap is ~14h (18:00 -> 08:00). A decision is never made
@@ -291,7 +297,7 @@ async function engineState(req, env, origin) {
   try {
     const champion = await latestPromotedWeights(env).catch(() => null);
     const observations = await select(
-      env, 'nfl_learning_observations', 'select=week,season,publication_scope&limit=5000',
+      env, 'nfl_learning_observations', 'integrity_status=eq.eligible&select=week,season,publication_scope&limit=5000',
     ) || [];
     const weeks = new Set(observations.map(o => `${o.season}-${o.week}`));
     const graded = observations.length;
@@ -333,6 +339,7 @@ async function runOrchestration(env, slate, base) {
   const counts = {
     eligible_games: 0, evaluated_games: 0, no_tape: 0, stale_tape: 0,
     emitted: 0, kept: 0, killed: 0, superseded: 0, pass: 0, ratings_blocked: 0, scope_drain: 0,
+    anomaly_review: 0, totals_disabled: 0,
   };
   let issuance = null;
   let newestTape = null;
@@ -413,25 +420,43 @@ async function runOrchestration(env, slate, base) {
         continue;
       }
       const weather = await weatherFor(game);
+      /* One market anchor per game. ML is preferred because it directly
+       * prices straight-up win probability; the current spread is the
+       * fallback. Every market then shares the same latent home margin. */
+      const marketAnchor = marketAnchorFor(odds);
       counts.evaluated_games += 1;
       record.outcome = 'evaluated';
 
-      for (const market of ['spread', 'total', 'moneyline']) {
+      for (const market of ['spread', 'moneyline', 'total']) {
         const quotes = odds.get(market);
         if (!quotes || !quotes.length) { record.markets.push({ market, outcome: 'no_quote' }); continue; }
 
-        /* Evaluate BOTH sides and take the strongest qualifying edge. If
-         * neither qualifies we still pass the best one through so an existing
-         * open pick can be killed on a collapsed edge. */
         const evaluated = quotes.map(quote =>
-          evaluate({ game, market, quote, ratings, weather, champion, season, week }));
+          evaluate({ game, market, quote, ratings, weather, champion, season, week, marketAnchor }));
+
+        const disabled = evaluated.find(d => d.integrity_status === 'MODEL_DISABLED');
+        if (disabled) {
+          counts.totals_disabled += 1;
+          record.markets.push({ market, outcome: 'model_disabled', reason: disabled.integrity_reason });
+          continue;
+        }
+
+        const anomalies = evaluated.filter(d => d.integrity_status === 'ANOMALY_REVIEW');
+        if (anomalies.length) {
+          counts.anomaly_review += 1;
+          await queueAnomaly(env, { game, market, champion, decisions: anomalies, season, week });
+          const worst = anomalies.slice().sort((a, b) => Number(b.edge_pct || 0) - Number(a.edge_pct || 0))[0];
+          record.markets.push({
+            market, outcome: 'anomaly_review', side: worst?.side || null,
+            edge_pct: worst?.edge_pct ?? null, reason: worst?.integrity_reason || 'decision_integrity_failure',
+          });
+          continue;
+        }
+
         const decision = evaluated
           .slice()
-          .sort((a, b) => Number(b.qualifies) - Number(a.qualifies) || b.edge_pct - a.edge_pct)[0];
+          .sort((a, b) => Number(b.qualifies) - Number(a.qualifies) || Number(b.edge_pct || -99) - Number(a.edge_pct || -99))[0];
 
-        /* Ratings unavailable: make NO decision. Not an emit, and not a kill
-         * either — killing an open pick because we lost our inputs would be a
-         * model decision we did not actually make. */
         if (decision.ratings_available === false) {
           counts.ratings_blocked += 1;
           blockedReasons.add(decision.unavailable_reason);
@@ -465,6 +490,7 @@ async function runOrchestration(env, slate, base) {
           qualifies: decision.qualifies,
           stake_units: decision.stake_units,
           confidence_bucket: decision.confidence_bucket,
+          integrity_warning: decision.integrity_warning || null,
           pass_reason: outcome === 'pass'
             ? (decision.qualifies ? 'stake_zero' : `edge_${decision.edge_pct}_below_threshold_${edgeThreshold(market)}`)
             : null,
@@ -551,104 +577,145 @@ async function runOrchestration(env, slate, base) {
 
 /* Pure decision step — exported so acceptance tests can drive it with fixtures
  * and no network. */
-export function evaluate({ game, market, quote, ratings, weather, champion, season, week }) {
-  /* HARD REQUIREMENT: a missing rating must never become a neutral 0 feature.
-   * Both teams must carry an explicitly usable rating or no decision is made
-   * at all — the caller receives ratings_unavailable and emits nothing. */
+export function evaluate({ game, market, quote, ratings, weather, champion, season, week, marketAnchor = null }) {
+  const selectedIsHome = quote.selected_is_home === true;
+
+  /* Totals are intentionally unavailable until they have a dedicated expected-
+   * total model. The former implementation scored OVER and UNDER from the same
+   * feature vector, which made opposite sides receive identical probabilities. */
+  if (market === 'total') {
+    return {
+      qualifies: false, ratings_available: true, unavailable_reason: null,
+      integrity_status: 'MODEL_DISABLED', integrity_reason: 'dedicated_total_model_required',
+      integrity_warning: null, side: quote.side, market_line: quote.line ?? null,
+      market_price: quote.price, model_line: null, model_prob: null, market_prob: null,
+      edge_pct: 0, confidence_bucket: null, stake_units: 0, features: null,
+      selection_team: null, selection_over_under: quote.over_under ?? null, side_is_home: null,
+      kickoff_ts: game.kickoff_ts, season, week,
+    };
+  }
+
   const homeRating = ratings.get(game.home_team);
   const awayRating = ratings.get(game.away_team);
   const homeCheck = ratingUsable(homeRating);
   const awayCheck = ratingUsable(awayRating);
-
   if (!homeCheck.usable || !awayCheck.usable) {
     return {
-      qualifies: false,
-      ratings_available: false,
-      unavailable_reason: !homeCheck.usable
-        ? `${game.home_team}:${homeCheck.reason}`
-        : `${game.away_team}:${awayCheck.reason}`,
-      side: quote.side,
-      edge_pct: 0,
-      stake_units: 0,
-      confidence_bucket: null,
-      features: null,
-      selection_team: quote.team ?? null,
-      selection_over_under: quote.over_under ?? null,
-      side_is_home: quote.selected_is_home === true ? true
-        : quote.selected_is_home === false ? false : null,
+      qualifies: false, ratings_available: false,
+      unavailable_reason: !homeCheck.usable ? `${game.home_team}:${homeCheck.reason}` : `${game.away_team}:${awayCheck.reason}`,
+      integrity_status: 'INPUT_UNAVAILABLE', integrity_reason: 'ratings_unavailable', integrity_warning: null,
+      side: quote.side, edge_pct: 0, stake_units: 0, confidence_bucket: null, features: null,
+      selection_team: quote.team ?? null, selection_over_under: null, side_is_home: selectedIsHome,
     };
   }
 
-  const home = homeRating;
-  const away = awayRating;
+  if (typeof quote.selected_is_home !== 'boolean' || !quote.team) {
+    return {
+      qualifies: false, ratings_available: true, integrity_status: 'ANOMALY_REVIEW',
+      integrity_reason: 'missing_side_attribution', integrity_warning: null, side: quote.side,
+      market_line: quote.line ?? null, market_price: quote.price, model_line: null, model_prob: null,
+      market_prob: null, edge_pct: 0, confidence_bucket: null, stake_units: 0, features: null,
+      selection_team: quote.team ?? null, selection_over_under: null, side_is_home: null,
+      kickoff_ts: game.kickoff_ts, season, week,
+    };
+  }
+
+  const integrityVersion = Number(champion?.weights?.meta?.integrity_version || 0);
   const dome = isIndoor(game.home_team);
-
-  /* Features are built for the side the quote actually describes. `home` is 1
-   * only when the selected side IS the home team — attribution comes from the
-   * stored snapshot, never assumed. A total has no team, so it is scored from
-   * the home team's perspective with home=0. */
-  const selectedIsHome = quote.selected_is_home === true;
-  const isTeamMarket = market !== 'total';
-  const self = isTeamMarket ? (selectedIsHome ? home : away) : home;
-  const opp = isTeamMarket ? (selectedIsHome ? away : home) : away;
-  const restSelf = isTeamMarket
-    ? (selectedIsHome ? game.rest_home : game.rest_away)
-    : game.rest_home;
-  const restOpp = isTeamMarket
-    ? (selectedIsHome ? game.rest_away : game.rest_home)
-    : game.rest_away;
-
+  /* One canonical HOME-perspective vector drives both moneyline and spread.
+   * No quote direction or current market tick is allowed to change the latent
+   * team-strength projection, which prevents paired-market contradictions. */
   const features = buildFeatureVector({
-    off_epa_diff: num(self.off_epa_play) - num(opp.def_epa_play),
-    def_epa_diff: num(opp.off_epa_play) - num(self.def_epa_play),
-    qb_tier_diff: num(opp.qb_tier) - num(self.qb_tier),
-    rest_diff: num(restSelf) - num(restOpp),
-    home: isTeamMarket && selectedIsHome,
+    off_epa_diff: num(homeRating.off_epa_play) - num(awayRating.def_epa_play),
+    def_epa_diff: num(awayRating.off_epa_play) - num(homeRating.def_epa_play),
+    qb_tier_diff: num(awayRating.qb_tier) - num(homeRating.qb_tier),
+    rest_diff: num(game.rest_home) - num(game.rest_away),
+    home: true,
     dome,
     wind15: !dome && weather?.wind_mph >= 15,
     cold25: !dome && weather?.temp_f <= 25,
-    proe_diff: num(self.proe) - num(opp.proe),
-    pace_sum: num(self.pace) + num(opp.pace),
-    line_move: num(quote.line_move),
+    proe_diff: num(homeRating.proe) - num(awayRating.proe),
+    pace_sum: num(homeRating.pace) + num(awayRating.pace),
+    line_move: 0,
     week,
   });
 
-  const bucketProbe = modelProbability(champion.weights, features);
-  const provisionalBucket = confidenceBucket(Math.abs(bucketProbe - 0.5), market) || 'C';
-  const modelProb = modelProbability(champion.weights, features, provisionalBucket);
+  const anchor = validAnchor(marketAnchor) ? marketAnchor : quoteMarketAnchor(market, quote);
+  if (!validAnchor(anchor)) {
+    return {
+      qualifies: false, ratings_available: true, integrity_status: 'ANOMALY_REVIEW',
+      integrity_reason: 'market_anchor_unavailable', integrity_warning: null, side: quote.side,
+      market_line: quote.line ?? null, market_price: quote.price, model_line: null, model_prob: null,
+      market_prob: null, edge_pct: 0, confidence_bucket: null, stake_units: 0, features,
+      selection_team: quote.team ?? null, selection_over_under: null, side_is_home: selectedIsHome,
+      kickoff_ts: game.kickoff_ts, season, week,
+    };
+  }
+
+  const rawHomeWin = modelProbability(champion.weights, features);
+  const priorMargin = expectedMarginFromWinProbability(rawHomeWin);
+  const anchorMargin = expectedMarginFromWinProbability(anchor.home_win_prob);
+  const requestedWeight = Number(champion?.weights?.meta?.market_anchor_weight ?? BOOTSTRAP_PROBABILITY_SHRINK);
+  const residualWeight = Number.isFinite(requestedWeight)
+    ? Math.max(0, Math.min(0.50, requestedWeight)) : BOOTSTRAP_PROBABILITY_SHRINK;
+  const requestedCap = Number(champion?.weights?.meta?.max_margin_residual_points ?? MAX_BOOTSTRAP_MARGIN_RESIDUAL);
+  const residualCap = Number.isFinite(requestedCap) ? Math.max(0.5, Math.min(7, requestedCap)) : MAX_BOOTSTRAP_MARGIN_RESIDUAL;
+  const rawResidual = (priorMargin - anchorMargin) * residualWeight;
+  const residual = Math.max(-residualCap, Math.min(residualCap, rawResidual));
+  const modelHomeMargin = anchorMargin + residual;
+  const homeWin = normalCdf(modelHomeMargin / SPREAD_SIGMA);
+  const selectedWin = selectedWinProbability(homeWin, selectedIsHome);
+
+  let modelProb;
+  let modelLine;
+  if (market === 'moneyline') {
+    modelProb = selectedWin;
+    modelLine = Number(probToAmerican(modelProb));
+  } else if (market === 'spread') {
+    const line = Number(quote.line);
+    if (!Number.isFinite(line)) {
+      return {
+        qualifies: false, ratings_available: true, integrity_status: 'ANOMALY_REVIEW',
+        integrity_reason: 'spread_line_missing', integrity_warning: null, side: quote.side,
+        market_line: quote.line ?? null, market_price: quote.price, model_line: null, model_prob: null,
+        market_prob: null, edge_pct: 0, confidence_bucket: null, stake_units: 0, features,
+        selection_team: quote.team ?? null, selection_over_under: null, side_is_home: selectedIsHome,
+        kickoff_ts: game.kickoff_ts, season, week,
+      };
+    }
+    modelProb = spreadCoverProbability({ homeWinProb: homeWin, selectedIsHome, line });
+    modelLine = Number(fairSpreadFromMargin({ homeWinProb: homeWin, selectedIsHome }).toFixed(2));
+  } else {
+    throw new Error(`bad_market:${market}`);
+  }
 
   const marketProb = devigTwoWay(quote.price, quote.opposite_price);
   const edge = Number((modelProb - marketProb).toFixed(6));
-  const bucket = confidenceBucket(edge, market);
+  const edgeState = edgeAnomaly(edge);
+  const coherent = market !== 'spread' || monotonicityValid({
+    winProb: selectedWin, coverProb: modelProb, line: Number(quote.line),
+  });
 
-  const modelLine = market === 'spread'
-    ? Number(probToFairSpread(modelProb).toFixed(2))
-    : market === 'total'
-      ? (quote.line === null || quote.line === undefined ? null : Number(quote.line))
-      : Number(probToAmerican(modelProb));
+  let integrityStatus = 'ELIGIBLE';
+  let integrityReason = null;
+  if (integrityVersion < 2) { integrityStatus = 'ANOMALY_REVIEW'; integrityReason = 'model_integrity_version_lt_2'; }
+  else if (!coherent) { integrityStatus = 'ANOMALY_REVIEW'; integrityReason = 'spread_moneyline_monotonicity_failure'; }
+  else if (edgeState.hard) { integrityStatus = 'ANOMALY_REVIEW'; integrityReason = edgeState.reason; }
+
+  const bucket = integrityStatus === 'ELIGIBLE' ? confidenceBucket(edge, market) : null;
+  const doesQualify = integrityStatus === 'ELIGIBLE' && qualifies(edge, market) && bucket !== null;
 
   return {
-    qualifies: qualifies(edge, market) && bucket !== null,
-    ratings_available: true,
-    unavailable_reason: null,
-    side: quote.side,
-    /* Canonical attribution straight from the odds quote. Never re-derived
-     * from the display string, which changes when the line moves. */
-    selection_team: isTeamMarket ? (quote.team ?? null) : null,
-    selection_over_under: isTeamMarket ? null : (quote.over_under ?? null),
-    side_is_home: isTeamMarket ? selectedIsHome : null,
-    market_line: quote.line ?? null,
-    market_price: quote.price,
-    model_line: modelLine,
-    model_prob: Number(modelProb.toFixed(6)),
-    market_prob: Number(marketProb.toFixed(6)),
-    edge_pct: edge,
-    confidence_bucket: bucket,
-    stake_units: bucket ? quarterKellyUnits(modelProb, quote.price) : 0,
-    features,
-    kickoff_ts: game.kickoff_ts,
-    season,
-    week,
+    qualifies: doesQualify, ratings_available: true, unavailable_reason: null,
+    integrity_status: integrityStatus, integrity_reason: integrityReason,
+    integrity_warning: edgeState.warn && !edgeState.hard ? edgeState.reason : null,
+    integrity_context: { anchor_source: anchor.source, anchor_home_win_prob: Number(anchor.home_win_prob.toFixed(6)), model_home_margin: Number(modelHomeMargin.toFixed(3)), residual_points: Number(residual.toFixed(3)) },
+    side: quote.side, selection_team: quote.team ?? null, selection_over_under: null,
+    side_is_home: selectedIsHome, market_line: quote.line ?? null, market_price: quote.price,
+    model_line: modelLine, model_prob: Number(modelProb.toFixed(6)),
+    market_prob: Number(marketProb.toFixed(6)), edge_pct: edge, confidence_bucket: bucket,
+    stake_units: bucket ? quarterKellyUnits(modelProb, quote.price) : 0, features,
+    kickoff_ts: game.kickoff_ts, season, week,
   };
 }
 
@@ -656,6 +723,9 @@ export function evaluate({ game, market, quote, ratings, weather, champion, seas
  * edits an issued pick's economic terms. */
 async function reconcile(env, { open, decision, champion, game, market, season, week, scope }) {
   const tally = { emitted: 0, killed: 0, superseded: 0, kept: 0, scope_drain: 0 };
+
+  /* Defence in depth: anomaly/model-disabled outputs can never reach the pick ledger. */
+  if (decision.integrity_status && decision.integrity_status !== 'ELIGIBLE') return tally;
 
   const issuanceRow = {
     game_id: game.game_id,
@@ -674,6 +744,8 @@ async function reconcile(env, { open, decision, champion, game, market, season, 
     features: decision.features,
     model_version: champion.version,
     publication_scope: scope,
+    integrity_status: 'eligible',
+    integrity_reason: null,
     /* Canonical attribution, persisted at issuance and frozen by the database.
      * Grading reads these, never the display string. */
     selection_team: decision.selection_team,
@@ -735,6 +807,14 @@ async function reconcile(env, { open, decision, champion, game, market, season, 
 
   const sideFlipped = decision.side && decision.side !== open.side;
 
+  if (sideFlipped && decision.qualifies && decision.stake_units > 0 && !flipAllowed(open, decision, market)) {
+    /* Hysteresis: a one-tick price wobble cannot reverse a frozen decision.
+     * The old side remains until the latent probability meaningfully moves,
+     * or a spread crosses by at least 1.5 points. Totals are disabled. */
+    tally.kept = 1;
+    return tally;
+  }
+
   if (sideFlipped && decision.qualifies && decision.stake_units > 0) {
     /* Atomic: the function supersedes the incumbent and inserts the
      * replacement in one transaction, so the partial unique index never sees
@@ -785,6 +865,89 @@ async function reconcile(env, { open, decision, champion, game, market, season, 
    * Re-emitting at a better number would be rewriting history. */
   tally.kept = 1;
   return tally;
+}
+
+export function marketAnchorFor(odds) {
+  const ml = odds?.get?.('moneyline') || [];
+  const homeMl = ml.find(q => q.selected_is_home === true);
+  if (homeMl) {
+    try {
+      const p = devigTwoWay(homeMl.price, homeMl.opposite_price);
+      if (p > 0 && p < 1) return { home_win_prob: p, source: 'consensus_moneyline' };
+    } catch (_) {}
+  }
+  const spread = odds?.get?.('spread') || [];
+  const homeSpread = spread.find(q => q.selected_is_home === true && Number.isFinite(Number(q.line)));
+  if (homeSpread) {
+    const homeMargin = -Number(homeSpread.line);
+    const p = normalCdf(homeMargin / SPREAD_SIGMA);
+    if (p > 0 && p < 1) return { home_win_prob: p, source: 'consensus_spread' };
+  }
+  return null;
+}
+
+function quoteMarketAnchor(market, quote) {
+  try {
+    if (market === 'moneyline') {
+      const selected = devigTwoWay(quote.price, quote.opposite_price);
+      return { home_win_prob: quote.selected_is_home === true ? selected : 1 - selected, source: 'quote_moneyline_fallback' };
+    }
+    if (market === 'spread' && Number.isFinite(Number(quote.line))) {
+      const selectedMargin = -Number(quote.line);
+      const homeMargin = quote.selected_is_home === true ? selectedMargin : -selectedMargin;
+      return { home_win_prob: normalCdf(homeMargin / SPREAD_SIGMA), source: 'quote_spread_fallback' };
+    }
+  } catch (_) {}
+  return null;
+}
+
+function validAnchor(anchor) {
+  const p = Number(anchor?.home_win_prob);
+  return Number.isFinite(p) && p > 0.01 && p < 0.99;
+}
+
+export function flipAllowed(open, decision, market) {
+  if (!open || !decision || market === 'total') return false;
+  const oldProb = Number(open.model_prob);
+  const newProb = Number(decision.model_prob);
+  if (!Number.isFinite(oldProb) || !Number.isFinite(newProb)) return false;
+  /* Compare the new opposite-side probability with the complement of what the
+   * old model believed at issuance. Market-only price noise produces ~0. */
+  const probabilityShift = Math.abs(newProb - (1 - oldProb));
+  let lineShift = 0;
+  if (market === 'spread') {
+    const oldLine = Number(open.market_line), newLine = Number(decision.market_line);
+    if (Number.isFinite(oldLine) && Number.isFinite(newLine)) {
+      lineShift = Math.abs(Math.abs(newLine) - Math.abs(oldLine));
+    }
+  }
+  return probabilityShift >= SIDE_FLIP_MIN_PROB_SHIFT
+    || (probabilityShift >= 0.02 && lineShift >= SIDE_FLIP_MIN_LINE_SHIFT);
+}
+
+async function queueAnomaly(env, { game, market, champion, decisions, season, week }) {
+  const first = decisions[0] || {};
+  const type = first.integrity_reason || 'decision_integrity_failure';
+  try {
+    const existing = await select(
+      env, 'nfl_pick_anomalies',
+      `game_id=eq.${encodeURIComponent(game.game_id)}&market=eq.${market}&model_version=eq.${champion.version}&anomaly_type=eq.${encodeURIComponent(type)}&status=eq.open&select=id&limit=1`,
+    ) || [];
+    if (existing.length) return;
+    await insert(env, 'nfl_pick_anomalies', {
+      game_id: game.game_id, season, week, market, model_version: champion.version,
+      anomaly_type: type, status: 'open',
+      detail: {
+        matchup: `${game.away_team} @ ${game.home_team}`,
+        candidates: decisions.map(d => ({
+          side: d.side, line: d.market_line, model_prob: d.model_prob, market_prob: d.market_prob,
+          edge_pct: d.edge_pct, reason: d.integrity_reason, warning: d.integrity_warning || null,
+        })),
+      },
+    });
+  } catch (error) {
+    console.error(`[${SERVICE}] anomaly queue failed class=${errorClass(error)}`);
+  }
 }
 
 /* ---------------------------------------------------------------------------
