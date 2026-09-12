@@ -66,7 +66,7 @@ function normalizeRow(row) {
     team: {
       id: String(row?.team?.id || team.id),
       abbreviation: team.abbreviation,
-      name: row?.team?.name || team.name,
+      name: team.name,
       conference: team.conference,
       division: team.division
     }
@@ -85,6 +85,7 @@ function sortRows(rows) {
 
 export function buildInjuryBoard(rows, snapshot = {}, { now = Date.now(), staleMs = 30 * 60000 } = {}) {
   const byTeam = new Map(TEAM_DIRECTORY.map(team => [team.abbreviation, []]));
+  const failedTeams = new Set((Array.isArray(snapshot?.failed_teams) ? snapshot.failed_teams : []).map(value => String(value || '').toUpperCase()));
   for (const raw of Array.isArray(rows) ? rows : []) {
     const row = normalizeRow(raw);
     if (row) byTeam.get(row.team.abbreviation).push(row);
@@ -92,9 +93,12 @@ export function buildInjuryBoard(rows, snapshot = {}, { now = Date.now(), staleM
 
   const teams = TEAM_DIRECTORY.map(team => {
     const injuries = sortRows(byTeam.get(team.abbreviation));
+    const sourceStale = failedTeams.has(team.abbreviation);
     return {
       ...team,
       logo: `https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/${team.abbreviation.toLowerCase()}.png`,
+      source_status: sourceStale ? 'STALE_PREVIOUS_SNAPSHOT' : 'CURRENT',
+      source_stale: sourceStale,
       counts: countStatuses(injuries),
       injuries
     };
@@ -113,14 +117,16 @@ export function buildInjuryBoard(rows, snapshot = {}, { now = Date.now(), staleM
       fetched_at: fetchedAt,
       age_seconds: ageSeconds,
       stale: ageSeconds === null ? null : ageSeconds * 1000 > staleMs,
+      partial: failedTeams.size > 0 || Number(snapshot?.record_failures || 0) > 0,
       ingested_by: 'nfl-intel cron',
-      failed_teams: Array.isArray(snapshot?.failed_teams) ? snapshot.failed_teams : [],
+      failed_teams: [...failedTeams],
       record_failures: Number(snapshot?.record_failures || 0),
-      note: 'Current reported designations only. PropBetEdge does not infer return timelines, practice participation, or game-day inactive status.'
+      note: 'Current reported designations only. If a team refresh fails, nfl-intel retains that team’s last good entries and marks the team stale. PropBetEdge does not infer return timelines, practice participation, or game-day inactive status.'
     },
     counts: {
       teams: TEAM_DIRECTORY.length,
       teams_with_entries: teams.filter(team => team.counts.total > 0).length,
+      stale_teams: teams.filter(team => team.source_stale).length,
       ...countStatuses(all)
     },
     teams
