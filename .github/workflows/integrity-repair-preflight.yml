@@ -44,6 +44,7 @@ jobs:
             workers/nfl-picks-engine-shared/pick-math.mjs \
             workers/nfl-picks-engine-shared/publication.mjs \
             workers/nfl-picks-engine-shared/tests/acceptance.test.mjs \
+            tests/pbe-picks-runtime.test.mjs \
             api/pbe-picks.js api/pbe-validation.js
 
       - name: Picks engine regression suite
@@ -67,6 +68,7 @@ jobs:
             workers/nfl-picks-engine-shared/pick-math.mjs \
             workers/nfl-picks-engine-shared/publication.mjs \
             workers/nfl-picks-engine-shared/tests/acceptance.test.mjs \
+            tests/pbe-picks-runtime.test.mjs \
             api/pbe-picks.js api/pbe-validation.js
           git commit -m 'Complete NFL picks integrity repair'
           git push origin HEAD:fix/bestline-integrity-ui-v1
