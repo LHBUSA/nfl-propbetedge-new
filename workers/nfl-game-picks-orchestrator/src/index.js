@@ -20,6 +20,7 @@ import {
   probToAmerican, KILL_THRESHOLD, selectedWinProbability, normalCdf,
   spreadCoverProbability, fairSpreadFromMargin, edgeAnomaly, monotonicityValid,
   expectedMarginFromWinProbability, SPREAD_SIGMA,
+  consensusTotal, totalSideProbability, TOTAL_SIGMA,
 } from '../../nfl-picks-engine-shared/pick-math.mjs';
 import {
   isIndoor, venueFor, restDaysBySchedule,
@@ -510,6 +511,63 @@ async function engineState(req, env, origin) {
  * ------------------------------------------------------------------------ */
 
 const BESTLINE_EVAL_KEY = 'eval:bestline:v2:current';
+const TOTALS_SHADOW_KEY = 'eval:totals-shadow:current';
+
+/* ---------------------------------------------------------------------------
+ * Totals v2 — market-calibrated validation lane
+ *
+ * A DEDICATED model, not a patch on the side model. One expected total drives
+ * both sides; Under is the complement of Over, so the two can never contradict.
+ * expected_total is the consensus anchor with zero structural residual, because
+ * walk-forward testing showed a residual has no out-of-sample skill and every
+ * shrink degraded calibration.
+ *
+ * This feeds Best Line ONLY. It deliberately does not touch issuance: the pick
+ * path still receives MODEL_DISABLED from evaluate() and still returns before
+ * reconcile, so no total can become a pick from this lane.
+ * ------------------------------------------------------------------------ */
+function evaluateTotalsV2(quotes, { tapeAt, evaluatedAt }) {
+  const list = Array.isArray(quotes) ? quotes : [];
+  const expectedTotal = consensusTotal(list.map(q => q.line));
+  /* No anchor, no fair value. Never guessed. */
+  if (expectedTotal === null) {
+    return list.map(q => ({
+      market: 'total', side: q.side ?? null, team: null,
+      over_under: q.over_under ?? null, side_is_home: null,
+      integrity_status: 'INPUT_UNAVAILABLE', integrity_reason: 'total_anchor_unavailable',
+      integrity_warning: null,
+      market_line: q.line ?? null, market_price: q.price ?? null,
+      expected_total: null, total_sigma: null,
+      model_prob: null, model_line: null, latent_margin: null, market_prob: null, edge_pct: null,
+      evaluated_at: evaluatedAt, tape_captured_at: tapeAt,
+    }));
+  }
+  return list.map(q => {
+    const prob = totalSideProbability({
+      expectedTotal, line: Number(q.line), overUnder: q.over_under, sigma: TOTAL_SIGMA,
+    });
+    const usable = prob !== null && Number.isFinite(prob);
+    return {
+      market: 'total', side: q.side ?? null, team: null,
+      over_under: q.over_under ?? null, side_is_home: null,
+      /* Its own status: real model output, but market-calibrated and
+       * validation-only. Never 'ELIGIBLE', which is the issuance vocabulary. */
+      integrity_status: usable ? 'MARKET_CALIBRATED' : 'INPUT_UNAVAILABLE',
+      integrity_reason: usable ? 'zero_residual_market_anchor' : 'total_side_unresolved',
+      integrity_warning: null,
+      market_line: q.line ?? null, market_price: q.price ?? null,
+      expected_total: expectedTotal,
+      total_sigma: TOTAL_SIGMA,
+      model_prob: usable ? Number(prob.toFixed(6)) : null,
+      /* The fair number IS the expected total; it is one number for both sides. */
+      model_line: expectedTotal,
+      latent_margin: null,
+      market_prob: null, edge_pct: null,
+      evaluated_at: evaluatedAt, tape_captured_at: tapeAt,
+    };
+  });
+}
+
 
 function sanitizeEvaluation(d, { market, tapeAt, evaluatedAt }) {
   const base = {
@@ -563,6 +621,8 @@ async function runOrchestration(env, slate, base) {
   const evaluations = [];
   /* Sanitized Best Line model snapshot, built from the same evaluate() calls. */
   const blGames = [];
+  /* Shadow corpus: EVERY eligible game, not only ones with an apparent edge. */
+  const totalsShadow = [];
   /* One evaluation instant for the whole run, so every stored side agrees. */
   const evaluatedAtIso = new Date().toISOString();
   const counts = {
@@ -713,9 +773,47 @@ async function runOrchestration(env, slate, base) {
 
         /* Snapshot EVERY evaluated side — issued or not. Best Line shows model
          * value whenever the engine evaluated the market successfully; it does
-         * not require the edge to have qualified for issuance. */
-        for (const d of evaluated) {
-          blGame.markets.push(sanitizeEvaluation(d, { market, tapeAt, evaluatedAt: evaluatedAtIso }));
+         * not require the edge to have qualified for issuance.
+         *
+         * Totals come from their own dedicated model rather than from
+         * evaluate(), which still reports MODEL_DISABLED for them a few lines
+         * below and still blocks issuance. Surface and pick ledger are
+         * deliberately different lanes here. */
+        if (market === 'total') {
+          const totalRows = evaluateTotalsV2(quotes, { tapeAt, evaluatedAt: evaluatedAtIso });
+          for (const row of totalRows) blGame.markets.push(row);
+          const anchored = totalRows.find(r => r.expected_total !== null) || null;
+          totalsShadow.push({
+            game_id: game.game_id,
+            season, week,
+            away: game.away_team, home: game.home_team,
+            kickoff_ts: game.kickoff_ts,
+            evaluated_at: evaluatedAtIso,
+            tape_captured_at: tapeAt,
+            books: odds.books || 0,
+            market_total_anchor: anchored?.expected_total ?? null,
+            expected_total: anchored?.expected_total ?? null,
+            total_sigma: anchored ? TOTAL_SIGMA : null,
+            model: 'totals_v2_market_anchor_zero_residual',
+            sides: totalRows.map(r => ({
+              over_under: r.over_under, line: r.market_line, price: r.market_price,
+              model_prob: r.model_prob, integrity_status: r.integrity_status,
+            })),
+            /* Verified pregame context only — no invented weather or rest. */
+            features: {
+              dome: isIndoor(game.home_team),
+              rest_home: game.rest_home ?? null,
+              rest_away: game.rest_away ?? null,
+              weather_observed: Boolean(weather),
+              wind_mph: weather?.wind_mph ?? null,
+              temp_f: weather?.temp_f ?? null,
+            },
+            provenance: { source: 'nfl_odds_snapshots', anchor: 'consensus_median_total' },
+          });
+        } else {
+          for (const d of evaluated) {
+            blGame.markets.push(sanitizeEvaluation(d, { market, tapeAt, evaluatedAt: evaluatedAtIso }));
+          }
         }
 
         const disabled = evaluated.find(d => d.integrity_status === 'MODEL_DISABLED');
@@ -825,6 +923,23 @@ async function runOrchestration(env, slate, base) {
         games: blGames,
       }), { expirationTtl: 7 * 86400 });
     } catch (_) { /* non-fatal: Best Line falls back to its locked state */ }
+
+    /* Shadow totals corpus. The FULL eligible slate every run, so a future
+     * total challenger is trained on what was actually offered rather than on
+     * the subset that happened to look like an edge. Not a pick ledger: nothing
+     * here is customer-facing and nothing here can become an official record. */
+    try {
+      await env.PICKS_KV?.put(TOTALS_SHADOW_KEY, JSON.stringify({
+        contract: 'totals-shadow-v2',
+        model: 'totals_v2_market_anchor_zero_residual',
+        total_sigma: TOTAL_SIGMA,
+        evaluated_at: evaluatedAtIso,
+        season, week: slate.week,
+        eligible_games: counts.eligible_games,
+        recorded_games: totalsShadow.length,
+        games: totalsShadow,
+      }), { expirationTtl: 90 * 86400 });
+    } catch (_) { /* the run ledger below still records the run */ }
 
     const next = games[0];
     const record = {

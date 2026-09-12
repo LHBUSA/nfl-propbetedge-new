@@ -204,6 +204,41 @@
     return null;
   }
 
+  /* Totals: a dedicated, market-calibrated validation model. One expected total
+   * drives both sides, so Over and Under are complements of one distribution.
+   * Labelled so nobody reads it as a trained proprietary forecast. */
+  function totalHtml(m, side, ev) {
+    const expected = n(m.expected_total);
+    const prob = n(m.model_prob);
+    if (!Number.isFinite(expected) || !Number.isFinite(prob)) return {
+      fair: '<b>UNAVAILABLE</b><small>No consensus total to anchor to</small>',
+      edge: '<b>UNAVAILABLE</b><small>No value is guessed</small>'
+    };
+    const bestLine = n(side?.best?.line);
+    const bestPrice = n(side?.best?.price);
+    const bestBook = side?.best?.book || '';
+    const ou = String(m.over_under || side?.side || '').toUpperCase() === 'UNDER' ? 'Under' : 'Over';
+    const sigma = n(m.total_sigma);
+
+    /* Probability AT the best executable number, from the same expected total. */
+    let probAtBest = prob;
+    if (Number.isFinite(bestLine) && Number.isFinite(sigma) && sigma > 0) {
+      const over = 1 - normalCdf((bestLine - expected) / sigma);
+      probAtBest = ou === 'Under' ? 1 - over : over;
+    }
+    const be = breakEven(bestPrice);
+    const edgeAtBest = Number.isFinite(be) ? probAtBest - be : NaN;
+    const fresh = staleNote(ev, m);
+    const at = Number.isFinite(bestLine)
+      ? `${pct(probAtBest)} ${ou} at ${bestLine}${Number.isFinite(bestPrice) ? ` ${american(bestPrice)}` : ''}`
+      : `${pct(probAtBest)} ${ou}`;
+
+    return {
+      fair: `<b>${esc(String(expected))}</b><small>${esc(at)}</small><small>${esc(`PBE TOTAL · MARKET-CALIBRATED VALIDATION${fresh.at ? ` · ${fresh.at}` : ''}`)}</small>`,
+      edge: `<b>${esc(Number.isFinite(edgeAtBest) ? pp(edgeAtBest) : '—')}</b><small>EDGE AT BEST · ${esc(Number.isFinite(be) ? `vs ${pct(be)} break-even at ${american(bestPrice)}${bestBook ? ` · ${bestBook}` : ''}` : 'no executable price')}</small><small>Market-anchored, zero structural residual</small>`
+    };
+  }
+
   function modelHtml(event, market, side) {
     const state = accessState();
     if (state !== 'ready') return stateHtml(state);
@@ -212,6 +247,7 @@
     const m = evalSide(event, market, side);
 
     if (m) {
+      if (m.integrity_status === 'MARKET_CALIBRATED') return totalHtml(m, side, ev);
       const status = statusHtml(m);
       if (status) return status;
 
