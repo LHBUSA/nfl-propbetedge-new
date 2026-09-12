@@ -1,0 +1,91 @@
+name: Deploy NFL Integrity Workers Once
+
+on:
+  push:
+    branches: [ops/deploy-nfl-integrity-workers-v1]
+    paths:
+      - '.github/workflows/deploy-nfl-integrity-workers-once.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax gate
+        run: |
+          node scripts/check-syntax.mjs \
+            workers/nfl-intel/src/index.js workers/nfl-intel/src/bestline-core.js \
+            workers/nfl-game-picks-orchestrator/src/index.js \
+            workers/nfl-game-grader/src/index.js \
+            workers/nfl-weight-tuner/src/index.js \
+            workers/nfl-picks-engine-shared/pick-math.mjs \
+            workers/nfl-picks-engine-shared/publication.mjs
+      - name: Regression gate
+        run: |
+          node --test tests/nfl-intel-worker.test.mjs
+          node --test workers/nfl-picks-engine-shared/tests/*.test.mjs
+          node --test tests/pbe-card-v3.test.mjs tests/pbe-picks-runtime.test.mjs
+
+  deploy-nfl-intel:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy nfl-intel
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: fd3a233edadd0a60916413c1199f71ee
+          workingDirectory: workers/nfl-intel
+          command: deploy
+
+  deploy-game-picks-orchestrator:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy nfl-game-picks-orchestrator
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: fd3a233edadd0a60916413c1199f71ee
+          workingDirectory: workers/nfl-game-picks-orchestrator
+          command: deploy
+
+  deploy-game-grader:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy nfl-game-grader
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: fd3a233edadd0a60916413c1199f71ee
+          workingDirectory: workers/nfl-game-grader
+          command: deploy
+
+  deploy-weight-tuner:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy nfl-weight-tuner
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: fd3a233edadd0a60916413c1199f71ee
+          workingDirectory: workers/nfl-weight-tuner
+          command: deploy
