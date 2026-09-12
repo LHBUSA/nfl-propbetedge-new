@@ -157,7 +157,7 @@ test('the orchestrator returns early when it cannot issue at all, writing nothin
   /* The blocked path now returns its run record (so a manual run can report
    * the gate) rather than a bare `return;`. What matters is unchanged: it
    * returns BEFORE any slate work, which the no-write assertion pins down. */
-  assert.ok(/\breturn(;| record;)/.test(gateBlock), 'blocked path must return early');
+  assert.ok(/\breturn\b/.test(gateBlock), 'blocked path must return early');
   // Nothing in the blocked branch may write.
   assert.equal(/insert\(|patch\(|upsert\(/.test(gateBlock), false,
     'blocked branch must not write any row');

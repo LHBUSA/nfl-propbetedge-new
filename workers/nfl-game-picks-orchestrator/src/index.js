@@ -442,6 +442,17 @@ async function engineState(req, env, origin) {
  * Orchestration
  * ------------------------------------------------------------------------ */
 
+/* Stamp the completion time ONCE, on the record that is both persisted and
+ * returned. safeRecord() would otherwise mint it inside recordRun, leaving the
+ * caller's copy with finished_at undefined — which is why POST /v1/engine/run-now
+ * reported a null completion time for a run that had plainly finished. One
+ * timestamp, one object: the response and the durable ledger cannot disagree. */
+async function persistRun(env, record) {
+  record.finished_at = record.finished_at || new Date().toISOString();
+  await recordRun(env, SERVICE, record);
+  return record;
+}
+
 async function runOrchestration(env, slate, base) {
   resetHealth();
   const evaluations = [];
@@ -504,9 +515,8 @@ async function runOrchestration(env, slate, base) {
           },
         },
       };
-      await recordRun(env, SERVICE, record);
       console.log(`[${SERVICE}] decision gated ${issuance.reason} — runtime ok, emitting nothing`);
-      return record;
+      return await persistRun(env, record);
     }
 
     /* Season and week come from nfl-current. So does eligibility: a game is
@@ -527,8 +537,7 @@ async function runOrchestration(env, slate, base) {
         ...base, status: 'ok', reason: 'no_issuable_games', counts,
         detail: { public: { tier: base.tier, engine_state: health.engine_state, next_game: null } },
       };
-      await recordRun(env, SERVICE, record);
-      return record;
+      return await persistRun(env, record);
     }
 
     const ratings = await teamRatings(env, season);
@@ -709,8 +718,7 @@ async function runOrchestration(env, slate, base) {
         },
       },
     };
-    await recordRun(env, SERVICE, record);
-    return record;
+    return await persistRun(env, record);
   } catch (error) {
     health.engine_state = 'ENGINE DEGRADED — source unavailable';
     health.last_error_class = errorClass(error);
@@ -722,8 +730,7 @@ async function runOrchestration(env, slate, base) {
       counts,
       detail: { public: { tier: base?.tier, engine_state: health.engine_state } },
     };
-    await recordRun(env, SERVICE, record);
-    return record;
+    return persistRun(env, record);
   }
 }
 

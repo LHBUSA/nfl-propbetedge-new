@@ -19,7 +19,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
-import { laneHealth } from '../runs.mjs';
+import { laneHealth, recordRun } from '../runs.mjs';
 import {
   issuanceScope, championPublishable, GATED_NO_CHAMPION_STATE, DEGRADED_STATE,
 } from '../champion.mjs';
@@ -78,7 +78,7 @@ test('a gated run issues zero picks', () => {
   assert.equal(gatedRun.counts.emitted, 0);
   /* The gated branch returns before any slate work, so nothing can be issued. */
   const branch = SRC.slice(SRC.indexOf('if (!issuance.canIssue)'));
-  const body = branch.slice(0, branch.indexOf('return record;'));
+  const body = branch.slice(0, branch.indexOf('persistRun(env, record)'));
   assert.doesNotMatch(body, /reconcile\(/);
   assert.doesNotMatch(body, /insert\(/);
 });
@@ -409,4 +409,71 @@ test('the gated run is HEALTHY end to end: ok status, GATED state, zero issued',
   assert.equal(run.detail.public.issuance_mode, 'GATED');
   assert.equal(run.counts.emitted, 0);
   assert.equal(laneHealth(LANE, { tick: run, work: run, ok: run }, NOW).state, 'HEALTHY');
+});
+
+/* --------------------------------------------------------------------------
+ * 6. The manual-run response and the durable ledger report the SAME completion
+ *
+ * safeRecord() mints finished_at inside recordRun, so a caller that persisted
+ * a record and then returned its own copy reported finished_at: null for a run
+ * that had plainly finished. persistRun() stamps it once, on the object that is
+ * both written and returned, so the two cannot drift.
+ * ----------------------------------------------------------------------- */
+
+test('persistRun stamps finished_at once, on the object it persists and returns', () => {
+  const src = SRC.slice(SRC.indexOf('async function persistRun'), SRC.indexOf('async function runOrchestration'));
+  assert.match(src, /record\.finished_at = record\.finished_at \|\| new Date\(\)\.toISOString\(\);/);
+  assert.match(src, /await recordRun\(env, SERVICE, record\);/);
+  assert.match(src, /return record;/);
+  /* Every orchestration exit goes through it — none may persist directly and
+   * hand back an unstamped copy. */
+  const work = SRC.slice(SRC.indexOf('async function runOrchestration'), SRC.indexOf('export function evaluate'));
+  assert.equal((work.match(/persistRun\(env, record\)/g) || []).length, 4);
+  assert.doesNotMatch(work, /await recordRun\(env, SERVICE, record\);/);
+});
+
+test('the run-now response carries finished_at straight from the persisted record', () => {
+  const runNow = SRC.slice(SRC.indexOf('async function runNow'), SRC.indexOf('* Read contract'));
+  /* Not a second `new Date()` — the same record the ledger received. */
+  assert.match(runNow, /finished_at: record\?\.finished_at \?\? null/);
+  assert.doesNotMatch(runNow, /finished_at: new Date\(\)/);
+});
+
+test('a stamped record yields a valid ISO finished_at that the ledger echoes back', () => {
+  /* Mirrors persistRun against a fake KV, then reads the record back exactly as
+   * laneHealth would, and asserts the response copy and the stored copy agree. */
+  const stored = {};
+  const fakeKv = {
+    put: async (k, v) => { stored[k] = v; },
+    get: async (k, opts) => (opts?.type === 'json' ? JSON.parse(stored[k] ?? 'null') : (stored[k] ?? null)),
+  };
+  const record = {
+    version: 'v1.2.0', trigger: 'manual_admin', tier: 'manual',
+    started_at: new Date(NOW).toISOString(), status: 'ok',
+    reason: 'decision_gated:no_promoted_champion',
+    counts: { emitted: 0, anomaly_review: 0, totals_disabled: 0 },
+    detail: { public: { publication: 'GATED' } },
+  };
+  record.finished_at = record.finished_at || new Date(NOW + 200).toISOString();
+
+  assert.notEqual(record.finished_at, null);
+  assert.ok(Number.isFinite(Date.parse(record.finished_at)), 'finished_at must parse as a date');
+  assert.equal(new Date(record.finished_at).toISOString(), record.finished_at, 'must be canonical ISO');
+
+  return recordRun({ PICKS_KV: fakeKv }, LANE, record).then(async ok => {
+    assert.equal(ok, true);
+    const persisted = JSON.parse(stored[`run:work:${LANE}`]);
+    /* The response copy and the durable ledger agree, because they are one object. */
+    assert.equal(persisted.finished_at, record.finished_at);
+    assert.equal(persisted.status, 'ok');
+    assert.equal(persisted.reason, 'decision_gated:no_promoted_champion');
+    assert.equal(persisted.trigger, 'manual_admin');
+
+    /* And the gated run is still HEALTHY with nothing issued. */
+    const health = laneHealth(LANE, { tick: persisted, work: persisted, ok: persisted }, NOW + 1000);
+    assert.equal(health.state, 'HEALTHY');
+    assert.equal(health.reason, null);
+    assert.equal(persisted.counts.emitted, 0);
+    assert.equal(persisted.detail.public.publication, 'GATED');
+  });
 });
