@@ -16,10 +16,21 @@ NFL_GATEWAY = "https://nfl-api.propbetedge.ai"
 crons = ["*/15 * * * *"]
 
 # Secrets (wrangler secret put):
-#   SUPABASE_SERVICE_ROLE_KEY  - database access
-#   PICKS_INTERNAL_TOKEN       - server-to-server token presented by the Vercel
-#                                proxy to unlock proprietary fields. NOT a user
-#                                session and NOT the session signing secret.
+#   SUPABASE_SERVICE_ROLE_KEY  - database access. SET.
+#
+#   PICKS_INTERNAL_TOKEN       - NOT SET, and deliberately so. This gates only
+#     the Pro-field enrichment in isInternal() (src/index.js:189). As of
+#     2026-09-12 NOTHING presents the x-pbe-internal-token header: api/pbe-picks.js
+#     reads Supabase directly with the service role key, and api/_pbe-engine-runtime.js
+#     calls only the unauthenticated /v1/engine/runs. No matching variable exists
+#     in the Vercel project either. The earlier claim of an active Vercel proxy
+#     integration here was wrong.
+#     Unset is the correct, fail-closed state: isInternal() returns false, so
+#     /v1/picks/current serves entitlement="public". The customer-facing filter
+#     (publication_scope=eq.official + isCustomerFacing) does NOT depend on this
+#     token and applies either way.
+#     Do not provision one until a caller actually presents the header; at that
+#     point the SAME value must be set on both sides in the same change.
 
 # Durable run ledger (run:tick|work|ok|err:<lane>). Isolate memory is not
 # evidence that a cron ran; this namespace is.
