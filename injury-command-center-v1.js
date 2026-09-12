@@ -5,7 +5,8 @@
 (() => {
   'use strict';
 
-  const API = '/api/injury-board';
+  const GATEWAY = typeof NFL_API_GATEWAY !== 'undefined' ? NFL_API_GATEWAY : 'https://nfl-api.propbetedge.ai';
+  const API = GATEWAY + '/api/injuries';
   const ROOT_ID = 'pbe-injury-command-center';
   const state = {
     loading: false,
