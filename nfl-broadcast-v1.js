@@ -69,9 +69,10 @@
   function html(b, opts = {}) {
     const lead = opts.lead || '';
     const mode = opts.mode === 'text' ? 'text' : 'link';
-    if (typeof b === 'string') return b.trim() ? `${esc(lead)}<span class="pbe-tv"><span class="pbe-tv-name">${esc(b.trim())}</span></span>` : '';
+    const leadHtml = lead ? `<span class="pbe-tv-lead">${esc(lead)}</span>` : '';
+    if (typeof b === 'string') return b.trim() ? `<span class="pbe-tv">${leadHtml}<span class="pbe-tv-name">${esc(b.trim())}</span></span>` : '';
     if (!b || typeof b !== 'object') return '';
-    if (b.status === 'UNASSIGNED') return `${esc(lead)}<span class="pbe-tv is-tba" data-broadcast-status="UNASSIGNED">TV TBA</span>`;
+    if (b.status === 'UNASSIGNED') return `<span class="pbe-tv is-tba" data-broadcast-status="UNASSIGNED">${leadHtml}TV TBA</span>`;
     if (b.status !== 'VERIFIED' && b.status !== 'STALE') return '';
     const list = names(b);
     if (!list.length) return '';
@@ -83,7 +84,7 @@
       if (!href) return `<span class="pbe-tv-name">${esc(name)}</span>`;
       return `<a class="pbe-tv-link" href="${esc(href)}" target="_blank" rel="noopener noreferrer" aria-label="${esc(`Watch / view ${matchup} broadcast information on ${name} (opens ${name} in a new tab)`)}">${esc(name)}<span class="pbe-tv-ext" aria-hidden="true">↗</span></a>`;
     });
-    return `${esc(lead)}<span class="pbe-tv" data-broadcast-status="${esc(b.status)}"${b.verified_at ? ` title="${esc(`TV: ${list.join(' / ')} · verified ${b.verified_at}`)}"` : ''}>${parts.join('<span class="pbe-tv-sep"> / </span>')}</span>`;
+    return `<span class="pbe-tv" data-broadcast-status="${esc(b.status)}"${b.verified_at ? ` title="${esc(`TV: ${list.join(' / ')} · verified ${b.verified_at}`)}"` : ''}>${leadHtml}${parts.join('<span class="pbe-tv-sep"> / </span>')}</span>`;
   }
 
   /* ---- identity --------------------------------------------------------- */

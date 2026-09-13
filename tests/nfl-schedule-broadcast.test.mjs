@@ -395,7 +395,7 @@ test('browser: CBS renders "CBS ↗" as a secondary external link with noopener 
   const B = browserModule();
   const b = buildBroadcast(game('2026_01_GB_MIN'), snapshotFrom(), NOW);
   const html = B.html(b, { away: 'Green Bay Packers', home: 'Minnesota Vikings', lead: ' · ' });
-  assert.match(html, /^ · <span class="pbe-tv"/);
+  assert.match(html, /^<span class="pbe-tv"[^>]*><span class="pbe-tv-lead"> · <\/span><a /);
   assert.match(html, /<a class="pbe-tv-link" href="https:\/\/www\.cbs\.com\/live-tv\/stream\/" target="_blank" rel="noopener noreferrer" aria-label="Watch \/ view Green Bay Packers at Minnesota Vikings broadcast information on CBS/);
   assert.match(html, />CBS<span class="pbe-tv-ext" aria-hidden="true">↗<\/span><\/a>/);
   assert.equal((html.match(/<a /g) || []).length, 1);
