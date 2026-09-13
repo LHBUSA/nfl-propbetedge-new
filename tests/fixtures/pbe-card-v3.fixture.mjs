@@ -136,7 +136,11 @@ export function installMockFetch() {
       const dq = decodeURIComponent(q);
       if (table === 'nfl_subscriptions') {
         if (dq.includes('broken@')) return reply({ message: 'down' }, 500);
-        return reply(dq.includes('pro@') ? [{ status: 'active', current_period_end: '2099-01-01T00:00:00Z' }] : []);
+        /* a verifiable NFL subscription (api/_nfl-entitlement.js): NFL price, Stripe ids, real period end */
+        return reply(dq.includes('pro@') ? [{
+          status: 'active', customer_email: 'pro@propbetedge.test', current_period_end: new Date(Date.now() + 5 * 86400000).toISOString(),
+          stripe_price_id: 'price_1UEWAXF3CaVzg4ORGlsgboLq', stripe_subscription_id: 'sub_1CardFixture', stripe_customer_id: 'cus_CardFixture',
+        }] : []);
       }
       if (table === 'nfl_model_weights') return reply([{ version: mock.trained ? 2 : 1, weights: { meta: { trained: mock.trained } }, notes: 'fixture' }]);
       if (table === 'nfl_learning_observations') return reply([{ season: 2026, week: 1, publication_scope: 'tracking' }]);

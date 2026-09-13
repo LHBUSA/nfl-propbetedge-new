@@ -12,6 +12,7 @@ import { resolvePlayer, gamesFor, baseline, conditionProfile, dnaSignals,
          qbConnections, provenance, dataWindow, SAMPLE, dataset }
   from './_wrdna/engine.js';
 import { playerMedia, teamBlock } from './_playerdna/media.js';
+import { withNflEntitlement } from './_nfl-access.js';
 
 function send(res, status, body, ttl = 0) {
   res.statusCode = status;
@@ -38,7 +39,7 @@ function windowOf(rows, want, label) {
   };
 }
 
-export default function handler(req, res) {
+function handler(req, res) {
   const q = req.query || {};
 
   if (q.list) {
@@ -171,3 +172,7 @@ export default function handler(req, res) {
     provenance: provenance()
   }, 300);
 }
+
+/* Paid NFL route: a current, verified NFL entitlement is required (api/_nfl-access.js). */
+export { handler };
+export default withNflEntitlement(handler);

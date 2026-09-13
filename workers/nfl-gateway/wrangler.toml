@@ -5,6 +5,11 @@ account_id = "fd3a233edadd0a60916413c1199f71ee"
 
 [vars]
 ENV = "production"
+# Paid-data lock. "true" = every route but /api/health needs x-pbe-gateway-token
+# matching the NFL_GATEWAY_TOKEN secret (wrangler secret put NFL_GATEWAY_TOKEN).
+# Kept "false" in source until the ordered rollout in docs/NFL_PAYWALL_ROLLOUT.md
+# reaches step 4: flipping it first breaks the live site and four engine Workers.
+REQUIRE_GATEWAY_TOKEN = "false"
 
 [[kv_namespaces]]
 binding = "NFL_KV"

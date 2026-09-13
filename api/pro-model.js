@@ -1,6 +1,8 @@
-import { getNflSession, verifiedEmail } from './_nfl-auth.js';
-
-const UPSTREAM = 'https://nfl-api.propbetedge.ai/api/picks/pass';
+/* PropBetEdge NFL — the passing model for one event (Pro).
+ * Gated by the one NFL entitlement check (api/_nfl-access.js); the upstream
+ * read carries the server-only gateway token. */
+import { withNflEntitlement } from './_nfl-access.js';
+import { gatewayBase, gatewayHeaders } from './_nfl-gateway.js';
 
 function send(res, status, body) {
   res.statusCode = status;
@@ -10,25 +12,15 @@ function send(res, status, body) {
   res.end(JSON.stringify(body));
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== 'GET') return send(res, 405, { error: 'method_not_allowed' });
 
   const eventId = typeof req.query?.event_id === 'string' ? req.query.event_id.trim() : '';
   if (!eventId) return send(res, 400, { error: 'event_id_required' });
 
   try {
-    const auth = await getNflSession(req);
-    const email = verifiedEmail(auth);
-    if (!email) {
-      /* A degraded backend is not the same as a signed-out visitor. */
-      if (auth?.degraded) return send(res, 503, { error: 'entitlement_unavailable', stage: auth.stage });
-      return send(res, 401, { error: 'sign_in_required', entitlement: 'nfl_pro' });
-    }
-    if (auth.degraded) return send(res, 503, { error: 'entitlement_unavailable', stage: auth.stage });
-    if (auth.pro !== true) return send(res, 403, { error: 'nfl_pro_required', entitlement: 'nfl_pro' });
-
-    const upstreamResponse = await fetch(`${UPSTREAM}?event_id=${encodeURIComponent(eventId)}`, {
-      headers: { accept: 'application/json' },
+    const upstreamResponse = await fetch(`${gatewayBase()}/api/picks/pass?event_id=${encodeURIComponent(eventId)}`, {
+      headers: gatewayHeaders({ accept: 'application/json' }),
       cache: 'no-store'
     });
 
@@ -39,7 +31,10 @@ export default async function handler(req, res) {
     res.setHeader('x-content-type-options', 'nosniff');
     res.end(text);
   } catch (error) {
-    console.error('NFL Pro model gate failed', error instanceof Error ? error.message : String(error));
-    return send(res, 503, { error: 'entitlement_unavailable' });
+    console.error('NFL Pro model upstream failed', error instanceof Error ? error.message : String(error));
+    return send(res, 503, { error: 'model_unavailable' });
   }
 }
+
+export { handler };
+export default withNflEntitlement(handler);

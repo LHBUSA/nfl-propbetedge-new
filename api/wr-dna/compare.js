@@ -14,6 +14,7 @@
 import { resolvePlayer, gamesFor, baseline, splitRows, provenance, dataWindow,
          CONDITIONS, SAMPLE } from '../_wrdna/engine.js';
 import { playerMedia, teamBlock } from '../_playerdna/media.js';
+import { withNflEntitlement } from '../_nfl-access.js';
 
 function send(res, status, body, ttl = 0) {
   res.statusCode = status;
@@ -225,10 +226,14 @@ function contextMode(res, q) {
   }, 300);
 }
 
-export default function handler(req, res) {
+function handler(req, res) {
   const q = req.query || {};
   const mode = q.mode || (q.player_a || q.name_a ? 'players' : 'context');
   if (mode === 'players') return playersMode(res, q);
   if (mode === 'context') return contextMode(res, q);
   return send(res, 400, { ok: false, error: 'unknown_mode', supported: ['players', 'context'] });
 }
+
+/* Paid NFL route: a current, verified NFL entitlement is required (api/_nfl-access.js). */
+export { handler };
+export default withNflEntitlement(handler);

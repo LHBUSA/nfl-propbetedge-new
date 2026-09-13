@@ -1,9 +1,19 @@
 /* PropBetEdge NFL — single session authority.
  *
  * ONE cookie name, ONE scope, ONE verifier.
+ *
+ * Identity != entitlement. The session cookie proves who the reader is. Access
+ * to the paid NFL product is decided only by a verifiable NFL purchase
+ * (_nfl-entitlement.js). Every session reports `access`:
+ *
+ *   anonymous       no usable session
+ *   no_entitlement  signed in, no current verified NFL purchase
+ *   unavailable     the entitlement authority could not answer (fail closed)
+ *   granted         signed in with a current verified NFL purchase
  */
 
 import { createHmac, timingSafeEqual } from 'node:crypto';
+import { selectNflEntitlement, ilikeLiteral, NFL_PRODUCT } from './_nfl-entitlement.js';
 
 const DEFAULT_SUPABASE_URL = 'https://tkmlnhmylqnttmnsnief.supabase.co';
 
@@ -112,35 +122,52 @@ export function supabaseAdminHeaders(secret) {
   return headers;
 }
 
-async function entitlementByEmail(email, secret) {
+/* The rows for one email, from the NFL ledger only. Other sports' ledgers
+ * (MLB pbe_subscribers, UFC, NBA, NHL) are never consulted, and a row here
+ * still has to carry a recognized NFL price to count. */
+async function nflSubscriptionRows(email, secret) {
   const base = String(process.env.SUPABASE_URL || DEFAULT_SUPABASE_URL).replace(/\/$/, '');
-  const q = `customer_email=ilike.${encodeURIComponent(email)}&select=status,current_period_end,cancel_at_period_end,stripe_price_id,created_at&order=created_at.desc&limit=10`;
+  const select = 'status,customer_email,current_period_end,cancel_at_period_end,stripe_price_id,stripe_subscription_id,stripe_customer_id,stripe_checkout_session_id,created_at';
+  const q = `customer_email=ilike.${encodeURIComponent(ilikeLiteral(email))}&select=${select}&order=created_at.desc&limit=25`;
   const response = await fetch(`${base}/rest/v1/nfl_subscriptions?${q}`, {
     headers: supabaseAdminHeaders(secret),
     cache: 'no-store',
   });
   if (!response.ok) throw new Error(`entitlement_${response.status}`);
-  const rows = await response.json().catch(() => []);
+  const rows = await response.json().catch(() => { throw new Error('entitlement_bad_json'); });
+  if (!Array.isArray(rows)) throw new Error('entitlement_bad_shape');
+  return rows;
+}
+
+/* Positive grants only, per warm function instance, for data routes that are
+ * called many times per page. A denial or a failure is never cached, and any
+ * fresh lookup that denies clears the entry, so /api/auth-session (always
+ * fresh) revokes it for this instance immediately. */
+const GRANT_CACHE_MS = 60 * 1000;
+const grantCache = new Map();
+export function clearEntitlementCache() { grantCache.clear(); }
+
+async function entitlementByEmail(email, secret, { allowCachedGrant = false } = {}) {
   const now = Date.now();
-  const row = (Array.isArray(rows) ? rows : []).find(item => {
-    const status = String(item?.status || '').toLowerCase();
-    return ['active', 'trialing'].includes(status)
-      && (!item?.current_period_end || Date.parse(item.current_period_end) > now);
-  });
-  return row ? {
-    status: row.status,
-    current_period_end: row.current_period_end || null,
-    cancel_at_period_end: Boolean(row.cancel_at_period_end),
-    stripe_price_id: row.stripe_price_id || null,
-  } : null;
+  if (allowCachedGrant) {
+    const hit = grantCache.get(email);
+    if (hit && hit.expires > now && Date.parse(hit.entitlement.current_period_end) > now) return { ...hit.entitlement, cached: true };
+  }
+  const rows = await nflSubscriptionRows(email, secret);
+  const entitlement = selectNflEntitlement(rows, email, Date.now());
+  if (entitlement.entitled) grantCache.set(email, { expires: now + GRANT_CACHE_MS, entitlement });
+  else grantCache.delete(email);
+  return entitlement;
 }
 
 const SIGNED_OUT = {
-  valid: false, pro: false, user: null, subscription: null,
+  valid: false, pro: false, access: 'anonymous', entitlement: null, user: null, subscription: null,
   authority: 'vercel-local', degraded: false,
 };
 
-export async function getNflSession(req) {
+export const ACCESS = Object.freeze({ anonymous: 'anonymous', none: 'no_entitlement', unavailable: 'unavailable', granted: 'granted' });
+
+export async function getNflSession(req, { allowCachedGrant = false } = {}) {
   const header = req.headers?.cookie || '';
   const current = readCookieValues(header, SESSION_COOKIE);
   const legacy = readCookieValues(header, LEGACY_SESSION_COOKIE);
@@ -153,7 +180,7 @@ export async function getNflSession(req) {
   const signing = getSessionSigningSecrets();
   if (!signing.primary) {
     return {
-      ...SIGNED_OUT, stage: 'secret_missing', cookies,
+      ...SIGNED_OUT, access: ACCESS.unavailable, stage: 'secret_missing', cookies,
       degraded: true, error: 'session_secret_not_configured',
     };
   }
@@ -179,32 +206,48 @@ export async function getNflSession(req) {
   const entitlementSecret = String(process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
   if (!entitlementSecret) {
     return {
-      valid: true, pro: false, user: { email: payload.email }, subscription: null,
+      valid: true, pro: false, access: ACCESS.unavailable, entitlement: null, user: { email: payload.email }, subscription: null,
       authority: 'vercel-local', stage: 'entitlement_secret_missing', cookies,
       degraded: true, error: 'entitlement_secret_not_configured',
       signing: { mode: signing.mode, verified_by: signatureSource },
     };
   }
 
-  let subscription = null;
+  let entitlement = null;
   try {
-    subscription = await entitlementByEmail(payload.email, entitlementSecret);
+    entitlement = await entitlementByEmail(payload.email, entitlementSecret, { allowCachedGrant });
   } catch (error) {
     return {
-      valid: true, pro: false, user: { email: payload.email }, subscription: null,
+      valid: true, pro: false, access: ACCESS.unavailable, entitlement: null, user: { email: payload.email }, subscription: null,
       authority: 'vercel-local', stage: 'entitlement_lookup_failed', cookies,
       degraded: true, error: String(error?.message || 'entitlement_unavailable'),
       signing: { mode: signing.mode, verified_by: signatureSource },
     };
   }
 
+  const granted = entitlement?.entitled === true;
   return {
     valid: true,
-    pro: Boolean(subscription),
+    pro: granted,
+    access: granted ? ACCESS.granted : ACCESS.none,
+    entitlement: {
+      product: NFL_PRODUCT,
+      entitled: granted,
+      reason: entitlement?.reason || 'no_subscription',
+      plan: entitlement?.plan || null,
+      billing: granted ? entitlement.billing : null,
+      status: entitlement?.status || null,
+      expires_at: granted ? entitlement.current_period_end : null,
+    },
     user: { email: payload.email },
-    subscription,
+    subscription: granted ? {
+      status: entitlement.status,
+      current_period_end: entitlement.current_period_end,
+      cancel_at_period_end: entitlement.cancel_at_period_end,
+      stripe_price_id: entitlement.stripe_price_id,
+    } : null,
     authority: 'vercel-local',
-    stage: subscription ? 'entitlement_active' : 'entitlement_missing',
+    stage: granted ? 'entitlement_active' : 'entitlement_missing',
     cookies,
     degraded: false,
     signing: { mode: signing.mode, verified_by: signatureSource },

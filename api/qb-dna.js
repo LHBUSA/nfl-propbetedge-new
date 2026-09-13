@@ -12,6 +12,7 @@ import { resolvePlayer, gamesFor, baseline, conditionProfile, dnaSignals, proven
          dataWindow, MARKETS, SAMPLE, dataset } from './_qbdna/engine.js';
 import { gateReport, SERVED_FIELDS } from './_qbdna/gating.js';
 import { playerMedia, teamBlock } from './_playerdna/media.js';
+import { withNflEntitlement } from './_nfl-access.js';
 
 function send(res, status, body, ttl = 0) {
   res.statusCode = status;
@@ -53,7 +54,7 @@ function recency(rows) {
   };
 }
 
-export default function handler(req, res) {
+function handler(req, res) {
   const q = req.query || {};
 
   // ?list=1 — the quarterbacks this dataset can answer for, and nothing more.
@@ -215,3 +216,7 @@ export default function handler(req, res) {
     provenance: provenance()
   }, 300);
 }
+
+/* Paid NFL route: a current, verified NFL entitlement is required (api/_nfl-access.js). */
+export { handler };
+export default withNflEntitlement(handler);

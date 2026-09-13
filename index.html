@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-pbe-access="checking">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -86,10 +86,20 @@
   <link rel="stylesheet" href="./base-v3.css?v=20260828y1">
   <link rel="stylesheet" href="./ui-v2.css?v=20260828y1">
   <link rel="stylesheet" href="./paywall.css?v=20260828y1">
+  <link rel="stylesheet" href="./paywall-funnel-v2.css?v=20260913access1">
+  <link rel="stylesheet" href="./nfl-access-gate-v1.css?v=20260913access1">
   <link rel="stylesheet" href="./prop-board-v3.css?v=20260828y1">
   <link rel="stylesheet" href="./model-lab.css?v=20260828y1">
   <style>
     html{-webkit-text-size-adjust:100%;text-size-adjust:100%;background:#14110d;overflow-x:hidden}
+    /* NFL is a subscription product: no workspace chrome until the server has
+       verified a current NFL entitlement (nfl-access-gate-v1.js). */
+    html:not([data-pbe-access="granted"]) #pbe-shell-slot,
+    html:not([data-pbe-access="granted"]) #ticker,
+    html:not([data-pbe-access="granted"]) .shell,
+    html:not([data-pbe-access="granted"]) #mobile-overlay,
+    html:not([data-pbe-access="granted"]) #mobile-bottom-nav,
+    html:not([data-pbe-access="granted"]) .pbe-skip{display:none!important}
     /* Measured shell heights per breakpoint. Kept in the critical inline CSS so
        the reservation applies before any stylesheet loads. */
     #pbe-shell-slot{min-height:194px}
@@ -112,6 +122,8 @@
   </style>
 </head>
 <body>
+<div id="pbe-access-checking" role="status" aria-live="polite"><div><div class="pbe-access-mark" aria-hidden="true"></div>Verifying NFL access…</div></div>
+<noscript><p style="padding:24px;color:#f4ecdc;font:14px/1.5 Inter,sans-serif">PropBetEdge NFL needs JavaScript to verify your subscription.</p></noscript>
 <a class="pbe-skip" href="#main-content">Skip to content</a>
 <!-- The shell is built by JS and inserted above .shell. Without a reserved slot
      the whole page rendered at y=0 and then dropped by the shell's height,
@@ -196,21 +208,13 @@
   function pbeMbnActive(id){document.querySelectorAll('.mbn-item').forEach(el=>el.classList.remove('active'));document.getElementById('mbn-'+id)?.classList.add('active')}
   function pbeToggleSidebar(){App.toggleMobile()}
 </script>
-<script src="./app-core-v3.js?v=20260828y1"></script>
-<!-- Verified/frozen archive datasets; live game data is served separately by /api/nfl-live. -->
-<script src="./archive/utils.js?v=202604071125"></script>
-<script src="./archive/teams.js?v=202604071125"></script>
-<script src="./archive/superbowls.js?v=202604071125"></script>
-<script src="./archive/hof.js?v=202604071125"></script>
-<script src="./archive/seasons.js?v=202604071125"></script>
-<script src="./archive/records.js?v=202604071125"></script>
-<script src="./archive/stats-2025.js?v=20260829verified1"></script>
-<script src="./archive/standings-2025.js?v=20260829verified1"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="./paywall.js?v=20260829authfix1"></script>
-<script src="./ui-v2.js?v=20260828y1"></script>
-<script src="./prop-board-v3.js?v=20260828y1"></script>
-<script src="./model-lab.js?v=20260828y1"></script>
-<script src="./page-loader.js?v=20260911productdepth1"></script>
+<!-- Public: session state, the subscription wall and the access gate. The paid
+     workspace (app-core, archives, ui-v2, prop-board-v3, model-lab, page-loader
+     and everything page-loader injects) is requested by nfl-access-gate-v1.js
+     only after /api/auth-session reports access "granted". The unused
+     supabase-js CDN tag is gone: no browser code referenced it. -->
+<script src="./paywall.js?v=20260913access1"></script>
+<script src="./paywall-funnel-v2.js?v=20260913access1"></script>
+<script src="./nfl-access-gate-v1.js?v=20260913access1"></script>
 </body>
 </html>

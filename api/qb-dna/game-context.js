@@ -15,6 +15,7 @@ import { join } from 'node:path';
 import { eventMarkets, events as marketEvents, MARKET_UNAVAILABLE } from '../_playerdna/markets.js';
 import { dataWindow, provenance } from '../_qbdna/engine.js';
 import { teamBlock } from '../_playerdna/media.js';
+import { withNflEntitlement } from '../_nfl-access.js';
 
 const SCOREBOARD = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard';
 const FORECAST = 'https://api.open-meteo.com/v1/forecast';
@@ -110,7 +111,7 @@ function shapeEvent(ev) {
   };
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   const q = req.query || {};
   const kind = q.kind === 'receiving' ? 'receiving' : 'passing';
   let board;
@@ -276,3 +277,7 @@ export default async function handler(req, res) {
     provenance: provenance()
   }, 120);
 }
+
+/* Paid NFL route: a current, verified NFL entitlement is required (api/_nfl-access.js). */
+export { handler };
+export default withNflEntitlement(handler);

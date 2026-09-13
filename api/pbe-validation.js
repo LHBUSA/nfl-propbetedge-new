@@ -1,4 +1,5 @@
 import { supabaseAdminHeaders } from './_nfl-auth.js';
+import { withNflEntitlement } from './_nfl-access.js';
 
 const DEFAULT_SUPABASE_URL = 'https://tkmlnhmylqnttmnsnief.supabase.co';
 const MIN_GRADED_PICKS = 100;
@@ -60,7 +61,7 @@ function eventLabel(type) {
   }[type] || String(type || '').replace(/_/g, ' '));
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== 'GET') return send(res, 405, { error: 'method_not_allowed' });
   const key = secret();
   if (!key) return send(res, 503, { error: 'validation_backend_unavailable', stage: 'service_secret_missing' });
@@ -176,3 +177,7 @@ export default async function handler(req, res) {
     return send(res, 503, { error: 'validation_backend_unavailable' });
   }
 }
+
+/* Paid NFL route: a current, verified NFL entitlement is required (api/_nfl-access.js). */
+export { handler };
+export default withNflEntitlement(handler);
