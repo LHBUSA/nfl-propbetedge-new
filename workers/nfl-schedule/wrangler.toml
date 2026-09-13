@@ -1,0 +1,15 @@
+# nfl-schedule — captured from the DEPLOYED Worker on 2026-09-13 (read-only).
+#
+# This file reproduces the deployed configuration exactly: version
+# 1a88cfca-1f81-41b8-9f91-61dcf78d55ce, uploaded 2026-08-28T17:35:42Z via
+# wrangler, compatibility_date 2026-08-28, no compatibility flags, no bindings,
+# no cron triggers, workers.dev enabled. It is reached in production only
+# through nfl-gateway's NFL_SCHEDULE service binding (/api/schedule*).
+#
+# The previous local "source" at C:\Workers\nfl-schedule\ was a 390-byte stub
+# that answered {worker:'nfl-schedule',status:'ok'} and never matched what is
+# deployed. See CAPTURE.md.
+name = "nfl-schedule"
+main = "index.js"
+compatibility_date = "2026-08-28"
+account_id = "fd3a233edadd0a60916413c1199f71ee"
