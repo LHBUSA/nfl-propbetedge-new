@@ -97,7 +97,11 @@
 .pbebl-table td[data-label="Range"] small{max-width:340px}
 @media (max-width:768px){.pbebl-week+.pbebl-week{margin-top:8px;padding-top:14px}.pbebl-table td[data-label="Range"] small{max-width:none}}
 /* Player props for a game that has kicked off: a pre-game capture, never a price. */
-.pbebl-kickoff{display:grid;gap:4px;margin:0 0 var(--s-3,12px);padding:10px 12px;border:1px solid rgba(255,92,92,.45);border-left-width:3px;border-radius:var(--r-sm,6px);background:rgba(255,92,92,.08)}
+.pbebl-kickoff{display:grid;gap:4px;margin:0 0 var(--s-3,12px);padding:10px 12px;border:1px solid rgba(255,92,92,.45);border-left-width:3px;border-radius:var(--r-sm,6px);background:linear-gradient(rgba(255,92,92,.10),rgba(255,92,92,.10)),var(--pbe-ink-2,#1a1511)}
+/* the props view sits over the stadium backdrop: give its text a surface, as game cards have */
+.pbebl-propbar~.pbebl-fresh{display:inline-block;padding:6px 10px;border-radius:var(--r-sm,6px);background:var(--pbe-ink-2,#1a1511);border:1px solid var(--pbe-line)}
+.pbebl-scroll:has(>.pbebl-props){background:var(--pbe-ink-2,#1a1511);border:1px solid var(--pbe-line);border-radius:var(--r-md,10px)}
+.pbebl-propbar~.pbebl-note{display:block;padding:8px 10px;border-radius:var(--r-sm,6px);background:var(--pbe-ink-2,#1a1511)}
 .pbebl-kickoff b{font:800 var(--fs-micro,11px)/1.3 var(--pbe-font-data);letter-spacing:.1em;text-transform:uppercase;color:var(--pbe-crimson-bright)}
 .pbebl-kickoff span{font-size:12px;line-height:1.45;color:var(--pbe-dim)}
 .pbebl-props .pbebl-captured{display:block;white-space:nowrap}

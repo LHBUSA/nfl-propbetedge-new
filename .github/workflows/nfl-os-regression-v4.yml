@@ -30,13 +30,17 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          grep -Fq './app-core-v3.js' index.html
-          grep -Fq './page-loader.js' index.html
+          # NFL is a subscription product: index.html loads the session state, the
+          # subscription wall and the access gate; the gate loads the (still fully
+          # local) workspace only after a verified NFL entitlement.
           grep -Fq './paywall.js' index.html
+          grep -Fq './nfl-access-gate-v1.js' index.html
+          grep -Fq "'./app-core-v3.js?v=" nfl-access-gate-v1.js
+          grep -Fq "'./page-loader.js?v=" nfl-access-gate-v1.js
           for dataset in utils teams superbowls hof seasons records stats-2025 standings-2025; do
-            grep -Eq "src=\"\./archive/${dataset}\.js" index.html || { echo "Missing local archive dataset: ${dataset}"; exit 1; }
+            grep -Eq "'\./archive/${dataset}\.js\?v=" nfl-access-gate-v1.js || { echo "Missing local archive dataset: ${dataset}"; exit 1; }
           done
-          ! grep -Eq 'src="https?://[^"]*/archive/' index.html
+          ! grep -Eq 'https?://[^"]*/archive/' index.html nfl-access-gate-v1.js
           ! grep -Fq 'https://nfl.propbetedge.ai/js/' index.html
 
       - name: Forbid randomized product behavior
@@ -158,11 +162,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          grep -Fq "from './_nfl-auth.js'" api/pro-model.js
-          grep -Fq 'getNflSession' api/pro-model.js
-          grep -Fq 'sign_in_required' api/pro-model.js
-          grep -Fq 'nfl_pro_required' api/pro-model.js
-          for f in api/*.js; do
+          # One entitlement gate: every paid route is wrapped by _nfl-access.js,
+          # which reuses _nfl-auth.js (session) and _nfl-entitlement.js (purchase).
+          grep -Fq "from './_nfl-access.js'" api/pro-model.js
+          grep -Fq 'export default withNflEntitlement(handler)' api/pro-model.js
+          grep -Fq "from './_nfl-auth.js'" api/_nfl-access.js
+          grep -Fq 'getNflSession' api/_nfl-access.js
+          grep -Fq 'sign_in_required' api/_nfl-access.js
+          grep -Fq 'nfl_subscription_required' api/_nfl-access.js
+          grep -Fq 'entitlement_unavailable' api/_nfl-access.js
+          for f in api/*.js api/*/*.js; do
             case "$(basename "$f")" in _nfl-auth.js|auth-diag.js) continue ;; esac
             if grep -Fq 'createHmac' "$f"; then echo "Duplicate auth logic in $f"; exit 1; fi
           done

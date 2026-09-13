@@ -119,7 +119,7 @@
               <div class="pbe-pro-feature"><div class="pbe-pro-feature-icon">◇</div><div><strong>PBE Fair Line</strong><span>See where the current passing model prices the prop independent of the sportsbook consensus.</span></div></div>
               <div class="pbe-pro-feature"><div class="pbe-pro-feature-icon">%</div><div><strong>Model Probability</strong><span>Unlock the model's probability at the current consensus line with explicit model provenance.</span></div></div>
               <div class="pbe-pro-feature"><div class="pbe-pro-feature-icon">↗</div><div><strong>Model Gap</strong><span>Compare market consensus with PBE fair value without relabeling the difference as guaranteed edge.</span></div></div>
-              <div class="pbe-pro-feature"><div class="pbe-pro-feature-icon">＋</div><div><strong>Premium modules as they clear validation</strong><span>Usage, matchup, simulation, SGP and live intelligence move behind the same NFL Pro entitlement as they become production-ready.</span></div></div>
+              <div class="pbe-pro-feature"><div class="pbe-pro-feature-icon">＋</div><div><strong>Every NFL workspace</strong><span>Best Line, Prop Board, Game Center, PBE Picks, Track Record, Market Watch, Simulator, SGP Lab and Player DNA, on one NFL Pro subscription.</span></div></div>
             </div>
           </section>
           <section class="pbe-pro-checkout" id="pbe-pro-checkout"></section>
@@ -165,8 +165,9 @@
       : state.access === 'no_entitlement'
         ? (DENIAL_COPY[reason] || 'No current NFL Pro subscription is linked to this email.')
         : 'Sign in with the email tied to your subscription, or choose a plan.';
+    /* the purchase column already names the signed-in email */
     const account = state.user?.email
-      ? `<div class="pbe-access-account"><span>Signed in as</span><strong>${esc(state.user.email)}</strong><button type="button" class="pbe-access-signout" data-pbe-access-signout>Sign out</button></div>`
+      ? `<div class="pbe-access-account"><span>Not this account?</span><button type="button" class="pbe-access-signout" data-pbe-access-signout>Sign out</button></div>`
       : '';
     el.hidden = false;
     if (setHtml(el,`<p class="pbe-access-note" data-access-state="${esc(state.access)}">${esc(note)}</p>${account}`)) {
