@@ -275,9 +275,15 @@
   .pc3-step header{margin-left:0}
   .pc3-ev-record .pc3-step::before{display:none}
   .pc3-dl div{grid-template-columns:96px minmax(0,1fr)}
-  .pc3-quad{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
-  .pc3-quad div{padding:8px}
-  .pc3-quad b{font-size:var(--fs-data)}
+  /* Phone: three ~90px tiles cannot hold "BEST MAIN LINE" plus its help
+     control on one line, so each tile becomes a row — label (and help) left,
+     value right, detail beneath. Presentation only. */
+  .pc3-quad{grid-template-columns:minmax(0,1fr);gap:6px}
+  .pc3-quad div{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:12px;row-gap:2px;padding:8px 10px}
+  .pc3-quad small{grid-column:1;grid-row:1;display:flex;align-items:center;gap:6px;min-width:0}
+  .pc3-quad b{grid-column:2;grid-row:1/span 2;font-size:var(--fs-data);text-align:right}
+  .pc3-quad span{grid-column:1;grid-row:2}
+  .pc3-quad .pc3-tip{flex:none;margin-left:0}
   .pc3-bigtape{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:8px}
   .pc3-bigtape .pc3-delta{grid-column:1/-1}
   .pc3-bigtape b{font-size:var(--fs-data-lg)}
@@ -297,5 +303,5 @@
 .pc3-board{overflow:visible}
 .pc3-board-head{border-radius:var(--r-md) var(--r-md) 0 0}
 .pc3-rows>.pc3-row:last-child{border-radius:0 0 var(--r-md) var(--r-md)}
-@media (max-width:760px){.pc3-tip{width:30px;height:30px;font-size:12px}.pc3-tip::after{right:auto;left:-120px;width:230px}}
+@media (max-width:760px){.pc3-tip{width:30px;height:30px;font-size:12px}.pc3-tip::after{right:auto;left:50%;transform:translateX(-50%);width:230px}}
 
