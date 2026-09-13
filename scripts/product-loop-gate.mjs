@@ -38,7 +38,7 @@ const arg=(n,f)=>{const i=argv.indexOf(`--${n}`);return i>-1&&argv[i+1]&&!argv[i
 const LIVE=flag('live');
 const FULL=flag('full');
 const OUT=resolve(arg('out',join(REPO,'.product-loop')));
-const ROUTES=arg('routes','home,changes,bestline,pbecast,pbepicks,trackrecord,propboard,marketwatch,injuries,matchups').split(',').map(s=>s.trim()).filter(Boolean);
+const ROUTES=arg('routes','home,changes,bestline,propchain,pbecast,pbepicks,trackrecord,propboard,marketwatch,injuries,matchups').split(',').map(s=>s.trim()).filter(Boolean);
 const WIDTHS=arg('widths','1440,390').split(',').map(n=>parseInt(n,10));
 const HEIGHTS={360:780,390:844,430:932,768:1024,1024:768,1280:800,1440:900};
 const SETTLE=Number(arg('settle','7000'));
@@ -147,6 +147,17 @@ const ASSERT={
     const heads=[...document.querySelectorAll('.pbebl-legend [data-term]')].map(x=>x.dataset.term);r.push({name:'best price / consensus / fair value / edge defined separately',ok:['best','consensus','fair','edge'].every(t=>heads.includes(t))});
     const rows=document.querySelectorAll('.pbebl-row');r.push({name:'rows or honest unavailable state',ok:rows.length>0||!!document.querySelector('.pbebl-unavailable')});
     r.push({name:'snapshot age shown',ok:/UPDATED|CAPTURED|AGE/i.test(root?.querySelector('.pbebl-fresh')?.innerText||'')});
+    return r})()`,
+  /* PropChain v3. Deep scenarios (direct-load generations, filters, failure
+     injection, truth invariants) live in scripts/propchain-gate.mjs. */
+  propchain:`(() => {const r=[];const root=document.querySelectorAll('.pc3');r.push({name:'v3 is the one route authority',ok:root.length===1&&App.VIEWS.propchain===window.PBEPropChain?.load});
+    r.push({name:'no roadmap placeholder or v2 markup',ok:!document.querySelector('.pbe15-chain')&&!/product roadmap/i.test(document.getElementById('view-container')?.innerText||'')});
+    const rows=[...document.querySelectorAll('.pc3-row[data-id]')];r.push({name:'chains or the honest empty/unavailable state',ok:rows.length>0||!!document.querySelector('.pc3-none,.pc3-error'),detail:rows.length+' rows'});
+    r.push({name:'every row names its source time',ok:rows.every(x=>x.querySelector('time')?.textContent.trim()&&/updated|captured/.test(x.querySelector('.pc3-c-src')?.textContent||''))});
+    const m=window.PBEPropChain?.model?.();const by=new Map((m?.chains||[]).map(c=>[c.id,c]));
+    r.push({name:'movement shown only with two captures',ok:rows.every(x=>{const c=by.get(x.dataset.id);return !/→/.test(x.querySelector('.pc3-c-mkt')?.textContent||'')||(c?.kind==='MARKET'&&c.move?.from?.captured_at&&c.move?.to?.captured_at)})});
+    r.push({name:'model values only where published',ok:rows.every(x=>!x.querySelector('.pc3-c-pbe .pc3-model')||by.get(x.dataset.id)?.model?.state==='PUBLISHED')});
+    r.push({name:'freshness line present',ok:/Injury report/i.test(document.querySelector('.pc3-status')?.textContent||'')||!!document.querySelector('.pc3-error')});
     return r})()`,
   pbecast:`(() => {const r=[];r.push({name:'v6 is the route authority',ok:!!document.querySelector('.pbecast6')});
     r.push({name:'single .pbecast6 root',ok:document.querySelectorAll('.pbecast6').length===1});

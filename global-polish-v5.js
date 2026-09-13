@@ -27,7 +27,7 @@
     simulator:['Line Simulator','Model-derived threshold sensitivity · NFL Pro'],
     sgplab:['SGP Lab','Same-game leg research · no fake correlation · NFL Pro'],
     usage:['Usage Research','2025 final role baseline · current NEWS context'],
-    propchain:['PropChain','Factual news → entity → market → model evidence map'],
+    propchain:['PropChain','Follow the change through the market'],
     pbecast:['Game Center','Selected event · score state · market · news'],
     newsintel:['News Intelligence','Current NFL newsroom · impact · affected teams and players'],
     injuries:['Injury Editorial','PropBetEdge reporting · analysis · latest injury coverage'],

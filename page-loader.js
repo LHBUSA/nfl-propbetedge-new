@@ -1,7 +1,7 @@
 /* PropBetEdge NFL - ordered page/product upgrade loader v45 recovery */
 (() => {
   'use strict';
-  const VERSION='20260911pbecard3lc2';
+  const VERSION='20260913propchain3';
   const upgrades=[
     /* Establish the final homepage authority first. v6 replaces the v5 DOM with
        .pbehome6; v7 historically registered itself after that without repainting
@@ -67,7 +67,12 @@
        authority; see TERMINAL_AUTHORITIES. The files were deleted on
        2026-09-11 (nfl-product-depth-v1); git history is the rollback. */
 
-    {css:'./propchain-v2.css',js:'./propchain-v2.js'},
+    /* PropChain v3 is the sole route authority for #propchain (see
+       TERMINAL_AUTHORITIES). The core is its pure chain join and renders
+       nothing. propchain-v2 and the ui-v2 roadmap placeholder are out of the
+       runtime; git history is the rollback. */
+    {js:'./propchain-core-v3.js'},
+    {css:'./propchain-v3.css',js:'./propchain-v3.js'},
     {css:'./matchups-v2.css',js:'./matchups-v2.js'},
     {css:'./simulator-v2.css',js:'./simulator-v2.js'},
     {css:'./simulator-v3-enhance.css',js:'./simulator-v3-enhance.js'},
@@ -192,6 +197,12 @@
      exactly as it always has. */
   const TERMINAL_AUTHORITIES=[
     {route:'pbecast',js:'./pbecast-v6.js',installed:()=>typeof window.PBEcastV6?.load==='function'},
+    /* ui-v2 registered a roadmap placeholder for propchain at parse time and
+       again on DOMContentLoaded, and v2 replaced it only when its own script
+       landed, so a cold #propchain deep link painted the placeholder first.
+       The placeholder is gone; declaring v3 terminal also guarantees no cached
+       copy of an older generation can paint or reclaim the route. */
+    {route:'propchain',js:'./propchain-v3.js',installed:()=>typeof window.PBEPropChain?.load==='function'},
     /* standings-v2 and stats-v2 register the 2025 archive routes now, but both
        owned the live route names for a long time; declaring the current-season
        modules terminal keeps a cached copy of either archive from painting the

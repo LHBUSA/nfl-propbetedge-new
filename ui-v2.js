@@ -92,7 +92,7 @@
     tedna: ['TE DNA','Red zone role · QB connection · props · conditions'],
     propboard: ['Prop Board','Live sportsbook prices + PBE model context'],
     picks: ['Model Lab','PBE model workspace'],
-    propchain: ['PropChain','Prop intelligence workflow'],
+    propchain: ['PropChain','Follow the change through the market'],
     pbecast: ['PBEcast','Live-game workspace'],
     injuries: ['Injury Intelligence','Verified player-status workflow'],
     trades: ['Transactions','News and roster movement'],
@@ -329,12 +329,10 @@
       'Open NFL News',
       "window.location.href='https://propbetedge.ai/news/nfl'"
     );
-    App.VIEWS.propchain = () => renderFeatureState(
-      'PropChain',
-      'PropChain remains part of the product roadmap. Until its live transport is fully verified, the production-grade market workflow is the Prop Board.',
-      'Open Prop Board',
-      "App.nav('propboard')"
-    );
+    /* PropChain is not registered here either. This roadmap placeholder used
+       to paint first on every cold #propchain deep link (and again from the
+       DOMContentLoaded reinstall) before the real module replaced it.
+       propchain-v3.js is the terminal authority for the route. */
   }
 
   function cleanLegacyNav() {
