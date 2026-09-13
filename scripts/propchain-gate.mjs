@@ -44,6 +44,9 @@ const argv = process.argv.slice(2);
 const flag = n => argv.includes(`--${n}`);
 const arg = (n, f) => { const i = argv.indexOf(`--${n}`); return i > -1 && argv[i + 1] && !argv[i + 1].startsWith('--') ? argv[i + 1] : f; };
 const LIVE = flag('live');
+/* --require: a release run. A scenario that cannot be exercised (no transition
+   or no observed market move in the data) FAILS instead of printing SKIP. */
+const REQUIRE = flag('require');
 const OUT = resolve(arg('out', join(REPO, '.propchain-gate')));
 const WIDTHS = arg('widths', '1440,390').split(',').map(n => parseInt(n, 10));
 const HEIGHTS = { 360: 780, 390: 844, 768: 1024, 1024: 768, 1280: 800, 1440: 900 };
@@ -225,8 +228,17 @@ async function generic() {
     { name: 'no horizontal overflow', ok: (m?.overflowX ?? 1) <= 0, detail: `${m?.overflowX}px ${(m?.bleeders || []).join(',')}` },
     { name: 'no broken images', ok: !(m?.brokenImages || []).length, detail: (m?.brokenImages || []).join(',') },
     { name: 'no text under 10px', ok: (m?.sub10Text ?? 1) === 0, detail: `${m?.sub10Text} ${(m?.sub10Examples || []).join(' / ')}` },
-    { name: 'touch targets ≥30px (narrow)', ok: (m?.smallTargets ?? 0) === 0, detail: String(m?.smallTargets) }
+    { name: 'touch targets ≥30px (narrow)', ok: (m?.smallTargets ?? 0) === 0, detail: String(m?.smallTargets) },
+    await neverPainted()
   ];
+}
+/* Checked in every scenario, not only on the cold load: no generation of this
+   document has ever painted the ui-v2 roadmap placeholder or propchain-v2. */
+async function neverPainted() {
+  const p = await evaluate(`(window.__pc3Paints || []).map(x => x.sig)`);
+  const bad = (Array.isArray(p) ? p : []).filter(sig => /^pbe15|pbe-v2-dashboard|product roadmap|BUILT TRUTH-FIRST/i.test(sig));
+  const dom = await evaluate(`!!document.querySelector('.pbe15-chain') || /product roadmap/i.test(document.getElementById('view-container')?.textContent || '')`);
+  return { name: 'placeholder / v2 never painted in this document', ok: Array.isArray(p) && !bad.length && dom === false, detail: bad.slice(0, 2).join(' | ') };
 }
 const click = sel => evaluate(`(() => { const el = document.querySelector(${JSON.stringify(sel)}); if (!el) return false; el.click(); return true; })()`);
 
@@ -269,7 +281,9 @@ for (const width of WIDTHS) {
     { name: 'board renders chains or the honest empty state', ok: summary?.rows > 0 || summary?.none === true, detail: JSON.stringify(summary) },
     { name: 'strip values are counts or honest dashes', ok: Array.isArray(summary?.strip) && summary.strip.length === 6 && summary.strip.every(v => /^(\d+|—|…|\d+[mhd]( \d+m)?|just now)$/.test(v.trim())), detail: summary?.strip?.join(' | ') },
     { name: 'truth invariants', ok: truth?.ok === true, detail: JSON.stringify(truth?.bad || truth) },
-    { name: 'freshness line present', ok: /Injury report/i.test(await evaluate(`document.querySelector('.pc3-status')?.textContent || ''`)) }
+    { name: 'freshness line present', ok: /Injury report/i.test(await evaluate(`document.querySelector('.pc3-status')?.textContent || ''`)) },
+    { name: 'player-prop best is named "Best main line", never a bare "Best line"', ok: (await evaluate(`(() => { const t = document.querySelector('.pc3')?.innerText || ''; const bare = t.split('Best Line page').join('').match(/best line/gi) || []; const head = document.querySelector('.pc3-board-head')?.textContent || ''; const lbl = [...document.querySelectorAll('.pc3-lbl')].filter(x => /best/i.test(x.textContent)).every(x => x.textContent.trim() === 'Best main line'); return bare.length === 0 && (!head || /Best main line/.test(head)) && lbl; })()`)) === true },
+    { name: 'best main line definition available', ok: (await evaluate(`(document.querySelector('.pc3-tip')?.getAttribute('data-tip') || '').includes('alternate ladders are not treated as the same wager')`)) === true }
   ], { note: `rows=${summary?.rows} chains=${summary?.chains}` });
 
   /* 3 · filters */
@@ -358,7 +372,26 @@ for (const width of WIDTHS) {
     await shotElement('.pc3-row.is-open', join(OUT, `transition-evidence-${width}.png`));
     await evaluate(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))`);
     await evaluate(`(() => { const i = document.querySelector('[data-pc3-q]'); i.value = ''; i.dispatchEvent(new Event('input', { bubbles: true })); })()`); await sleep(500);
-  } else console.log(`SKIP transitions@${width} — the change API publishes no transitions${UPSTREAM ? '' : ' (production nfl-intel; set PBE_CHANGES_UPSTREAM to exercise 1.2.0)'}`);
+  } else if (REQUIRE) record('transitions', width, [{ name: 'a published ledger transition exists to exercise', ok: false, detail: JSON.stringify(tr) }]);
+  else console.log(`SKIP transitions@${width} — the change API publishes no transitions${UPSTREAM ? '' : ' (production nfl-intel; set PBE_CHANGES_UPSTREAM to exercise 1.2.0)'}`);
+
+  /* 5c · market movement evidence: a MARKET chain opens to a tape with both
+     capture times, both values and the book counts */
+  const mv = await evaluate(`(() => { const m = PBEPropChain.model(); const c = m.chains.find(x => x.kind === 'MARKET' && PBEPropChainCore.matches(x, PBEPropChain.ui, Date.now())); return c ? c.id : null; })()`);
+  if (mv && !mv.__error) {
+    await click('[data-pc3-set="signal:market"]'); await sleep(700);
+    await click(`[data-pc3-open="${mv}"]`); await sleep(700);
+    const r = await evaluate(`(() => { const c = PBEPropChain.model().chains.find(x => x.id === ${JSON.stringify(mv)}); const t = document.querySelector('.pc3-row.is-open .pc3-bigtape'); const txt = t?.textContent || ''; return { has: !!t, from: c.move.from.captured_at, to: c.move.to.captured_at, times: (txt.match(/ET/g) || []).length, books: (txt.match(/books/g) || []).length, delta: !!t?.querySelector('.pc3-delta') }; })()`);
+    record('market-move-evidence', width, [
+      { name: 'movement evidence shows two captures, two values, books and the delta', ok: r?.has && r.from && r.to && r.from !== r.to && r.times >= 2 && r.books >= 2 && r.delta, detail: JSON.stringify(r) },
+      { name: 'truth invariants', ok: (await evaluate(TRUTH))?.ok === true },
+      ...(await generic())
+    ]);
+    await shotElement('.pc3-row.is-open', join(OUT, `market-move-evidence-${width}.png`));
+    await evaluate(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))`);
+    await click('[data-pc3-set="signal:all"]'); await sleep(500);
+  } else if (REQUIRE) record('market-move-evidence', width, [{ name: 'an observed market move exists to exercise', ok: false }]);
+  else console.log(`SKIP market-move-evidence@${width} — no observed consensus move in scope`);
 
   /* 6 · polling stops off-route */
   const polling = [];

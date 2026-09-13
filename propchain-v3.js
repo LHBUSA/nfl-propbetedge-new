@@ -44,6 +44,10 @@
   };
   const BESTLINE_PROP_MARKETS = new Set(['player_pass_yds', 'player_rush_yds', 'player_reception_yds', 'player_receptions', 'player_pass_tds', 'player_rush_attempts', 'player_pass_attempts', 'player_anytime_td']);
 
+  /* One definition, shown wherever PropChain names the number. It is NOT the
+     Best Line page's "lowest over on offer": alternates are different bets. */
+  const BEST_MAIN_DEF = 'Best available number among each book’s primary/main market offering; alternate ladders are not treated as the same wager.';
+  const tip = label => `<button type="button" class="pc3-tip" data-tip="${BEST_MAIN_DEF}" aria-label="${label}: ${BEST_MAIN_DEF}">?</button>`;
   const core = () => window.PBEPropChainCore;
   const cc = () => window.PBECommandCenter;
   const esc = v => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
@@ -284,7 +288,7 @@
       <ul>
         <li><strong>Entity.</strong> Players are linked by ESPN athlete id on the injury report, then by exact name on that game’s player board. No fuzzy matching; an ambiguous name is not linked.</li>
         <li><strong>Market tape.</strong> Cross-book median consensus per scheduled capture (08:00 · 13:00 · 18:00 ET). A move is placed before, spanning or after a change in time. PropChain shows what was observed and when — it does not claim a change caused a move.</li>
-        <li><strong>Player props</strong> are stored as the latest snapshot only, so a player line shows its current value, never an invented earlier one. Consensus is the median of each book’s main line (the number it prices closest to even); best line is the best main number, then price.</li>
+        <li><strong>Player props</strong> are stored as the latest snapshot only, so a player line shows its current value, never an invented earlier one. Consensus is the median of each book’s main line (the number it prices closest to even); best main line is the best available number among each book’s primary/main offering, then price — alternate ladders are not treated as the same wager.</li>
         <li><strong>Transitions</strong> (e.g. QUESTIONABLE → OUT) appear only when PropBetEdge captured both designations.</li>
         <li><strong>Order.</strong> By severity; within a severity, players the books price more deeply (yardage and volume lines, not only an anytime touchdown) come first, then the most recent change.</li>
         <li><strong>PBE model</strong> values appear only where a model publishes them and your plan includes them. Fair value is never estimated from consensus.</li>
@@ -399,7 +403,7 @@
         <span class="pc3-c pc3-c-src"><small>Source</small><b>${esc(c.source?.label)}</b><small>${esc(c.source?.basis === 'CAPTURE_TIME' ? 'captured' : 'updated')} ${esc(clock(c.source?.at))}</small></span>
         <span class="pc3-c pc3-c-ent">${entityCell(c)}</span>
         <span class="pc3-c pc3-c-mkt">${marketCell(c)}</span>
-        <span class="pc3-c pc3-c-best"><small class="pc3-lbl">Best line</small>${bestCell(c)}</span>
+        <span class="pc3-c pc3-c-best"><small class="pc3-lbl">Best main line</small>${bestCell(c)}</span>
         <span class="pc3-c pc3-c-pbe"><small class="pc3-lbl">PBE</small>${modelCell(c)}</span>
         <span class="pc3-chev" aria-hidden="true"></span>
       </button>
@@ -511,17 +515,17 @@
     if (mk.kind === 'PLAYER_PROPS') {
       const ou = mk.markets.filter(m => m.kind === 'OU'), yes = mk.markets.filter(m => m.kind === 'YES');
       body += snapshotNote(mk.snapshot);
-      if (ou.length) body += `<div class="pc3-scroll"><table class="pc3-table"><thead><tr><th scope="col">Market</th><th scope="col">Consensus</th><th scope="col">Best over</th><th scope="col">Best under</th><th scope="col">Books</th></tr></thead><tbody>${ou.map(m => `<tr><th scope="row">${esc(m.label)}</th><td><b>${esc(m.consensus_line)}</b>${m.line_low !== m.line_high ? `<small>${esc(m.line_low)}–${esc(m.line_high)}</small>` : ''}</td><td><b>${esc(m.best_over.point)}</b> ${esc(american(m.best_over.price))}<small>${esc(m.best_over.book)}</small></td><td><b>${esc(m.best_under.point)}</b> ${esc(american(m.best_under.price))}<small>${esc(m.best_under.book)}</small></td><td>${esc(m.main_books)}</td></tr>`).join('')}</tbody></table></div>`;
-      if (yes.length) body += `<div class="pc3-yes">${yes.map(m => `<div><small>${esc(m.label)}</small><b>${esc(american(m.best_yes.price))}</b><span>best · ${esc(m.best_yes.book)} · median ${esc(american(m.consensus_price))} · ${esc(m.books)} books</span></div>`).join('')}</div>`;
-      body += '<p class="pc3-fine">Consensus = median of each book’s main line. Best = best main number, then best price. Raw bookmaker prices, not vig-free.</p>';
+      if (ou.length) body += `<div class="pc3-scroll"><table class="pc3-table"><thead><tr><th scope="col">Market</th><th scope="col">Consensus</th><th scope="col">Best main over</th><th scope="col">Best main under</th><th scope="col">Books</th></tr></thead><tbody>${ou.map(m => `<tr><th scope="row">${esc(m.label)}</th><td><b>${esc(m.consensus_line)}</b>${m.line_low !== m.line_high ? `<small>${esc(m.line_low)}–${esc(m.line_high)}</small>` : ''}</td><td><b>${esc(m.best_over.point)}</b> ${esc(american(m.best_over.price))}<small>${esc(m.best_over.book)}</small></td><td><b>${esc(m.best_under.point)}</b> ${esc(american(m.best_under.price))}<small>${esc(m.best_under.book)}</small></td><td>${esc(m.main_books)}</td></tr>`).join('')}</tbody></table></div>`;
+      if (yes.length) body += `<div class="pc3-yes">${yes.map(m => `<div><small>${esc(m.label)}</small><b>${esc(american(m.best_yes.price))}</b><span>best available · ${esc(m.best_yes.book)} · median ${esc(american(m.consensus_price))} · ${esc(m.books)} books</span></div>`).join('')}</div>`;
+      body += `<p class="pc3-fine">Consensus = median of each book’s main line. Best main line: ${BEST_MAIN_DEF} Raw bookmaker prices, not vig-free.</p>`;
     } else if (mk.kind === 'GAME_LINE') {
       const l = mk.line, cons = l.consensus || {}, b = l.best;
       body += snapshotNote(mk.snapshot);
       body += `<div class="pc3-quad">
         <div><small>Consensus</small><b>${esc(l.market === 'moneyline' ? american(cons.price) : line(l.market, cons.line))}</b><span>${l.market === 'moneyline' ? '' : esc(american(cons.price))}${cons.no_vig_probability != null ? ` · ${esc(pct(cons.no_vig_probability))} vig-free` : ''}</span></div>
-        <div><small>Best available</small><b>${b ? esc(l.market === 'moneyline' ? american(b.price) : line(l.market, b.line)) : '—'}</b><span>${b ? `${l.market === 'moneyline' ? '' : `${esc(american(b.price))} · `}${esc(b.book)}` : 'No quote'}</span></div>
+        <div><small>Best main line ${tip('Best main line')}</small><b>${b ? esc(l.market === 'moneyline' ? american(b.price) : line(l.market, b.line)) : '—'}</b><span>${b ? `${l.market === 'moneyline' ? '' : `${esc(american(b.price))} · `}${esc(b.book)}` : 'No quote'}</span></div>
         <div><small>Books</small><b>${esc(l.books ?? '—')}</b><span>${l.line_range ? `range ${esc(line(l.market, l.line_range.low))} to ${esc(line(l.market, l.line_range.high))}` : ''}</span></div>
-      </div><p class="pc3-fine">${esc(l.market === 'total' ? 'Game total, over side.' : `${l.side} ${l.market}.`)} Consensus is the median line; vig-free probability from books quoting both sides at it.</p>`;
+      </div><p class="pc3-fine">${esc(l.market === 'total' ? 'Game total, over side.' : `${l.side} ${l.market}.`)} Consensus is the median line; vig-free probability from books quoting both sides at it. Game lines carry one main number per book (no alternate lines in the snapshot).</p>`;
     } else if (mk.kind === 'PENDING') {
       body += '<p class="pc3-empty-line">Reading this game’s player board…</p>';
     } else {
@@ -562,7 +566,7 @@
     if (e.type === 'PLAYER' && dna && e.espn_id) b.push(`<button type="button" data-pc3-act="dna" data-id="${esc(c.id)}">Open ${esc(e.position)} DNA</button>`);
     if (e.type === 'PLAYER') b.push(`<button type="button" data-pc3-act="research" data-id="${esc(c.id)}">Player research</button>`);
     if (g.odds_event_id) b.push(`<button type="button" data-pc3-act="marketwatch" data-id="${esc(c.id)}">Market Watch</button>`);
-    if (g.odds_event_id) b.push(`<button type="button" data-pc3-act="bestline" data-id="${esc(c.id)}">Shop best line</button>`);
+    if (g.odds_event_id) b.push(`<button type="button" data-pc3-act="bestline" data-id="${esc(c.id)}">Compare on Best Line page</button>`);
     if (g.odds_event_id) b.push(`<button type="button" data-pc3-act="matchup" data-id="${esc(c.id)}">Open matchup</button>`);
     if (g.id) b.push(`<button type="button" data-pc3-act="pbecast" data-id="${esc(c.id)}">${g.semantics === 'LIVE' ? 'Live PBEcast' : 'PBEcast'}</button>`);
     if (c.source?.url) b.push(`<a href="${esc(c.source.url)}" target="_blank" rel="noopener">${esc(c.source.url_label || 'Source')} ↗</a>`);
@@ -614,7 +618,7 @@
     const visible = C.rank(model.chains.filter(c => c.complete !== false && C.matches(c, ui, now)), ui.sort);
     const shown = visible.slice(0, ui.limit || PAGE());
     const pending = visible.some(c => c.complete === null);
-    const head = `<div class="pc3-board-head" aria-hidden="true"><span>Signal</span><span>Change</span><span>Source</span><span>Entity</span><span>Market</span><span>Best line</span><span>PBE</span><span></span></div>`;
+    const head = `<div class="pc3-board-head"><span>Signal</span><span>Change</span><span>Source</span><span>Entity</span><span>Market</span><span>Best main line ${tip('Best main line')}</span><span>PBE</span><span></span></div>`;
     const list = shown.length
       ? `<ol class="pc3-rows">${shown.map(row).join('')}</ol>${visible.length > shown.length ? `<div class="pc3-more-row"><button type="button" data-pc3-more>Show ${Math.min(PAGE(), visible.length - shown.length)} more</button><span>${shown.length} of ${visible.length} chains</span></div>` : `<div class="pc3-more-row"><span>${visible.length} chain${visible.length === 1 ? '' : 's'}${pending ? ' · reading player boards…' : ''}</span></div>`}`
       : `<div class="pc3-none"><b>No complete chains meet these filters</b><span>Every source answered. Nothing in this scope links a sourced change to a current market${ui.q ? ` for “${esc(ui.q)}”` : ''}. The verified context for this scope is below.</span></div>`;

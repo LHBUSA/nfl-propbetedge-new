@@ -288,3 +288,14 @@
   .pc3-ctx-list li{grid-template-columns:92px minmax(0,1fr)}
   .pc3-skel-row{grid-template-columns:1fr 1fr}
 }
+
+/* ---- definition tip (best main line) --------------------------------------- */
+.pc3-tip{position:relative;display:inline-grid;place-items:center;width:18px;height:18px;margin-left:4px;padding:0;border:1px solid var(--pbe-line-strong);border-radius:50%;background:transparent;color:var(--pbe-dim);font:700 10px/1 var(--pbe-font-data);letter-spacing:0;text-transform:none;vertical-align:middle;cursor:help}
+.pc3-tip:hover,.pc3-tip:focus-visible{border-color:var(--pbe-gold);color:var(--pbe-paper)}
+.pc3-tip::after{content:attr(data-tip);position:absolute;z-index:20;top:calc(100% + 8px);right:-8px;width:260px;padding:8px 10px;border:1px solid var(--pbe-line-strong);border-radius:var(--r-sm);background:var(--pbe-ink-4);box-shadow:var(--sh-1);color:var(--pbe-paper-2);font:500 12px/1.45 var(--pbe-font-ui);letter-spacing:0;text-transform:none;text-align:left;white-space:normal;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .12s}
+.pc3-tip:hover::after,.pc3-tip:focus::after{opacity:1;visibility:visible}
+.pc3-board{overflow:visible}
+.pc3-board-head{border-radius:var(--r-md) var(--r-md) 0 0}
+.pc3-rows>.pc3-row:last-child{border-radius:0 0 var(--r-md) var(--r-md)}
+@media (max-width:760px){.pc3-tip{width:30px;height:30px;font-size:12px}.pc3-tip::after{right:auto;left:-120px;width:230px}}
+
