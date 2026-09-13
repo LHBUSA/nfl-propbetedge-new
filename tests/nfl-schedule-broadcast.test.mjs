@@ -14,7 +14,7 @@ import {
   joinGame, channelsFromCompetition, easternInstant
 } from '../workers/nfl-schedule/broadcast-core.js';
 import { BROADCASTERS, destinationFor, isAllowedDestination, allowedHostsById, providerForName } from '../workers/nfl-schedule/broadcasters.js';
-import { planRefresh, runRefresh, CDN_WEEK_URL, relayRangeForWeek, MAX_REQUESTS_PER_TICK } from '../workers/nfl-schedule/refresh.js';
+import { planRefresh, runRefresh, CDN_WEEK_URL, relayRangeForWeek, MAX_WEEKS_PER_TICK } from '../workers/nfl-schedule/refresh.js';
 import worker, { resetSnapshotMemo } from '../workers/nfl-schedule/index.js';
 
 const FIX = JSON.parse(readFileSync(new URL('./fixtures/espn-cdn-scoreboard-2026.json', import.meta.url), 'utf8'));
@@ -239,7 +239,7 @@ test('J: a refresh tick whose sources all fail keeps prior observations and reco
   const calls = [];
   const out = await runRefresh({ snapshot: prior, schedule: SCHEDULE, now: NOW, fetchImpl: async url => { calls.push(url); return new Response('<html>blocked</html>', { status: 200 }); } });
   assert.equal(out.ran, true);
-  assert.ok(calls.length <= MAX_REQUESTS_PER_TICK);
+  assert.ok(calls.length <= 2 * MAX_WEEKS_PER_TICK);
   assert.ok(out.snapshot.lanes.near.last_error);
   assert.deepEqual(buildBroadcast(game('2026_01_GB_MIN'), out.snapshot, NOW).networks, ['CBS']);
   assert.equal(buildBroadcast(game('2026_01_GB_MIN'), out.snapshot, NOW).verified_at, '2026-09-13T20:00:00.000Z');
@@ -274,7 +274,7 @@ test('refresh: CDN first; the existing relay is the fallback and its names are t
 test('refresh cadence: empty store sweeps; idle store reads nothing; game day reads the current week every 15 minutes', () => {
   const first = planRefresh(null, SCHEDULE, NOW);
   assert.deepEqual(first.sweep_weeks, [1, 2, 3, 4, 5, 6]);
-  assert.ok(first.weeks.length <= MAX_REQUESTS_PER_TICK);
+  assert.ok(first.weeks.length <= MAX_WEEKS_PER_TICK);
 
   const tue = Date.parse('2026-09-15T15:00:00Z');
   const idle = { lanes: { sweep: { completed_at: '2026-09-15T06:00:00Z', cursor: 1 }, near: { last_success_at: '2026-09-15T14:30:00Z', last_attempt_at: '2026-09-15T14:30:00Z' } } };
@@ -287,6 +287,22 @@ test('refresh cadence: empty store sweeps; idle store reads nothing; game day re
   const plan = planRefresh(gd, SCHEDULE, sunday);
   assert.equal(plan.gameday, true);
   assert.deepEqual(plan.weeks, [{ week: 2, reasons: ['gameday'] }]);
+});
+
+test('refresh: a sweep whose weeks all fail still advances, so a dead source cannot become a request loop', async () => {
+  const fail = async () => new Response('nope', { status: 503 });
+  const t1 = await runRefresh({ snapshot: null, schedule: SCHEDULE, now: NOW, fetchImpl: fail });
+  assert.equal(t1.snapshot.lanes.sweep.cursor, 7);
+  assert.deepEqual(t1.snapshot.lanes.sweep.pass_failed_weeks, [1, 2, 3, 4, 5, 6]);
+  assert.ok(t1.requests <= 2 * MAX_WEEKS_PER_TICK);
+  const t2 = await runRefresh({ snapshot: t1.snapshot, schedule: SCHEDULE, now: NOW + 15 * 60000, fetchImpl: fail });
+  assert.deepEqual(t2.plan.sweep_weeks, [7, 8, 9, 10, 11, 12]);
+  const t3 = await runRefresh({ snapshot: t2.snapshot, schedule: SCHEDULE, now: NOW + 30 * 60000, fetchImpl: fail });
+  assert.equal(t3.snapshot.lanes.sweep.cursor, 1);
+  assert.ok(t3.snapshot.lanes.sweep.completed_at);
+  const idle = planRefresh(t3.snapshot, SCHEDULE, NOW + 45 * 60000);
+  assert.deepEqual(idle.sweep_weeks, [], 'the next pass waits a day');
+  for (const g of SCHEDULE) assert.equal(buildBroadcast(g, t3.snapshot, NOW).status, 'UNAVAILABLE');
 });
 
 test('stale snapshots are marked STALE rather than silently served as fresh', () => {

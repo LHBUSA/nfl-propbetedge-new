@@ -7,7 +7,8 @@
  *   near     the current and next week every hour (2 requests)
  *   gameday  the current week every 15 minutes while any game kicks off in
  *            the next 12 hours or kicked off in the last 4 (1 request)
- * A tick issues at most 8 upstream requests. Idle ticks issue none.
+ * A tick reads at most 8 weeks: 8 requests when the CDN answers, 16 only if
+ * every CDN read in the tick falls back to the relay. Idle ticks issue none.
  *
  * Each week is read from ESPN's CDN scoreboard, which Workers can reach. If
  * that read fails, the same week is read through the existing server-side
@@ -30,7 +31,7 @@ export const NEAR_EVERY_MS = HOUR;
 export const GAMEDAY_EVERY_MS = 15 * MIN;
 const RETRY_AFTER_MS = 14 * MIN;
 const TICK_SLACK_MS = 60000;   // cron ticks are not exact to the second
-export const MAX_REQUESTS_PER_TICK = 8;
+export const MAX_WEEKS_PER_TICK = 8;
 export const LAST_WEEK = 18;
 
 const kickoffOf = g => Date.parse(easternInstant(g.gameday, g.gametime));
@@ -54,7 +55,7 @@ export function planRefresh(snapshot, schedule, now) {
   const sweepRunning = Number(sweep.cursor) > 1;
   const sweepDue = sweepRunning || since(now, sweep.completed_at) >= SWEEP_EVERY_MS - TICK_SLACK_MS;
   let sweepWeeks = [];
-  if (sweepDue && since(now, sweep.last_failure_at) >= RETRY_AFTER_MS) {
+  if (sweepDue) {
     const from = sweepRunning ? Number(sweep.cursor) : 1;
     for (let w = from; w < from + SWEEP_CHUNK && w <= LAST_WEEK; w++) sweepWeeks.push(w);
     sweepWeeks.forEach(w => add(w, 'sweep'));
@@ -69,7 +70,7 @@ export function planRefresh(snapshot, schedule, now) {
   const gameday = isGameday(schedule, now);
   if (gameday && since(now, gd.last_success_at) >= GAMEDAY_EVERY_MS - TICK_SLACK_MS && since(now, gd.last_attempt_at) >= GAMEDAY_EVERY_MS - TICK_SLACK_MS) add(cur, 'gameday');
 
-  const list = [...weeks.entries()].sort((a, b) => a[0] - b[0]).slice(0, MAX_REQUESTS_PER_TICK);
+  const list = [...weeks.entries()].sort((a, b) => a[0] - b[0]).slice(0, MAX_WEEKS_PER_TICK);
   return { weeks: list.map(([week, reasons]) => ({ week, reasons })), current_week: cur, gameday, sweep_weeks: sweepWeeks };
 }
 
@@ -142,15 +143,16 @@ export async function runRefresh({ snapshot, schedule, now = Date.now(), fetchIm
   if (sweepRows.length) {
     const lane = snap.lanes.sweep || {};
     lane.last_attempt_at = at;
-    if (sweepRows.every(r => r.ok)) {
-      const last = Math.max(...plan.sweep_weeks);
-      if (last >= LAST_WEEK) { lane.cursor = 1; lane.completed_at = at; } else { lane.cursor = last + 1; }
-      if (plan.sweep_weeks[0] === 1) lane.started_at = at;
-      lane.last_error = null;
-    } else {
-      lane.last_failure_at = at;
-      lane.last_error = sweepRows.filter(r => !r.ok).map(r => `wk${r.week}`).join(',');
-    }
+    /* The pass always moves on. A week that failed keeps its previous
+       observations (and turns STALE if it stays unreadable); retrying one
+       chunk every tick would turn a single dead week into a request loop.
+       The current and next week have their own hourly lane regardless. */
+    if (plan.sweep_weeks[0] === 1) { lane.started_at = at; lane.pass_failed_weeks = []; }
+    const failed = sweepRows.filter(r => !r.ok).map(r => r.week);
+    lane.pass_failed_weeks = [...new Set([...(lane.pass_failed_weeks || []), ...failed])];
+    if (failed.length) { lane.last_failure_at = at; lane.last_error = failed.map(w => `wk${w}`).join(','); }
+    const last = Math.max(...plan.sweep_weeks);
+    if (last >= LAST_WEEK) { lane.cursor = 1; lane.completed_at = at; } else { lane.cursor = last + 1; }
     snap.lanes.sweep = lane;
   }
   snap.last_tick = { at, requests, weeks: results.map(r => ({ week: r.week, reasons: r.reasons, ok: r.ok, attempts: r.attempts })) };

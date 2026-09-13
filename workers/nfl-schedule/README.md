@@ -72,7 +72,9 @@ event id or slug. Re-verify with `node scripts/verify-broadcaster-links.mjs`.
 
 Cron `*/15 * * * *`; `refresh.js` decides per tick: full-season sweep daily
 (18 requests over three ticks), current + next week hourly (2), current week
-every 15 minutes on game days (1). At most 8 upstream requests per tick; idle
+every 15 minutes on game days (1). At most 8 weeks per tick (8 requests, 16 only if
+every CDN read falls back to the relay); a failed sweep week is not retried in
+a loop — the pass moves on and the week turns STALE if it stays unreadable; idle
 ticks make none. The fetch path makes none: it reads the KV key
 `schedule:broadcast:v1` (shared `NFL_KV` namespace), cached 30 s per isolate.
 `STALE` after 6 h without confirmation for a game within 36 h, 60 h otherwise.
