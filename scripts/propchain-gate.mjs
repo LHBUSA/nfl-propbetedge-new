@@ -49,7 +49,7 @@ const LIVE = flag('live');
 const REQUIRE = flag('require');
 const OUT = resolve(arg('out', join(REPO, '.propchain-gate')));
 const WIDTHS = arg('widths', '1440,390').split(',').map(n => parseInt(n, 10));
-const HEIGHTS = { 360: 780, 390: 844, 768: 1024, 1024: 768, 1280: 800, 1440: 900 };
+const HEIGHTS = { 360: 780, 375: 812, 390: 844, 768: 1024, 1024: 768, 1280: 800, 1440: 900 };
 mkdirSync(OUT, { recursive: true });
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
@@ -397,6 +397,7 @@ for (const width of WIDTHS) {
     const r = await evaluate(`(() => { const c = PBEPropChain.model().chains.find(x => x.id === ${JSON.stringify(mv)}); const t = document.querySelector('.pc3-row.is-open .pc3-bigtape'); const txt = t?.textContent || ''; return { has: !!t, from: c.move.from.captured_at, to: c.move.to.captured_at, times: (txt.match(/ET/g) || []).length, books: (txt.match(/books/g) || []).length, delta: !!t?.querySelector('.pc3-delta') }; })()`);
     record('market-move-evidence', width, [
       { name: 'movement evidence shows two captures, two values, books and the delta', ok: r?.has && r.from && r.to && r.from !== r.to && r.times >= 2 && r.books >= 2 && r.delta, detail: JSON.stringify(r) },
+      { name: 'evidence tile labels (incl. Best main line + help) sit on one line', ok: (await evaluate(`(() => { const labels = [...document.querySelectorAll('.pc3-row.is-open .pc3-quad small')]; const bad = labels.filter(el => { const lh = parseFloat(getComputedStyle(el).lineHeight) || 14; const tip = el.querySelector('.pc3-tip'); const one = Math.max(lh, tip ? tip.getBoundingClientRect().height : 0) + 4; return el.getBoundingClientRect().height > one || el.scrollWidth > el.clientWidth + 1; }).map(el => el.textContent.trim() + '@' + Math.round(el.getBoundingClientRect().height)); return labels.length > 0 && bad.length === 0 ? true : { labels: labels.length, bad }; })()`)) === true },
       { name: 'truth invariants', ok: (await evaluate(TRUTH))?.ok === true },
       ...(await generic())
     ]);
