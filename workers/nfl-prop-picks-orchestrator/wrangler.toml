@@ -15,8 +15,9 @@ NFL_GATEWAY = "https://nfl-api.propbetedge.ai"
 [triggers]
 crons = ["*/15 * * * *"]
 
-# Required secret:
+# Required secrets:
 # SUPABASE_SERVICE_ROLE_KEY
+# PICKS_MODEL_TOKEN — credential for nfl-picks model output (/api/picks/pass)
 #
 # Deliberately absent:
 # ODDS_API_KEY — this selector reads nfl-odds' persisted snapshot through the

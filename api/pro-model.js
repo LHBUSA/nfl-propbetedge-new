@@ -27,8 +27,14 @@ export default async function handler(req, res) {
     if (auth.degraded) return send(res, 503, { error: 'entitlement_unavailable', stage: auth.stage });
     if (auth.pro !== true) return send(res, 403, { error: 'nfl_pro_required', entitlement: 'nfl_pro' });
 
+    /* The model service accepts only this server-held credential (nfl-picks
+       enforces it), so model output can no longer be read around this check.
+       Unset means fail closed, never an unauthenticated upstream call. */
+    const modelToken = String(process.env.NFL_PICKS_MODEL_TOKEN || '').trim();
+    if (!modelToken) return send(res, 503, { error: 'entitlement_unavailable' });
+
     const upstreamResponse = await fetch(`${UPSTREAM}?event_id=${encodeURIComponent(eventId)}`, {
-      headers: { accept: 'application/json' },
+      headers: { accept: 'application/json', authorization: `Bearer ${modelToken}` },
       cache: 'no-store'
     });
 

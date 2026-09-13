@@ -69,7 +69,8 @@ function stubSupabase({ rows }) {
   return () => { globalThis.fetch = original; };
 }
 
-const ACTIVE_ROW = [{ status: 'active', current_period_end: null, cancel_at_period_end: false, stripe_price_id: 'price_x', created_at: '2026-08-01T00:00:00Z' }];
+/* An NFL Pro price: the entitlement reader refuses rows priced for another product. */
+const ACTIVE_ROW = [{ status: 'active', current_period_end: null, cancel_at_period_end: false, stripe_price_id: 'price_1U9QUZF3CaVzg4OR3QNfwWCS', created_at: '2026-08-01T00:00:00Z' }];
 
 /* =====================================================================
  * ROOT CAUSE

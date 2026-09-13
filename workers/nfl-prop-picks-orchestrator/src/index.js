@@ -194,8 +194,10 @@ async function runOrchestration(env, slate, meta, base) {
         count.stale_board += 1; row.coverage = 'stale_board'; continue;
       }
 
+      /* nfl-picks serves model output only to a holder of PICKS_MODEL_TOKEN. */
       const model = await getJson(
         `${gatewayBase(env)}/api/picks/pass?event_id=${encodeURIComponent(event.id)}`,
+        env.PICKS_MODEL_TOKEN ? { authorization: `Bearer ${env.PICKS_MODEL_TOKEN}` } : {},
       ).catch(() => null);
       const projections = projectionRows(model);
       if (!projections.length) {
@@ -578,9 +580,9 @@ function gatewayBase(env) {
   return String(env.NFL_GATEWAY || 'https://nfl-api.propbetedge.ai').replace(/\/$/, '');
 }
 
-async function getJson(url) {
+async function getJson(url, headers = {}) {
   const response = await fetch(url, {
-    headers: { accept: 'application/json' },
+    headers: { accept: 'application/json', ...headers },
     cf: { cacheTtl: 0 },
   });
   if (!response.ok) throw new Error(`upstream_${response.status}`);

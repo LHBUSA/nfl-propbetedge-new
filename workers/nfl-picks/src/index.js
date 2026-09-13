@@ -497,6 +497,38 @@ async function buildPassModel(env, url) {
   });
 }
 __name(buildPassModel, "buildPassModel");
+/* ---- model access gate (2026-09-13) -------------------------------------
+ * Model output is NFL Pro. Until this gate, every path containing /picks
+ * returned the full passing model to anyone, on all three hosts that reach
+ * this Worker: nfl-api.propbetedge.ai (via nfl-gateway), nfl-gateway's and
+ * nfl-picks' own workers.dev URLs. The browser-side paywall rewrite was the
+ * only thing standing in front of it.
+ *
+ * Entitlement is decided where the session and subscription are verified:
+ * api/pro-model.js on Vercel checks the NFL Pro session and only then calls
+ * here with the server-held credential; the prop-picks orchestrator holds the
+ * same credential for its internal projection read. This Worker enforces:
+ *
+ *   PICKS_MODEL_TOKEN unset          -> 503, fail closed
+ *   missing / wrong Bearer credential -> 401 nfl_pro_required
+ *   valid credential                  -> the unchanged model response
+ *
+ * /health stays public: it reports service state, not model output.
+ */
+function modelAccess(request, env) {
+  const expected = String(env?.PICKS_MODEL_TOKEN || "");
+  if (!expected) return "unconfigured";
+  const header = String(request.headers.get("authorization") || "");
+  const match = /^Bearer\s+(.+)$/i.exec(header.trim());
+  const given = match ? match[1] : "";
+  const enc = new TextEncoder();
+  const a = enc.encode(given), b = enc.encode(expected);
+  if (a.length !== b.length) return "denied";
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i];
+  return diff === 0 ? "granted" : "denied";
+}
+__name(modelAccess, "modelAccess");
 var index_pass_v1_2_candidate_default = {
   async fetch(request, env) {
     if (request.method === "OPTIONS") {
@@ -526,6 +558,13 @@ var index_pass_v1_2_candidate_default = {
       });
     }
     if (path.includes("/picks")) {
+      const access = modelAccess(request, env);
+      if (access === "unconfigured") {
+        return json({ error: "model_access_unavailable", entitlement: "nfl_pro" }, 503);
+      }
+      if (access !== "granted") {
+        return json({ error: "nfl_pro_required", entitlement: "nfl_pro" }, 401);
+      }
       return buildPassModel(
         env,
         url

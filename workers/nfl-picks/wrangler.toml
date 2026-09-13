@@ -5,6 +5,9 @@
 # source was never committed; src/index.js is the deployed module verbatim, so
 # every later change is a reviewable diff against what actually ran.
 #
+# Required secret: PICKS_MODEL_TOKEN. Model output (/picks) is refused without it
+# (503 when unset, 401 without the matching Bearer credential).
+#
 # Deploy from a clean export of a pushed commit, never from a local directory.
 name = "nfl-picks"
 main = "src/index.js"

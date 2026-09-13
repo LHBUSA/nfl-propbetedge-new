@@ -112,6 +112,21 @@ export function supabaseAdminHeaders(secret) {
   return headers;
 }
 
+/* NFL Pro prices: the only prices any NFL writer (api/checkout.js,
+ * api/stripe-webhook.js, workers/nfl-billing) can record on nfl_subscriptions.
+ * One Stripe account serves MLB, PropData, PropSports, UFC and NFL, so a row
+ * carrying any OTHER price is not NFL entitlement, however it got there. A row
+ * with no recorded price is accepted: only NFL-guarded writers produce rows. */
+export const NFL_PRO_PRICE_IDS = Object.freeze(new Set([
+  'price_1U9QUZF3CaVzg4OR3QNfwWCS', // legacy weekly
+  'price_1UEWAOF3CaVzg4ORjkWpwOz9', // founding weekly
+  'price_1UEWAXF3CaVzg4ORGlsgboLq', // founding monthly
+  'price_1U9oVzF3CaVzg4ORnk5NiJFA', // season pass (one-time)
+]));
+export function isNflProPrice(priceId) {
+  return priceId === null || priceId === undefined || priceId === '' || NFL_PRO_PRICE_IDS.has(String(priceId));
+}
+
 async function entitlementByEmail(email, secret) {
   const base = String(process.env.SUPABASE_URL || DEFAULT_SUPABASE_URL).replace(/\/$/, '');
   const q = `customer_email=ilike.${encodeURIComponent(email)}&select=status,current_period_end,cancel_at_period_end,stripe_price_id,created_at&order=created_at.desc&limit=10`;
@@ -125,7 +140,8 @@ async function entitlementByEmail(email, secret) {
   const row = (Array.isArray(rows) ? rows : []).find(item => {
     const status = String(item?.status || '').toLowerCase();
     return ['active', 'trialing'].includes(status)
-      && (!item?.current_period_end || Date.parse(item.current_period_end) > now);
+      && (!item?.current_period_end || Date.parse(item.current_period_end) > now)
+      && isNflProPrice(item?.stripe_price_id);
   });
   return row ? {
     status: row.status,
