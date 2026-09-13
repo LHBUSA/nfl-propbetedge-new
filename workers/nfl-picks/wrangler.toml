@@ -1,0 +1,20 @@
+# nfl-picks — the PBE passing model service (player_pass_yds fair line).
+#
+# Captured from production on 2026-09-13: version 24fd03dc-2493-49cf-9fdc-9e6ba5901bd5
+# (deployed 2026-08-28, entrypoint index.pass-v1_2.candidate.js). The original
+# source was never committed; src/index.js is the deployed module verbatim, so
+# every later change is a reviewable diff against what actually ran.
+#
+# Deploy from a clean export of a pushed commit, never from a local directory.
+name = "nfl-picks"
+main = "src/index.js"
+compatibility_date = "2026-08-28"
+account_id = "fd3a233edadd0a60916413c1199f71ee"
+workers_dev = true
+
+[[services]]
+binding = "NFL_ODDS"
+service = "nfl-odds"
+
+[observability]
+enabled = true
