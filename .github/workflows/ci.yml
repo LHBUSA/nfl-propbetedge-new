@@ -54,6 +54,11 @@ jobs:
       - name: Founding Season billing contract
         run: node --test tests/nfl-founding-season-billing.test.mjs
 
+      # Stripe webhook -> nfl_subscriptions through the real billing Worker:
+      # every delivery order of a Payment Link purchase must end entitled.
+      - name: NFL billing webhook end to end
+        run: node --test tests/nfl-billing-worker.test.mjs
+
       # PBE Picks V3: which persisted decisions a customer may see. Leak
       # prevention, superseded/withdrawn filtering, receipt verification and
       # the official-mode transition, against the real read handler.
