@@ -92,8 +92,12 @@ let seq = 1; const pending = new Map();
    scenario must fail that call, not hang the whole run. */
 const send = (method, params = {}, ms = 30000) => { const n = seq++; ws.send(JSON.stringify({ id: n, method, params })); return new Promise((res, rej) => { pending.set(n, { res, rej }); setTimeout(() => { if (pending.has(n)) { pending.delete(n); rej(new Error(`cdp_timeout:${method}`)); } }, ms); }); };
 
-/* Per-scenario API rules: [{match: RegExp, status?, mutate?(json)}] */
+/* Per-scenario API rules: [{match: RegExp, status?, mutate?(json)}].
+   PBE_CHANGES_UPSTREAM=<origin> serves /api/changes from another nfl-intel
+   origin — e.g. an uploaded, non-serving Worker version's preview URL — so a
+   Worker change can be exercised end to end before it takes traffic. */
 let rules = [];
+const UPSTREAM = process.env.PBE_CHANGES_UPSTREAM ? process.env.PBE_CHANGES_UPSTREAM.replace(/\/$/, '') : null;
 const state = { errors: [], apiCalls: [] };
 ws.onmessage = async ev => {
   const m = JSON.parse(ev.data);
@@ -103,6 +107,13 @@ ws.onmessage = async ev => {
     const url = request.url;
     try {
       const rule = rules.find(r => r.match.test(url));
+      if (!rule && UPSTREAM && responseStatusCode === undefined && /\/api\/changes/.test(url)) {
+        const u = new URL(url);
+        const r = await fetch(`${UPSTREAM}${u.pathname}${u.search}`, { headers: { accept: 'application/json' } });
+        const body = Buffer.from(await r.arrayBuffer());
+        await send('Fetch.fulfillRequest', { requestId, responseCode: r.status, responseHeaders: [{ name: 'content-type', value: 'application/json' }, { name: 'access-control-allow-origin', value: '*' }, { name: 'cache-control', value: 'no-store' }], body: body.toString('base64') });
+        return;
+      }
       if (rule && responseStatusCode === undefined && rule.status) {
         await send('Fetch.fulfillRequest', { requestId, responseCode: rule.status, responseHeaders: [{ name: 'content-type', value: 'application/json' }, { name: 'access-control-allow-origin', value: '*' }], body: Buffer.from(JSON.stringify({ error: `gate_injected_${rule.status}` })).toString('base64') });
         return;
@@ -331,6 +342,23 @@ for (const width of WIDTHS) {
     await evaluate(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))`);
   } else evChecks.push({ name: 'a row exists to expand', ok: false });
   record('evidence', width, [...evChecks, ...(await generic())]);
+
+  /* 5b · transitions, when the API publishes them */
+  const tr = await evaluate(`(() => { const m = PBEPropChain.model(); const c = m.chains.find(x => x.transition && x.complete && PBEPropChainCore.matches(x, PBEPropChain.ui, Date.now())); return { published: m.chains.some(x => x.transition) || m.context.some(x => x.transition), id: c ? c.id : null }; })()`);
+  if (tr?.published && tr.id) {
+    const rowOnPage = await evaluate(`(() => { const i = document.querySelector('[data-pc3-q]'); const c = PBEPropChain.model().chains.find(x => x.id === ${JSON.stringify(tr.id)}); i.value = c.entity.name; i.dispatchEvent(new Event('input', { bubbles: true })); return c.entity.name; })()`);
+    await sleep(900);
+    await click(`[data-pc3-open="${tr.id}"]`); await sleep(700);
+    const r = await evaluate(`(() => { const row = document.querySelector('.pc3-row.is-open'); return { label: row?.querySelector('.pc3-trans')?.textContent || null, block: row?.querySelector('.pc3-transition')?.textContent || null }; })()`);
+    record('transitions', width, [
+      { name: 'a ledger transition renders as FROM → TO on the row', ok: /→/.test(r?.label || ''), detail: JSON.stringify(r) },
+      { name: 'evidence shows both capture times', ok: /Last captured as[\s\S]*ET[\s\S]*First captured as[\s\S]*ET/.test(r?.block || ''), detail: (r?.block || '').slice(0, 120) },
+      { name: 'truth invariants', ok: (await evaluate(TRUTH))?.ok === true }
+    ], { note: String(rowOnPage) });
+    await shotElement('.pc3-row.is-open', join(OUT, `transition-evidence-${width}.png`));
+    await evaluate(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))`);
+    await evaluate(`(() => { const i = document.querySelector('[data-pc3-q]'); i.value = ''; i.dispatchEvent(new Event('input', { bubbles: true })); })()`); await sleep(500);
+  } else console.log(`SKIP transitions@${width} — the change API publishes no transitions${UPSTREAM ? '' : ' (production nfl-intel; set PBE_CHANGES_UPSTREAM to exercise 1.2.0)'}`);
 
   /* 6 · polling stops off-route */
   const polling = [];
