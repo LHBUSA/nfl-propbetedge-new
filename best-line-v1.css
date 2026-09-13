@@ -96,3 +96,9 @@
 .pbebl-week-head span{border-left:1px solid var(--pbe-line-strong);padding-left:8px}
 .pbebl-table td[data-label="Range"] small{max-width:340px}
 @media (max-width:768px){.pbebl-week+.pbebl-week{margin-top:8px;padding-top:14px}.pbebl-table td[data-label="Range"] small{max-width:none}}
+/* Player props for a game that has kicked off: a pre-game capture, never a price. */
+.pbebl-kickoff{display:grid;gap:4px;margin:0 0 var(--s-3,12px);padding:10px 12px;border:1px solid rgba(255,92,92,.45);border-left-width:3px;border-radius:var(--r-sm,6px);background:rgba(255,92,92,.08)}
+.pbebl-kickoff b{font:800 var(--fs-micro,11px)/1.3 var(--pbe-font-data);letter-spacing:.1em;text-transform:uppercase;color:var(--pbe-crimson-bright)}
+.pbebl-kickoff span{font-size:12px;line-height:1.45;color:var(--pbe-dim)}
+.pbebl-props .pbebl-captured{display:block;white-space:nowrap}
+.pbebl-props.is-kicked-off .pbebl-price{opacity:.78}

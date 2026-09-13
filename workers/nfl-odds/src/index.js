@@ -18,7 +18,7 @@
  * is ever echoed in a response or a log line.
  */
 
-const VERSION = 'v3.0.0-snapshot';
+const VERSION = 'v3.1.0-snapshot';
 const PROVIDER = 'https://api.the-odds-api.com/v4';
 const SPORT_KEYS = { regular: 'americanfootball_nfl', preseason: 'americanfootball_nfl_preseason' };
 const FEATURED_MARKETS = new Set(['h2h', 'spreads', 'totals']);
@@ -37,6 +37,11 @@ const KV = {
   meta: 'odds:v1:meta',
   featured: 'odds:v1:featured:regular',
   eventPrefix: 'odds:v1:event:',
+  /* LAST VERIFIED PLAYER MARKET, per event: every market's newest PRE-GAME
+     capture that actually carried quotes. An ingest that finds a market
+     missing never deletes its entry. */
+  verifiedPrefix: 'odds:v1:props-verified:',
+  coverage: 'odds:v1:props-coverage',
   index: 'odds:v1:board-index',
   attempt: 'odds:v1:ingest:last-attempt',
   batches: 'odds:v1:batches',
@@ -156,6 +161,86 @@ function bestPricesAtSameLine(quotes) {
   return Array.from(groups.values()).sort((a, b) => a.player.localeCompare(b.player) || a.market.localeCompare(b.market) || String(a.direction).localeCompare(String(b.direction)) || Number(a.point || 0) - Number(b.point || 0));
 }
 
+/* ------------------------------------------------ last verified player market
+ *
+ * Why this exists: the ingest used to overwrite one event record per run. A
+ * book that pulls its player markets at kickoff, or a run that finds nothing
+ * posted yet, then replaced a good pre-game board with an empty one.
+ *
+ * Rules:
+ *   · only a capture received BEFORE kickoff can become verified, so an
+ *     in-play price is never presented as a pre-game one
+ *   · a capture replaces a market's entry only when it carries quotes for it
+ *   · every entry keeps its own captured_at and batch_id; a read never stamps
+ *     it with a newer batch's time
+ */
+const VERIFIED_RETENTION_SECONDS = 7 * 86400;          // after kickoff
+const COVERAGE_RETENTION_MS = 12 * 3600000;            // started games stay listed this long
+
+export function marketQuotes(event, market) { return flattenPropQuotes(filterEventMarkets(event, [market])); }
+
+/** Fold one pre-game capture into the verified record. Pure. */
+export function mergeVerified(previous, capture) {
+  if (!capture?.pregame) return previous || null;       // an in-play capture never becomes pre-game truth
+  const out = {
+    event: capture.event_ref,
+    markets: { ...(previous?.markets || {}) },
+    updated_at: capture.captured_at,
+    updated_batch_id: capture.batch_id,
+  };
+  for (const market of capture.markets_requested || []) {
+    const quotes = marketQuotes(capture.event, market);
+    if (!quotes.length) continue;                         // absence is not evidence; keep the last verified entry
+    out.markets[market] = {
+      market,
+      quotes,
+      books: Array.from(new Set(quotes.map((q) => q.book))).sort(),
+      quote_count: quotes.length,
+      provider_last_update: latestBookUpdate([filterEventMarkets(capture.event, [market])]),
+      captured_at: capture.captured_at,
+      batch_id: capture.batch_id,
+    };
+  }
+  return out;
+}
+
+/* One row per game a reader can open in Player Props: which markets the
+   newest capture carried and which have a retained pre-game entry, each with
+   its own capture time. Reads never fan out per event to build it. */
+function coverageEntry(e, verified, currentMarkets, currentCapturedAt) {
+  const markets = verified?.markets || {};
+  return {
+    ...eventRef(e),
+    current_markets: currentMarkets,
+    current_captured_at: currentCapturedAt,
+    verified_markets: Object.keys(markets).sort(),
+    verified_captured_at: Object.fromEntries(Object.entries(markets).map(([m, v]) => [m, v.captured_at])),
+  };
+}
+function eventRef(e) { return { id: e.id, commence_time: e.commence_time, away_team: e.away_team, home_team: e.home_team }; }
+function verifiedExpiration(commenceTime, nowMs) {
+  const k = Date.parse(commenceTime);
+  const at = Math.floor(((Number.isFinite(k) ? k : nowMs) / 1000) + VERIFIED_RETENTION_SECONDS);
+  return Math.max(at, Math.floor(nowMs / 1000) + 3600);
+}
+
+/* Records written before v3.1 carry no captured_at. One is still provably
+   pre-game when the previous batch index listed it (so that batch wrote it)
+   and both that batch's finish time and every book update in it precede
+   kickoff. Only then is it promoted, stamped with THAT batch's time. */
+export function legacyPregameCapture(stored, prevMeta, prevIndexEntry) {
+  if (!stored?.event || stored.captured_at || !prevMeta?.captured_at || !prevIndexEntry) return null;
+  const kickoff = Date.parse(stored.event.commence_time);
+  const batchAt = Date.parse(prevMeta.captured_at);
+  const lastUpdate = stored.provider_last_update ? Date.parse(stored.provider_last_update) : NaN;
+  if (!Number.isFinite(kickoff) || !Number.isFinite(batchAt) || batchAt >= kickoff) return null;
+  if (Number.isFinite(lastUpdate) && lastUpdate >= kickoff) return null;
+  return {
+    event: stored.event, event_ref: eventRef(stored.event), markets_requested: stored.markets_requested || [],
+    captured_at: prevMeta.captured_at, batch_id: prevMeta.batch_id, pregame: true,
+  };
+}
+
 /* --------------------------------------------------------------- provider */
 async function providerFetch(url) {
   const response = await fetch(url, { headers: { Accept: 'application/json', 'User-Agent': 'PropBetEdge-NFL/3.0' } });
@@ -203,43 +288,96 @@ export async function ingest(env, { trigger = 'cron', now = new Date() } = {}) {
     let usage = safeUsage(featuredReq.response.headers);
     let credits = Number(usage.last_cost) || 0;
 
-    /* 2. player markets for events inside the prop window: one request per
-          event, cost = requested markets × 1 region */
+    /* 2. player markets for events that have NOT kicked off and sit inside
+          the prop window: one request per event, cost = requested markets ×
+          1 region. A game already under way is not requested: its in-play
+          prices can never be pre-game truth, and its last verified pre-game
+          board is retained below instead of being overwritten. */
     const nowMs = now.getTime();
     const windowEnd = nowMs + p.prop_window_days * 86400000;
-    const inWindow = events.filter((e) => { const t = Date.parse(e.commence_time); return Number.isFinite(t) && t >= nowMs - 6 * 3600000 && t <= windowEnd; });
+    const thisBatch = batchId(now, trigger);
+    const inWindow = events.filter((e) => { const t = Date.parse(e.commence_time); return Number.isFinite(t) && t > nowMs && t <= windowEnd; });
     const index = []; const boardFailures = [];
     const marketsParam = p.prop_markets.join(',');
+    const [prevMeta, prevIndex, prevCoverage] = await Promise.all([
+      env.NFL_KV.get(KV.meta, 'json').catch(() => null),
+      env.NFL_KV.get(KV.index, 'json').catch(() => null),
+      env.NFL_KV.get(KV.coverage, 'json').catch(() => null),
+    ]);
+    const prevIndexById = new Map((Array.isArray(prevIndex) ? prevIndex : []).map((x) => [x.id, x]));
+    const coverage = new Map();
     const CONCURRENCY = 4;
     for (let i = 0; i < inWindow.length; i += CONCURRENCY) {
       await Promise.all(inWindow.slice(i, i + CONCURRENCY).map(async (e) => {
         const r = await providerFetch(providerUrl(env, `/sports/${sport}/events/${encodeURIComponent(e.id)}/odds`, { regions: 'us', markets: marketsParam, oddsFormat: 'american', dateFormat: 'iso' }));
+        /* `now` is the trigger instant; elapsed wall time moves it to the moment
+           this response arrived without mixing clocks */
+        const receivedAt = new Date(nowMs + (Date.now() - started));
         if (!r.response.ok) { boardFailures.push({ event_id: e.id, ...providerFailure(r.response, r.body) }); return; }
         usage = safeUsage(r.response.headers);
         credits += Number(usage.last_cost) || 0;
         const ev = normalizeEvents(r.body ? [r.body] : [])[0] || { ...e, bookmakers: [] };
+        /* the response arrived after kickoff (a delayed request near 13:00):
+           nothing in it is pre-game, so neither record is touched */
+        const pregame = Date.parse(e.commence_time) > receivedAt.getTime();
+        if (!pregame) return;
         const captured = new Set(); for (const b of ev.bookmakers || []) for (const m of b.markets || []) captured.add(m.key);
         const quoteCount = flattenPropQuotes(ev).length;
-        await env.NFL_KV.put(KV.eventPrefix + e.id, JSON.stringify({ event: ev, markets_requested: p.prop_markets, markets_captured: Array.from(captured), quote_count: quoteCount, provider_last_update: latestBookUpdate([ev]) }));
-        index.push({ id: e.id, commence_time: e.commence_time, away_team: e.away_team, home_team: e.home_team, markets_captured: Array.from(captured), quote_count: quoteCount });
+        const capturedAt = receivedAt.toISOString();
+        let previous = await env.NFL_KV.get(KV.verifiedPrefix + e.id, 'json').catch(() => null);
+        if (!previous) {
+          /* first v3.1 run: keep what the previous batch provably captured
+             pre-game, read BEFORE this capture overwrites the event record */
+          const stored = await env.NFL_KV.get(KV.eventPrefix + e.id, 'json').catch(() => null);
+          const legacy = legacyPregameCapture(stored, prevMeta, prevIndexById.get(e.id));
+          previous = legacy ? mergeVerified(null, legacy) : null;
+        }
+        await env.NFL_KV.put(KV.eventPrefix + e.id, JSON.stringify({ event: ev, markets_requested: p.prop_markets, markets_captured: Array.from(captured), quote_count: quoteCount, provider_last_update: latestBookUpdate([ev]), captured_at: capturedAt, batch_id: thisBatch, captured_pregame: true }));
+        const verified = mergeVerified(previous, { event: ev, event_ref: eventRef(e), markets_requested: p.prop_markets, captured_at: capturedAt, batch_id: thisBatch, pregame: true });
+        if (verified) await env.NFL_KV.put(KV.verifiedPrefix + e.id, JSON.stringify(verified), { expiration: verifiedExpiration(e.commence_time, nowMs) });
+        index.push({ id: e.id, commence_time: e.commence_time, away_team: e.away_team, home_team: e.home_team, markets_captured: Array.from(captured), quote_count: quoteCount, captured_at: capturedAt });
+        coverage.set(e.id, coverageEntry(e, verified, Array.from(captured), capturedAt));
       }));
     }
     index.sort((a, b) => String(a.commence_time).localeCompare(String(b.commence_time)));
 
+    /* 2b. games not re-requested (kicked off, or a failed board request) keep
+           their last verified pre-game board. Promote a pre-v3.1 record the
+           previous batch provably captured before kickoff, once. */
+    const carry = new Map();
+    for (const c of Array.isArray(prevCoverage) ? prevCoverage : []) carry.set(c.id, c);
+    for (const x of prevIndexById.values()) if (!carry.has(x.id)) carry.set(x.id, { id: x.id, commence_time: x.commence_time, away_team: x.away_team, home_team: x.home_team });
+    for (const c of carry.values()) {
+      if (coverage.has(c.id)) continue;
+      const kickoff = Date.parse(c.commence_time);
+      if (!Number.isFinite(kickoff) || kickoff < nowMs - COVERAGE_RETENTION_MS) continue;
+      let verified = await env.NFL_KV.get(KV.verifiedPrefix + c.id, 'json').catch(() => null);
+      if (!verified) {
+        const stored = await env.NFL_KV.get(KV.eventPrefix + c.id, 'json').catch(() => null);
+        const legacy = legacyPregameCapture(stored, prevMeta, prevIndexById.get(c.id));
+        if (legacy) {
+          verified = mergeVerified(null, legacy);
+          if (verified) await env.NFL_KV.put(KV.verifiedPrefix + c.id, JSON.stringify(verified), { expiration: verifiedExpiration(c.commence_time, nowMs) });
+        }
+      }
+      if (verified && Object.keys(verified.markets || {}).length) coverage.set(c.id, coverageEntry(c, verified, [], null));
+    }
+
     /* 3. persist one verified batch */
     const capturedAt = new Date().toISOString();
     const meta = {
-      batch_id: batchId(now, trigger), version: VERSION, trigger, captured_at: capturedAt, captured_at_et: etLabel(new Date(capturedAt)),
+      batch_id: thisBatch, version: VERSION, trigger, captured_at: capturedAt, captured_at_et: etLabel(new Date(capturedAt)),
       /* the trigger time of the attempt that produced this batch; freshness()
          compares a later failed attempt against this, not against captured_at */
       attempt_started_at: attempt.started_at,
       provider: 'the_odds_api', provider_last_update: latestBookUpdate(events), sport_key: sport,
-      counts: { events: events.length, boards: index.length, boards_failed: boardFailures.length, board_quotes: index.reduce((n, x) => n + x.quote_count, 0) },
+      counts: { events: events.length, boards: index.length, boards_failed: boardFailures.length, board_quotes: index.reduce((n, x) => n + x.quote_count, 0), boards_retained_pregame: Array.from(coverage.values()).filter((c) => !c.current_captured_at).length },
       window: { prop_window_days: p.prop_window_days, from: new Date(nowMs - 6 * 3600000).toISOString(), to: new Date(windowEnd).toISOString() },
       player_markets: p.prop_markets, credits_spent: credits, usage, duration_ms: Date.now() - started,
     };
     await env.NFL_KV.put(KV.featured, JSON.stringify({ league: 'regular', sport_key: sport, markets: Array.from(FEATURED_MARKETS), count: events.length, events, provider_last_update: meta.provider_last_update }));
     await env.NFL_KV.put(KV.index, JSON.stringify(index));
+    await env.NFL_KV.put(KV.coverage, JSON.stringify(Array.from(coverage.values()).sort((a, b) => String(a.commence_time).localeCompare(String(b.commence_time)))));
     await env.NFL_KV.put(KV.meta, JSON.stringify(meta));
     const status = boardFailures.length && boardFailures.length === inWindow.length && inWindow.length ? 'partial' : boardFailures.length ? 'partial' : 'ok';
     const done = { ...attempt, status, finished_at: capturedAt, batch_id: meta.batch_id, credits_spent: credits, usage, boards_failed: boardFailures.slice(0, 5) };
@@ -323,8 +461,65 @@ async function getProps(env, url) {
   if (!fresh) return noSnapshot();
   if (!stored) return json({ error: 'Event not in the player-market snapshot window', event_id: eventId, ...fresh, semantics: 'UNAVAILABLE' }, 404);
   const event = filterEventMarkets(stored.event, markets);
-  return readJson({ league: 'regular', sport_key: SPORT_KEYS.regular, event_id: eventId, markets, event, ...fresh, provider_last_update: stored.provider_last_update, generated_at: new Date().toISOString() });
+  /* the event record's own capture time; a pre-v3.1 record has none recorded */
+  return readJson({ league: 'regular', sport_key: SPORT_KEYS.regular, event_id: eventId, markets, event, ...fresh, captured_at: stored.captured_at || null, capture_batch_id: stored.batch_id || null, snapshot_captured_at: fresh.captured_at, provider_last_update: stored.provider_last_update, generated_at: new Date().toISOString() });
 }
+/* Market availability on a board read:
+ *   IN_SNAPSHOT                     in the newest pre-game capture of a game that has not kicked off
+ *   LAST_VERIFIED_PREGAME_SNAPSHOT  served from the retained pre-game entry: the newest capture
+ *                                   omitted the market, or the game has kicked off
+ *   NOT_OFFERED_AT_INGEST           requested by every ingest, never captured before kickoff
+ *   NOT_REQUESTED_BY_INGEST         outside the ingest's market list
+ * Each served market names its own captured_at and batch_id. */
+export const AVAILABILITY = Object.freeze({
+  current: 'IN_SNAPSHOT', verified: 'LAST_VERIFIED_PREGAME_SNAPSHOT', never: 'NOT_OFFERED_AT_INGEST', notRequested: 'NOT_REQUESTED_BY_INGEST',
+});
+
+/** Pure board resolution, exported for the regression suite. */
+export function resolveBoard({ stored, verified, markets, nowMs, meta, prevIndex = null, requestedMarkets = DEFAULT_PROP_MARKETS }) {
+  const ref = stored?.event || verified?.event;
+  const kickoff = Date.parse(ref?.commence_time || '');
+  const started = Number.isFinite(kickoff) && kickoff <= nowMs;
+  const requested = new Set(stored?.markets_requested || requestedMarkets);
+  /* a pre-v3.1 record has no captured_at: the batch index proves which batch wrote it */
+  const inPrevIndex = Array.isArray(prevIndex) && prevIndex.some((x) => x.id === ref?.id);
+  const legacyAt = stored && !stored.captured_at && inPrevIndex ? meta?.captured_at || null : null;
+  const legacyBatch = stored && !stored.captured_at && inPrevIndex ? meta?.batch_id || null : null;
+  const legacyPregame = legacyAt && Date.parse(legacyAt) < kickoff
+    && !(stored.provider_last_update && Date.parse(stored.provider_last_update) >= kickoff);
+  const quotes = []; const availability = {}; const provenance = {};
+  for (const m of markets) {
+    const current = stored ? marketQuotes(stored.event, m) : [];
+    const currentAt = stored?.captured_at || legacyAt;
+    const currentIsPregame = stored?.captured_pregame === true || legacyPregame;
+    const kept = verified?.markets?.[m];
+    let chosen = null;
+    if (current.length && currentAt && currentIsPregame && !started) {
+      chosen = { semantics: AVAILABILITY.current, quotes: current, captured_at: currentAt, batch_id: stored.batch_id || legacyBatch, provider_last_update: latestBookUpdate([filterEventMarkets(stored.event, [m])]) };
+    } else if (kept?.quotes?.length) {
+      chosen = { semantics: AVAILABILITY.verified, quotes: kept.quotes, captured_at: kept.captured_at, batch_id: kept.batch_id, provider_last_update: kept.provider_last_update };
+    } else if (started && current.length && currentAt && legacyPregame) {
+      chosen = { semantics: AVAILABILITY.verified, quotes: current, captured_at: currentAt, batch_id: legacyBatch, provider_last_update: latestBookUpdate([filterEventMarkets(stored.event, [m])]) };
+    }
+    if (chosen) {
+      availability[m] = chosen.semantics;
+      provenance[m] = { semantics: chosen.semantics, captured_at: chosen.captured_at, captured_at_et: chosen.captured_at ? etLabel(new Date(chosen.captured_at)) : null, batch_id: chosen.batch_id || null, provider_last_update: chosen.provider_last_update || null, books: Array.from(new Set(chosen.quotes.map((q) => q.book))).sort(), quote_count: chosen.quotes.length };
+      for (const q of chosen.quotes) quotes.push({ ...q, captured_at: chosen.captured_at, batch_id: chosen.batch_id || null, snapshot_semantics: chosen.semantics });
+    } else {
+      availability[m] = requested.has(m) ? AVAILABILITY.never : AVAILABILITY.notRequested;
+      provenance[m] = { semantics: availability[m], captured_at: null, captured_at_et: null, batch_id: null, provider_last_update: null, books: [], quote_count: 0 };
+    }
+  }
+  /* The board-level time is the OLDEST served capture, so a consumer that reads
+     one timestamp can never take a retained market for a fresh one. */
+  const servedTimes = Object.values(provenance).map((x) => x.captured_at).filter(Boolean).sort();
+  return {
+    event: ref ? { id: ref.id, commence_time: ref.commence_time, away_team: ref.away_team, home_team: ref.home_team, started, state: started ? 'KICKED_OFF' : 'PRE_GAME' } : null,
+    started, quotes, market_availability: availability, market_provenance: provenance,
+    captured_at: servedTimes[0] || stored?.captured_at || legacyAt || null,
+  };
+}
+
 async function getBoard(env, url) {
   const eventId = (url.searchParams.get('event_id') || url.searchParams.get('id') || '').trim();
   if (!eventId) return json({ error: 'event_id is required' }, 400);
@@ -332,21 +527,36 @@ async function getBoard(env, url) {
   if (markets.length > 8) return json({ error: 'Maximum 8 player markets per board request', requested: markets.length }, 400);
   const v = validateMarkets(markets, PLAYER_MARKETS);
   if (!v.ok) return json({ error: 'Unsupported player prop market', invalid_markets: v.invalid, allowed_markets: Array.from(PLAYER_MARKETS) }, 400);
-  const [fresh, stored] = await Promise.all([freshness(env), loadEvent(env, eventId)]);
+  const now = new Date();
+  const [fresh, stored, verified, meta, index] = await Promise.all([freshness(env, now), loadEvent(env, eventId), kvJson(env, KV.verifiedPrefix + eventId), kvJson(env, KV.meta), kvJson(env, KV.index)]);
   if (!fresh) return noSnapshot();
-  if (!stored) return json({ error: 'Event not in the player-market snapshot window', event_id: eventId, ...fresh, semantics: 'UNAVAILABLE' }, 404);
-  const event = filterEventMarkets(stored.event, markets);
-  const quotes = flattenPropQuotes(event);
-  const captured = new Set(stored.markets_captured || []);
-  const availability = Object.fromEntries(markets.map((m) => [m, captured.has(m) ? 'IN_SNAPSHOT' : (stored.markets_requested || []).includes(m) ? 'NOT_OFFERED_AT_INGEST' : 'NOT_REQUESTED_BY_INGEST']));
+  if (!stored && !verified) return json({ error: 'Event not in the player-market snapshot window', event_id: eventId, ...fresh, semantics: 'UNAVAILABLE' }, 404);
+  const board = resolveBoard({ stored, verified, markets, nowMs: now.getTime(), meta, prevIndex: index, requestedMarkets: policy(env).prop_markets });
+  const summary = summarizePropMarkets(board.quotes);
+  const ageSeconds = board.captured_at ? Math.max(0, Math.round((now.getTime() - Date.parse(board.captured_at)) / 1000)) : fresh.age_seconds;
   return readJson({
-    event: { id: stored.event.id, commence_time: stored.event.commence_time, away_team: stored.event.away_team, home_team: stored.event.home_team },
-    markets, market_availability: availability, quote_count: quotes.length,
-    player_market_count: summarizePropMarkets(quotes).length, quotes, market_summary: summarizePropMarkets(quotes), best_price_same_line: bestPricesAtSameLine(quotes),
+    event: board.event,
+    markets, market_availability: board.market_availability, market_provenance: board.market_provenance, quote_count: board.quotes.length,
+    player_market_count: summary.length, quotes: board.quotes, market_summary: summary, best_price_same_line: bestPricesAtSameLine(board.quotes),
     ...fresh,
+    price_semantics: board.started ? 'KICKED_OFF_PREGAME_SNAPSHOT_NOT_LIVE' : 'SCHEDULED_SNAPSHOT_NOT_LIVE',
+    captured_at: board.captured_at, captured_at_et: board.captured_at ? etLabel(new Date(board.captured_at)) : null,
+    age_seconds: ageSeconds, age_hours: Number((ageSeconds / 3600).toFixed(2)),
+    snapshot_batch_id: fresh.batch_id, snapshot_captured_at: fresh.captured_at,
     source: { ...fresh.source, normalization: 'PropBetEdge market normalization v1', implied_probability: 'raw bookmaker implied probability; not vig-free' },
-    provider_last_update: stored.provider_last_update, generated_at: new Date().toISOString(),
+    provider_last_update: stored?.provider_last_update || null, generated_at: now.toISOString(),
   });
+}
+
+async function getPropCoverage(env) {
+  const now = Date.now();
+  const [fresh, coverage] = await Promise.all([freshness(env), kvJson(env, KV.coverage)]);
+  if (!fresh) return noSnapshot();
+  const events = (Array.isArray(coverage) ? coverage : []).map((c) => {
+    const kickoff = Date.parse(c.commence_time);
+    return { ...c, started: Number.isFinite(kickoff) && kickoff <= now, has_player_props: Boolean((c.current_markets || []).length || (c.verified_markets || []).length) };
+  });
+  return readJson({ semantics: 'PLAYER_PROP_COVERAGE', batch_id: fresh.batch_id, captured_at: fresh.captured_at, ingest: fresh.ingest, count: events.length, events, generated_at: new Date(now).toISOString() });
 }
 async function getSnapshot(env) {
   const [fresh, index, batches] = await Promise.all([freshness(env), kvJson(env, KV.index), kvJson(env, KV.batches)]);
@@ -389,6 +599,7 @@ export default {
     if (path.endsWith('/markets')) return json({ featured: Array.from(FEATURED_MARKETS), player_props: Array.from(PLAYER_MARKETS), synthetic_fallback: false });
     if (path.endsWith('/ingest')) { if (request.method !== 'POST') return json({ error: 'POST required' }, 405); return manualIngest(request, env); }
     if (path.endsWith('/snapshot')) return getSnapshot(env);
+    if (path.endsWith('/prop-coverage')) return getPropCoverage(env);
     if (path.includes('/board')) return getBoard(env, url);
     if (path.includes('/props')) return getProps(env, url);
     if (path.includes('/events')) return getEvents(env, url);

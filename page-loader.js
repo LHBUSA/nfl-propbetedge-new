@@ -28,6 +28,7 @@
     {css:'./pbe-card-v3.css',js:'./pbe-card-v3.js'},
     {css:'./nfl-command-center-v1.css',js:'./nfl-command-center-v1.js'},
     {css:'./what-changed-v1.css',js:'./what-changed-v1.js'},
+    {js:'./best-line-props-core-v1.js'},
     {css:'./best-line-v1.css',js:'./best-line-v1.js'},
     {css:'./dashboard-v7.css',js:'./dashboard-v7.js'},
     {css:'./dashboard-v8-enhance.css',js:'./dashboard-v8-enhance.js'},

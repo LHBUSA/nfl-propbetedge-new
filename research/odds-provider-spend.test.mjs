@@ -5,7 +5,7 @@
  * stubbed global fetch that counts every request to api.the-odds-api.com.
  *
  *   · one ingest = exactly 1 featured request + 1 request per event inside
- *     the player-market window, and nothing else
+ *     the player-market window that has not kicked off, and nothing else
  *   · 100 sequential GETs to /api/odds, /api/odds/board and /api/home-market
  *     (the Vercel handler, with its gateway calls routed into the worker)
  *     make ZERO provider requests
@@ -18,7 +18,7 @@
  * Fixtures are today's real provider responses (research/fixtures/odds),
  * usage counters redacted. No real provider call is made here.
  */
-import test from 'node:test';
+import test, { mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import worker, { ingest, etHour } from '../workers/nfl-odds/src/index.js';
@@ -80,7 +80,9 @@ async function seeded() {
 
 test('one ingest = 1 featured request + 1 request per event in the window', async () => {
   const { ingestResult, ingestCalls, kv } = await seeded();
-  const inWindow = FEATURED.events.filter((e) => { const t = Date.parse(e.commence_time); return t >= NOW.getTime() - 6 * 3600000 && t <= NOW.getTime() + 7 * 86400000; });
+  /* a game already under way is never re-requested: its in-play prices cannot
+     be pre-game truth (see tests/best-line-props-retention.test.mjs) */
+  const inWindow = FEATURED.events.filter((e) => { const t = Date.parse(e.commence_time); return t > NOW.getTime() && t <= NOW.getTime() + 7 * 86400000; });
   assert.equal(ingestResult.status, 'ok');
   assert.equal(ingestCalls.filter((u) => /\/sports\/americanfootball_nfl\/odds\?/.test(u)).length, 1, 'exactly one featured slate request');
   assert.equal(ingestCalls.filter((u) => /\/events\/[^/]+\/odds\?/.test(u)).length, inWindow.length, 'one player-market request per in-window event');
@@ -95,6 +97,8 @@ test('one ingest = 1 featured request + 1 request per event in the window', asyn
 
 test('100 sequential /api/odds + /api/odds/board + /api/home-market calls make ZERO provider requests', async () => {
   const { kv } = await seeded();
+  /* the read clock sits inside the fixture slate, before NE @ SEA kicks off */
+  mock.timers.enable({ apis: ['Date'], now: NOW.getTime() + 3600000 });
   const p = providerStub(); const real = globalThis.fetch;
   /* every network call the Vercel handler makes is routed into the worker;
      anything that reaches the provider is counted by the stub */
@@ -126,7 +130,7 @@ test('100 sequential /api/odds + /api/odds/board + /api/home-market calls make Z
     }
     assert.equal(ok, 100, 'all 300 reads answered 200');
     assert.equal(p.calls.length, 0, 'ZERO provider requests from 300 user reads');
-  } finally { globalThis.fetch = real; }
+  } finally { globalThis.fetch = real; mock.timers.reset(); }
 });
 
 test('reads never contact the provider even when our HTTP cache would have expired (no cache layer is consulted at all)', async () => {
@@ -143,6 +147,7 @@ test('reads never contact the provider even when our HTTP cache would have expir
 
 test('a market the ingest did not capture is reported as unavailable, never fetched on demand', async () => {
   const { kv } = await seeded();
+  mock.timers.enable({ apis: ['Date'], now: NOW.getTime() + 3600000 });
   const p = providerStub(); const real = globalThis.fetch; globalThis.fetch = p.fetch;
   try {
     const r = await worker.fetch(req(`/api/odds/board?event_id=${NE_SEA}&markets=player_sacks`), env(kv), {});
@@ -152,7 +157,7 @@ test('a market the ingest did not capture is reported as unavailable, never fetc
     const r2 = await worker.fetch(req(`/api/odds/board?event_id=${outside.id}`), env(kv), {});
     assert.equal(r2.status, 404); assert.equal((await r2.json()).semantics, 'UNAVAILABLE');
     assert.equal(p.calls.length, 0);
-  } finally { globalThis.fetch = real; }
+  } finally { globalThis.fetch = real; mock.timers.reset(); }
 });
 
 test('a failed scheduled ingest keeps the last verified batch and flags LATEST_INGEST_UNAVAILABLE', async () => {
