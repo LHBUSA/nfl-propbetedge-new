@@ -30,6 +30,7 @@
     data: null, error: null, at: 0, busy: null, status: null,
     history: { data: null, error: null, at: 0, busy: null },
     open: new Set(),
+    failure: null,         // { want, count, status, error, at, retryAt } after a failed read
   };
 
   const esc = v => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
@@ -93,22 +94,51 @@
 
   function emit() { window.dispatchEvent(new CustomEvent('pbe:card-ready', { detail: { mode: store.mode, ok: Boolean(store.data) } })); }
 
+  /* Failed reads back off. Surfaces call ensure() while they render and
+   * re-render on pbe:card-ready, so a read that failed used to be retried by
+   * its own repaint: a preview without the Supabase secret sent ~87 requests
+   * in seven seconds. Now a failure holds every caller — render-time and
+   * forced alike — until retryAt; a known backend-unavailable answer waits the
+   * longest; nothing retries while the tab is hidden. Only an explicit user
+   * retry or an entitlement change skips the wait. Success clears it. */
+  const BACKOFF = { firstMs: 15000, maxMs: 300000, unavailableMs: 300000 };
+  function backoffMs(count, status, code) {
+    if (status === 503 && /backend_unavailable|service_secret_missing|entitlement_unavailable/.test(String(code || ''))) return BACKOFF.unavailableMs;
+    return Math.min(BACKOFF.maxMs, BACKOFF.firstMs * 2 ** Math.max(0, count - 1));
+  }
+  function noteFailure(want, status, code) {
+    const prev = store.failure && store.failure.want === want ? store.failure.count : 0;
+    const count = prev + 1;
+    const at = Date.now();
+    store.failure = { want, count, status: status || null, error: code || 'unavailable', at, retryAt: at + backoffMs(count, status, code) };
+  }
+  function held(want, { userRetry = false } = {}) {
+    const f = store.failure;
+    if (!f || userRetry || f.want !== want) return false;
+    if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return true;
+    return Date.now() < f.retryAt;
+  }
+
   /* The server decides entitlement. The browser only chooses which view to
    * ask for; a Pro request that is refused falls back to the locked preview. */
-  function ensure(force = false) {
+  function ensure(force = false, { userRetry = false } = {}) {
     const want = isPro() ? 'pro' : 'public';
     if (store.busy) return store.busy;
     const fresh = store.mode === want && store.at && Date.now() - store.at < TTL[want === 'pro' ? 'current' : 'preview'];
     if (!force && fresh) return Promise.resolve(store.data);
+    if (held(want, { userRetry })) return Promise.resolve(store.data);
     const url = `${API}?view=${want === 'pro' ? 'current' : 'preview'}`;
     store.busy = getJson(url)
-      .then(body => { store.mode = want; store.data = body; store.error = null; store.status = 200; return body; })
+      .then(body => { store.mode = want; store.data = body; store.error = null; store.status = 200; store.failure = null; return body; })
       .catch(async error => {
         store.status = error.status || null;
         if (want === 'pro' && [401, 403].includes(error.status)) {
-          try { const body = await getJson(`${API}?view=preview`); store.mode = 'public'; store.data = body; store.error = null; return body; } catch (e) { error = e; }
+          /* Refused as Pro: the locked preview is the answer, and asking for
+             the Pro view again on every repaint would only be refused again. */
+          try { const body = await getJson(`${API}?view=preview`); store.mode = 'public'; store.data = body; store.error = null; noteFailure(want, error.status, error.body?.error); return body; } catch (e) { error = e; }
         }
         store.error = error.body?.error || error.message || 'unavailable';
+        noteFailure(want, error.status, error.body?.error || error.body?.stage);
         if (store.mode !== want) store.data = null;
         return store.data;
       })
@@ -536,14 +566,14 @@
     const cast = e.target.closest?.('[data-pbec-cast]');
     if (cast) { e.preventDefault(); try { sessionStorage.setItem('pbe.pbecast.focus', JSON.stringify({ game_id: cast.dataset.pbecCast })); } catch (_) {} window.App?.nav?.('pbecast'); return; }
     const retry = e.target.closest?.('[data-pbec-retry]');
-    if (retry) { e.preventDefault(); ensure(true); return; }
+    if (retry) { e.preventDefault(); ensure(true, { userRetry: true }); return; }
     const route = e.target.closest?.('.pbec [data-route], .pbec-dash [data-route], .pbec-mini[data-route], .pbec-badge[data-route]');
     if (route && !route.closest('.pbecc')) { e.preventDefault(); window.App?.nav?.(route.dataset.route); }
   });
   let lastPro = null;
   window.addEventListener('pbe:pro-state', ev => {
     const pro = ev?.detail?.pro === true;
-    if (pro !== lastPro) { lastPro = pro; store.history = { data: null, error: null, at: 0, busy: null }; ensure(true); }
+    if (pro !== lastPro) { lastPro = pro; store.history = { data: null, error: null, at: 0, busy: null }; store.failure = null; ensure(true); }
   });
   window.addEventListener('pbe:card-ready', fillSlots);
 
