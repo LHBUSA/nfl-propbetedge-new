@@ -130,3 +130,33 @@ test('the healthy production path is unchanged: one read, served from TTL, no fa
   h.advance(61000); await h.card.ensure(); await settle();
   assert.equal(h.calls.length, 2, 'TTL refresh still happens');
 });
+
+/* The engine story reads the same backend (/api/pbe-picks?view=state) on every
+   route change and used to refetch a state that had just failed. */
+test('engine story: a failed state read is not re-requested on every sync, hidden tabs never retry', async () => {
+  let now = Date.parse('2026-09-13T18:00:00Z');
+  let up = false;
+  const calls = [];
+  const doc = { visibilityState: 'visible', readyState: 'complete', addEventListener() {}, querySelector: () => null, querySelectorAll: () => [] };
+  const win = { addEventListener() {} };
+  const ctx = {
+    window: win, document: doc, console, Promise, setTimeout, clearTimeout, JSON, Math, Number, String, Array, Object,
+    Date: class extends Date { static now() { return now; } },
+    fetch: async url => { calls.push(String(url)); return up ? new Response(JSON.stringify({ champion_version: 3 }), { status: 200 }) : new Response(JSON.stringify(UNAVAILABLE.body), { status: 503 }); }
+  };
+  vm.runInNewContext(readFileSync(new URL('../pbe-engine-story-v1.js', import.meta.url), 'utf8'), ctx);
+  await settle();
+  for (let i = 0; i < 30; i++) win.PBEEngineStory.sync();
+  await settle();
+  assert.equal(calls.length, 1, `requests: ${calls.length}`);
+  doc.visibilityState = 'hidden'; now += 3600000;
+  for (let i = 0; i < 10; i++) win.PBEEngineStory.sync();
+  await settle();
+  assert.equal(calls.length, 1, 'hidden tab: no retry');
+  doc.visibilityState = 'visible'; up = true;
+  win.PBEEngineStory.sync(); await settle();
+  assert.equal(calls.length, 2, 'recovers once visible and past the back-off');
+  for (let i = 0; i < 10; i++) win.PBEEngineStory.sync();
+  await settle();
+  assert.equal(calls.length, 2, 'a loaded snapshot is not re-read');
+});
