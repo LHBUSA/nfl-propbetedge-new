@@ -15,10 +15,20 @@
  *
  * Existing subscriptions are NEVER migrated by this Worker. It mirrors Stripe
  * state only. Old customers keep the price/term they already purchased.
+ *
+ * Event order (v1.2.0). Stripe does not deliver events in creation order. A
+ * Payment Link purchase produces customer.subscription.created, invoice.paid
+ * and checkout.session.completed within a second of each other, in any order.
+ * `last_stripe_event_created` is therefore owned by customer.subscription.*
+ * events ONLY — they carry status, price and current_period_end. Checkout and
+ * invoice events fill identity (email, customer, checkout id) and send the
+ * access email, and never advance that ordering column; otherwise a checkout
+ * delivered before an earlier-created subscription.created made the latter
+ * "stale" and left current_period_end null, which denies a paying customer.
  */
 
 const SERVICE = 'propbetedge-nfl-billing';
-const VERSION = 'v1.1.0';
+const VERSION = 'v1.2.0';
 const DEFAULT_SUPABASE_URL = 'https://tkmlnhmylqnttmnsnief.supabase.co';
 const APP_ORIGIN = 'https://nfl.propbetedge.ai';
 const AUTH_WORKER_URL = 'https://propbetedge-nfl-auth.sales-fd3.workers.dev';
@@ -47,8 +57,15 @@ export default {
     const url = new URL(request.url);
 
     if (request.method === 'GET' && url.pathname === '/health') {
+      const configured = Boolean(env.STRIPE_WEBHOOK_SECRET && env.SUPABASE_SERVICE_ROLE_KEY);
+      /* ?deep=1 proves the two dependencies a delivery needs, read-only: the
+       * ledger answers with this Worker's key, and the auth Worker (access
+       * email) is reachable through its binding. No rows are returned. */
+      const deep = url.searchParams.get('deep') === '1' ? await deepHealth(env) : null;
       return json({
-        ok: Boolean(env.STRIPE_WEBHOOK_SECRET && env.SUPABASE_SERVICE_ROLE_KEY),
+        ok: configured && (!deep || (deep.ledger === 'ok' && deep.auth === 'ok')),
+        configured,
+        ...(deep ? { deep } : {}),
         service: SERVICE,
         version: VERSION,
         runtime: 'cloudflare-workers',
@@ -69,6 +86,24 @@ export default {
     return handleWebhook(request, env);
   },
 };
+
+async function deepHealth(env) {
+  const out = { ledger: 'unchecked', auth: 'unchecked' };
+  try {
+    await sbSelect(env, 'nfl_stripe_webhook_events?select=event_id&limit=1');
+    out.ledger = 'ok';
+  } catch (error) {
+    out.ledger = String(error?.message || 'error').replace(/:.*/, '');
+  }
+  try {
+    const r = env.AUTH ? await env.AUTH.fetch('https://auth/health') : await fetch(`${AUTH_WORKER_URL}/health`);
+    const body = await r.json().catch(() => ({}));
+    out.auth = r.ok && body?.ok === true ? 'ok' : `auth_${r.status}`;
+  } catch (error) {
+    out.auth = 'unreachable';
+  }
+  return out;
+}
 
 async function handleWebhook(request, env) {
   if (!env.STRIPE_WEBHOOK_SECRET) return json({ error: 'webhook_not_configured' }, 503);
@@ -156,30 +191,23 @@ async function handleCheckoutCompleted(env, session, eventId, eventCreated) {
   }
 
   const existing = await findSubscription(env, subscriptionId);
-  const incoming = eventCreated || 0;
-  const stored = Number(existing?.last_stripe_event_created || 0);
-  const checkoutIsCurrent = !existing || !stored || !incoming || incoming >= stored;
   const paymentComplete = session?.payment_status === 'paid' || session?.payment_status === 'no_payment_required';
+  /* Has any customer.subscription.* event been applied? Then the lifecycle
+   * owns status, price and period; checkout only links identity. */
+  const lifecycleApplied = Boolean(existing && Number(existing.last_stripe_event_created || 0) > 0);
 
   if (existing) {
-    /* Identity/check-out linkage is safe even when this event arrives after a
-     * newer lifecycle event. Lifecycle truth is only changed when this event is
-     * not stale, so a delayed checkout can never resurrect a canceled sub. */
     const patchRecord = {
       customer_email: email || existing.customer_email || null,
       stripe_customer_id: idOf(session?.customer) || existing.stripe_customer_id || null,
       stripe_checkout_session_id: checkoutId,
-      stripe_price_id: priceId,
+      stripe_price_id: existing.stripe_price_id || priceId,
       updated_at: new Date().toISOString(),
     };
     if (userId) patchRecord.user_id = userId;
-    if (checkoutIsCurrent) {
-      patchRecord.status = paymentComplete ? 'active' : (existing.status || 'incomplete');
-      patchRecord.last_stripe_event_id = eventId;
-      patchRecord.last_stripe_event_created = eventCreated;
-      /* Deliberately do not write current_period_end here. If subscription.created
-       * already supplied it, checkout must not erase it with null. */
-    }
+    if (!lifecycleApplied) patchRecord.status = paymentComplete ? 'active' : (existing.status || 'incomplete');
+    /* Never writes current_period_end or the ordering column: a delayed
+     * checkout can neither erase a period nor resurrect a canceled sub. */
     await patch(env, 'nfl_subscriptions', `stripe_subscription_id=eq.${encodeURIComponent(subscriptionId)}`, patchRecord);
   } else {
     await insert(env, 'nfl_subscriptions', {
@@ -192,8 +220,9 @@ async function handleCheckoutCompleted(env, session, eventId, eventCreated) {
       status: paymentComplete ? 'active' : 'incomplete',
       current_period_end: null,
       cancel_at_period_end: false,
-      last_stripe_event_id: eventId,
-      last_stripe_event_created: eventCreated,
+      /* ordering is left to customer.subscription.* (see header) */
+      last_stripe_event_id: null,
+      last_stripe_event_created: null,
       updated_at: new Date().toISOString(),
     });
   }
@@ -273,6 +302,17 @@ async function handleSubscriptionLifecycle(env, subscription, eventType, eventId
     : normalizeStatus(subscription?.status);
   if (!status) throw new Error(`unmappable_subscription_status:${subscription?.status || 'none'}`);
 
+  /* Stripe stamps created and the first updated with the same second. At an
+   * equal timestamp the lifecycle only moves forward: a late .created never
+   * overwrites an applied event, and nothing returns a live subscription to
+   * incomplete. */
+  if (existing && stored > 0 && incoming === stored) {
+    if (eventType === 'customer.subscription.created') return { applied: false, reason: 'stale_same_second' };
+    if ((status === 'incomplete' || status === 'incomplete_expired') && existing.status && existing.status !== status) {
+      return { applied: false, reason: 'stale_same_second' };
+    }
+  }
+
   const record = {
     stripe_subscription_id: subscriptionId,
     stripe_customer_id: idOf(subscription?.customer),
@@ -299,26 +339,38 @@ async function handleInvoice(env, invoice, eventType, eventId, eventCreated) {
   if (!subscriptionId) return { applied: false, reason: 'no_subscription' };
 
   const existing = await findSubscription(env, subscriptionId);
-  if (!existing) return { applied: false, reason: 'not_nfl' };
+  if (!existing) {
+    /* An NFL first invoice can arrive before customer.subscription.created.
+     * Nothing is lost by recording it: checkout.session.completed carries the
+     * same email and sends the same (idempotent) access email. */
+    return { applied: false, reason: invoiceHasNflPrice(invoice) ? 'nfl_invoice_before_subscription' : 'not_nfl' };
+  }
 
-  const incoming = eventCreated || 0;
-  const stored = Number(existing.last_stripe_event_created || 0);
-  if (stored > incoming && incoming > 0) return { applied: false, reason: 'stale' };
-
+  /* Status comes from customer.subscription.updated, which Stripe sends on
+   * every status transition (incomplete -> active, active -> past_due, ...).
+   * Invoices only fill a missing email and trigger the access email, so an
+   * invoice delivered out of order can never flip access either way. */
   const email = normalizeEmail(invoice?.customer_email || existing.customer_email);
-  const status = eventType === 'invoice.payment_failed' ? 'past_due' : 'active';
-  await patch(env, 'nfl_subscriptions', `stripe_subscription_id=eq.${encodeURIComponent(subscriptionId)}`, {
-    status,
-    customer_email: email || existing.customer_email || null,
-    last_stripe_event_id: eventId,
-    last_stripe_event_created: eventCreated,
-    updated_at: new Date().toISOString(),
-  });
+  if (email && email !== existing.customer_email) {
+    await patch(env, 'nfl_subscriptions', `stripe_subscription_id=eq.${encodeURIComponent(subscriptionId)}`, {
+      customer_email: email,
+      updated_at: new Date().toISOString(),
+    });
+  }
 
   if (eventType === 'invoice.paid') {
     await sendAccessEmailOnce(env, email, `subscription:${subscriptionId}`, eventId);
+    return { applied: true, reason: 'invoice_paid_identity' };
   }
-  return { applied: true, reason: status };
+  return { applied: false, reason: 'payment_failed_status_from_subscription_event' };
+}
+
+function invoiceHasNflPrice(invoice) {
+  const lines = Array.isArray(invoice?.lines?.data) ? invoice.lines.data : [];
+  return lines.some(line => {
+    const price = idOf(line?.price) || idOf(line?.pricing?.price_details?.price) || line?.pricing?.price_details?.price || null;
+    return RECURRING_PRICE_IDS.has(price);
+  });
 }
 
 function recurringPriceFromSubscription(subscription) {
@@ -438,13 +490,13 @@ async function sendAccessEmailOnce(env, emailRaw, deliveryKey, eventId) {
 function supabaseUrl(env) {
   return String(env.SUPABASE_URL || DEFAULT_SUPABASE_URL).replace(/\/$/, '');
 }
+/* Legacy service_role JWTs use apikey + Bearer; sb_secret_* API keys are not
+ * JWTs and must be sent on apikey only (same rule as api/_nfl-auth.js). */
 function sbHeaders(env, extra = {}) {
-  return {
-    apikey: env.SUPABASE_SERVICE_ROLE_KEY,
-    authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
-    accept: 'application/json',
-    ...extra,
-  };
+  const key = String(env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+  const headers = { apikey: key, accept: 'application/json', ...extra };
+  if (key.startsWith('eyJ')) headers.authorization = `Bearer ${key}`;
+  return headers;
 }
 async function sbSelect(env, path) {
   const response = await fetch(`${supabaseUrl(env)}/rest/v1/${path}`, {
