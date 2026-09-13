@@ -55,7 +55,7 @@ jobs:
       # route fails closed, cross-sport isolation, gateway lock, and the
       # frontend access gate.
       - name: NFL paywall access control
-        run: node --test tests/nfl-paywall-entitlement.test.mjs tests/nfl-access-gate.test.mjs
+        run: node --test tests/nfl-paywall-entitlement.test.mjs tests/nfl-access-gate.test.mjs tests/nfl-purchase-to-access.test.mjs
 
       # Best Line player props across kickoff: last verified pre-game market.
       - name: Best Line player props retention
