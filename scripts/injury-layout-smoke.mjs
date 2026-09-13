@@ -1,10 +1,16 @@
 /* Injury Editorial focused browser gate.
- * Uses production origin/APIs while substituting checked-out branch static
+ * Uses the production origin while substituting checked-out branch static
  * files. Verifies the injuries route is a photo-led PropBetEdge article desk
  * with source-disciplined player availability, reported return windows, and a
  * high-contrast readable availability surface on desktop + mobile.
+ *
+ * Injuries is a paid NFL workspace. When the tree carries the access gate, the
+ * page is tested as a valid subscriber: same-origin /api/* is answered by the
+ * branch's own handlers under the QA entitlement (scripts/qa-entitled-api.mjs),
+ * never by bypassing production's paywall. The layout assertions are unchanged.
  */
 import {spawn} from 'node:child_process';
+import {startEntitledApi,accessProblem} from './qa-entitled-api.mjs';
 import {mkdtempSync,rmSync,readFileSync,existsSync,statSync,writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join,extname} from 'node:path';
@@ -18,7 +24,8 @@ const dir=mkdtempSync(join(tmpdir(),'pbe-injury-editorial-'));
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const out=s=>console.log(s);
 const chrome=spawn(CHROME,[`--remote-debugging-port=${PORT}`,`--user-data-dir=${dir}`,'--headless=new','--no-first-run','--no-default-browser-check','--disable-extensions','--disable-background-timer-throttling','--window-size=1440,900','about:blank'],{stdio:'ignore'});
-function finish(code){try{chrome.kill()}catch{}setTimeout(()=>{try{rmSync(dir,{recursive:true,force:true})}catch{}process.exit(code)},200)}
+const entitled=await startEntitledApi({repo:REPO,log:out});
+function finish(code){try{chrome.kill()}catch{}try{entitled?.stop()}catch{}setTimeout(()=>{try{rmSync(dir,{recursive:true,force:true})}catch{}process.exit(code)},200)}
 const hard=setTimeout(()=>{out('HARD_DEADLINE');finish(3)},120000);hard.unref?.();
 async function wsUrl(){for(let i=0;i<80;i++){try{const list=await(await fetch(`http://127.0.0.1:${PORT}/json/list`)).json();const p=list.find(x=>x.type==='page'&&x.webSocketDebuggerUrl);if(p)return p.webSocketDebuggerUrl}catch{}await sleep(200)}throw new Error('devtools_unavailable')}
 const ws=new WebSocket(await wsUrl());await new Promise(r=>{ws.onopen=r});
@@ -26,7 +33,7 @@ let id=1;const pending=new Map();
 const send=(method,params={})=>{const n=id++;ws.send(JSON.stringify({id:n,method,params}));return new Promise((resolve,reject)=>pending.set(n,{resolve,reject}))};
 const mime=p=>({'.js':'application/javascript; charset=utf-8','.mjs':'application/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.html':'text/html; charset=utf-8','.webmanifest':'application/manifest+json; charset=utf-8','.json':'application/json; charset=utf-8'}[extname(p)]||'application/octet-stream');
 function localFile(url){let u;try{u=new URL(url)}catch{return null}if(u.origin!==ORIGIN||u.pathname.startsWith('/api/'))return null;let rel=u.pathname==='/'?'index.html':decodeURIComponent(u.pathname.slice(1));if(!rel||rel.includes('..'))return null;const ext=extname(rel);if(!['.js','.mjs','.css','.html','.webmanifest','.json'].includes(ext))return null;const fp=join(REPO,rel);try{if(!existsSync(fp)||!statSync(fp).isFile())return null;return{body:readFileSync(fp),type:mime(rel)}}catch{return null}}
-ws.onmessage=ev=>{const m=JSON.parse(ev.data);if(m.id&&pending.has(m.id)){const p=pending.get(m.id);pending.delete(m.id);m.error?p.reject(new Error(m.error.message)):p.resolve(m.result);return}if(m.method==='Fetch.requestPaused'){const local=localFile(m.params.request.url);if(local)send('Fetch.fulfillRequest',{requestId:m.params.requestId,responseCode:200,responseHeaders:[{name:'content-type',value:local.type},{name:'cache-control',value:'no-store'}],body:local.body.toString('base64')}).catch(()=>{});else send('Fetch.continueRequest',{requestId:m.params.requestId}).catch(()=>{})}};
+ws.onmessage=ev=>{const m=JSON.parse(ev.data);if(m.id&&pending.has(m.id)){const p=pending.get(m.id);pending.delete(m.id);m.error?p.reject(new Error(m.error.message)):p.resolve(m.result);return}if(m.method==='Fetch.requestPaused'){if(entitled&&new URL(m.params.request.url).origin===ORIGIN&&new URL(m.params.request.url).pathname.startsWith('/api/')){entitled.fulfill(send,m.params,ORIGIN);return}const local=localFile(m.params.request.url);if(local)send('Fetch.fulfillRequest',{requestId:m.params.requestId,responseCode:200,responseHeaders:[{name:'content-type',value:local.type},{name:'cache-control',value:'no-store'}],body:local.body.toString('base64')}).catch(()=>{});else send('Fetch.continueRequest',{requestId:m.params.requestId}).catch(()=>{})}};
 await send('Runtime.enable');await send('Page.enable');await send('Fetch.enable',{patterns:[{urlPattern:`${ORIGIN}/*`,requestStage:'Request'}]});
 const probe=async(expr,ms=7000)=>{try{const r=await Promise.race([send('Runtime.evaluate',{expression:expr,returnByValue:true,awaitPromise:true}),sleep(ms).then(()=>{throw new Error('WEDGED')})]);if(r.exceptionDetails)return`<EVAL ${r.exceptionDetails.text||'ERROR'}>`;return r.result?.value}catch(e){return`<${e.message}>`}};
 async function shot(name){const r=await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});writeFileSync(name,Buffer.from(r.data,'base64'));out(`screenshot ${name}`)}
@@ -34,6 +41,10 @@ async function shot(name){const r=await send('Page.captureScreenshot',{format:'p
 await send('Page.navigate',{url:`${TARGET}/?injury-editorial=${Date.now()}`});
 await sleep(11000);
 if(await probe('1+1')!==2){out('RESULT FAIL main_thread');ws.close();finish(1)}
+const accessVerdict=await probe(`document.documentElement.dataset.pbeAccess??null`);
+out(`access ${JSON.stringify({verdict:accessVerdict,entitled:Boolean(entitled)})}`);
+const accessIssue=accessProblem(accessVerdict,Boolean(entitled));
+if(accessIssue){out(`RESULT FAIL ${accessIssue}`);ws.close();finish(1)}
 await probe(`window.App&&App.nav('injuries')`,8000);
 await sleep(3300);
 

@@ -60,17 +60,38 @@ jobs:
             games-v2.js games-command-v4.js games-intel-v5.js
             prop-board-v3.js prop-board-v5.js market-watch-v3.js matchups-v2.js
             model-lab.js model-lab-v2-enhance.js simulator-v2.js simulator-v3-enhance.js
-            sgp-lab-v2.js usage-v2.js propchain-v2.js
+            sgp-lab-v2.js usage-v2.js propchain-v3.js
             pbecast-v6.js pbecast-v7-enhance.js
             news-intelligence-v2.js newsroom-v2.js injury-intel-v2.js player-research-v2.js
             pbe-picks-v2.js pbe-validation-v1.js
             pbe-engine-story-v1.js pbe-prop-engine-v1.js
             nfl-brand-media-v2.js nfl-player-media-v3.js
           )
+          # Authorized loaders. Without the NFL access gate the workspace loads
+          # from index.html and page-loader.js. With it (nfl-access-gate-v1.js),
+          # paid workspace modules must be reachable only through the verified
+          # entitlement-gated path: index.html -> access gate -> (after a
+          # granted /api/auth-session) the workspace scripts and page-loader.js.
+          # index.html itself may then load none of them.
+          loaders=(page-loader.js index.html)
+          if [ -f nfl-access-gate-v1.js ]; then
+            grep -Eq 'src="\./nfl-access-gate-v1\.js' index.html || { echo "Access gate exists but index.html does not load it"; exit 1; }
+            grep -Fq "'./page-loader.js?v=" nfl-access-gate-v1.js || { echo "page-loader.js is not behind the access gate"; exit 1; }
+            ! grep -Eq 'src="\./page-loader\.js' index.html || { echo "page-loader.js is loaded outside the access gate"; exit 1; }
+            loaders=(page-loader.js nfl-access-gate-v1.js)
+          fi
           for file in "${required[@]}"; do
             test -s "$file" || { echo "Missing product module: $file"; exit 1; }
-            if ! grep -Fq "$file" page-loader.js && ! grep -Fq "$file" index.html; then
+            active=false
+            for loader in "${loaders[@]}"; do
+              if grep -Fq "$file" "$loader"; then active=true; fi
+            done
+            if [ "$active" != true ]; then
               echo "Product module is not active: $file"
+              exit 1
+            fi
+            if [ -f nfl-access-gate-v1.js ] && grep -Fq "src=\"./$file" index.html; then
+              echo "Paid workspace module loaded outside the entitlement gate: $file"
               exit 1
             fi
           done
@@ -126,7 +147,7 @@ jobs:
           grep -Fq 'player_stats' pbecast-v6.js
           grep -Fq "function isLive(d=state.detail){return semantics(d)==='LIVE'}" pbecast-v6.js
           grep -Fq 'espn_cdn_gamepackage' api/nfl-live.js
-          grep -Fiq 'causality unproven' propchain-v2.js
+          grep -Fiq 'does not claim a change caused a move' propchain-v3.js
           grep -Fiq 'model derived' simulator-v2.js
           grep -Fiq 'correlation model unavailable' sgp-lab-v2.js
           grep -Fiq 'target share' usage-v2.js
