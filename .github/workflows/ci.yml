@@ -67,6 +67,12 @@ jobs:
       - name: Research contract suites
         run: node --test research/*.test.mjs
 
+      # nfl-schedule broadcast authority: A-J game cases against captured ESPN
+      # weeks, identity joins, refresh cadence, the verified broadcaster
+      # registry and its host allow-list, and the browser label's link rules.
+      - name: NFL broadcast authority contract
+        run: node --test tests/nfl-schedule-broadcast.test.mjs
+
       - name: Validate Vercel config JSON
         run: node -e "JSON.parse(require('fs').readFileSync('vercel.json','utf8')); console.log('vercel.json OK')"
 
