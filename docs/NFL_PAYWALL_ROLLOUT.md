@@ -94,7 +94,8 @@ touches production and needs the owner's approval before it runs.
   Worker (`?range`, `?standings`, `?event`) and nfl-prop-picks-grader
   (`?event`) depend on it.
 - Static JS bundles are public, as in any SPA. The data behind them is not.
-- `scripts/recovery-browser-smoke.mjs` runs against live production APIs.
-  After step 3 it needs an entitled session. It now boots the workspace with a
-  stubbed browser-side verdict and sends paid reads to the local API harness;
-  see that script's header.
+- `scripts/recovery-browser-smoke.mjs` and `scripts/injury-layout-smoke.mjs`
+  serve branch statics on the production origin. Paid same-origin `/api/*`
+  calls go to the branch's own handlers, run by `scripts/qa-entitled-api.mjs`
+  and the local harness, as a QA subscriber signed in through the real
+  `/api/auth-verify`. Production's paywall is never bypassed.
