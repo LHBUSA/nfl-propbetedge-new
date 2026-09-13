@@ -14,6 +14,11 @@
  * Game lines come from the nfl-intel Worker's /api/best-line (the nfl-odds snapshot, reshaped
  * side). Player props come from the gateway board for the one game the reader
  * opens; nothing polls. Every price is a scheduled capture and says so.
+ *
+ * Player props across kickoff (best-line-props-core-v1.js decides): a game
+ * that has kicked off stays selectable while nfl-odds holds its verified
+ * pre-game board, and says KICKED OFF — PRE-GAME MARKET SNAPSHOT. Every
+ * market shows its own capture time, never the newest batch's.
  */
 (() => {
   'use strict';
@@ -43,7 +48,9 @@
     const tot = e.markets?.total?.OVER?.consensus?.line;
     return [sp ? `${abbr(sp.side)} ${sp.consensus.line}` : null, tot != null ? `O/U ${tot}` : null, 'Tap for best prices'].filter(Boolean).join(' · ');
   }
-  const state = { tab: 'games', event: null, market: 'player_pass_yds', props: new Map(), propBusy: false, propError: null };
+  const state = { tab: 'games', event: null, eventExplicit: false, market: 'player_pass_yds', props: new Map(), propBusy: false, propError: null, coverage: null, coverageAt: 0, coverageBusy: false };
+  const core = () => window.PBEBestLinePropsCore;
+  const COVERAGE_TTL_MS = 60000;
   const cc = () => window.PBECommandCenter;
   const lines = () => cc()?.store?.bestline || { data: null, error: 'command_center_not_loaded' };
   const mounted = () => window.App?.current === 'bestline' && Boolean(document.querySelector('.pbebl'));
@@ -163,6 +170,18 @@
 
   /* ---- player props ------------------------------------------------------- */
   function propKey() { return `${state.event}|${state.market}`; }
+  /* One read of nfl-odds prop coverage per minute at most: which games hold a
+     current or retained pre-game player board. Never per event, never polled. */
+  async function loadCoverage(force = false) {
+    if (state.coverageBusy || (!force && state.coverageAt && Date.now() - state.coverageAt < COVERAGE_TTL_MS)) return;
+    state.coverageBusy = true;
+    try {
+      const r = await fetch(`${API}/api/odds/prop-coverage`, { cache: 'no-store', headers: { accept: 'application/json' } });
+      const body = await r.json().catch(() => null);
+      state.coverage = r.ok && core()?.coverageUsable(body) ? body : null;
+    } catch (_) { state.coverage = null; }
+    finally { state.coverageAt = Date.now(); state.coverageBusy = false; if (mounted()) paint(); }
+  }
   async function loadProps() {
     if (!state.event || state.props.has(propKey()) || state.propBusy) return;
     state.propBusy = true; state.propError = null; paint();
@@ -175,46 +194,81 @@
     } catch (e) { state.propError = e instanceof Error ? e.message : String(e); }
     finally { state.propBusy = false; if (mounted()) paint(); }
   }
-  function propRows(board) {
+  function propRows(quotes, board) {
     const groups = new Map();
-    for (const q of arr(board?.quotes)) {
+    for (const q of arr(quotes)) {
       if (!q?.player) continue;
       const k = q.player;
       if (!groups.has(k)) groups.set(k, []);
       groups.get(k).push(q);
     }
-    const summary = new Map(arr(board?.market_summary).map(s => [s.player, s]));
+    const summary = new Map(arr(board?.market_summary).map(s => [`${s.player}|${s.market}`, s]));
     const best = (rows, side) => rows.filter(q => String(q.direction).toUpperCase() === side)
       .sort((a, b) => (side === 'OVER' ? num(a.point) - num(b.point) : num(b.point) - num(a.point)) || (payout(b.price) - payout(a.price)))[0] || null;
-    return [...groups.entries()].map(([player, rows]) => ({ player, over: best(rows, 'OVER'), under: best(rows, 'UNDER'), yes: best(rows, 'YES'), s: summary.get(player), books: new Set(rows.map(q => q.book)).size }))
-      .sort((a, b) => b.books - a.books || a.player.localeCompare(b.player));
+    return [...groups.entries()].map(([player, rows]) => ({
+      player, over: best(rows, 'OVER'), under: best(rows, 'UNDER'), yes: best(rows, 'YES'), s: summary.get(`${player}|${state.market}`),
+      books: new Set(rows.map(q => q.book)).size,
+      /* the oldest capture behind this player's prices */
+      captured: rows.map(q => q.captured_at).filter(Boolean).sort()[0] || null
+    })).sort((a, b) => b.books - a.books || a.player.localeCompare(b.player));
+  }
+  function capturedText(m, rowCaptured) {
+    if (m.provenance_missing) return 'capture time not recorded';
+    const at = rowCaptured || m.captured_at;
+    return at ? `captured ${when(at)}` : 'capture time not recorded';
+  }
+  function propFreshness(board, m) {
+    const failed = board?.ingest?.status === 'LATEST_INGEST_UNAVAILABLE';
+    const at = m.provenance_missing ? null : m.captured_at;
+    const ageText = at ? age((Date.now() - Date.parse(at)) / 1000) : '';
+    const kicked = m.started ? `<p class="pbebl-kickoff" data-bl-kickoff role="status"><b>${esc(core().KICKED_OFF_LABEL)}</b><span>These prices were captured before kickoff. They are not live and cannot be taken now.</span></p>` : '';
+    const retained = !m.started && m.availability === core().AVAILABILITY.verified ? ' · <b>NOT IN THE LATEST CAPTURE</b>' : '';
+    return `${kicked}<p class="pbebl-fresh ${failed || m.started ? 'is-stale' : ''}" data-bl-captured="${esc(at || '')}" data-bl-availability="${esc(m.availability || '')}"><b>${esc(m.headline || 'MARKET SNAPSHOT')}</b> · ${at ? `CAPTURED ${esc(m.captured_at_et || when(at))}` : 'CAPTURE TIME NOT RECORDED'}${ageText ? ` · ${esc(ageText)}` : ''}${retained}${failed ? ' · <b>LATEST INGEST UNAVAILABLE</b>' : ''} · SCHEDULED CAPTURE, NOT LIVE</p>`;
+  }
+  function eventOption(e) {
+    const label = `${abbr(e.away)} @ ${abbr(e.home)} · ${when(e.kickoff)}${e.started ? ' · KICKED OFF' : ''}`;
+    return `<option value="${esc(e.id)}"${e.id === state.event ? ' selected' : ''}${e.started ? ' data-started="1"' : ''}>${esc(label)}</option>`;
   }
   function propsHtml(d) {
-    const events = arr(d?.events).filter(e => !e.started);
-    if (!state.event && events.length) state.event = events[0].id;
+    if (!core()) return '<div class="pbebl-unavailable"><b>Player props unavailable</b><span>best-line-props-core-v1.js did not load.</span></div>';
+    const now = Date.now();
+    if (!state.coverageAt) queueMicrotask(() => loadCoverage());
+    const events = core().propEvents(d?.events, state.coverage, now);
+    /* an explicit choice (deep link, game card, selector) is kept while it is
+       offered; anything else follows the default as coverage arrives */
+    const keep = state.eventExplicit && events.some(e => e.id === state.event) ? state.event : null;
+    const chosen = core().resolveSelection(events, keep, state.market, now);
+    if (chosen !== state.event) { state.event = chosen; state.propError = null; }
     const ev = events.find(e => e.id === state.event);
-    const picker = `<div class="pbebl-propbar"><label><span>Game</span><select data-bl-event>${events.map(e => `<option value="${esc(e.id)}"${e.id === state.event ? ' selected' : ''}>${esc(abbr(e.away))} @ ${esc(abbr(e.home))} · ${esc(when(e.kickoff))}</option>`).join('')}</select></label>
+    const picker = `<div class="pbebl-propbar"><label><span>Game</span><select data-bl-event>${events.map(eventOption).join('')}</select></label>
       <label><span>Market</span><select data-bl-market>${PROP_MARKETS.map(([k, l]) => `<option value="${k}"${k === state.market ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select></label></div>`;
-    if (!ev) return `${picker}<div class="pbebl-unavailable"><b>No open games in the snapshot</b><span>Player prices appear once a game is in the ingest window.</span></div>`;
+    if (!ev) return `${picker}<div class="pbebl-unavailable"><b>No games with player markets</b><span>Player prices appear once a game is in the ingest window.</span></div>`;
     const board = state.props.get(propKey());
     if (!board) {
       if (state.propError) return `${picker}<div class="pbebl-unavailable"><b>Player market unavailable</b><span>${esc(state.propError)} — the snapshot has no board for this game and market.</span></div>`;
       queueMicrotask(loadProps);
       return `${picker}<div class="pbebl-empty"><b>Reading the player board…</b></div>`;
     }
-    const avail = board.market_availability?.[state.market];
-    const rows = propRows(board);
-    if (!rows.length) return `${picker}<div class="pbebl-unavailable"><b>No ${esc(PROP_MARKETS.find(m => m[0] === state.market)?.[1] || 'player')} prices</b><span>${avail === 'NOT_OFFERED_AT_INGEST' ? 'Books were not offering this market when the snapshot was captured.' : avail === 'NOT_REQUESTED_BY_INGEST' ? 'This market is not part of the scheduled ingest.' : 'The snapshot carries no quotes for this market.'}</span></div>`;
+    const m = core().marketState(board, state.market, now);
+    const marketName = PROP_MARKETS.find(x => x[0] === state.market)?.[1] || 'player';
+    const rows = propRows(m.quotes, board);
+    if (!m.served || !rows.length) {
+      const why = m.availability === core().AVAILABILITY.never
+        ? (m.started ? 'Books were not offering this market in any capture taken before kickoff.' : 'Books have not posted this market in any scheduled capture yet. Nothing is shown rather than an estimate.')
+        : m.availability === core().AVAILABILITY.notRequested ? 'This market is not part of the scheduled ingest.' : 'The snapshot carries no quotes for this market.';
+      const kicked = m.started ? `<p class="pbebl-kickoff" data-bl-kickoff role="status"><b>KICKED OFF</b><span>No pre-game ${esc(marketName.toLowerCase())} prices were captured for this game.</span></p>` : '';
+      return `${picker}${kicked}<div class="pbebl-unavailable" data-bl-availability="${esc(m.availability || '')}"><b>No ${esc(marketName)} prices</b><span>${why}</span></div>`;
+    }
     const yesNo = state.market === 'player_anytime_td';
-    return `${picker}${freshness(board)}
-      <div class="pbebl-scroll"><table class="pbebl-table pbebl-props"><thead><tr><th scope="col">Player</th>${yesNo ? '<th scope="col">Best price · Yes</th>' : '<th scope="col">Best over</th><th scope="col">Best under</th>'}<th scope="col">Consensus line</th><th scope="col">Books</th><th scope="col" class="pbebl-model">PBE fair</th></tr></thead><tbody>
-      ${rows.map(r => `<tr class="pbebl-row"><th scope="row">${esc(r.player)}</th>${yesNo
+    return `${picker}${propFreshness(board, m)}
+      <div class="pbebl-scroll"><table class="pbebl-table pbebl-props${m.started ? ' is-kicked-off' : ''}"><thead><tr><th scope="col">Player</th>${yesNo ? '<th scope="col">Best price · Yes</th>' : '<th scope="col">Best over</th><th scope="col">Best under</th>'}<th scope="col">Consensus line</th><th scope="col">Books</th><th scope="col" class="pbebl-model">PBE fair</th></tr></thead><tbody>
+      ${rows.map(r => `<tr class="pbebl-row" data-captured-at="${esc(r.captured || '')}"><th scope="row">${esc(r.player)}</th>${yesNo
         ? `<td data-label="Best · Yes">${r.yes ? `<span class="pbebl-price">${american(r.yes.price)}</span><small>${esc(r.yes.book)}</small>` : '<span class="pbebl-na">—</span>'}</td>`
         : `<td data-label="Best over">${r.over ? `<b>${esc(r.over.point)}</b> <span class="pbebl-price">${american(r.over.price)}</span><small>${esc(r.over.book)}</small>` : '<span class="pbebl-na">—</span>'}</td><td data-label="Best under">${r.under ? `<b>${esc(r.under.point)}</b> <span class="pbebl-price">${american(r.under.price)}</span><small>${esc(r.under.book)}</small>` : '<span class="pbebl-na">—</span>'}</td>`}
         <td data-label="Consensus">${r.s?.consensus_line != null ? `<b>${esc(r.s.consensus_line)}</b>${r.s.line_low !== r.s.line_high ? `<small>${esc(r.s.line_low)}–${esc(r.s.line_high)}</small>` : ''}` : '<span class="pbebl-na">—</span>'}</td>
-        <td data-label="Books">${esc(r.books)}</td><td data-label="PBE fair" class="pbebl-model"><span class="pbebl-na">—</span></td></tr>`).join('')}
+        <td data-label="Books">${esc(r.books)}<small class="pbebl-captured">${esc(capturedText(m, r.captured))}</small></td><td data-label="PBE fair" class="pbebl-model"><span class="pbebl-na">—</span></td></tr>`).join('')}
       </tbody></table></div>
-      <p class="pbebl-note">Best over = the lowest line on offer, then the best price at it; best under = the highest. Prices are raw bookmaker quotes, not vig-free. Open Prop Board for the full cross-book table with PBE model columns (Pro).</p>`;
+      <p class="pbebl-note">Best over = the lowest line on offer, then the best price at it; best under = the highest. Prices are raw bookmaker quotes, not vig-free${m.started ? ', and this game has kicked off: every price here is a pre-game capture' : ''}. Open Prop Board for the full cross-book table with PBE model columns (Pro).</p>`;
   }
 
   /* ---- page ---------------------------------------------------------------- */
@@ -238,10 +292,10 @@
   }
   async function load() {
     const p = window.App?.params || {};
-    if (p.event) { state.event = String(p.event); state.tab = p.tab === 'games' ? 'games' : 'props'; }
+    if (p.event) { state.event = String(p.event); state.eventExplicit = true; state.tab = p.tab === 'games' ? 'games' : 'props'; }
     if (p.market && PROP_MARKETS.some(m => m[0] === p.market)) state.market = p.market;
     paint();
-    await cc()?.refresh?.('bestline');
+    await Promise.all([cc()?.refresh?.('bestline'), loadCoverage()]);
     paint();
   }
 
@@ -250,7 +304,7 @@
     const tab = e.target.closest('[data-bl-tab]');
     if (tab) { state.tab = tab.dataset.blTab; paint(); return; }
     const props = e.target.closest('[data-bl-props]');
-    if (props) { state.tab = 'props'; state.event = props.dataset.blProps; paint(); window.scrollTo(0, 0); return; }
+    if (props) { state.tab = 'props'; state.event = props.dataset.blProps; state.eventExplicit = true; paint(); window.scrollTo(0, 0); return; }
     if (e.target.closest('[data-bl-retry]')) { cc()?.refresh?.('bestline', true).then(paint); }
   });
   document.addEventListener('toggle', e => {
@@ -259,11 +313,11 @@
   }, true);
   document.addEventListener('change', e => {
     if (!e.target.closest?.('.pbebl')) return;
-    if (e.target.matches('[data-bl-event]')) { state.event = e.target.value; state.propError = null; paint(); }
+    if (e.target.matches('[data-bl-event]')) { state.event = e.target.value; state.eventExplicit = true; state.propError = null; paint(); }
     if (e.target.matches('[data-bl-market]')) { state.market = e.target.value; state.propError = null; paint(); }
   });
 
   function install() { if (!window.App?.VIEWS) return false; window.App.VIEWS.bestline = load; return true; }
-  window.PBEBestLine = { load, paint, state };
+  window.PBEBestLine = { load, paint, state, loadCoverage };
   if (!install()) document.addEventListener('DOMContentLoaded', install, { once: true });
 })();

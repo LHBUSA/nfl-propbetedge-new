@@ -14,6 +14,7 @@ import { resolvePlayer, gamesFor, propThreshold, splitRows, provenance, dataWind
          MARKETS, CONDITIONS, SAMPLE } from '../_qbdna/engine.js';
 import { playerMarkets, MARKET_UNAVAILABLE } from '../_playerdna/markets.js';
 import { playerMedia, teamBlock } from '../_playerdna/media.js';
+import { withNflEntitlement } from '../_nfl-access.js';
 
 function send(res, status, body, ttl = 0) {
   res.statusCode = status;
@@ -28,7 +29,7 @@ function send(res, status, body, ttl = 0) {
 const KEY = { passing_yards: 'py', passing_attempts: 'att', completions: 'cmp',
               passing_touchdowns: 'td', interceptions: 'int' };
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   const q = req.query || {};
   const market = String(q.market || 'passing_yards');
   if (!MARKETS[market]) {
@@ -158,3 +159,7 @@ export default async function handler(req, res) {
     provenance: provenance()
   }, 300);
 }
+
+/* Paid NFL route: a current, verified NFL entitlement is required (api/_nfl-access.js). */
+export { handler };
+export default withNflEntitlement(handler);

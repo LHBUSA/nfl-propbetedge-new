@@ -69,7 +69,16 @@ function stubSupabase({ rows }) {
   return () => { globalThis.fetch = original; };
 }
 
-const ACTIVE_ROW = [{ status: 'active', current_period_end: null, cancel_at_period_end: false, stripe_price_id: 'price_x', created_at: '2026-08-01T00:00:00Z' }];
+/* A verifiable NFL subscription: recognized NFL price, Stripe subscription and
+ * customer, and a real future period end. The fixture that used to live here
+ * ({ status:'active', current_period_end:null, stripe_price_id:'price_x' })
+ * encoded the bug this suite now forbids: an unverifiable, never-expiring row
+ * was treated as Pro. See 'an active row with a NULL period end is NOT Pro'. */
+const ACTIVE_ROW = [{
+  status: 'active', customer_email: EMAIL, current_period_end: new Date(Date.now() + 5 * 86400000).toISOString(), cancel_at_period_end: false,
+  stripe_price_id: 'price_1UEWAXF3CaVzg4ORGlsgboLq', stripe_subscription_id: 'sub_1AuthFixture', stripe_customer_id: 'cus_AuthFixture',
+  created_at: '2026-08-01T00:00:00Z',
+}];
 
 /* =====================================================================
  * ROOT CAUSE
@@ -213,6 +222,7 @@ test('a Supabase outage keeps the proven identity and flags degraded', async () 
     assert.equal(session.pro, false);
     assert.equal(session.stage, 'entitlement_lookup_failed');
     assert.equal(session.degraded, true);
+    assert.equal(session.access, 'unavailable', 'an outage is never read as anonymous or as Pro');
     assert.equal(verifiedEmail(session), EMAIL);
   } finally { globalThis.fetch = original; }
 });
@@ -223,6 +233,17 @@ test('a signed-in account with no active row reports stage=entitlement_missing',
     const session = await getNflSession(reqWith(`${SESSION_COOKIE}=${freshSession()}`));
     assert.equal(session.valid, true);
     assert.equal(session.pro, false);
+    assert.equal(session.stage, 'entitlement_missing');
+  } finally { restore(); }
+});
+
+test('an active row with a NULL period end is NOT Pro (the old fixture was the bug)', async () => {
+  const restore = stubSupabase({ rows: [{ status: 'active', customer_email: EMAIL, current_period_end: null, cancel_at_period_end: false, stripe_price_id: 'price_x', created_at: '2026-08-01T00:00:00Z' }] });
+  try {
+    const session = await getNflSession(reqWith(`${SESSION_COOKIE}=${freshSession()}`));
+    assert.equal(session.valid, true);
+    assert.equal(session.pro, false);
+    assert.equal(session.access, 'no_entitlement');
     assert.equal(session.stage, 'entitlement_missing');
   } finally { restore(); }
 });
@@ -311,6 +332,7 @@ test('auth-session returns the full stage contract for a Pro subscriber', async 
     assert.equal(res.body.pro, true);
     assert.equal(res.body.user.email, EMAIL);
     assert.equal(res.body.stage, 'entitlement_active');
+    assert.equal(res.body.access, 'granted');
     assert.equal(res.body.authority, 'vercel-local');
   } finally { restore(); }
 });

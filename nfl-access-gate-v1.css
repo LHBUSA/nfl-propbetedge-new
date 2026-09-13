@@ -1,0 +1,30 @@
+/* PropBetEdge NFL — access gate states.
+ * html[data-pbe-access] is set by nfl-access-gate-v1.js from the server's
+ * verdict. The workspace chrome is hidden by the critical CSS in index.html
+ * until it is "granted"; this file styles the checking line and the wall. */
+
+#pbe-access-checking{display:none}
+html[data-pbe-access="checking"] #pbe-access-checking{
+  display:grid;place-items:center;min-height:100dvh;padding:24px;box-sizing:border-box;
+  color:var(--pbe-dim,#b9ad96);font:600 12px/1.4 var(--pbe-font-data,"JetBrains Mono",monospace);letter-spacing:.12em;text-transform:uppercase
+}
+#pbe-access-checking .pbe-access-mark{width:28px;height:28px;margin:0 auto 14px;border-radius:50%;border:2px solid rgba(216,183,91,.25);border-top-color:var(--pbe-gold,#d8b75b);animation:pbe-access-spin .9s linear infinite}
+@keyframes pbe-access-spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){#pbe-access-checking .pbe-access-mark{animation:none}}
+
+/* The wall is the page, not a dialog over one. */
+.pbe-pro-backdrop.is-wall{background:var(--pbe-ink,#14110d);backdrop-filter:none;overflow:auto;align-items:start}
+.pbe-pro-backdrop.is-wall .pbe-pro-close{display:none!important}
+.pbe-pro-backdrop.is-wall .pbe-pro-modal{margin:max(16px,4vh) auto;max-height:none!important;overflow:visible}
+
+.pbe-access-status{display:grid;gap:10px;margin:16px 0 18px}
+.pbe-access-note{margin:0;padding:10px 12px;border-radius:10px;border:1px solid rgba(216,183,91,.28);background:rgba(216,183,91,.07);color:var(--pbe-paper,#f4ecdc);font-size:13px;line-height:1.45}
+.pbe-access-note[data-access-state="unavailable"]{border-color:rgba(255,120,110,.4);background:rgba(255,120,110,.08)}
+.pbe-access-account{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;font-size:12px;color:var(--pbe-dim,#b9ad96)}
+.pbe-access-account strong{color:var(--pbe-paper,#f4ecdc);font-weight:700;overflow-wrap:anywhere}
+/* the funnel's "Signed in as" label ran into the email */
+.pbe-funnel-user{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:baseline}
+.pbe-funnel-user strong{overflow-wrap:anywhere}
+.pbe-access-signout{margin-left:auto;min-height:36px;padding:0 12px;border-radius:8px;border:1px solid rgba(255,255,255,.16);background:transparent;color:var(--pbe-paper,#f4ecdc);font:600 12px/1 var(--pbe-font-ui,Inter,sans-serif);cursor:pointer}
+.pbe-access-signout:hover{background:rgba(255,255,255,.06)}
+@media (max-width:768px){.pbe-access-signout{min-height:44px;margin-left:0}}

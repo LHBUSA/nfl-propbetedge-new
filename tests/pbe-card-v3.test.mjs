@@ -208,7 +208,7 @@ test('degraded entitlement fails closed', async () => {
   assertNoSecrets(broken.text);
 });
 
-test('public preview and state carry no selection data', async () => {
+test('public preview carries no selection data; state is subscriber-only', async () => {
   const preview = await call('preview');
   assert.equal(preview.status, 200);
   assertNoSecrets(preview.text);
@@ -216,7 +216,10 @@ test('public preview and state carry no selection data', async () => {
   assert.equal(preview.json.previews.length, 4);
   assert.deepEqual(preview.json.previews.map(p => p.matchup.away).sort(), ['BUF', 'MIA', 'NE', 'SF']);
   assert.equal(preview.json.unlock.cta, "Unlock today's PBE card");
-  const state = await call('state');
+  const anonState = await call('state');
+  assert.equal(anonState.status, 401, 'PBE Picks state is part of the paid product');
+  assertNoSecrets(anonState.text);
+  const state = await call('state', sessionCookie('pro@propbetedge.test'));
   assertNoSecrets(state.text);
 });
 
@@ -269,7 +272,9 @@ test('degraded engine suppresses actionable framing', async () => {
 
 test('the Official Track Record stays official-only; validation history is Pro-only and separate', async () => {
   mock.requested.length = 0;
-  const track = await call('trackrecord');
+  assert.equal((await call('trackrecord')).status, 401, 'Track Record is part of the paid product');
+  mock.requested.length = 0;
+  const track = await call('trackrecord', sessionCookie('pro@propbetedge.test'));
   assert.equal(track.status, 200);
   const pickQueries = mock.requested.filter(u => u.includes('/nfl_game_picks?') && !u.includes('select=season,status,publication_scope,created_at'));
   assert.equal(pickQueries.length, 1);
@@ -399,7 +404,7 @@ test('handler: an official decision replaced before lock is not an Official Trac
     superseded_by: '11111111-1111-4111-8111-111111111111', game_id: '2026_01_KC_DEN', kickoff_ts: '2026-09-10T00:00:00+00:00' });
   mock.extraRows.push(off);
   try {
-    const track = await call('trackrecord');
+    const track = await call('trackrecord', sessionCookie('pro@propbetedge.test'));
     assert.equal(track.json.total_count, 0);
     assert.equal(track.json.picks.length, 0);
     assert.equal(track.json.replaced_count, 1);

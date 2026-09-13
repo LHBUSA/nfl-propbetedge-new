@@ -301,6 +301,9 @@
     if (s.loading) return;
     const host = document.getElementById('pbe-pro-checkout');
     if (!host) return;
+    /* paywall.js owns the "Unable to verify access" screen; pricing is never
+       offered to someone whose subscription could not be checked */
+    if (s.access === 'unavailable') return;
 
     const mode = s.pro ? 'active-pro' : s.user ? 'signed-in-free' : 'signed-out';
     const current = host.querySelector('.pbe-funnel-root')?.dataset?.funnelState;

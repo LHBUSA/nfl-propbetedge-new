@@ -1382,9 +1382,15 @@ async function openPickFor(env, gameId, market) {
   return Array.isArray(rows) && rows.length ? rows[0] : null;
 }
 
+/* Server-to-server gateway reads carry NFL_GATEWAY_TOKEN once the gateway
+   enforces it (workers/nfl-gateway REQUIRE_GATEWAY_TOKEN). Unset = no header. */
+function gatewayTokenHeaders(env) {
+  const token = String(env?.NFL_GATEWAY_TOKEN || '').trim();
+  return token ? { accept: 'application/json', 'x-pbe-gateway-token': token } : { accept: 'application/json' };
+}
 async function restDays(env) {
   const base = String(env.NFL_GATEWAY || 'https://nfl-api.propbetedge.ai').replace(/\/$/, '');
-  const response = await fetch(`${base}/api/schedule`, { cf: { cacheTtl: 0 } });
+  const response = await fetch(`${base}/api/schedule`, { headers: gatewayTokenHeaders(env), cf: { cacheTtl: 0 } });
   if (!response.ok) throw new Error(`gateway_${response.status}`);
   const body = await response.json();
   return restDaysBySchedule(Array.isArray(body?.games) ? body.games : []);

@@ -18,6 +18,7 @@
  * Given a durable store this moves server-side unchanged, because
  * weatherEvents(next, prev) is already a pure function of two snapshots.
  */
+import { withNflEntitlement } from './_nfl-access.js';
 import { gameSnapshot, weatherEvents, pollIntervalMinutes, THRESHOLDS, venues }
   from './_breaking/weather.js';
 
@@ -53,7 +54,7 @@ async function slate() {
   }).filter(g => g.home_team && g.away_team);
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   const q = req.query || {};
   const now = Date.now();
   const fetchNws = q.nws !== '0';
@@ -158,3 +159,7 @@ export default async function handler(req, res) {
     fetched_at: new Date(now).toISOString()
   }, 300);
 }
+
+/* Paid NFL route: a current, verified NFL entitlement is required (api/_nfl-access.js). */
+export { handler };
+export default withNflEntitlement(handler);

@@ -17,6 +17,7 @@ import { resolvePlayer, gamesFor, propThreshold, splitRows, provenance, dataWind
          MARKETS, CONDITIONS, SAMPLE } from '../_qbdna/engine.js';
 import { eventMarkets, MARKET_MAP, MARKET_UNAVAILABLE } from '../_playerdna/markets.js';
 import { playerMedia, teamBlock } from '../_playerdna/media.js';
+import { withNflEntitlement } from '../_nfl-access.js';
 
 function send(res, status, body, ttl = 0) {
   res.statusCode = status;
@@ -46,7 +47,7 @@ function windowSplit(rows, market, line, label) {
   };
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   const q = req.query || {};
   const found = resolvePlayer({ player_id: q.player_id, gsis_id: q.gsis_id,
                                 espn_id: q.espn_id, name: q.name });
@@ -158,3 +159,7 @@ export default async function handler(req, res) {
     provenance: provenance()
   }, 120);
 }
+
+/* Paid NFL route: a current, verified NFL entitlement is required (api/_nfl-access.js). */
+export { handler };
+export default withNflEntitlement(handler);

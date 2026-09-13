@@ -28,6 +28,7 @@
     {css:'./pbe-card-v3.css',js:'./pbe-card-v3.js'},
     {css:'./nfl-command-center-v1.css',js:'./nfl-command-center-v1.js'},
     {css:'./what-changed-v1.css',js:'./what-changed-v1.js'},
+    {js:'./best-line-props-core-v1.js'},
     {css:'./best-line-v1.css',js:'./best-line-v1.js'},
     {css:'./dashboard-v7.css',js:'./dashboard-v7.js'},
     {css:'./dashboard-v8-enhance.css',js:'./dashboard-v8-enhance.js'},
@@ -106,8 +107,8 @@
     /* Global network identity + subscriber controls. */
     {css:'./network-footer-v1.css',js:'./network-footer-v1.js'},
 
-    /* Production authorities. */
-    {css:'./paywall-funnel-v2.css',js:'./paywall-funnel-v2.js'},
+    /* Production authorities. paywall-funnel-v2 is loaded by index.html, ahead of
+       the access gate, because the subscription wall renders without the workspace. */
     /* PBEcast v6 is the sole route authority: #pbecast -> PBEcastV6.load ->
        .pbecast6. v7 is additive only — it decorates v6's DOM and state and
        never registers a route or renders the container itself. */

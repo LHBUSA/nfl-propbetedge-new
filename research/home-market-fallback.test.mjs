@@ -6,7 +6,9 @@
    to stand in. */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import handler from '../api/home-market.js';
+/* the market contract under test, behind the NFL entitlement gate (api/_nfl-access.js,
+   covered by tests/nfl-paywall-entitlement.test.mjs) */
+import { handler } from '../api/home-market.js';
 
 const GATEWAY_502 = { error: 'Odds provider request failed', provider: 'the_odds_api', provider_status: 401, provider_error_code: 'OUT_OF_USAGE_CREDITS', provider_error_class: 'QUOTA', semantics: 'UNAVAILABLE' };
 const now = new Date();

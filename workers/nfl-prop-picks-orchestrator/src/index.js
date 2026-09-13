@@ -195,7 +195,7 @@ async function runOrchestration(env, slate, meta, base) {
       }
 
       const model = await getJson(
-        `${gatewayBase(env)}/api/picks/pass?event_id=${encodeURIComponent(event.id)}`,
+        `${gatewayBase(env)}/api/picks/pass?event_id=${encodeURIComponent(event.id)}`, gatewayTokenHeaders(env),
       ).catch(() => null);
       const projections = projectionRows(model);
       if (!projections.length) {
@@ -578,9 +578,16 @@ function gatewayBase(env) {
   return String(env.NFL_GATEWAY || 'https://nfl-api.propbetedge.ai').replace(/\/$/, '');
 }
 
-async function getJson(url) {
+/* Server-to-server gateway reads carry NFL_GATEWAY_TOKEN once the gateway
+   enforces it (workers/nfl-gateway REQUIRE_GATEWAY_TOKEN). Unset = no header. */
+function gatewayTokenHeaders(env) {
+  const token = String(env?.NFL_GATEWAY_TOKEN || '').trim();
+  return token ? { 'x-pbe-gateway-token': token } : {};
+}
+
+async function getJson(url, extraHeaders = {}) {
   const response = await fetch(url, {
-    headers: { accept: 'application/json' },
+    headers: { accept: 'application/json', ...extraHeaders },
     cf: { cacheTtl: 0 },
   });
   if (!response.ok) throw new Error(`upstream_${response.status}`);

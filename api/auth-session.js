@@ -19,10 +19,11 @@ export default async function handler(req, res) {
     /* Stage + cookie counts only. No token bytes, no secrets. This is what
      * makes the auth loop observable in production. */
     console.log(
-      '[auth-session] stage=%s valid=%s pro=%s cookies_current=%d cookies_legacy=%d%s',
+      '[auth-session] stage=%s valid=%s pro=%s access=%s cookies_current=%d cookies_legacy=%d%s',
       session.stage,
       session.valid,
       session.pro,
+      session.access,
       session.cookies?.current ?? 0,
       session.cookies?.legacy ?? 0,
       session.reason ? ` reason=${session.reason}` : (session.error ? ` error=${session.error}` : '')
@@ -34,6 +35,7 @@ export default async function handler(req, res) {
     return res.status(500).json({
       valid: false,
       pro: false,
+      access: 'unavailable',
       user: null,
       subscription: null,
       stage: 'handler_exception',

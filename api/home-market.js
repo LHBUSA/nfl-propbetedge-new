@@ -1,4 +1,6 @@
 import { TEAM_NAME_TO_CODE } from '../workers/nfl-picks-engine-shared/odds-normalize.mjs';
+import { withNflEntitlement } from './_nfl-access.js';
+import { gatewayHeaders } from './_nfl-gateway.js';
 
 const NFL_GATEWAY=process.env.NFL_GATEWAY||'https://nfl-api.propbetedge.ai';
 const CORE_MARKETS=['h2h','spreads','totals'];
@@ -37,7 +39,7 @@ const priceOf=q=>num(q?.price??q?.american_odds??q?.odds);
 const bookOf=q=>q?.book||q?.book_title||q?.sportsbook||q?.book_key||'';
 
 async function upstream(path){
-  const response=await fetch(`${NFL_GATEWAY}${path}`,{headers:{accept:'application/json'},cache:'no-store'});
+  const response=await fetch(`${NFL_GATEWAY}${path}`,{headers:gatewayHeaders({accept:'application/json'}),cache:'no-store'});
   const text=await response.text();
   if(!response.ok)throw new Error(`gateway_${response.status}:${text.slice(0,120)}`);
   try{return JSON.parse(text)}catch{throw new Error('gateway_non_json')}
@@ -191,7 +193,7 @@ async function lastVerified(away,home,liveError){
   return summarizeSnapshot(rows,{id:game.game_id,away,home,away_code:awayCode,home_code:homeCode},liveError);
 }
 
-export default async function handler(req,res){
+async function handler(req,res){
   if(req.method!=='GET')return send(res,405,{ok:false,error:'method_not_allowed'});
   const away=String(req.query?.away||'').trim(),home=String(req.query?.home||'').trim();
   if(!away||!home)return send(res,400,{ok:false,error:'away_and_home_required'});
@@ -220,3 +222,7 @@ export default async function handler(req,res){
     return send(res,503,{ok:false,error:'core_market_unavailable',detail,fallback:'no_verified_snapshot'});
   }
 }
+
+/* Paid NFL route: a current, verified NFL entitlement is required (api/_nfl-access.js). */
+export { handler };
+export default withNflEntitlement(handler);
