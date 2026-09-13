@@ -9,11 +9,12 @@
  *                  per scheduled ingest, compared batch to batch
  *
  * What it deliberately does NOT do:
- *   - It does not claim a status TRANSITION ("Questionable -> Out"). ESPN's
- *     report carries the current designation and the time its note was last
- *     updated, not the previous designation. A transition needs a durable
- *     ledger of earlier observations (see workers/nfl-changes). Until that is
- *     deployed the surface says "updated", never "changed from".
+ *   - It does not read a status TRANSITION ("Questionable -> Out") out of
+ *     ESPN's report, which carries only the current designation and the time
+ *     its note was last updated. A transition is attached only from
+ *     nfl-intel's own ledger, where two of our captures disagreed
+ *     (attachTransitions); without one the item says "updated". Headlines
+ *     never carry a transition.
  *   - It does not infer workload, snap counts or depth from a note's prose.
  *   - It never invents a game for a player: a team without a game on the
  *     current scoreboard is reported with game=null.
@@ -449,6 +450,44 @@ export function marketMoves(rows, gameByTapeId, T = MARKET_THRESHOLDS) {
     });
   }
   return out;
+}
+
+/* ---- designation transitions ------------------------------------------ */
+
+/* The injury lane records a transition only when two of PropBetEdge's own
+   report captures disagree for the same athlete (src/injuries.js, ledger
+   seed). This attaches the NEWEST such transition to a current designation,
+   and only while it still describes it: same athlete, same team, and its `to`
+   is the designation on the report now. Everything else stays "updated". */
+export function attachTransitions(changes, transitions) {
+  const newest = new Map();
+  for (const t of Array.isArray(transitions) ? transitions : []) {
+    const id = clean(t?.athlete_id);
+    if (!id || !iso(t?.observed_at)) continue;
+    const prev = newest.get(id);
+    if (!prev || Date.parse(t.observed_at) > Date.parse(prev.observed_at)) newest.set(id, t);
+  }
+  let attached = 0;
+  const out = (Array.isArray(changes) ? changes : []).map(c => {
+    if (c?.kind !== 'INJURY_STATUS' || !c.player?.espn_id) return c;
+    const t = newest.get(String(c.player.espn_id));
+    if (!t) return c;
+    const to = normalizeStatus(t.to), from = normalizeStatus(t.from);
+    if (!to || !from || to !== c.status || from === to) return c;
+    if (t.team && c.team?.abbreviation && t.team !== c.team.abbreviation) return c;
+    attached++;
+    return {
+      ...c,
+      transition: {
+        from, to,
+        from_observed_at: iso(t.from_observed_at),
+        observed_at: iso(t.observed_at),
+        source_date: iso(t.source_date),
+        basis: 'PBE_LEDGER_OBSERVATIONS'
+      }
+    };
+  });
+  return { changes: out, attached };
 }
 
 export function rankChanges(changes) {

@@ -16,13 +16,15 @@
  *
  * Truth contract carried over unchanged from the Vercel prototype this
  * replaces: every change names its source and the source's time; "UPDATED",
- * never "CHANGED FROM"; an unavailable source is reported with its reason;
+ * never "CHANGED FROM" — except where nfl-intel itself observed both
+ * designations, in which case the item carries a `transition` with both
+ * observation times; an unavailable source is reported with its reason;
  * best price / consensus / PBE fair value / model edge stay separate, and fair
  * value and edge are null unless a model publishes them.
  */
 import {
   gamesFromCurrent, teamGameIndex, gameStatusChanges, parseInjuryReport,
-  recentInjuryChanges, availabilityByGame, marketMoves, rankChanges, MARKET_THRESHOLDS
+  recentInjuryChanges, availabilityByGame, marketMoves, rankChanges, attachTransitions, MARKET_THRESHOLDS
 } from './changes-core.js';
 import { summarizeEvent, bookLeaderboard } from './bestline-core.js';
 import { ingestInjuries, KV_KEYS } from './injuries.js';
@@ -31,7 +33,7 @@ import { captureMarket, recentRows } from './market.js';
 import { refreshWeather, WX_KEY, WX_MAX_AGE_MS } from './weather.js';
 import { nflverseCode, nflverseGameId } from '../../nfl-picks-engine-shared/current-slate.mjs';
 
-const VERSION = 'nfl-intel/1.1.0';
+const VERSION = 'nfl-intel/1.2.0';
 const INJURY_STALE_MS = 30 * 60000;
 const CORS = {
   'access-control-allow-origin': '*',
@@ -122,11 +124,12 @@ async function changes(env, url) {
   const now = Date.now();
   const fetchedAt = new Date(now).toISOString();
   const windowHours = intParam(url, 'window_hours', 48, 6, 168);
-  const [slateRes, injRes, mktRes, wxRes] = await Promise.allSettled([
+  const [slateRes, injRes, mktRes, wxRes, trRes] = await Promise.allSettled([
     currentGames(env),
     env.INTEL_KV.get(KV_KEYS.report, 'json'),
     recentRows(env, 12),
-    env.INTEL_KV.get(WX_KEY, 'json')
+    env.INTEL_KV.get(WX_KEY, 'json'),
+    env.INTEL_KV.get(KV_KEYS.transitions, 'json')
   ]);
 
   const sources = {};
@@ -174,11 +177,22 @@ async function changes(env, url) {
     : { available: false, reason: wxRes.status === 'rejected' ? String(wxRes.reason?.message || wxRes.reason) : 'first_snapshot_pending' };
   sources.weather = { provider: 'nws_alerts + open_meteo_forecast', available: weather.available, fetched_at: weather.fetched_at || fetchedAt, reason: weather.reason };
 
-  const list = rankChanges([
+  const ledger = trRes.status === 'fulfilled' ? trRes.value : null;
+  const ranked = rankChanges([
     ...gameStatusChanges(games, fetchedAt),
     ...recentInjuryChanges(injuryRows, teamGameIndex(games), { now, windowHours }),
     ...moves
   ]);
+  const { changes: list, attached } = attachTransitions(ranked, Array.isArray(ledger) ? ledger : []);
+  const transitions = trRes.status === 'rejected'
+    ? { available: false, reason: String(trRes.reason?.message || trRes.reason), note: 'The designation ledger could not be read. Items here are current designations with their source update time.' }
+    : {
+      available: true,
+      basis: 'PBE_LEDGER_OBSERVATIONS',
+      recorded: Array.isArray(ledger) ? ledger.length : 0,
+      attached,
+      note: 'A transition (e.g. QUESTIONABLE to OUT) is attached only where two PropBetEdge captures of the injury report disagreed; from_observed_at is the last capture that still showed the earlier designation. Other items are current designations with their source update time.'
+    };
   const counts = list.reduce((acc, c) => { acc[c.kind] = (acc[c.kind] || 0) + 1; return acc; }, { total: list.length });
   const anySource = sources.injuries.available || sources.scoreboard.available || sources.market.available || weather.available;
   return json({
@@ -187,11 +201,7 @@ async function changes(env, url) {
     runtime: VERSION,
     generated_at: fetchedAt,
     window_hours: windowHours,
-    transitions: {
-      available: false,
-      reason: 'change_ledger_not_published',
-      note: 'Status transitions (e.g. QUESTIONABLE to OUT) need a durable ledger of prior observations. Items here are current designations with their source update time.'
-    },
+    transitions,
     sources,
     games: games.map(g => ({ id: g.id, matchup: g.matchup, kickoff: g.kickoff, semantics: g.semantics, detail: g.detail, week: g.week, away: g.away, home: g.home })),
     counts,

@@ -6,7 +6,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   normalizeStatus, injurySeverity, parseScoreboard, teamGameIndex, gameStatusChanges,
-  parseInjuryReport, recentInjuryChanges, availabilityByGame, marketMoves, tapeSeries, rankChanges
+  parseInjuryReport, recentInjuryChanges, availabilityByGame, marketMoves, tapeSeries, rankChanges, attachTransitions
 } from '../workers/nfl-intel/src/changes-core.js';
 import { nflverseGameId, nflverseCode } from '../workers/nfl-picks-engine-shared/current-slate.mjs';
 
@@ -158,6 +158,25 @@ test('tape: drift since the first capture is reported when the last step was qui
   const total = marketMoves(rows, byTape).find(m => m.market.market === 'total');
   assert.equal(total.market.basis, 'FIRST_OBSERVATION');
   assert.equal(total.market.delta, 1.5);
+});
+
+test('transitions: newest per athlete, attached only while it still describes the designation', () => {
+  const inj = (id, status, team = 'TB') => ({ kind: 'INJURY_STATUS', status, headline: `P${id} — ${status}`, player: { espn_id: id, name: `P${id}` }, team: { abbreviation: team } });
+  const changes = [inj('1', 'OUT'), inj('2', 'OUT'), inj('3', 'QUESTIONABLE'), inj('4', 'OUT', 'BUF'), inj('5', 'OUT'), { kind: 'MARKET_MOVE', headline: 'x' }];
+  const ledger = [
+    { athlete_id: '1', team: 'TB', from: 'Questionable', to: 'Out', from_observed_at: '2026-09-13T15:41:04.723Z', observed_at: '2026-09-13T15:51:04.337Z', source_date: '2026-09-13T15:43Z' },
+    { athlete_id: '1', team: 'TB', from: 'Active', to: 'Questionable', from_observed_at: '2026-09-12T10:00:00Z', observed_at: '2026-09-12T10:10:00Z' },
+    { athlete_id: '2', team: 'TB', from: 'Out', to: 'Questionable', observed_at: '2026-09-13T12:00:00Z' },   // newest no longer describes OUT
+    { athlete_id: '2', team: 'TB', from: 'Questionable', to: 'Out', observed_at: '2026-09-13T11:00:00Z' },
+    { athlete_id: '4', team: 'TB', from: 'Questionable', to: 'Out', observed_at: '2026-09-13T12:00:00Z' },   // recorded for another team
+    { athlete_id: '5', team: 'TB', from: 'Out', to: 'Out', observed_at: '2026-09-13T12:00:00Z' }             // not a change
+  ];
+  const { changes: out, attached } = attachTransitions(changes, ledger);
+  assert.equal(attached, 1);
+  assert.deepEqual(out[0].transition, { from: 'QUESTIONABLE', to: 'OUT', from_observed_at: '2026-09-13T15:41:04.723Z', observed_at: '2026-09-13T15:51:04.337Z', source_date: '2026-09-13T15:43:00.000Z', basis: 'PBE_LEDGER_OBSERVATIONS' });
+  assert.ok(out.slice(1).every(c => c.transition === undefined));
+  assert.equal(out[0].headline, 'P1 — OUT', 'headline untouched');
+  assert.equal(attachTransitions(changes, null).attached, 0);
 });
 
 test('tapeSeries ignores rows without identity instead of guessing one', () => {

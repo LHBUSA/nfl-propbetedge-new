@@ -39,7 +39,10 @@ test('an absent query parameter is absent, not zero', () => {
 
 /* ESPN core API stub: TB (27) lists three records — one negative id, one for a
    player whose current team is elsewhere — CIN (4) one, everyone else none. */
-function espnStub({ tbStatus = 'Out', failTeams = [] } = {}) {
+/* `date` defaults to ESPN's canonical fixture time; tests that read
+   /api/changes pass a date relative to now, because the read path windows on
+   it (a fixed 2026-09-11 date fell out of the 48h window two days later). */
+function espnStub({ tbStatus = 'Out', failTeams = [], date = '2026-09-11T10:00Z' } = {}) {
   const base = 'https://sports.core.api.espn.com/v2/sports/football/leagues/nfl';
   const rec = (a, i) => ({ $ref: `http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2026/athletes/${a}/injuries/${i}?lang=en` });
   return async url => {
@@ -54,7 +57,7 @@ function espnStub({ tbStatus = 'Out', failTeams = [] } = {}) {
     const inj = /athletes\/(\d+)\/injuries\/(-?\d+)/.exec(u);
     if (inj) {
       const status = inj[1] === '1001' ? tbStatus : 'Questionable';
-      return respond({ id: inj[2], status, date: '2026-09-11T10:00Z', shortComment: `note ${inj[1]}`, type: { name: 'X', description: status.toLowerCase(), abbreviation: status[0] }, details: { type: 'Knee', returnDate: '2026-09-13' } });
+      return respond({ id: inj[2], status, date, shortComment: `note ${inj[1]}`, type: { name: 'X', description: status.toLowerCase(), abbreviation: status[0] }, details: { type: 'Knee', returnDate: '2026-09-13' } });
     }
     const ath = /\/athletes\/(\d+)$/.exec(u.split('?')[0]);
     if (ath) {
@@ -122,7 +125,7 @@ test('market history: consensus rows keyed to nflverse ids; post-kick quotes nev
 
 test('GET /api/changes composes persisted state; one market capture is honestly not a move', async () => {
   const env = { INTEL_KV: kv(), NFL_CURRENT: currentBinding };
-  await ingestInjuries(env, { season: 2026, fetchImpl: espnStub(), now: Date.now() - 60000 });
+  await ingestInjuries(env, { season: 2026, fetchImpl: espnStub({ date: new Date(Date.now() - 3600000).toISOString() }), now: Date.now() - 60000 });
   await env.INTEL_KV.put('mkt:v1:batches', JSON.stringify([{ batch_id: 'b1', captured_at: '2026-09-11T12:00:00Z', rows: 0 }]));
   const res = await worker.fetch(new Request('https://nfl-api.propbetedge.ai/api/changes'), env, {});
   assert.equal(res.status, 200);
@@ -132,11 +135,44 @@ test('GET /api/changes composes persisted state; one market capture is honestly 
   assert.equal(body.sources.injuries.available, true);
   assert.equal(body.sources.market.available, false);
   assert.equal(body.sources.market.reason, 'one_capture_so_far_a_move_needs_two');
-  assert.equal(body.transitions.available, false, 'UPDATED, never CHANGED FROM');
+  assert.equal(body.transitions.available, true);
+  assert.equal(body.transitions.attached, 0, 'one capture: nothing was observed changing, so nothing says CHANGED FROM');
+  assert.ok(!body.changes.some(c => c.transition), 'UPDATED, never CHANGED FROM, without two observations');
   assert.ok(body.changes.some(c => c.kind === 'GAME_STATUS' && c.status === 'POSTPONED'), 'disruption read from ESPN status text');
   assert.ok(body.changes.some(c => c.kind === 'INJURY_STATUS' && c.player?.name === 'Player 1001'));
   assert.ok(!body.changes.some(c => /from|→/.test(c.headline)));
   assert.equal(body.weather.available, false);
+});
+
+test('GET /api/changes attaches a transition only where two of our captures disagreed', async () => {
+  const env = { INTEL_KV: kv(), NFL_CURRENT: currentBinding };
+  const date = new Date(Date.now() - 3600000).toISOString();
+  const t1 = Date.now() - 20 * 60000, t2 = Date.now() - 10 * 60000;
+  await ingestInjuries(env, { season: 2026, fetchImpl: espnStub({ tbStatus: 'Questionable', date }), now: t1 });
+  await ingestInjuries(env, { season: 2026, fetchImpl: espnStub({ tbStatus: 'Out', date }), now: t2 });
+  const body = await (await worker.fetch(new Request('https://x/api/changes'), env, {})).json();
+  assert.equal(body.transitions.available, true);
+  assert.equal(body.transitions.basis, 'PBE_LEDGER_OBSERVATIONS');
+  assert.equal(body.transitions.attached, 1);
+  const moved = body.changes.find(c => c.player?.name === 'Player 1001');
+  assert.deepEqual(moved.transition, {
+    from: 'QUESTIONABLE', to: 'OUT',
+    from_observed_at: new Date(t1).toISOString(), observed_at: new Date(t2).toISOString(),
+    source_date: new Date(Date.parse(date)).toISOString(), basis: 'PBE_LEDGER_OBSERVATIONS'
+  });
+  assert.ok(!/→|->|from/i.test(moved.headline), 'the headline never carries the transition');
+  const unchanged = body.changes.find(c => c.player?.name === 'Player 1002');
+  assert.equal(unchanged.transition, undefined, 'a designation seen once is only UPDATED');
+});
+
+test('GET /api/changes says so when the ledger cannot be read', async () => {
+  const store = kv();
+  const env = { INTEL_KV: { ...store, get: async (k, t) => { if (k === KV_KEYS.transitions) throw new Error('kv_down'); return store.get(k, t); } }, NFL_CURRENT: currentBinding };
+  await ingestInjuries({ INTEL_KV: store }, { season: 2026, fetchImpl: espnStub({ date: new Date(Date.now() - 3600000).toISOString() }), now: Date.now() - 60000 });
+  const body = await (await worker.fetch(new Request('https://x/api/changes'), env, {})).json();
+  assert.equal(body.transitions.available, false);
+  assert.equal(body.transitions.reason, 'kv_down');
+  assert.ok(body.changes.length > 0 && !body.changes.some(c => c.transition));
 });
 
 test('GET /api/changes without any ingest says why, not "no changes"', async () => {
