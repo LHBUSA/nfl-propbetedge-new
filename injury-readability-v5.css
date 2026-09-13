@@ -137,6 +137,11 @@
   font:900 13px/1 'JetBrains Mono',monospace!important;
   letter-spacing:.045em!important;
 }
+.pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-team.is-unreported .team-unreported{
+  /* Honest unknown: quieter than a code and never styled like one. */
+  color:var(--pbe-dim)!important;
+  font:700 13px/1 'JetBrains Mono',monospace!important;
+}
 .pbe13-news.pbe13-injury-editorial[data-pbe-injury-readability="5"] .pbe13-availability-cell .label{
   display:none!important;
 }

@@ -57,6 +57,11 @@ jobs:
           PBE_CHROME: /usr/bin/google-chrome
         run: node --test --test-concurrency=1 tests/pbe-card-gate-harness.test.mjs
 
+      # Fixture-backed: team alias mapping and the honest unknown team cell,
+      # independent of whatever the live news feed carries today.
+      - name: Injury availability team column (fixture)
+        run: node --test tests/injury-team-column.test.mjs
+
       - name: Injury Editorial article layout
         env:
           PBE_CHROME: /usr/bin/google-chrome
