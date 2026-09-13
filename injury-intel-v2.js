@@ -26,23 +26,48 @@
   const trustOf = a => a?._trust || null;
   const safeSummary = a => (trustOf(a) ? trustOf(a).summary : (a?.summary || '')) || '';
   const safePlayers = a => (trustOf(a) ? trustOf(a).players : (Array.isArray(a?.players) ? a.players : [])) || [];
+  /* TEAM CODE ALIASES
+     The feed's team tags are written by the upstream take model and are not
+     held to one code set. On 2026-09-13 the same payload tagged Rams stories
+     both "LAR" and "LA" (nflverse's Rams code), and another row "GBP". The
+     directory (archive/teams.js) keys the Rams as LAR, so "LA" matched no row
+     and a Rams story whose own headline says "Rams'" rendered with no team.
+     Only codes that name exactly one current franchise are mapped here; the
+     mapped code must still be corroborated by the article's own text below.
+     Relocation-era codes (OAK, SD, STL) are deliberately absent: they name a
+     city a franchise left, and guessing across that is not a report. */
+  const TEAM_ALIASES = {
+    LA:'LAR', LVR:'LV', WSH:'WAS', JAC:'JAX',
+    GBP:'GB', KCC:'KC', NEP:'NE', NOS:'NO', SFO:'SF', TBB:'TB'
+  };
+  const canonicalTeamCode = code => {
+    const value = String(code ?? '').trim().toUpperCase();
+    return TEAM_ALIASES[value] || value;
+  };
+  const normText = value => String(value || '').toLowerCase().replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
   let TEAM_TERMS = null;
   function teamTerms() {
     if (TEAM_TERMS && TEAM_TERMS.length) return TEAM_TERMS;
     const map = (typeof window !== 'undefined' && window.NFL_TEAMS) || {};
-    TEAM_TERMS = Object.entries(map).map(([abbr,t]) => {
+    const rows = Object.entries(map).map(([abbr,t]) => {
       const name = String(t?.name || '');
       const terms = [name, t?.city, name.split(/\s+/).slice(-1)[0], abbr]
-        .map(v => String(v || '').toLowerCase().replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim())
+        .map(normText)
         .filter(v => v.length > 1);
       return { abbr:String(abbr).toUpperCase(), terms:[...new Set(terms)] };
     });
+    /* A term two franchises share ("los angeles", "new york") corroborates
+       neither. Without this a Chargers story tagged "LA" that says "Los
+       Angeles" would be labelled LAR through the alias above. */
+    const owners = new Map();
+    rows.forEach(row => row.terms.forEach(term => owners.set(term, (owners.get(term) || 0) + 1)));
+    TEAM_TERMS = rows.map(row => ({ abbr:row.abbr, terms:row.terms.filter(term => owners.get(term) === 1) }));
     return TEAM_TERMS;
   }
   function safeTeams(a) {
-    const declared = (Array.isArray(a?.teams) ? a.teams : []).map(x => String(x).toUpperCase());
+    const declared = [...new Set((Array.isArray(a?.teams) ? a.teams : []).map(canonicalTeamCode).filter(Boolean))];
     if (!declared.length) return [];
-    const hay = `${a?.title || ''} ${safeSummary(a)}`.toLowerCase().replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
+    const hay = normText(`${a?.title || ''} ${safeSummary(a)}`);
     if (!hay) return [];
     const index = teamTerms();
     if (!index.length) return [];
@@ -560,5 +585,5 @@
   document.addEventListener('DOMContentLoaded', burst, { once: true });
   if (document.readyState !== 'loading') burst();
 
-  window.PBEInjuryIntelV2 = { enhance, burst, canonicalUrl, injurySignal, factForArticle, availabilityFacts };
+  window.PBEInjuryIntelV2 = { enhance, burst, canonicalUrl, injurySignal, factForArticle, availabilityFacts, safeTeams, canonicalTeamCode, uniqueArticles, availabilityRow };
 })();

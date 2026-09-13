@@ -1,0 +1,275 @@
+{
+  "_capture": {
+    "source": "GET https://nfl.propbetedge.ai/api/news-feed?limit=100",
+    "fetched_at": "2026-09-13T22:16:38.096Z",
+    "note": "Verbatim rows from the live payload that failed the Injury Editorial smoke on main a4271ca. Six of 50 articles kept; nothing edited."
+  },
+  "ok": true,
+  "sport": "nfl",
+  "semantics": "NEWS",
+  "source": "propbet-news-api",
+  "fetched_at": "2026-09-13T22:16:38.096Z",
+  "articles": [
+    {
+      "id": "ae1deb6e-6132-444d-9ad7-23e9b4f0eb7b",
+      "title": "Garrett's Knee Surgery Fractures Rams' Pass Rush in Week 2 Absence",
+      "summary": "Los Angeles loses its marquee offseason acquisition to arthroscopic surgery immediately after a disappointing debut, forcing a four-week minimum reset on its defensive line.",
+      "url": "https://propbetedge.ai/news/nfl/sources-rams-star-garrett-to-have-knee-surgery-headed-to-ir-2026-09-13",
+      "slug": "sources-rams-star-garrett-to-have-knee-surgery-headed-to-ir-2026-09-13",
+      "image_url": "https://propbet-img-proxy.sales-fd3.workers.dev/?url=https%3A%2F%2Fa4.espncdn.com%2Fcombiner%2Fi%3Fimg%3D%252Fphoto%252F2026%252F0911%252Fr1714767_1296x729_16%252D9.jpg",
+      "original_image_url": "https://a4.espncdn.com/combiner/i?img=%2Fphoto%2F2026%2F0911%2Fr1714767_1296x729_16%2D9.jpg",
+      "image_alt": "Garrett's Knee Surgery Fractures Rams' Pass Rush in Week 2 Absence",
+      "image_credit": null,
+      "source": "espn",
+      "author": "Ty Whitney",
+      "published_at": "2026-09-13T16:16:07.849501+00:00",
+      "updated_at": null,
+      "topic_kind": "injury",
+      "teams": [
+        "LA",
+        "LV"
+      ],
+      "players": [
+        "Myles Garrett"
+      ],
+      "props": [],
+      "availability": null,
+      "impact_score": 4,
+      "market_impact": {
+        "band": "CONTEXT",
+        "score": 4,
+        "text": "Availability can change usage assumptions, player derivatives and team pricing. Monitor confirmation and related markets.",
+        "scope": "Myles Garrett",
+        "semantics": "CONTEXT_NOT_PRICE_MOVE"
+      },
+      "relevance_score": null,
+      "is_breaking": false,
+      "provenance": {
+        "semantics": "NEWS",
+        "upstream": "propbet-news-api",
+        "canonical_host": "propbetedge.ai",
+        "image_transport": "propbet-img-proxy",
+        "availability_transport": null,
+        "sport": "nfl"
+      }
+    },
+    {
+      "id": "ed7c8bc9-9cac-47f3-9535-52d52d182934",
+      "title": "49ers' Second-Round Bet on Stribling Shelved for Month-Plus",
+      "summary": "De'Zhaun Stribling's ankle injury in Week 1 forces San Francisco to accelerate its receiving depth plan and reshapes the target distribution in Kyle Shanahan's passing attack.",
+      "url": "https://propbetedge.ai/news/nfl/sources-niners-rookie-wr-stribling-out-at-least-1-month-due-to-ankle-2026-09-13",
+      "slug": "sources-niners-rookie-wr-stribling-out-at-least-1-month-due-to-ankle-2026-09-13",
+      "image_url": "https://propbet-img-proxy.sales-fd3.workers.dev/?url=https%3A%2F%2Fa.espncdn.com%2Fcombiner%2Fi%3Fimg%3D%252Fphoto%252F2026%252F0913%252Fr1715841_1296x729_16%252D9.jpg",
+      "original_image_url": "https://a.espncdn.com/combiner/i?img=%2Fphoto%2F2026%2F0913%2Fr1715841_1296x729_16%2D9.jpg",
+      "image_alt": "49ers' Second-Round Bet on Stribling Shelved for Month-Plus",
+      "image_credit": null,
+      "source": "espn",
+      "author": "Eric Esters",
+      "published_at": "2026-09-13T14:16:07.103451+00:00",
+      "updated_at": null,
+      "topic_kind": "injury",
+      "teams": [
+        "SF"
+      ],
+      "players": [
+        "De'Zhaun Stribling",
+        "Brandon Aiyuk",
+        "Jauan Jennings"
+      ],
+      "props": [],
+      "availability": null,
+      "impact_score": 3,
+      "market_impact": {
+        "band": "CONTEXT",
+        "score": 3,
+        "text": "Availability can change usage assumptions, player derivatives and team pricing. Monitor confirmation and related markets.",
+        "scope": "De'Zhaun Stribling, Brandon Aiyuk",
+        "semantics": "CONTEXT_NOT_PRICE_MOVE"
+      },
+      "relevance_score": null,
+      "is_breaking": false,
+      "provenance": {
+        "semantics": "NEWS",
+        "upstream": "propbet-news-api",
+        "canonical_host": "propbetedge.ai",
+        "image_transport": "propbet-img-proxy",
+        "availability_transport": null,
+        "sport": "nfl"
+      }
+    },
+    {
+      "id": "8aa109a9-fbfd-41ef-b347-e38cddf948c1",
+      "title": "Cooper Rush Starts for Falcons Despite Saturday Back Spasms; Injury Uncertainty Clouds Pittsburgh Matchup",
+      "summary": "A late-week injury to Atlanta's backup pivot leaves Rush in a hobbled Week 1 debut against a Steelers defense built to exploit mechanically compromised quarterbacks.",
+      "url": "https://propbetedge.ai/news/nfl/rush-still-to-start-for-ailing-falcons-despite-back-spasms-2026-09-12",
+      "slug": "rush-still-to-start-for-ailing-falcons-despite-back-spasms-2026-09-12",
+      "image_url": "https://propbet-img-proxy.sales-fd3.workers.dev/?url=https%3A%2F%2Fa1.espncdn.com%2Fcombiner%2Fi%3Fimg%3D%252Fphoto%252F2026%252F0729%252Fr1695147_1296x729_16%252D9.jpg",
+      "original_image_url": "https://a1.espncdn.com/combiner/i?img=%2Fphoto%2F2026%2F0729%2Fr1695147_1296x729_16%2D9.jpg",
+      "image_alt": "Cooper Rush Starts for Falcons Despite Saturday Back Spasms; Injury Uncertainty Clouds Pittsburgh Matchup",
+      "image_credit": null,
+      "source": "espn",
+      "author": "Justin Erickson",
+      "published_at": "2026-09-12T21:15:44.692677+00:00",
+      "updated_at": null,
+      "topic_kind": "injury",
+      "teams": [
+        "ATL",
+        "PIT"
+      ],
+      "players": [
+        "Cooper Rush",
+        "Tua Tagovailoa"
+      ],
+      "props": [],
+      "availability": null,
+      "impact_score": 4,
+      "market_impact": {
+        "band": "CONTEXT",
+        "score": 4,
+        "text": "Availability can change usage assumptions, player derivatives and team pricing. Monitor confirmation and related markets.",
+        "scope": "Cooper Rush, Tua Tagovailoa",
+        "semantics": "CONTEXT_NOT_PRICE_MOVE"
+      },
+      "relevance_score": null,
+      "is_breaking": false,
+      "provenance": {
+        "semantics": "NEWS",
+        "upstream": "propbet-news-api",
+        "canonical_host": "propbetedge.ai",
+        "image_transport": "propbet-img-proxy",
+        "availability_transport": null,
+        "sport": "nfl"
+      }
+    },
+    {
+      "id": "ea7c9590-0bb2-451d-b5e1-5512edb302cd",
+      "title": "Crosby's No-Trade Stance Ends Rams' Edge-Rush Arms Race—For Now",
+      "summary": "When a defensive star actively blocks his own trade, it reshapes the offseason hierarchy and forces contenders to settle for second-choice reinforcements.",
+      "url": "https://propbetedge.ai/news/nfl/sources-crosby-shut-down-rams-trade-talks-wanted-to-stay-with-raiders-2026-09-13",
+      "slug": "sources-crosby-shut-down-rams-trade-talks-wanted-to-stay-with-raiders-2026-09-13",
+      "image_url": "https://propbet-img-proxy.sales-fd3.workers.dev/?url=https%3A%2F%2Fa4.espncdn.com%2Fcombiner%2Fi%3Fimg%3D%252Fphoto%252F2026%252F0727%252Fr1694346_1296x729_16%252D9.jpg",
+      "original_image_url": "https://a4.espncdn.com/combiner/i?img=%2Fphoto%2F2026%2F0727%2Fr1694346_1296x729_16%2D9.jpg",
+      "image_alt": "Crosby's No-Trade Stance Ends Rams' Edge-Rush Arms Race—For Now",
+      "image_credit": null,
+      "source": "espn",
+      "author": "Eric Esters",
+      "published_at": "2026-09-13T12:33:17+00:00",
+      "updated_at": null,
+      "topic_kind": "transaction",
+      "teams": [
+        "LV",
+        "LAR"
+      ],
+      "players": [
+        "Maxx Crosby",
+        "Myles Garrett"
+      ],
+      "props": [],
+      "availability": null,
+      "impact_score": 3,
+      "market_impact": {
+        "band": "CONTEXT",
+        "score": 3,
+        "text": "Roster movement can alter depth-chart assumptions, player opportunity and broader team-market expectations.",
+        "scope": "Maxx Crosby, Myles Garrett",
+        "semantics": "CONTEXT_NOT_PRICE_MOVE"
+      },
+      "relevance_score": null,
+      "is_breaking": false,
+      "provenance": {
+        "semantics": "NEWS",
+        "upstream": "propbet-news-api",
+        "canonical_host": "propbetedge.ai",
+        "image_transport": "propbet-img-proxy",
+        "availability_transport": null,
+        "sport": "nfl"
+      }
+    },
+    {
+      "id": "44f515ef-e3b2-4ff8-bf41-a13db1436d0b",
+      "title": "Cowboys RB Malik Davis is out for the year after hip surgery",
+      "summary": "New York's defensive line rotation suffers dual blows just days before the season opener, forcing the Jets to lean on unproven reserves.",
+      "url": "https://propbetedge.ai/news/nfl/cowboys-rb-malik-davis-is-out-for-the-year-after-hip-surgery-2026-09-13",
+      "slug": "cowboys-rb-malik-davis-is-out-for-the-year-after-hip-surgery-2026-09-13",
+      "image_url": "https://propbet-img-proxy.sales-fd3.workers.dev/?url=https%3A%2F%2Fnbcsports.brightspotcdn.com%2Fdims4%2Fdefault%2F722b12c%2F2147483647%2Fstrip%2Ftrue%2Fcrop%2F7198x4049%2B0%2B0%2Fresize%2F1440x810!%2Fquality%2F90%2F%3Furl%3Dhttps%253A%252F%252Fnbc-sports-production-nbc-sports.s3.us-east-1.amazonaws.com%252Fbrightspot%252F37%252F34%252Ffcd5e048479bb7cd3b08566a3b4c%252F2250397858.jpg",
+      "original_image_url": "https://nbcsports.brightspotcdn.com/dims4/default/722b12c/2147483647/strip/true/crop/7198x4049+0+0/resize/1440x810!/quality/90/?url=https%3A%2F%2Fnbc-sports-production-nbc-sports.s3.us-east-1.amazonaws.com%2Fbrightspot%2F37%2F34%2Ffcd5e048479bb7cd3b08566a3b4c%2F2250397858.jpg",
+      "image_alt": "Cowboys RB Malik Davis is out for the year after hip surgery",
+      "image_credit": null,
+      "source": "pro-football-talk",
+      "author": "Donneal Green",
+      "published_at": "2026-09-13T16:02:27+00:00",
+      "updated_at": null,
+      "topic_kind": "injury",
+      "teams": [
+        "NYJ"
+      ],
+      "players": [
+        "Joseph Ossai",
+        "D'Angelo Ponds"
+      ],
+      "props": [],
+      "availability": null,
+      "impact_score": 3,
+      "market_impact": {
+        "band": "CONTEXT",
+        "score": 3,
+        "text": "Availability can change usage assumptions, player derivatives and team pricing. Monitor confirmation and related markets.",
+        "scope": "Joseph Ossai, D'Angelo Ponds",
+        "semantics": "CONTEXT_NOT_PRICE_MOVE"
+      },
+      "relevance_score": null,
+      "is_breaking": false,
+      "provenance": {
+        "semantics": "NEWS",
+        "upstream": "propbet-news-api",
+        "canonical_host": "propbetedge.ai",
+        "image_transport": "propbet-img-proxy",
+        "availability_transport": null,
+        "sport": "nfl"
+      }
+    },
+    {
+      "id": "74561403-a886-4fb1-8724-5ec4ee267b7f",
+      "title": "Myles Garrett will have knee surgery, head to IR",
+      "summary": "New York's defensive line rotation suffers dual blows just days before the season opener, forcing the Jets to lean on unproven reserves.",
+      "url": "https://propbetedge.ai/news/nfl/myles-garrett-will-have-knee-surgery-head-to-ir-2026-09-13",
+      "slug": "myles-garrett-will-have-knee-surgery-head-to-ir-2026-09-13",
+      "image_url": "https://propbet-img-proxy.sales-fd3.workers.dev/?url=https%3A%2F%2Fnbcsports.brightspotcdn.com%2Fdims4%2Fdefault%2Fe6cf74a%2F2147483647%2Fstrip%2Ftrue%2Fcrop%2F1920x1080%2B0%2B0%2Fresize%2F1440x810!%2Fquality%2F90%2F%3Furl%3Dhttps%253A%252F%252Fhdliveextra-a.akamaihd.net%252FHD%252Fimage_sports%252FNBCU_Sports_Group_-_nbcsports%252F163%252F763%252Fnbc_pft_mylesgarrett_260911.jpg",
+      "original_image_url": "https://nbcsports.brightspotcdn.com/dims4/default/e6cf74a/2147483647/strip/true/crop/1920x1080+0+0/resize/1440x810!/quality/90/?url=https%3A%2F%2Fhdliveextra-a.akamaihd.net%2FHD%2Fimage_sports%2FNBCU_Sports_Group_-_nbcsports%2F163%2F763%2Fnbc_pft_mylesgarrett_260911.jpg",
+      "image_alt": "Myles Garrett will have knee surgery, head to IR",
+      "image_credit": null,
+      "source": "pro-football-talk",
+      "author": "Justin Erickson",
+      "published_at": "2026-09-13T15:29:06+00:00",
+      "updated_at": null,
+      "topic_kind": "general",
+      "teams": [
+        "NYJ"
+      ],
+      "players": [
+        "Joseph Ossai",
+        "D'Angelo Ponds"
+      ],
+      "props": [],
+      "availability": null,
+      "impact_score": 3,
+      "market_impact": {
+        "band": "CONTEXT",
+        "score": 3,
+        "text": "Contextual NFL information. No verified sportsbook price movement is being claimed.",
+        "scope": "Joseph Ossai, D'Angelo Ponds",
+        "semantics": "CONTEXT_NOT_PRICE_MOVE"
+      },
+      "relevance_score": null,
+      "is_breaking": false,
+      "provenance": {
+        "semantics": "NEWS",
+        "upstream": "propbet-news-api",
+        "canonical_host": "propbetedge.ai",
+        "image_transport": "propbet-img-proxy",
+        "availability_transport": null,
+        "sport": "nfl"
+      }
+    }
+  ]
+}

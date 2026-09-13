@@ -61,7 +61,26 @@ let desktop=await probe(`(()=>{
   const availabilityRows=[...root.querySelectorAll('.pbe13-availability-row')];
   const firstRow=availabilityRows[0];
   const playerName=firstRow?.querySelector('.pbe13-availability-player strong');
-  const teamCell=firstRow?.querySelector(':scope > .pbe13-availability-team .team-code');
+  /* TEAM COLUMN
+     This used to require a .team-code on the FIRST row, which made the gate a
+     statement about live news rather than about the layout: it failed on
+     2026-09-13 when the top row was a Rams story tagged "LA" (an alias the
+     directory did not map) and would fail again for any report that genuinely
+     names no franchise. The layout invariant is that EVERY row carries the team
+     cell as its second column, and that the cell holds either a real directory
+     code or the explicit unknown marker -- never an invented code, never an
+     empty hole. Font legibility is measured on whichever of the two renders. */
+  const directory=window.NFL_TEAMS||{};
+  const teamCells=availabilityRows.map(row=>row.querySelector(':scope > .pbe13-availability-team'));
+  const teamCellsOk=availabilityRows.length>0&&teamCells.every((cell,index)=>{
+    if(!cell||availabilityRows[index].children[1]!==cell)return false;
+    const code=cell.querySelector(':scope > .team-code');
+    const unknown=cell.querySelector(':scope > .team-unreported');
+    if(code)return !unknown&&!cell.classList.contains('is-unreported')&&Object.prototype.hasOwnProperty.call(directory,code.textContent.trim());
+    return !!unknown&&cell.classList.contains('is-unreported')&&unknown.textContent.trim()==='—';
+  });
+  const teamCodes=teamCells.filter(cell=>cell?.querySelector(':scope > .team-code')).length;
+  const teamCell=root.querySelector('.pbe13-availability-row > .pbe13-availability-team .team-code')||root.querySelector('.pbe13-availability-row > .pbe13-availability-team .team-unreported');
   const injuryValue=firstRow?.querySelector(':scope > .pbe13-availability-cell:nth-child(3)>strong');
   const statusValue=firstRow?.querySelector(':scope > .pbe13-availability-cell:nth-child(4) .pbe13-avail-status');
   const timelineValue=firstRow?.querySelector('.pbe13-availability-cell.timeline>strong');
@@ -115,7 +134,9 @@ let desktop=await probe(`(()=>{
     columnCount:columns?.children?.length||0,
     columnDisplay:columns?getComputedStyle(columns).display:null,
     columnFont:px(columns?.querySelector('span')),
-    teamColumn:!!teamCell,
+    teamColumn:teamCellsOk,
+    teamCodes,
+    teamUnreported:availabilityRows.length-teamCodes,
     renderedColumns,
     orderedColumns,
     rowLefts,
@@ -189,7 +210,7 @@ const mobile=await probe(`(()=>{
   const columns=board?.querySelector('.pbe13-availability-columns');
   const firstAvailability=root?.querySelector('.pbe13-availability-row');
   const player=firstAvailability?.querySelector('.pbe13-availability-player strong');
-  const team=firstAvailability?.querySelector('.pbe13-availability-team .team-code');
+  const team=root?.querySelector('.pbe13-availability-row > .pbe13-availability-team .team-code')||root?.querySelector('.pbe13-availability-row > .pbe13-availability-team .team-unreported');
   const injury=firstAvailability?.querySelector(':scope > .pbe13-availability-cell:nth-child(3)>strong');
   const timeline=firstAvailability?.querySelector('.pbe13-availability-cell.timeline>strong');
   const px=el=>el?parseFloat(getComputedStyle(el).fontSize)||0:0;
