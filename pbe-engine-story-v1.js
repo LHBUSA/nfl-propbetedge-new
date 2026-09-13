@@ -16,13 +16,18 @@
   const esc=v=>String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
   const pct=(a,b)=>b>0?Math.max(0,Math.min(100,(Number(a)||0)/(Number(b)||1)*100)):0;
 
+  /* A failed state read waits before it is asked again (15s doubling to 5 min,
+     5 min at once for a 503), and never while the tab is hidden: every sync()
+     used to refetch a state that had just failed. */
+  let stateFailure=null;
   async function loadState(){
     if(snapshot)return snapshot;
     if(statePromise)return statePromise;
+    if(stateFailure&&(document.visibilityState==='hidden'||Date.now()<stateFailure.retryAt))return null;
     statePromise=fetch(STATE_API,{cache:'no-store',headers:{accept:'application/json'}})
-      .then(async r=>r.ok?await r.json():null)
-      .then(data=>{snapshot=data||snapshot;return snapshot})
-      .catch(()=>null)
+      .then(async r=>{if(r.ok)return await r.json();const e=new Error('state_'+r.status);e.status=r.status;throw e})
+      .then(data=>{snapshot=data||snapshot;stateFailure=null;return snapshot})
+      .catch(error=>{const count=(stateFailure?.count||0)+1;const wait=error?.status===503?300000:Math.min(300000,15000*2**(count-1));stateFailure={count,retryAt:Date.now()+wait};return null})
       .finally(()=>{statePromise=null});
     return statePromise;
   }
