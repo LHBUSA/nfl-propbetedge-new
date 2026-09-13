@@ -50,6 +50,24 @@ const HEIGHTS = { 360: 780, 390: 844, 768: 1024, 1024: 768, 1280: 800, 1440: 900
 mkdirSync(OUT, { recursive: true });
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
+/* One Chrome process per width. A single long-lived tab rendering the full
+   NFL shell ~20 times per width eventually stops answering CDP (measured:
+   a different scenario wedged on each 1440+390 run while each width passed
+   alone), which would turn a harness limit into a false product failure. */
+if (WIDTHS.length > 1 && !process.env.PBE_PROPCHAIN_GATE_CHILD) {
+  let code = 0;
+  for (const w of WIDTHS) {
+    const r = await new Promise(res => {
+      const child = spawn(process.execPath, [process.argv[1], ...argv.filter((a, i) => a !== '--widths' && argv[i - 1] !== '--widths'), '--widths', String(w)], { stdio: 'inherit', env: { ...process.env, PBE_PROPCHAIN_GATE_CHILD: '1' } });
+      child.on('exit', c => res(c ?? 1));
+    });
+    if (r) code = r;
+  }
+  console.log(`
+${code ? 'PROPCHAIN GATE FAILED' : 'PROPCHAIN GATE PASSED'} · widths ${WIDTHS.join(',')}`);
+  process.exit(code);
+}
+
 const MIME = { '.js': 'application/javascript; charset=utf-8', '.mjs': 'application/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.html': 'text/html; charset=utf-8', '.json': 'application/json; charset=utf-8', '.webmanifest': 'application/manifest+json', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp', '.svg': 'image/svg+xml' };
 function localFile(url) {
   if (LIVE) return null; let u; try { u = new URL(url); } catch { return null; }
@@ -70,7 +88,9 @@ async function wsUrl() { for (let i = 0; i < 100; i++) { try { const l = await (
 const ws = new WebSocket(await wsUrl());
 await new Promise(r => { ws.onopen = r; });
 let seq = 1; const pending = new Map();
-const send = (method, params = {}) => { const n = seq++; ws.send(JSON.stringify({ id: n, method, params })); return new Promise((res, rej) => pending.set(n, { res, rej })); };
+/* Every CDP call is time-boxed: a paused request left over from a previous
+   scenario must fail that call, not hang the whole run. */
+const send = (method, params = {}, ms = 30000) => { const n = seq++; ws.send(JSON.stringify({ id: n, method, params })); return new Promise((res, rej) => { pending.set(n, { res, rej }); setTimeout(() => { if (pending.has(n)) { pending.delete(n); rej(new Error(`cdp_timeout:${method}`)); } }, ms); }); };
 
 /* Per-scenario API rules: [{match: RegExp, status?, mutate?(json)}] */
 let rules = [];
@@ -199,9 +219,20 @@ async function generic() {
 }
 const click = sel => evaluate(`(() => { const el = document.querySelector(${JSON.stringify(sel)}); if (!el) return false; el.click(); return true; })()`);
 
-if (process.env.PBE_GATE_BOOTSTRAP) { await send('Page.navigate', { url: process.env.PBE_GATE_BOOTSTRAP }); await sleep(4000); }
+/* A protected preview: visit the share URL until the app shell itself loads,
+   so a slow auth redirect is never mistaken for a page that painted nothing. */
+if (process.env.PBE_GATE_BOOTSTRAP) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await send('Page.navigate', { url: process.env.PBE_GATE_BOOTSTRAP }).catch(() => {});
+    if (await until(`document.getElementById('view-container') ? true : null`, 20000)) break;
+  }
+}
 
 for (const width of WIDTHS) {
+  /* Isolate widths: no interception rule or in-flight page survives. */
+  rules = [];
+  await send('Page.navigate', { url: 'about:blank' }).catch(() => {});
+  await sleep(1500);
   await setViewport(width);
   const narrow = width <= 760;
 
@@ -335,6 +366,6 @@ for (const width of WIDTHS) {
   rules = [];
 }
 
-writeFileSync(join(OUT, 'report.json'), JSON.stringify(report, null, 2));
+writeFileSync(join(OUT, `report-${WIDTHS.join('-')}.json`), JSON.stringify(report, null, 2));
 console.log(`\n${failures ? `${failures} FAILED CHECK(S)` : 'ALL CHECKS PASSED'} · ${report.length} scenario runs · ${OUT}`);
 finish(failures ? 1 : 0);
