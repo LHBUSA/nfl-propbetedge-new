@@ -1,7 +1,10 @@
 /* Recovery browser smoke.
  * Loads https://nfl.propbetedge.ai in real Chrome while substituting every
  * same-origin static HTML/JS/CSS request with the checked-out branch.
- * API requests continue to live production unchanged.
+ * API requests continue to live production unchanged, except on a tree that
+ * carries the NFL access gate: there the workspace is paid, so same-origin
+ * /api/* is answered by the branch's handlers under the QA entitlement
+ * (scripts/qa-entitled-api.mjs). Production's paywall is never bypassed.
  *
  * The gate deliberately fails the first Usage module request. Production must
  * retry it, recover the Usage workspace, keep one desktop nav authority, and
@@ -11,6 +14,7 @@ import {spawn} from 'node:child_process';
 import {mkdtempSync,rmSync,readFileSync,existsSync,statSync,appendFileSync,writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join,extname} from 'node:path';
+import {startEntitledApi,accessProblem} from './qa-entitled-api.mjs';
 
 const REPO=process.cwd();
 const TARGET='https://nfl.propbetedge.ai';
@@ -25,7 +29,8 @@ const out=s=>{console.log(s);try{appendFileSync(LOG,s+'\n')}catch{}};
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const dir=mkdtempSync(join(tmpdir(),'pbe-recovery-'));
 const chrome=spawn(CHROME,[`--remote-debugging-port=${PORT}`,`--user-data-dir=${dir}`,'--headless=new','--no-first-run','--no-default-browser-check','--disable-extensions','--disable-background-timer-throttling','--window-size=1440,900','about:blank'],{stdio:'ignore'});
-function finish(code){try{chrome.kill()}catch{}setTimeout(()=>{try{rmSync(dir,{recursive:true,force:true})}catch{}process.exit(code)},250)}
+const entitled=await startEntitledApi({repo:REPO,log:out});
+function finish(code){try{chrome.kill()}catch{}try{entitled?.stop()}catch{}setTimeout(()=>{try{rmSync(dir,{recursive:true,force:true})}catch{}process.exit(code)},250)}
 const hard=setTimeout(()=>{out('HARD_DEADLINE');finish(3)},240000);hard.unref?.();
 async function wsUrl(){for(let i=0;i<80;i++){try{const list=await(await fetch(`http://127.0.0.1:${PORT}/json/list`)).json();const p=list.find(x=>x.type==='page'&&x.webSocketDebuggerUrl);if(p)return p.webSocketDebuggerUrl}catch{}await sleep(200)}throw new Error('devtools_unavailable')}
 const ws=new WebSocket(await wsUrl());await new Promise(r=>{ws.onopen=r});
@@ -33,7 +38,7 @@ let id=1;const pending=new Map();
 const send=(method,params={})=>{const n=id++;ws.send(JSON.stringify({id:n,method,params}));return new Promise((resolve,reject)=>pending.set(n,{resolve,reject}))};
 const mime=p=>({'.js':'application/javascript; charset=utf-8','.mjs':'application/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.html':'text/html; charset=utf-8','.webmanifest':'application/manifest+json; charset=utf-8','.json':'application/json; charset=utf-8'}[extname(p)]||'application/octet-stream');
 function localFile(url){let u;try{u=new URL(url)}catch{return null}if(u.origin!==ORIGIN||u.pathname.startsWith('/api/'))return null;let rel=u.pathname==='/'?'index.html':decodeURIComponent(u.pathname.slice(1));if(!rel||rel.includes('..'))return null;const ext=extname(rel);if(!['.js','.mjs','.css','.html','.webmanifest','.json'].includes(ext))return null;const fp=join(REPO,rel);try{if(!existsSync(fp)||!statSync(fp).isFile())return null;return{rel,body:readFileSync(fp),type:mime(rel)}}catch{return null}}
-ws.onmessage=ev=>{const m=JSON.parse(ev.data);if(m.id&&pending.has(m.id)){const p=pending.get(m.id);pending.delete(m.id);m.error?p.reject(new Error(m.error.message)):p.resolve(m.result);return}if(m.method==='Fetch.requestPaused'){const local=localFile(m.params.request.url);if(local){if(local.rel==='usage-v2.js'&&!usageFaultInjected){usageFaultInjected=true;out('FAULT injected first usage-v2.js request');send('Fetch.fulfillRequest',{requestId:m.params.requestId,responseCode:503,responseHeaders:[{name:'content-type',value:'text/plain'},{name:'cache-control',value:'no-store'}],body:Buffer.from('intentional browser regression fault').toString('base64')}).catch(()=>{});return}served.add(local.rel);send('Fetch.fulfillRequest',{requestId:m.params.requestId,responseCode:200,responseHeaders:[{name:'content-type',value:local.type},{name:'cache-control',value:'no-store'}],body:local.body.toString('base64')}).catch(()=>{})}else send('Fetch.continueRequest',{requestId:m.params.requestId}).catch(()=>{});return}if(m.method==='Runtime.exceptionThrown')exceptions.push(String(m.params.exceptionDetails?.exception?.description||m.params.exceptionDetails?.text||'').slice(0,240))};
+ws.onmessage=ev=>{const m=JSON.parse(ev.data);if(m.id&&pending.has(m.id)){const p=pending.get(m.id);pending.delete(m.id);m.error?p.reject(new Error(m.error.message)):p.resolve(m.result);return}if(m.method==='Fetch.requestPaused'){if(entitled&&new URL(m.params.request.url).origin===ORIGIN&&new URL(m.params.request.url).pathname.startsWith('/api/')){entitled.fulfill(send,m.params,ORIGIN);return}const local=localFile(m.params.request.url);if(local){if(local.rel==='usage-v2.js'&&!usageFaultInjected){usageFaultInjected=true;out('FAULT injected first usage-v2.js request');send('Fetch.fulfillRequest',{requestId:m.params.requestId,responseCode:503,responseHeaders:[{name:'content-type',value:'text/plain'},{name:'cache-control',value:'no-store'}],body:Buffer.from('intentional browser regression fault').toString('base64')}).catch(()=>{});return}served.add(local.rel);send('Fetch.fulfillRequest',{requestId:m.params.requestId,responseCode:200,responseHeaders:[{name:'content-type',value:local.type},{name:'cache-control',value:'no-store'}],body:local.body.toString('base64')}).catch(()=>{})}else send('Fetch.continueRequest',{requestId:m.params.requestId}).catch(()=>{});return}if(m.method==='Runtime.exceptionThrown')exceptions.push(String(m.params.exceptionDetails?.exception?.description||m.params.exceptionDetails?.text||'').slice(0,240))};
 await send('Runtime.enable');await send('Page.enable');await send('Fetch.enable',{patterns:[{urlPattern:`${ORIGIN}/*`,requestStage:'Request'}]});
 const probe=async(expr,ms=7000)=>{try{const r=await Promise.race([send('Runtime.evaluate',{expression:expr,returnByValue:true,awaitPromise:true}),sleep(ms).then(()=>{throw new Error('WEDGED')})]);return r.result?.value}catch(e){return`<${e.message}>`}};
 async function shot(name){const r=await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});const file=`recovery-${name}.png`;writeFileSync(file,Buffer.from(r.data,'base64'));out(`screenshot             : ${file}`)}
@@ -72,6 +77,7 @@ out(`TARGET ${TARGET}`);out('MODE recovery static files + live production APIs +
 await send('Page.navigate',{url:`${TARGET}/?recovery=${Date.now()}`});await sleep(12000);
 let pass=true;
 if(await probe('1+1')!==2){out('RESULT MAIN THREAD WEDGED');ws.close();finish(1)}
+{const verdict=await probe(`document.documentElement.dataset.pbeAccess??null`);out(`access verdict         : ${JSON.stringify({verdict,entitled:Boolean(entitled)})}`);const issue=accessProblem(verdict,Boolean(entitled));if(issue){out(`RESULT FAIL ${issue}`);ws.close();finish(1)}}
 
 out('\n=== LOAD FAILURE RECOVERY ===');
 out(`usage fault injected   : ${usageFaultInjected}`);if(!usageFaultInjected)pass=false;
