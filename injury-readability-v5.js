@@ -31,8 +31,8 @@
      This used to bail when a row carried no team span, which left that row with
      four children and shifted its injury, status and timeline one column left --
      visible as soon as team codes started being withheld for lack of
-     corroboration. The cell is now always created, and stays EMPTY when the
-     article's own text does not support a franchise. An empty cell is the
+     corroboration. The cell is now always created, and carries no team code
+     when the article's own text does not support a franchise. Unknown is the
      truthful answer; the previous 'NFL' fallback was a value nobody reported. */
   function splitTeamColumn(row) {
     if (!row || row.querySelector(':scope > .pbe13-availability-team')) return false;
@@ -49,7 +49,15 @@
       code.textContent = label;
       team.appendChild(code);
     } else {
+      /* Unknown is stated, not implied by a hole in the grid: a dim dash with
+         the reason on hover. It is never a .team-code, so nothing downstream
+         can read it as a franchise. */
       team.classList.add('is-unreported');
+      const unknown = document.createElement('span');
+      unknown.className = 'team-unreported';
+      unknown.title = 'Team not stated in this report';
+      unknown.textContent = '—';
+      team.appendChild(unknown);
     }
     source?.remove();
     player.after(team);
