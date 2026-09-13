@@ -1,12 +1,17 @@
 /* PropBetEdge NFL - ordered page/product upgrade loader v45 recovery */
 (() => {
   'use strict';
-  const VERSION='20260913propchain3';
+  const VERSION='20260913broadcast1';
   const upgrades=[
     /* Establish the final homepage authority first. v6 replaces the v5 DOM with
        .pbehome6; v7 historically registered itself after that without repainting
        until the next navigation. The loader explicitly invokes v7 after install. */
     {js:'./team-globals-v1.js'},
+    /* Broadcast / where-to-watch client. Loaded before every surface that
+       shows a kickoff so each can ask it for the canonical TV label. It owns
+       no route, no timer and no observer; it fetches /api/schedule once, on
+       first use. */
+    {css:'./nfl-broadcast-v1.css',js:'./nfl-broadcast-v1.js'},
     /* The one place that knows what season, week and game state it is. Loaded
        early because standings, stats and the dashboard all read it, and
        because it repoints a stale default event before the market surfaces

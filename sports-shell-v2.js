@@ -245,7 +245,7 @@
           <span class="pbes-score-at">@</span>
           ${teamLogo(h)}<span class="pbes-score-team">${esc(h.abbreviation||h.display_name||'HME')}</span>${hasScore?`<b class="pbes-score-num">${esc(hScore)}</b>`:''}
         </span>
-        <span class="pbes-score-state">${sem==='LIVE'?'<i class="pbes-score-livedot"></i>':''}${esc(statusText(g))}</span>
+        <span class="pbes-score-state">${sem==='LIVE'?'<i class="pbes-score-livedot"></i>':''}${esc(statusText(g))}${sem==='SCHEDULE'?(window.PBEBroadcast?.slot?.({event:g.id,mode:'text',lead:' · '})||''):''}</span>
       </button>`;
     }).join('');
     attachLogoFallbacks(host);

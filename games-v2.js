@@ -46,7 +46,9 @@
       season:Number(raw?.season||raw?.year||2026)||2026,
       seasonType,
       venue:raw?.stadium||raw?.venue||raw?.site||null,
-      broadcast:raw?.network||raw?.tv||raw?.broadcast||null,
+      /* nfl-schedule publishes a normalized broadcast object (status, networks,
+         streaming, verified destinations). A legacy string is still accepted. */
+      broadcast:raw?.broadcast&&typeof raw.broadcast==='object'?raw.broadcast:(raw?.network||raw?.tv||raw?.broadcast||null),
       raw
     };
   }
@@ -72,6 +74,12 @@
 
     const cityMatches=values.filter(t=>text===String(t.city||'').toLowerCase());
     return cityMatches.length===1?cityMatches[0]:null;
+  }
+  /* TV label from the canonical broadcast object; never a derived network. */
+  function tvText(g){return window.PBEBroadcast?.text?.(g.broadcast)||(typeof g.broadcast==='string'?g.broadcast:'');}
+  function tvHtml(g,at,ht,lead=' · '){
+    if(window.PBEBroadcast?.html)return PBEBroadcast.html(g.broadcast,{away:at?.name||g.away,home:ht?.name||g.home,lead});
+    return typeof g.broadcast==='string'&&g.broadcast?`${esc(lead)}${esc(g.broadcast)}`:'';
   }
   function crest(t,size=42){try{if(t?.abbr&&typeof teamCrest==='function')return teamCrest(t.abbr,size)}catch(_){}return `<strong style="color:#fff;font:900 13px 'Inter',sans-serif">${esc(t?.abbr||'NFL')}</strong>`;}
   function date(value){const d=new Date(value);return Number.isNaN(d.getTime())?null:d;}
@@ -128,7 +136,7 @@
   function filtered(){
     const q=state.query.trim().toLowerCase(),nw=nextWeek();
     return state.games.filter(g=>{
-      const qOk=!q||`${g.away} ${g.home} ${g.venue||''} ${g.broadcast||''}`.toLowerCase().includes(q);
+      const qOk=!q||`${g.away} ${g.home} ${g.venue||''} ${tvText(g)}`.toLowerCase().includes(q);
       const wOk=state.week==='all'||(state.week==='next'&&g.week===nw)||String(g.week)===state.week;
       const tOk=state.team==='all'||sameTeam(g.away,state.team)||sameTeam(g.home,state.team);
       return qOk&&wOk&&tOk;
@@ -166,7 +174,7 @@
     return `<aside class="pbe25-feature">
       <div>
         <div class="pbe25-feature-head">
-          <div><div class="pbe25-feature-label">Next kickoff · Week ${esc(g.week??'—')}</div><div class="pbe25-feature-date">${esc(shortDate(g.start))} · ${esc(timeLabel(g.start))}</div></div>
+          <div><div class="pbe25-feature-label">Next kickoff · Week ${esc(g.week??'—')}</div><div class="pbe25-feature-date">${esc(shortDate(g.start))} · ${esc(timeLabel(g.start))}${tvHtml(g,at,ht)}</div></div>
           <span class="pbe25-feature-status">${provider?(selected?'Active market context':'Prop market linked'):'Schedule only'}</span>
         </div>
         <div class="pbe25-feature-match">
@@ -174,7 +182,7 @@
           <div class="pbe25-feature-at">@</div>
           <div class="pbe25-feature-team"><div class="pbe25-feature-crest">${crest(ht,52)}</div><strong>${esc(ht?.abbr||g.home)}</strong><span>${esc(ht?.name||g.home)}</span></div>
         </div>
-        <div class="pbe25-feature-meta"><span>${esc(g.venue||'Venue TBA')}</span>${g.broadcast?`<span>${esc(g.broadcast)}</span>`:''}</div>
+        <div class="pbe25-feature-meta"><span>${esc(g.venue||'Venue TBA')}</span></div>
       </div>
       <div class="pbe25-feature-actions">
         ${provider?`${providerAction(provider,selected?'Open Active Props':'Open Props','propboard','primary')}${providerAction(provider,'Game Center','pbecast','blue')}`:`${teamAction(at,'Away Research')}${teamAction(ht,'Home Research')}`}
@@ -190,7 +198,7 @@
       <div class="pbe25-time">
         <span class="pbe25-state-pill ${gs.kind==='LIVE'?'live':gs.kind==='FINAL'?'final':''}">${esc(gs.label)}</span>
         <strong>${esc(timeLabel(g.start))}</strong>
-        <small>WK ${esc(g.week??'—')}${g.broadcast?` · ${esc(g.broadcast)}`:''}</small>
+        <small>WK ${esc(g.week??'—')}${tvHtml(g,at,ht)}</small>
       </div>
       <div class="pbe25-match">
         <button class="pbe25-team-btn" type="button" ${at?.abbr?`data-team="${esc(at.abbr)}"`:''}>
@@ -270,7 +278,11 @@
     let last='schedule_unavailable';
     for(const path of ['/api/schedule?season=2026&season_type=REG','/api/schedule?season=2026','/api/schedule']){
       try{
-        const payload=await fetchJson(`${API}${path}`),rows=arrayOf(payload).map(normalize).filter(Boolean).filter(g=>g.season===2026&&(!g.seasonType||g.seasonType==='REG'||g.seasonType==='REGULAR'));
+        const payload=await fetchJson(`${API}${path}`);
+        /* hand the same payload to the broadcast client so other surfaces on
+           this page never need a second schedule call */
+        window.PBEBroadcast?.ingest?.(payload);
+        const rows=arrayOf(payload).map(normalize).filter(Boolean).filter(g=>g.season===2026&&(!g.seasonType||g.seasonType==='REG'||g.seasonType==='REGULAR'));
         if(rows.length)return rows;
         last='empty_schedule';
       }catch(error){last=error instanceof Error?error.message:String(error);}

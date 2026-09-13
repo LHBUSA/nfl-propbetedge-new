@@ -191,7 +191,7 @@
     const score = t => (s === 'SCHEDULE' ? '' : `<strong>${esc(t?.score ?? '—')}</strong>`);
     const win = t => (fin && t?.winner ? ' is-winner' : '');
     return `<article class="pbecc-game is-${s.toLowerCase()}${rz ? ' is-redzone' : ''}" data-game="${esc(g.id)}">
-      <header><span class="pbecc-status">${live ? '<i class="pbecc-dot" aria-hidden="true"></i>' : ''}${esc(status)}</span>${rz ? '<b class="pbecc-rz">RED ZONE</b>' : ''}</header>
+      <header><span class="pbecc-status">${live ? '<i class="pbecc-dot" aria-hidden="true"></i>' : ''}${esc(status)}${!live && !fin ? (window.PBEBroadcast?.slot?.({ event: g.id, away: a.display_name, home: h.display_name, lead: ' · ' }) || '') : ''}</span>${rz ? '<b class="pbecc-rz">RED ZONE</b>' : ''}</header>
       <div class="pbecc-teams">
         <div class="pbecc-team${win(a)}">${logo(a)}<span>${esc(a.abbreviation || 'AWY')}</span>${score(a)}</div>
         <div class="pbecc-team${win(h)}">${logo(h)}<span>${esc(h.abbreviation || 'HME')}</span>${score(h)}</div>

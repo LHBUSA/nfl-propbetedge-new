@@ -98,7 +98,7 @@
     const status = live ? (g?.status?.short_detail || `Q${g?.status?.period || ''} ${g?.status?.clock || ''}`) : fin ? (g?.status?.short_detail || 'Final') : `${etDay(g.date)} · ${etTime(g.date)} ET`;
     const team = (t, side) => `<div class="pbecb-t${fin && t.winner ? ' is-win' : ''}${poss && poss === t.abbreviation ? ' has-ball' : ''}"><span>${poss && poss === t.abbreviation ? '<i class="pbecb-ball" aria-label="possession"></i>' : ''}${esc(t.abbreviation || side)}</span><b>${s === 'SCHEDULE' ? '' : esc(t.score ?? '—')}</b></div>`;
     return `<button type="button" class="pbecb-tile is-${s.toLowerCase()}${active ? ' is-active' : ''}${live && sit.red_zone === true ? ' is-rz' : ''}" data-game="${esc(g.id)}" aria-pressed="${active}">
-      <span class="pbecb-st">${live ? '<i class="pbecb-dot" aria-hidden="true"></i>' : ''}${esc(status)}${live && sit.red_zone === true ? '<em>RED ZONE</em>' : ''}</span>
+      <span class="pbecb-st">${live ? '<i class="pbecb-dot" aria-hidden="true"></i>' : ''}${esc(status)}${!live && !fin ? (window.PBEBroadcast?.slot?.({ event: g.id, mode: 'text', lead: ' · ' }) || '') : ''}${live && sit.red_zone === true ? '<em>RED ZONE</em>' : ''}</span>
       ${team(a, 'AWY')}${team(h, 'HME')}
       ${live && (sit.down_distance_text || sit.possession_text) ? `<span class="pbecb-sit">${esc([sit.down_distance_text, sit.possession_text].filter(Boolean).join(' · '))}</span>` : ''}
     </button>`;

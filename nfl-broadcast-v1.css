@@ -1,0 +1,12 @@
+/* Broadcast / where-to-watch label (nfl-broadcast-v1.js). Compact and
+   subordinate: it inherits the size and colour of the kickoff/venue text it
+   sits in, and the link affordance is a dotted underline plus a small glyph. */
+.pbe-tv{display:inline;white-space:normal}
+.pbe-tv-name,.pbe-tv-link{white-space:nowrap}
+.pbe-tv-link{color:inherit;font:inherit;text-decoration:underline;text-decoration-style:dotted;text-decoration-thickness:1px;text-underline-offset:2px;cursor:pointer}
+.pbe-tv-link:hover{text-decoration-style:solid;color:#fff}
+.pbe-tv-link:focus-visible{outline:2px solid #7da7ff;outline-offset:2px;border-radius:2px}
+.pbe-tv-ext{display:inline-block;margin-left:2px;font-size:.82em;line-height:1;opacity:.7;transform:translateY(-1px)}
+.pbe-tv.is-tba{opacity:.72}
+.pbe-tv-sep{opacity:.6}
+.pbe-tv-slot:empty{display:none}

@@ -184,8 +184,11 @@
     const semantics = game?.status?.semantics || 'NFL';
     const away = game?.teams?.away || {};
     const home = game?.teams?.home || {};
-    const venue = [game?.venue?.name, [game?.venue?.city, game?.venue?.state].filter(Boolean).join(', '), arr(game?.broadcast).join(' / ')]
+    /* TV network comes from the canonical schedule broadcast authority
+       (PBEBroadcast -> nfl-schedule), not from this scoreboard payload. */
+    const venue = [game?.venue?.name, [game?.venue?.city, game?.venue?.state].filter(Boolean).join(', ')]
       .filter(Boolean).join(' · ');
+    const tv = window.PBEBroadcast?.slot?.({ event: game.id, away: away?.display_name, home: home?.display_name, lead: ' · ' }) || '';
     const provider = String(state.detail?.source?.provider || state.scoreboard?.source?.provider || '');
     const source = /espn/i.test(provider) ? 'ESPN' : provider ? provider.replace(/_/g, ' ').toUpperCase() : 'NFL live source';
 
@@ -203,7 +206,7 @@
       ${liveFacts(game)}
       ${leaderStrip()}
       <div class="pbe7-hero-foot">
-        <p class="pbe7-venue">${esc(venue || fmtDate(game?.date) || 'NFL game')}</p>
+        <p class="pbe7-venue">${esc(venue || fmtDate(game?.date) || 'NFL game')}${tv}</p>
         <div class="pbe7-actions"><button class="pbe7-primary" data-cast="${esc(game.id)}">${semantics === 'LIVE' ? '⚡ Open Live PBEcast' : 'Open PBEcast'}</button><button data-route="propboard">Prop Board</button><button data-route="games">Full Slate</button></div>
       </div>
     </section>`;

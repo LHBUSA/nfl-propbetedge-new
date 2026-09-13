@@ -1,15 +1,32 @@
-# nfl-schedule — captured from the DEPLOYED Worker on 2026-09-13 (read-only).
+# nfl-schedule — canonical 2026 schedule + broadcast authority.
 #
-# This file reproduces the deployed configuration exactly: version
-# 1a88cfca-1f81-41b8-9f91-61dcf78d55ce, uploaded 2026-08-28T17:35:42Z via
-# wrangler, compatibility_date 2026-08-28, no compatibility flags, no bindings,
-# no cron triggers, workers.dev enabled. It is reached in production only
-# through nfl-gateway's NFL_SCHEDULE service binding (/api/schedule*).
+# Source of record: this directory (captured from deployed version
+# 1a88cfca-1f81-41b8-9f91-61dcf78d55ce on 2026-09-13; see CAPTURE.md).
+# Reached in production only through nfl-gateway's NFL_SCHEDULE service
+# binding (/api/schedule*).
 #
-# The previous local "source" at C:\Workers\nfl-schedule\ was a 390-byte stub
-# that answered {worker:'nfl-schedule',status:'ok'} and never matched what is
-# deployed. See CAPTURE.md.
+# NOT DEPLOYED FROM THIS BRANCH. Deploy order when approved:
+#   1. frontend (games-v2.js etc. accept broadcast as an object), then
+#   2. this Worker: wrangler versions upload, canary, then promote.
+# The previous deployed version above is the rollback.
 name = "nfl-schedule"
 main = "index.js"
 compatibility_date = "2026-08-28"
 account_id = "fd3a233edadd0a60916413c1199f71ee"
+
+# The broadcast snapshot lives in the shared NFL KV namespace (the same one
+# nfl-gateway and nfl-current bind) under one key: schedule:broadcast:v1.
+# Only the cron below writes it; the fetch path only reads it.
+[[kv_namespaces]]
+binding = "NFL_KV"
+id = "71eaad8fad534c419846db4efb321f8f"
+
+# Broadcast refresh. The planner in refresh.js decides per tick whether to
+# read: daily full-season sweep (18 requests over three ticks), hourly current
+# + next week (2), and every 15 minutes on game days (1). Idle ticks read
+# nothing. Page traffic never triggers a source read.
+[triggers]
+crons = ["*/15 * * * *"]
+
+[observability]
+enabled = true
