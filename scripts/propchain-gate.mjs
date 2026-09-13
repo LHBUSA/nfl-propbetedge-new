@@ -101,7 +101,7 @@ const send = (method, params = {}, ms = 30000) => { const n = seq++; ws.send(JSO
    Worker change can be exercised end to end before it takes traffic. */
 let rules = [];
 const UPSTREAM = process.env.PBE_CHANGES_UPSTREAM ? process.env.PBE_CHANGES_UPSTREAM.replace(/\/$/, '') : null;
-const state = { errors: [], apiCalls: [] };
+const state = { errors: [], apiCalls: [], changesResponses: [] };
 ws.onmessage = async ev => {
   const m = JSON.parse(ev.data);
   if (m.id && pending.has(m.id)) { const p = pending.get(m.id); pending.delete(m.id); m.error ? p.rej(new Error(m.error.message)) : p.res(m.result); return; }
@@ -136,7 +136,8 @@ ws.onmessage = async ev => {
     send('Fetch.continueRequest', { requestId }).catch(() => {});
     return;
   }
-  if (m.method === 'Network.requestWillBeSent' && /\/api\//.test(m.params.request.url)) state.apiCalls.push({ t: Date.now(), u: m.params.request.url.replace(/^https?:\/\/[^/]+/, '') });
+  if (m.method === 'Network.requestWillBeSent' && /\/api\//.test(m.params.request.url)) state.apiCalls.push({ t: Date.now(), host: new URL(m.params.request.url).host, u: m.params.request.url.replace(/^https?:\/\/[^/]+/, '') });
+  if (m.method === 'Network.responseReceived' && /\/api\/changes/.test(m.params.response.url)) state.changesResponses.push({ host: new URL(m.params.response.url).host, status: m.params.response.status, runtime: m.params.response.headers['x-pbe-runtime'] || m.params.response.headers['X-Pbe-Runtime'] || null, fulfilledByGate: m.params.response.fromServiceWorker === true });
   if (m.method === 'Runtime.exceptionThrown') state.errors.push(String(m.params.exceptionDetails?.exception?.description || m.params.exceptionDetails?.text || '').slice(0, 300));
   if (m.method === 'Runtime.consoleAPICalled' && m.params.type === 'error') state.errors.push(m.params.args.map(a => String(a.value ?? a.description ?? '')).join(' ').slice(0, 300));
 };
@@ -168,7 +169,7 @@ async function shotElement(selector, file) {
   return true;
 }
 async function open(route = 'propchain', { settle = true } = {}) {
-  state.errors = []; state.apiCalls = [];
+  state.errors = []; state.apiCalls = []; state.changesResponses = [];
   await send('Page.navigate', { url: 'about:blank' }); await sleep(120);
   await send('Network.clearBrowserCache').catch(() => {});
   await send('Storage.clearDataForOrigin', { origin: ORIGIN, storageTypes: 'local_storage,session_storage' }).catch(() => {});
@@ -271,6 +272,18 @@ for (const width of WIDTHS) {
     { name: 'exactly one .pc3 root', ok: (await evaluate(`document.querySelectorAll('.pc3').length`)) === 1 },
     { name: 'route owned by v3 renderer', ok: (await evaluate(`App.current === 'propchain' && App.VIEWS.propchain === window.PBEPropChain.load`)) === true }
   ], { note: `generations=${gens.length}` });
+
+  /* Data provenance: which host served /api/changes, which nfl-intel runtime
+     produced the data the page actually rendered, and whether this run used
+     any override. EXPECT_RUNTIME (e.g. nfl-intel/1.2.0) makes it an assertion. */
+  const prov = await evaluate(`(() => { const d = window.PBECommandCenter?.store?.changes?.data; return { runtime: d?.runtime || null, transitionsAvailable: d?.transitions?.available ?? null, attached: d?.transitions?.attached ?? null, chainsWithTransition: (PBEPropChain.model()?.chains || []).filter(c => c.transition).length }; })()`);
+  const hosts = [...new Set(state.changesResponses.map(r => r.host))];
+  const want = process.env.EXPECT_RUNTIME || null;
+  record('data-provenance', width, [
+    { name: '/api/changes read from the production NFL gateway', ok: hosts.length === 1 && hosts[0] === 'nfl-api.propbetedge.ai' && state.changesResponses.every(r => r.status === 200), detail: JSON.stringify(state.changesResponses) },
+    { name: 'no upstream or version override in this run', ok: !UPSTREAM || !REQUIRE, detail: `PBE_CHANGES_UPSTREAM=${UPSTREAM || 'unset'}` },
+    ...(want ? [{ name: `rendered data came from ${want}`, ok: prov?.runtime === want && state.changesResponses.some(r => r.runtime === want), detail: JSON.stringify(prov) }] : [])
+  ], { note: `override=${UPSTREAM || 'none'} bootstrap=${process.env.PBE_GATE_BOOTSTRAP ? 'preview-share-cookie' : 'none'} runtime=${prov?.runtime} transitions=${prov?.attached} chains-with-transition=${prov?.chainsWithTransition}` });
 
   /* 2 · all games */
   const summary = await evaluate(`(() => { const m = PBEPropChain.model(); return { rows: document.querySelectorAll('.pc3-row').length, chains: m.chains.length, none: !!document.querySelector('.pc3-none'), strip: [...document.querySelectorAll('.pc3-stat b')].map(b => b.textContent), kinds: [...new Set(m.chains.map(c => c.kind))] }; })()`);
