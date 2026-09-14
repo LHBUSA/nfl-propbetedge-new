@@ -9,7 +9,8 @@
  *   loop      where we are in the week: TODAY -> WHAT CHANGED -> GAME -> MARKET
  *             -> PBE PICK -> LIVE PBECAST -> RESULT -> TRACK RECORD -> REPLAY
  *   changes   the top sourced changes from the nfl-intel Worker (/api/changes)
- *   picks     the PBE Picks engine's own state, verbatim (gated is gated)
+ *   picks     the official track record, or that validation is underway —
+ *             consumer presentation only; runtime health stays in observability
  *   best line where shopping beats the consensus number today
  *
  * OWNERSHIP. dashboard-v7 owns the route, the cadence and the scoreboard.
@@ -19,8 +20,9 @@
  * hidden tab or another route costs nothing here.
  *
  * TRUTH. Nothing here is inferred. A game with no market in the snapshot has
- * no line; a gated engine says GATED; an unavailable source says so with its
- * reason rather than rendering an empty list that reads as "nothing changed".
+ * no line; an unavailable source says so rather than rendering an empty list
+ * that reads as "nothing changed". The picks panel never renders an unread
+ * count as 0 and never calls a validation decision official.
  */
 (() => {
   'use strict';
@@ -301,29 +303,67 @@
   }
 
   /* ---- picks + track record --------------------------------------------- */
+  /* CONSUMER PRESENTATION ONLY. This panel answers one customer question:
+     is there an official PBE record, and if not yet, where does it stand?
+
+     It reads the publication state and the official decision counts from
+     /api/pbe-picks (view=state) and nothing else. Runtime health
+     (engine_health, engine_state, the run-ledger lanes) and the model version
+     are observability: they stay in the API payload and the console, never in
+     this panel. Runtime health does not change what the official record IS,
+     so it never replaces it.
+
+     Truth rules the copy below may not break:
+       - a count that is missing or malformed is never rendered as 0; the
+         whole panel fails closed to "temporarily unavailable"
+       - validation decisions are never called official
+       - an official record that exists is always shown, gated or not
+       - no metric the payload does not carry (win rate, units, ROI) */
+  const count = v => { const n = num(v); return Number.isInteger(n) && n >= 0 ? n : null; };
+  function consumerRecord(d) {
+    if (!d || typeof d !== 'object') return { ok: false, reason: 'no_payload' };
+    const pub = String(d.publication || '').toUpperCase();
+    if (pub !== 'GATED' && pub !== 'ALLOWED') return { ok: false, reason: `publication_state:${pub || 'missing'}` };
+    const o = d.decisions?.official;
+    const open = count(o?.open), graded = count(o?.graded);
+    if (open === null || graded === null) return { ok: false, reason: 'official_counts_missing' };
+    const g = count(d.graded_sample), gr = count(d.graded_sample_required);
+    const w = count(d.distinct_weeks), wr = count(d.distinct_weeks_required);
+    /* The qualification line is shown only when all four numbers are real. */
+    const progress = g !== null && w !== null && gr > 0 && wr > 0 ? `${g} / ${gr} graded · Week ${w} / ${wr}` : '';
+    return { ok: true, gated: pub === 'GATED', open, graded, progress };
+  }
+  /* Diagnostics go to the console once per distinct condition, not per paint. */
+  let lastDiagnostic = '';
+  function diagnose(level, message) {
+    if (message === lastDiagnostic) return;
+    lastDiagnostic = message;
+    try { console[level]?.(`[PBE Picks panel] ${message}`); } catch (_) {}
+  }
   function picksHtml() {
     const s = store.picks, d = s.data;
-    const head = `<div class="pbecc-head"><div><span class="pbecc-eyebrow">PBE PICKS · TRACK RECORD</span><h2>The engine, as it stands</h2></div></div>`;
-    if (!d) return `<section class="pbecc-panel pbecc-picks">${head}<div class="pbecc-empty ${s.error ? 'is-error' : ''}"><b>${s.error ? 'ENGINE STATE UNAVAILABLE' : 'Reading engine state'}</b><span>${s.error ? `${esc(s.error)}. A failed read is never shown as "no picks".` : 'Publication gate, sample and verified record.'}</span></div></section>`;
-    const official = d.decisions?.official || {};
-    const gated = String(d.publication || '').toUpperCase() === 'GATED';
-    const bar = (have, need) => { const pct = Math.max(0, Math.min(100, (num(have) / num(need)) * 100 || 0)); return `<span class="pbecc-bar"><i style="width:${pct.toFixed(1)}%"></i></span>`; };
-    return `<section class="pbecc-panel pbecc-picks">${head}
-      <div class="pbecc-engine ${gated ? 'is-gated' : 'is-live'}"><b>${esc(d.engine_state || (gated ? 'ENGINE GATED' : 'ENGINE LIVE'))}</b><span>${esc(d.engine_health ? `Runtime ${d.engine_health}` : '')}${d.champion_version != null ? ` · Champion v${esc(d.champion_version)}` : ''}</span></div>
-      <dl class="pbecc-kpis">
-        <div><dt>Official picks this season</dt><dd>${esc(official.total ?? 0)}</dd></div>
-        <div><dt>Open</dt><dd>${esc(official.open ?? 0)}</dd></div>
-        <div><dt>Official graded</dt><dd>${esc(official.graded ?? 0)}</dd></div>
-      </dl>
-      <div class="pbecc-gate">
-        <div><span>Graded validation sample</span><b>${esc(d.graded_sample ?? 0)} / ${esc(d.graded_sample_required ?? 100)}</b>${bar(d.graded_sample, d.graded_sample_required || 100)}</div>
-        <div><span>Weeks observed</span><b>${esc(d.distinct_weeks ?? 0)} / ${esc(d.distinct_weeks_required ?? 4)}</b>${bar(d.distinct_weeks, d.distinct_weeks_required || 4)}</div>
-      </div>
-      <p class="pbecc-note">${gated
-        ? 'Official publication stays gated until the validation sample and observation window are both met. Until then the engine’s real pre-game decisions reach NFL Pro as PBE Validation Signals on Today’s PBE Card; none is called official and none enters the Official Track Record.'
-        : 'Only the production champion publishes. Every official pick is locked at issuance and graded from final results.'}</p>
-      <div class="pbecc-actions"><button type="button" data-route="pbepicks">PBE Picks →</button><button type="button" data-route="trackrecord">Verified track record →</button></div>
-    </section>`;
+    const head = '<div class="pbecc-head"><div><span class="pbecc-eyebrow">PBE PICKS · TRACK RECORD</span><h2>Official Track Record</h2></div></div>';
+    const actions = '<div class="pbecc-actions"><button type="button" data-route="pbepicks">PBE Picks →</button><button type="button" data-route="trackrecord">Verified track record →</button></div>';
+    const panel = (key, body) => `<section class="pbecc-panel pbecc-picks" data-picks-state="${key}">${head}${body}${actions}</section>`;
+    const note = (copy, sub = '') => `<div class="pbecc-tr-state"><b>PBE Picks</b><span>${esc(copy)}</span>${sub ? `<small>${esc(sub)}</small>` : ''}</div>`;
+
+    if (!d && !s.error) return panel('loading', note('Loading the track record.'));
+    const rec = consumerRecord(d);
+    if (!rec.ok) {
+      diagnose('warn', `track record unavailable (${s.error || rec.reason}); panel fails closed`);
+      return panel('unavailable', note('Track record temporarily unavailable.'));
+    }
+    const health = String(d.engine_health || 'UNKNOWN').toUpperCase();
+    if (health !== 'HEALTHY' || s.error) {
+      diagnose('info', `runtime ${health}${d.engine_state ? ` (${d.engine_state})` : ''}${s.error ? `; last refresh failed: ${s.error}` : ''}. Observability only: the panel keeps the last valid consumer record.`);
+    }
+
+    if (rec.open + rec.graded > 0) {
+      const stats = [[rec.graded, 'Official picks graded'], ...(rec.open > 0 ? [[rec.open, 'Open official picks']] : [])];
+      return panel('record', `<dl class="pbecc-record">${stats.map(([v, label]) => `<div><dt>${esc(label)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>${rec.gated && rec.progress ? `<p class="pbecc-tr-sub">Validation underway · ${esc(rec.progress)}</p>` : ''}`);
+    }
+    if (rec.gated) return panel('validation', note('Validation is underway. Official track-record publication begins once the qualification window is complete.', rec.progress));
+    return panel('live-empty', note('No official picks yet. An official pick is published only when the engine finds a qualifying edge.'));
   }
 
   /* ---- best line teaser --------------------------------------------------- */
@@ -451,5 +491,5 @@
   }
   window.addEventListener('pbe:route-changed', e => routeStrip(e?.detail?.route || window.App?.current));
 
-  window.PBECommandCenter = { mount, tick, paint, refresh, store, phase, marketFor, pickAffected };
+  window.PBECommandCenter = { mount, tick, paint, refresh, store, phase, marketFor, pickAffected, picksHtml };
 })();

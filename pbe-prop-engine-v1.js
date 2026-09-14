@@ -35,7 +35,7 @@
   function stage(s){
     /* Runtime health from the persisted run ledger comes first: an engine that
        is not running is never shown as staged, tracking or production. */
-    if(s?.engine_health&&s.engine_health!=='HEALTHY')return{key:'degraded',label:'ENGINE DEGRADED',copy:'Player-prop engine lanes are not reporting healthy runs'};
+    if(s?.engine_health&&s.engine_health!=='HEALTHY')return{key:'degraded',label:'UPDATES PAUSED',copy:'Player-prop engine updates are paused; nothing here is presented as live'};
     if(s?.selector_trained===true)return{key:'production',label:'PRODUCTION',copy:'Trained selector · official publication enabled'};
     const orch=s?.engine_runtime?.lanes?.['nfl-prop-picks-orchestrator'];
     if(!s?.runtime_evidence?.first_decision_seen&&orch?.last_work_at){

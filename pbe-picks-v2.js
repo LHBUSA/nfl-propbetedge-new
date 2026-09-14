@@ -14,8 +14,10 @@
  *   explicitly not represented as independent third-party notarization.
  * - model/backtest comparison renders only fields the backend actually has.
  * - engine HEALTH is separate from publication. It comes from the durable run
- *   ledger (engine_runtime); a stale or unknown engine renders DEGRADED, never
- *   as a healthy validation page.
+ *   ledger (engine_runtime); a stale or unknown engine renders a compact
+ *   "updates paused" notice, never as a healthy validation page. Lane names,
+ *   lane states, run-ledger reasons and the champion version are
+ *   observability: they stay in the API payload, not in customer copy.
  */
 (() => {
   'use strict';
@@ -166,9 +168,9 @@
   function topline(active, data) {
     const gated = data?.champion_trained !== true;
     const degraded = healthOf(data) !== 'HEALTHY';
-    const mode = degraded ? 'Engine degraded' : gated ? 'Validation mode' : 'Production champion';
+    const mode = degraded ? 'Updates paused' : gated ? 'Validation mode' : 'Official picks live';
     const scope = active === 'trackrecord' ? 'official publication only' : gated ? 'Pro validation signals' : 'official picks';
-    return `<div class="pbe2-topline"><div class="pbe2-eyebrow"><i class="pbe2-live-dot ${degraded ? 'degraded' : gated ? 'gated' : ''}"></i>${mode} · v${esc(data?.champion_version ?? '—')} · ${scope}</div>${switcher(active)}</div>`;
+    return `<div class="pbe2-topline"><div class="pbe2-eyebrow"><i class="pbe2-live-dot ${degraded ? 'degraded' : gated ? 'gated' : ''}"></i>${mode} · ${scope}</div>${switcher(active)}</div>`;
   }
 
   /* ---- engine runtime (durable run ledger) ---------------------------- */
@@ -183,17 +185,18 @@
     if (s < 129600) return `${(s / 3600).toFixed(1)}h ago`;
     return `${Math.round(s / 86400)}d ago`;
   }
-  function laneStateLabel(state) {
-    return ({ HEALTHY: 'Healthy', DEGRADED: 'Degraded', STALE: 'Stale', UNKNOWN: 'No run recorded' }[state] || state || '—');
-  }
   function lanes(data) {
     const all = data?.engine_runtime?.lanes || {};
     return LANE_ORDER.map(key => all[key]).filter(Boolean);
   }
+  /* Customer notice only. Which lane is unhealthy, and why, is diagnostic
+     detail: it goes to the console and stays in the API payload. */
+  let lastRuntimeDiagnostic = '';
   function degradedBanner(data) {
     const bad = lanes(data).filter(l => l.critical !== false && l.state !== 'HEALTHY');
-    const reason = data?.engine_runtime?.unavailable_reason;
-    return `<section class="pbe2-degraded"><span>ENGINE DEGRADED</span><h2>The Picks Engine is not running normally</h2><p>This state comes from the engine's own persisted run records, not from this page. Nothing below should be read as a live evaluation until every critical lane reports healthy.</p><ul>${bad.length ? bad.map(l => `<li><b>${esc(l.label || l.lane)}</b> — ${esc(laneStateLabel(l.state))}${l.reason ? ` · ${esc(l.reason)}` : ''} · last run ${esc(ago(l.last_tick_at))}</li>`).join('') : `<li>${esc(reason || 'Run ledger unavailable')}</li>`}</ul></section>`;
+    const diagnostic = `runtime ${healthOf(data)}: ${bad.length ? bad.map(l => `${l.lane} ${l.state}${l.reason ? ` (${l.reason})` : ''}`).join('; ') : (data?.engine_runtime?.unavailable_reason || 'run ledger unavailable')}`;
+    if (diagnostic !== lastRuntimeDiagnostic) { lastRuntimeDiagnostic = diagnostic; try { console.info(`[PBE Picks] ${diagnostic}`); } catch (_) {} }
+    return '<section class="pbe2-degraded"><span>UPDATES PAUSED</span><p>Live engine updates are paused. Everything below is shown as last confirmed, not as a live evaluation.</p></section>';
   }
   function engineProgress(data) {
     const d = data?.decisions || {};
@@ -212,21 +215,15 @@
       ? `${num(c.emitted) ?? 0} new · ${num(c.kept) ?? 0} held · ${num(c.pass) ?? 0} passed · ${num(c.killed) ?? 0} killed`
       : '';
     const final = data?.current?.latest_final;
+    /* an unread count is shown as unknown, never as 0 */
+    const n = v => num(v) ?? '—';
     const tiles = [
-      ['Tracking decisions', `${num(tr.total) ?? 0}`, `${num(tr.open) ?? 0} open · ${num(tr.graded) ?? 0} graded · ${num(tr.superseded) ?? 0} superseded`],
-      ['Finalized', `${num(data?.graded_sample) ?? 0}`, `of ${num(data?.graded_sample_required) ?? 100} needed · ${num(data?.distinct_weeks) ?? 0}/${num(data?.distinct_weeks_required) ?? 4} weeks`],
+      ['Tracking decisions', `${n(tr.total)}`, `${n(tr.open)} open · ${n(tr.graded)} graded · ${n(tr.superseded)} superseded`],
+      ['Finalized', `${n(data?.graded_sample)}`, `of ${n(data?.graded_sample_required)} needed · ${n(data?.distinct_weeks)}/${n(data?.distinct_weeks_required)} weeks`],
       ['Last engine evaluation', evaluated, outcome],
       ['Next eligible game', next, final ? `Latest final: ${final.away} ${final.away_score}–${final.home_score} ${final.home}` : ''],
     ];
-    /* A weekly, non-critical lane that has not reached its first run is waiting,
-     * not failing. It never makes the engine read as degraded. */
-    const laneRows = lanes(data).map(l => {
-      const waiting = l.critical === false && l.state === 'UNKNOWN';
-      const state = waiting ? 'WAITING' : l.state;
-      const line = waiting ? 'Weekly · first run pending' : `${laneStateLabel(l.state)} · last run ${ago(l.last_tick_at)}`;
-      return `<div class="pbe2-lane" data-state="${esc(state)}"><i></i><div><strong>${esc(l.label || l.lane)}</strong><span>${esc(line)}</span></div></div>`;
-    }).join('');
-    return `<section class="pbe2-engine" aria-label="Picks Engine live progress"><div class="pbe2-engine-head"><span>Live engine · ${esc(data?.current?.season ?? d.season ?? '')} ${esc(data?.current?.season_type || '')} week ${esc(data?.current?.week ?? '—')}</span><b data-state="${esc(healthOf(data))}">${esc(laneStateLabel(healthOf(data)))}</b></div><div class="pbe2-engine-grid">${tiles.map(([label, value, sub]) => `<div class="pbe2-engine-tile"><span>${esc(label)}</span><strong>${esc(value)}</strong>${sub ? `<small>${esc(sub)}</small>` : ''}</div>`).join('')}</div><div class="pbe2-lanes">${laneRows || '<div class="pbe2-lane" data-state="UNKNOWN"><i></i><div><strong>Run ledger</strong><span>unavailable</span></div></div>'}</div><p class="pbe2-engine-note">Tracking decisions are real pregame decisions, frozen before kickoff and graded from the official final. NFL Pro sees the current ones as PBE Validation Signals. They are never official picks and never enter the Official Track Record.</p></section>`;
+    return `<section class="pbe2-engine" aria-label="Picks Engine progress"><div class="pbe2-engine-head"><span>Engine activity · ${esc(data?.current?.season ?? d.season ?? '')} ${esc(data?.current?.season_type || '')} week ${esc(data?.current?.week ?? '—')}</span></div><div class="pbe2-engine-grid">${tiles.map(([label, value, sub]) => `<div class="pbe2-engine-tile"><span>${esc(label)}</span><strong>${esc(value)}</strong>${sub ? `<small>${esc(sub)}</small>` : ''}</div>`).join('')}</div><p class="pbe2-engine-note">Tracking decisions are real pregame decisions, frozen before kickoff and graded from the official final. NFL Pro sees the current ones as PBE Validation Signals. They are never official picks and never enter the Official Track Record.</p></section>`;
   }
 
   function validation(data) {
@@ -248,7 +245,7 @@
     const governance = state.governance;
     const card = window.PBECard ? window.PBECard.flagshipHtml() : '';
     const deep = !governance ? ''
-      : `<div class="pbe2-deep-head"><span>The engine behind the card</span><small>Publication gate, finalized sample and live run ledger</small></div>${healthOf(governance) !== 'HEALTHY' ? degradedBanner(governance) : ''}${governance.champion_trained !== true ? validation(governance) : engineProgress(governance)}`;
+      : `<div class="pbe2-deep-head"><span>The engine behind the card</span><small>Validation progress and engine activity</small></div>${healthOf(governance) !== 'HEALTHY' ? degradedBanner(governance) : ''}${governance.champion_trained !== true ? validation(governance) : engineProgress(governance)}`;
     const html = `<section class="pbe2-wrap">${topline('pbepicks', governance || {})}${card}${deep}</section>`;
     if (vc.dataset.pbe2Sig === html) return;
     const open = vc.querySelector('.pbec-history')?.open;
@@ -373,7 +370,7 @@
       ['Brier', s.brier === null ? '—' : s.brier.toFixed(4), num(bt.brier) === null ? 'not published' : num(bt.brier).toFixed(4)],
       ['Profit', s.settledRows.length ? `${s.profit > 0 ? '+' : ''}${s.profit.toFixed(2)}u` : '—', num(bt.units) === null ? 'not published' : `${num(bt.units) > 0 ? '+' : ''}${num(bt.units).toFixed(2)}u`],
     ];
-    return `<section class="pbe2-panel"><div class="pbe2-panel-head"><div><span>Champion v${esc(data?.champion_version ?? '—')}</span><strong>Live vs backtest reference</strong></div></div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:7px">${cells.map(([label, live, backtest]) => `<div style="padding:12px;background:rgba(255,255,255,.025);border-radius:8px"><span style="display:block;font-size:11px;font-weight:900;letter-spacing:.8px;color:rgba(255,255,255,.27)">${esc(label.toUpperCase())}</span><strong style="display:block;font-family:var(--font-d);font-size:21px;margin-top:5px">${esc(live)}</strong><small style="display:block;margin-top:4px;font-size:11px;color:rgba(255,255,255,.25)">backtest: ${esc(backtest)}</small></div>`).join('')}</div><div class="pbe2-tape-note">Backtest figures are reference diagnostics, not a promise of live performance and not normalized to the live sample unless explicitly stated.</div></section>`;
+    return `<section class="pbe2-panel"><div class="pbe2-panel-head"><div><span>Current model</span><strong>Live vs backtest reference</strong></div></div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:7px">${cells.map(([label, live, backtest]) => `<div style="padding:12px;background:rgba(255,255,255,.025);border-radius:8px"><span style="display:block;font-size:11px;font-weight:900;letter-spacing:.8px;color:rgba(255,255,255,.27)">${esc(label.toUpperCase())}</span><strong style="display:block;font-family:var(--font-d);font-size:21px;margin-top:5px">${esc(live)}</strong><small style="display:block;margin-top:4px;font-size:11px;color:rgba(255,255,255,.25)">backtest: ${esc(backtest)}</small></div>`).join('')}</div><div class="pbe2-tape-note">Backtest figures are reference diagnostics, not a promise of live performance and not normalized to the live sample unless explicitly stated.</div></section>`;
   }
 
   function receiptShort(row) {
