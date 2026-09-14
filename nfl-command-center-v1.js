@@ -330,7 +330,7 @@
     const g = count(d.graded_sample), gr = count(d.graded_sample_required);
     const w = count(d.distinct_weeks), wr = count(d.distinct_weeks_required);
     /* The qualification line is shown only when all four numbers are real. */
-    const progress = g !== null && w !== null && gr > 0 && wr > 0 ? `${g} / ${gr} graded · Week ${w} / ${wr}` : '';
+    const progress = g !== null && w !== null && gr > 0 && wr > 0 ? [`${g} / ${gr} graded`, `Week ${w} / ${wr}`] : null;
     return { ok: true, gated: pub === 'GATED', open, graded, progress };
   }
   /* Diagnostics go to the console once per distinct condition, not per paint. */
@@ -345,7 +345,8 @@
     const head = '<div class="pbecc-head"><div><span class="pbecc-eyebrow">PBE PICKS · TRACK RECORD</span><h2>Official Track Record</h2></div></div>';
     const actions = '<div class="pbecc-actions"><button type="button" data-route="pbepicks">PBE Picks →</button><button type="button" data-route="trackrecord">Verified track record →</button></div>';
     const panel = (key, body) => `<section class="pbecc-panel pbecc-picks" data-picks-state="${key}">${head}${body}${actions}</section>`;
-    const note = (copy, sub = '') => `<div class="pbecc-tr-state"><b>PBE Picks</b><span>${esc(copy)}</span>${sub ? `<small>${esc(sub)}</small>` : ''}</div>`;
+    const line = parts => parts.map(p => `<i>${esc(p)}</i>`).join(' · ');
+    const note = (copy, sub = null) => `<div class="pbecc-tr-state"><b>PBE Picks</b><span>${esc(copy)}</span>${sub ? `<small>${line(sub)}</small>` : ''}</div>`;
 
     if (!d && !s.error) return panel('loading', note('Loading the track record.'));
     const rec = consumerRecord(d);
@@ -360,7 +361,7 @@
 
     if (rec.open + rec.graded > 0) {
       const stats = [[rec.graded, 'Official picks graded'], ...(rec.open > 0 ? [[rec.open, 'Open official picks']] : [])];
-      return panel('record', `<dl class="pbecc-record">${stats.map(([v, label]) => `<div><dt>${esc(label)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>${rec.gated && rec.progress ? `<p class="pbecc-tr-sub">Validation underway · ${esc(rec.progress)}</p>` : ''}`);
+      return panel('record', `<dl class="pbecc-record">${stats.map(([v, label]) => `<div><dt>${esc(label)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>${rec.gated && rec.progress ? `<p class="pbecc-tr-sub">${line(['Validation underway', ...rec.progress])}</p>` : ''}`);
     }
     if (rec.gated) return panel('validation', note('Validation is underway. Official track-record publication begins once the qualification window is complete.', rec.progress));
     return panel('live-empty', note('No official picks yet. An official pick is published only when the engine finds a qualifying edge.'));

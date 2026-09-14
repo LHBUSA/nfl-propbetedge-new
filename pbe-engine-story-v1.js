@@ -55,7 +55,7 @@
         </div>
         <aside class="pbe-engine-state">
           <span>PBE PICKS ENGINE</span>
-          <strong>${snapshot?(trained?'LIVE':'VALIDATING'):'—'}</strong>
+          <strong class="is-word">${snapshot?(trained?'LIVE':'VALIDATING'):'—'}</strong>
           <small>${trained?'Official publication enabled':'Bootstrap decisions stay hidden from the public record'}</small>
         </aside>
       </header>
