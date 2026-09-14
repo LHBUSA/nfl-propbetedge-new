@@ -32,7 +32,7 @@ jobs:
       (github.event.deployment_status.state == 'success' &&
        github.event.deployment.environment == 'Production')
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with:
@@ -56,8 +56,29 @@ jobs:
           echo "url=$url" >> "$GITHUB_OUTPUT"
           echo "Smoking $url"
 
+      # Access V2 (1551b3a): no site-wide wall. The live deployment is asked
+      # only what an anonymous reader and a forged owner session can ask:
+      # public shell up, every premium read 401 with no premium body, the model
+      # host refusing callers without the server credential, and the public
+      # Track Record contract (gate counts, validation and official totals
+      # separate, official record official-only, no decision content).
+      - name: Access boundaries and public Track Record contract (live)
+        env:
+          PBE_URL: ${{ steps.target.outputs.url }}
+        run: node scripts/nfl-access-boundary-smoke.mjs
+
+      # 403 (signed in, no purchase), 503 (entitlement unavailable) and the
+      # entitled-Pro path cannot be produced in production without a real
+      # subscriber session, and the workflow never mints one. They run here
+      # against the handler code this deployment was built from.
+      - name: Access contract for non-entitled, unavailable and Pro readers (deployed handlers)
+        run: >-
+          node --test tests/nfl-auth-access-v2.test.mjs tests/nfl-auth-model-boundary.test.mjs
+          tests/nfl-auth-smoke-contract.test.mjs tests/pbe-track-record-v3.test.mjs
+
       # A wedged renderer cannot answer 1+1. This asserts liveness directly
-      # rather than inferring it from a screenshot or a timeout.
+      # rather than inferring it from a screenshot or a timeout. It also walks
+      # the anonymous public surfaces and the Pro boundary at 1440 and 390.
       - name: Browser liveness and route soak against the live deployment
         env:
           PBE_URL: ${{ steps.target.outputs.url }}
@@ -82,6 +103,7 @@ jobs:
         with:
           name: post-deploy-smoke
           path: |
+            access-boundary.log
             recovery-smoke.log
             real-logo-audit.log
             observer-alarm.log

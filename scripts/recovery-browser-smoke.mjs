@@ -1,10 +1,13 @@
 /* Recovery browser smoke.
  * Loads https://nfl.propbetedge.ai in real Chrome while substituting every
  * same-origin static HTML/JS/CSS request with the checked-out branch.
- * API requests continue to live production unchanged, except on a tree that
- * carries the NFL access gate: there the workspace is paid, so same-origin
- * /api/* is answered by the branch's handlers under the QA entitlement
- * (scripts/qa-entitled-api.mjs). Production's paywall is never bypassed.
+ * API requests go to live production unchanged, as an anonymous reader.
+ *
+ * Access V2: there is no site-wide wall. The shell must boot for an anonymous
+ * reader (scripts/nfl-access-contract.mjs), public routes must render, and Pro
+ * data must stay behind its own boundary: the Track Record's validation detail
+ * is locked, the official record is public, and the Pro action opens the real
+ * upgrade surface. No session or entitlement is ever minted here.
  *
  * The gate deliberately fails the first Usage module request. Production must
  * retry it, recover the Usage workspace, keep one desktop nav authority, and
@@ -14,7 +17,7 @@ import {spawn} from 'node:child_process';
 import {mkdtempSync,rmSync,readFileSync,existsSync,statSync,appendFileSync,writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join,extname} from 'node:path';
-import {startEntitledApi,accessProblem} from './qa-entitled-api.mjs';
+import {SHELL_PROBE,judgeShell} from './nfl-access-contract.mjs';
 
 const REPO=process.cwd();
 const TARGET='https://nfl.propbetedge.ai';
@@ -29,8 +32,7 @@ const out=s=>{console.log(s);try{appendFileSync(LOG,s+'\n')}catch{}};
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const dir=mkdtempSync(join(tmpdir(),'pbe-recovery-'));
 const chrome=spawn(CHROME,[`--remote-debugging-port=${PORT}`,`--user-data-dir=${dir}`,'--headless=new','--no-first-run','--no-default-browser-check','--disable-extensions','--disable-background-timer-throttling','--window-size=1440,900','about:blank'],{stdio:'ignore'});
-const entitled=await startEntitledApi({repo:REPO,log:out});
-function finish(code){try{chrome.kill()}catch{}try{entitled?.stop()}catch{}setTimeout(()=>{try{rmSync(dir,{recursive:true,force:true})}catch{}process.exit(code)},250)}
+function finish(code){try{chrome.kill()}catch{}setTimeout(()=>{try{rmSync(dir,{recursive:true,force:true})}catch{}process.exit(code)},250)}
 const hard=setTimeout(()=>{out('HARD_DEADLINE');finish(3)},240000);hard.unref?.();
 async function wsUrl(){for(let i=0;i<80;i++){try{const list=await(await fetch(`http://127.0.0.1:${PORT}/json/list`)).json();const p=list.find(x=>x.type==='page'&&x.webSocketDebuggerUrl);if(p)return p.webSocketDebuggerUrl}catch{}await sleep(200)}throw new Error('devtools_unavailable')}
 const ws=new WebSocket(await wsUrl());await new Promise(r=>{ws.onopen=r});
@@ -38,7 +40,7 @@ let id=1;const pending=new Map();
 const send=(method,params={})=>{const n=id++;ws.send(JSON.stringify({id:n,method,params}));return new Promise((resolve,reject)=>pending.set(n,{resolve,reject}))};
 const mime=p=>({'.js':'application/javascript; charset=utf-8','.mjs':'application/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.html':'text/html; charset=utf-8','.webmanifest':'application/manifest+json; charset=utf-8','.json':'application/json; charset=utf-8'}[extname(p)]||'application/octet-stream');
 function localFile(url){let u;try{u=new URL(url)}catch{return null}if(u.origin!==ORIGIN||u.pathname.startsWith('/api/'))return null;let rel=u.pathname==='/'?'index.html':decodeURIComponent(u.pathname.slice(1));if(!rel||rel.includes('..'))return null;const ext=extname(rel);if(!['.js','.mjs','.css','.html','.webmanifest','.json'].includes(ext))return null;const fp=join(REPO,rel);try{if(!existsSync(fp)||!statSync(fp).isFile())return null;return{rel,body:readFileSync(fp),type:mime(rel)}}catch{return null}}
-ws.onmessage=ev=>{const m=JSON.parse(ev.data);if(m.id&&pending.has(m.id)){const p=pending.get(m.id);pending.delete(m.id);m.error?p.reject(new Error(m.error.message)):p.resolve(m.result);return}if(m.method==='Fetch.requestPaused'){if(entitled&&new URL(m.params.request.url).origin===ORIGIN&&new URL(m.params.request.url).pathname.startsWith('/api/')){entitled.fulfill(send,m.params,ORIGIN);return}const local=localFile(m.params.request.url);if(local){if(local.rel==='usage-v2.js'&&!usageFaultInjected){usageFaultInjected=true;out('FAULT injected first usage-v2.js request');send('Fetch.fulfillRequest',{requestId:m.params.requestId,responseCode:503,responseHeaders:[{name:'content-type',value:'text/plain'},{name:'cache-control',value:'no-store'}],body:Buffer.from('intentional browser regression fault').toString('base64')}).catch(()=>{});return}served.add(local.rel);send('Fetch.fulfillRequest',{requestId:m.params.requestId,responseCode:200,responseHeaders:[{name:'content-type',value:local.type},{name:'cache-control',value:'no-store'}],body:local.body.toString('base64')}).catch(()=>{})}else send('Fetch.continueRequest',{requestId:m.params.requestId}).catch(()=>{});return}if(m.method==='Runtime.exceptionThrown')exceptions.push(String(m.params.exceptionDetails?.exception?.description||m.params.exceptionDetails?.text||'').slice(0,240))};
+ws.onmessage=ev=>{const m=JSON.parse(ev.data);if(m.id&&pending.has(m.id)){const p=pending.get(m.id);pending.delete(m.id);m.error?p.reject(new Error(m.error.message)):p.resolve(m.result);return}if(m.method==='Fetch.requestPaused'){const local=localFile(m.params.request.url);if(local){if(local.rel==='usage-v2.js'&&!usageFaultInjected){usageFaultInjected=true;out('FAULT injected first usage-v2.js request');send('Fetch.fulfillRequest',{requestId:m.params.requestId,responseCode:503,responseHeaders:[{name:'content-type',value:'text/plain'},{name:'cache-control',value:'no-store'}],body:Buffer.from('intentional browser regression fault').toString('base64')}).catch(()=>{});return}served.add(local.rel);send('Fetch.fulfillRequest',{requestId:m.params.requestId,responseCode:200,responseHeaders:[{name:'content-type',value:local.type},{name:'cache-control',value:'no-store'}],body:local.body.toString('base64')}).catch(()=>{})}else send('Fetch.continueRequest',{requestId:m.params.requestId}).catch(()=>{});return}if(m.method==='Runtime.exceptionThrown')exceptions.push(String(m.params.exceptionDetails?.exception?.description||m.params.exceptionDetails?.text||'').slice(0,240))};
 await send('Runtime.enable');await send('Page.enable');await send('Fetch.enable',{patterns:[{urlPattern:`${ORIGIN}/*`,requestStage:'Request'}]});
 const probe=async(expr,ms=7000)=>{try{const r=await Promise.race([send('Runtime.evaluate',{expression:expr,returnByValue:true,awaitPromise:true}),sleep(ms).then(()=>{throw new Error('WEDGED')})]);return r.result?.value}catch(e){return`<${e.message}>`}};
 async function shot(name){const r=await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});const file=`recovery-${name}.png`;writeFileSync(file,Buffer.from(r.data,'base64'));out(`screenshot             : ${file}`)}
@@ -77,7 +79,8 @@ out(`TARGET ${TARGET}`);out('MODE recovery static files + live production APIs +
 await send('Page.navigate',{url:`${TARGET}/?recovery=${Date.now()}`});await sleep(12000);
 let pass=true;
 if(await probe('1+1')!==2){out('RESULT MAIN THREAD WEDGED');ws.close();finish(1)}
-{const verdict=await probe(`document.documentElement.dataset.pbeAccess??null`);out(`access verdict         : ${JSON.stringify({verdict,entitled:Boolean(entitled)})}`);const issue=accessProblem(verdict,Boolean(entitled));if(issue){out(`RESULT FAIL ${issue}`);ws.close();finish(1)}}
+/* Access V2 shell contract: an anonymous reader gets the whole public app. */
+{let shell=null;for(let i=0;i<20;i++){shell=await probe(SHELL_PROBE);if(!judgeShell(shell))break;await sleep(500)}out(`access shell           : ${JSON.stringify(shell)}`);const issue=judgeShell(shell,{expect:'anonymous'});if(issue){out(`RESULT FAIL ${issue}`);ws.close();finish(1)}}
 
 out('\n=== LOAD FAILURE RECOVERY ===');
 out(`usage fault injected   : ${usageFaultInjected}`);if(!usageFaultInjected)pass=false;
@@ -130,6 +133,44 @@ for(const route of routes){
   if(captureRoutes.has(route))await shot(`${route}-desktop`);
 }
 
+out('\n=== PUBLIC ACCESS SURFACES (anonymous, 1440) ===');
+const waitFor=async(expr,ms)=>{const end=Date.now()+ms;while(Date.now()<end){if(await probe(`Boolean(${expr})`)===true)return true;await sleep(250)}return false};
+const overflow=()=>probe(`document.documentElement.scrollWidth-innerWidth`);
+async function trackSurfaces(label){
+  await probe(`window.PBEPro?.close?.();App.nav('trackrecord');true`);
+  const ready=await waitFor(`App.current==='trackrecord'&&document.querySelector('.pbetr-head')&&!document.querySelector('.pbe2-loading')`,20000);
+  await probe(`document.querySelector('.pbetr-tabs [data-pbetr-tab="validation"]')?.click();true`);await sleep(700);
+  const locked=await probe(`(()=>{const vc=document.querySelector('#view-container'),t=vc.innerText;return{ready:${ready},mode:document.querySelector('.pbetr-mode')?.innerText||null,gate:[...document.querySelectorAll('.pbetr-meter-top')].map(m=>m.innerText.replace(/\\s+/g,' ')),locked:!!document.querySelector('.pbetr-locked [data-pbe2-upgrade]'),ledgerRows:document.querySelectorAll('[data-pbetr-expand]').length,ledger:!!document.querySelector('.pbetr-ledger-table'),requestedHistory:performance.getEntriesByType('resource').some(e=>/view=validation-history/.test(e.name)),officialLabel:/OFFICIAL PICK|OFFICIAL PBE PICK/.test(t),overflow:document.documentElement.scrollWidth-innerWidth}})()`);
+  out(`track validation ${label.padEnd(7)}: ${JSON.stringify(locked)}`);
+  if(!ready||!locked||typeof locked!=='object'||!locked.locked||locked.ledgerRows!==0||locked.ledger||locked.requestedHistory||locked.officialLabel||locked.gate.length!==2||!/\/ 100/.test(locked.gate[0])||!/\/ 4 weeks/.test(locked.gate[1])||Number(locked.overflow)>0)pass=false;
+  await shot(`trackrecord-validation-locked-${label}`);
+  await probe(`document.querySelector('.pbetr-tabs [data-pbetr-tab="official"]').click();true`);await sleep(900);
+  const official=await probe(`(()=>{const vc=document.querySelector('#view-container'),t=vc.innerText.replace(/\\s+/g,' ');return{active:document.querySelector('.pbetr-tabs button.active')?.dataset.pbetrTab,zero:!!document.querySelector('.pbetr-official-zero'),record:!!document.querySelector('.pbe2-track-hero'),zeroCopy:/OFFICIAL PUBLICATION HAS NOT STARTED/i.test(t)&&/0-0/.test(t),ledgerRows:document.querySelectorAll('[data-pbetr-expand]').length,officialLabelOnValidation:/VALIDATION SIGNAL/i.test(t),overflow:document.documentElement.scrollWidth-innerWidth}})()`);
+  out(`track official ${label.padEnd(9)}: ${JSON.stringify(official)}`);
+  if(!official||typeof official!=='object'||official.active!=='official'||!(official.zero?official.zeroCopy:official.record)||official.ledgerRows!==0||official.officialLabelOnValidation||Number(official.overflow)>0)pass=false;
+  await shot(`trackrecord-official-${label}`);
+  /* the Pro action at the validation boundary opens the real upgrade surface */
+  await probe(`document.querySelector('.pbetr-tabs [data-pbetr-tab="validation"]').click();true`);await sleep(600);
+  await probe(`document.querySelector('.pbetr-locked [data-pbe2-upgrade]')?.click();true`);
+  const opened=await waitFor(`document.getElementById('pbe-pro-backdrop')?.classList.contains('open')`,6000);await sleep(900);
+  const upgrade=await probe(`(()=>{const h=document.getElementById('pbe-pro-checkout'),t=(h?.innerText||'').replace(/\\s+/g,' ');return{state:h?.querySelector('.pbe-funnel-root')?.dataset.funnelState||null,monthly:/\\$9\\.99 \\/ month/i.test(t),weekly:/\\$3\\.99 \\/ week/i.test(t),stale:/\\$\\s*9\\.99\\s*(\\/|per)\\s*(wk|week)|\\$99\\b|\\bseason pass\\b/i.test(t),overflow:document.documentElement.scrollWidth-innerWidth}})()`);
+  out(`upgrade boundary ${label.padEnd(7)}: ${JSON.stringify({opened,...(upgrade&&typeof upgrade==='object'?upgrade:{value:upgrade})})}`);
+  if(!opened||!upgrade||upgrade.state!=='signed-out'||!upgrade.monthly||!upgrade.weekly||upgrade.stale||Number(upgrade.overflow)>0)pass=false;
+  await shot(`upgrade-boundary-${label}`);
+  await probe(`window.PBEPro?.close?.();true`);await sleep(500);
+  const after=await probe(`({modal:!!document.getElementById('pbe-pro-backdrop')?.classList.contains('open'),route:App.current})`);
+  out(`after upgrade close ${label.padEnd(4)}: ${JSON.stringify(after)}`);if(!after||after.modal!==false||after.route!=='trackrecord')pass=false;
+}
+await trackSurfaces('desktop');
+await probe(`App.nav('pbepicks');true`);await waitFor(`App.current==='pbepicks'&&!document.querySelector('.pbe2-loading')&&(document.querySelector('#view-container')?.textContent||'').length>200`,15000);await sleep(1200);
+{const picks=await probe(`(()=>{const t=document.querySelector('#view-container').innerText;return{chars:t.length,unlock:[...document.querySelectorAll('#view-container button,#view-container a')].filter(b=>b.offsetParent&&/unlock/i.test(b.textContent)).length,overflow:document.documentElement.scrollWidth-innerWidth}})()`);out(`pbe picks public       : ${JSON.stringify(picks)}`);if(!picks||typeof picks!=='object'||picks.chars<200||picks.unlock<1||Number(picks.overflow)>0)pass=false}
+
 out('\n=== SOAK ===');for(let i=0;i<36;i++){await probe(`window.App&&App.nav(${JSON.stringify(routes[i%routes.length])})`,6000);await sleep(260)}const soak=await probe('1+1',10000)===2;out(`36-nav responsive      : ${soak}`);if(!soak)pass=false;
 await probe(`window.App&&App.nav('home')`);await sleep(1500);await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});await sleep(600);const mobile=await probe(`(()=>({header:getComputedStyle(document.getElementById('mobile-header')).display,bottom:getComputedStyle(document.getElementById('mobile-bottom-nav')).display,route:window.App?.current}))()`);out(`mobile navigation       : ${JSON.stringify(mobile)}`);if(!mobile||typeof mobile!=='object'||mobile.route!=='home')pass=false;await shot('home-mobile');
+out('\n=== PUBLIC ACCESS SURFACES (anonymous, 390) ===');
+{const dash=await probe(`(()=>{const p=document.querySelector('.pbecc-picks');return{panel:!!p,text:(p?.innerText||'').replace(/\\s+/g,' ').slice(0,260),overflow:document.documentElement.scrollWidth-innerWidth}})()`);out(`dashboard panel mobile : ${JSON.stringify(dash)}`);if(!dash||typeof dash!=='object'||Number(dash.overflow)>0||(dash.panel&&!/validation sample \S+ \/ 100/i.test(dash.text)))pass=false}
+await probe(`App.nav('pbepicks');true`);await sleep(2500);
+{const o=await overflow();out(`pbe picks mobile       : overflow=${o}`);if(Number(o)>0)pass=false;await shot('pbepicks-mobile')}
+await trackSurfaces('mobile');
+{const again=await probe(SHELL_PROBE);const issue=judgeShell(again,{expect:'anonymous'});out(`access shell mobile    : ${issue||'ok'}`);if(issue)pass=false}
 out(`served recovery files : ${served.size}`);out(`exceptions             : ${exceptions.length}${exceptions.length?' | '+exceptions.slice(0,4).join(' | '):''}`);if(exceptions.length)pass=false;out(`RESULT ${pass?'PASS':'FAIL'}`);ws.close();finish(pass?0:1);

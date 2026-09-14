@@ -44,6 +44,10 @@ jobs:
           set -euo pipefail
           curl -fsS 'https://nfl.propbetedge.ai/api/nfl-live?date=20260830' | grep -Fq '"ok":true'
 
+      # Access V2: the branch's static files against live production APIs as an
+      # anonymous reader. Asserts the public shell (no site-wide wall), the
+      # public routes, and the Track Record / PBE Picks / upgrade surfaces at
+      # the Pro boundary, with captures at 1440 and 390.
       - name: Browser liveness media nav routes and visual captures
         env:
           PBE_CHROME: /usr/bin/google-chrome
