@@ -20,8 +20,6 @@ import { dataset as wrDataset } from '../_wrdna/engine.js';
 import { dataset as teDataset } from '../_tedna/engine.js';
 import { dataset as rbDataset } from '../_rbdna/engine.js';
 
-import { gatewayHeaders } from '../_nfl-gateway.js';
-
 const GATEWAY = process.env.NFL_GATEWAY || 'https://nfl-api.propbetedge.ai';
 
 /* RUSHING markets, for the running-back product. Audited against the live
@@ -63,7 +61,7 @@ async function getJSON(url, ms = 12000) {
   const ac = new AbortController();
   const t = setTimeout(() => ac.abort(), ms);
   try {
-    const r = await fetch(url, { signal: ac.signal, headers: gatewayHeaders({ accept: 'application/json' }) });
+    const r = await fetch(url, { signal: ac.signal, headers: { accept: 'application/json' } });
     if (!r.ok) throw new Error(`gateway_${r.status}`);
     return await r.json();
   } finally { clearTimeout(t); }

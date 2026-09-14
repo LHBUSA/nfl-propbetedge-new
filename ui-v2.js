@@ -397,16 +397,12 @@
   }
 
   install();
-  /* The access gate loads the workspace after the document has parsed, so
-     DOMContentLoaded may already be behind us. */
-  function onReady() {
+  document.addEventListener('DOMContentLoaded',() => {
     install();
     const ticker = document.getElementById('ticker');
     if (ticker) {
       ticker.innerHTML = statusSkeleton();
       refreshStatus(ticker);
     }
-  }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded',onReady,{once:true});
-  else onReady();
+  },{once:true});
 })();

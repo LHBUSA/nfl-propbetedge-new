@@ -53,7 +53,7 @@ function recency(rows) {
   };
 }
 
-function handler(req, res) {
+export default function handler(req, res) {
   const q = req.query || {};
 
   // ?list=1 — the quarterbacks this dataset can answer for, and nothing more.
@@ -215,7 +215,3 @@ function handler(req, res) {
     provenance: provenance()
   }, 300);
 }
-
-/* Public NFL route (api/_nfl-route-policy.js). */
-export { handler };
-export default handler;

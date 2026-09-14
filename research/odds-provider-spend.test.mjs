@@ -22,8 +22,8 @@ import test, { mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import worker, { ingest, etHour } from '../workers/nfl-odds/src/index.js';
-/* the ungated contract; the entitlement gate is tests/nfl-paywall-entitlement.test.mjs */
-import { handler as homeMarket } from '../api/home-market.js';
+
+import homeMarket from '../api/home-market.js';
 
 const FEATURED = JSON.parse(readFileSync(new URL('./fixtures/odds/featured-2026-09-06.json', import.meta.url), 'utf8'));
 const BOARD = JSON.parse(readFileSync(new URL('./fixtures/odds/board-NE-SEA-player_pass_yds-2026-09-06.json', import.meta.url), 'utf8'));

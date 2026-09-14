@@ -11,8 +11,6 @@
  * gateway), the same authority the engine itself uses.
  */
 
-import { gatewayHeaders } from './_nfl-gateway.js';
-
 const DEFAULT_ENGINE_URL = 'https://nfl-game-picks-orchestrator.sales-fd3.workers.dev';
 const DEFAULT_NFL_GATEWAY = 'https://nfl-api.propbetedge.ai';
 
@@ -20,7 +18,7 @@ async function fetchJson(url, timeoutMs = 4000) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const response = await fetch(url, { cache: 'no-store', headers: gatewayHeaders({ accept: 'application/json' }), signal: controller.signal });
+    const response = await fetch(url, { cache: 'no-store', headers: { accept: 'application/json' }, signal: controller.signal });
     if (!response.ok) throw new Error(`http_${response.status}`);
     return await response.json();
   } finally {

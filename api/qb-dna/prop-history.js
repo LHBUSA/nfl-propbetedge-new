@@ -28,7 +28,7 @@ function send(res, status, body, ttl = 0) {
 const KEY = { passing_yards: 'py', passing_attempts: 'att', completions: 'cmp',
               passing_touchdowns: 'td', interceptions: 'int' };
 
-async function handler(req, res) {
+export default async function handler(req, res) {
   const q = req.query || {};
   const market = String(q.market || 'passing_yards');
   if (!MARKETS[market]) {
@@ -158,7 +158,3 @@ async function handler(req, res) {
     provenance: provenance()
   }, 300);
 }
-
-/* Public NFL route (api/_nfl-route-policy.js). */
-export { handler };
-export default handler;

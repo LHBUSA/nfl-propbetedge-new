@@ -27,7 +27,7 @@ const exceptions=[];
 let usageFaultInjected=false;
 const out=s=>{console.log(s);try{appendFileSync(LOG,s+'\n')}catch{}};
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-const dir=mkdtempSync(join(process.env.PBE_QA_PROFILE_ROOT||tmpdir(),'pbe-recovery-'));
+const dir=mkdtempSync(join(tmpdir(),'pbe-recovery-'));
 const chrome=spawn(CHROME,[`--remote-debugging-port=${PORT}`,`--user-data-dir=${dir}`,'--headless=new','--no-first-run','--no-default-browser-check','--disable-extensions','--disable-background-timer-throttling','--window-size=1440,900','about:blank'],{stdio:'ignore'});
 const entitled=await startEntitledApi({repo:REPO,log:out});
 function finish(code){try{chrome.kill()}catch{}try{entitled?.stop()}catch{}setTimeout(()=>{try{rmSync(dir,{recursive:true,force:true})}catch{}process.exit(code)},250)}
@@ -115,7 +115,7 @@ for(const route of routes){
   await probe(`window.App&&App.nav(${JSON.stringify(route)})`,8000);await sleep(1500);
   const alive=await probe('1+1')===2,cur=await probe('window.App?.current??null'),chars=await probe(`(document.querySelector('#view-container')?.textContent||'').trim().length`),active=await activeNav(route);media=await mediaStats();
   out(`${route.padEnd(13)} alive=${alive?'YES':'NO '} route=${String(cur).padEnd(13)} chars=${chars} active=${JSON.stringify(active)} media=${JSON.stringify(media)}`);
-  if(!alive||cur!==route||!(Number(chars)>80)||!active||active.active!==true||active.activeCount!==1||Number(media?.broken||0)>0){out(`${route} view text   : ${JSON.stringify(await probe(`(document.querySelector('#view-container')?.textContent||'').trim().replace(/\s+/g,' ').slice(0,160)`))}`);pass=false;break}
+  if(!alive||cur!==route||!(Number(chars)>80)||!active||active.active!==true||active.activeCount!==1||Number(media?.broken||0)>0){pass=false;break}
   if(route==='usage'&&await probe(`!!document.querySelector('.pbe21-usage')`)!==true){pass=false;break}
   if(route==='injuries'){
     const injuryLayout=await probe(`(()=>{const root=document.querySelector('.pbe13-news'),affected=[...document.querySelectorAll('.pbe13-aff-name>.pbe-player-headshot-v3')],tagPhotos=[...document.querySelectorAll('.pbe13-tags .pbe-player-headshot-v3')],feed=document.querySelector('.pbe13-coverage-list,.pbe13-feed'),cards=[...document.querySelectorAll('.pbe13-feed>.pbe13-card,.pbe13-coverage-list>.pbe13-coverage-row')];const maxAffected=affected.reduce((m,img)=>Math.max(m,img.getBoundingClientRect().width,img.getBoundingClientRect().height),0);const visibleTagPhotos=tagPhotos.filter(img=>{const s=getComputedStyle(img),r=img.getBoundingClientRect();return s.display!=='none'&&s.visibility!=='hidden'&&r.width>0&&r.height>0}).length;const fcs=feed?getComputedStyle(feed):null;const columns=fcs?(fcs.display.indexOf('grid')>=0?fcs.gridTemplateColumns:'single'):'';return{root:!!root,affected:affected.length,maxAffected:+maxAffected.toFixed(2),tagPhotos:tagPhotos.length,visibleTagPhotos,columns,cards:cards.length}})()`);

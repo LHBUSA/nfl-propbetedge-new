@@ -23,7 +23,3 @@ firstview/
 image-gate/
 nav-gate/
 scripts/tmp/
-
-# local paywall QA output
-qa-paywall/
-qa-harness-*.log

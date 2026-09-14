@@ -1,4 +1,3 @@
-import { gatewayHeaders } from './_nfl-gateway.js';
 const NFL_GATEWAY = process.env.NFL_GATEWAY || 'https://nfl-api.propbetedge.ai';
 const PROP_ANCHORS = [
   ['player_pass_yds','passing'],
@@ -75,7 +74,7 @@ function homeEnvironment(home){
 }
 
 async function upstream(path){
-  const response=await fetch(`${NFL_GATEWAY}${path}`,{headers:gatewayHeaders({accept:'application/json'}),cache:'no-store'});
+  const response=await fetch(`${NFL_GATEWAY}${path}`,{headers:{accept:'application/json'},cache:'no-store'});
   const text=await response.text();
   if(!response.ok)throw new Error(`gateway_${response.status}:${text.slice(0,120)}`);
   try{return JSON.parse(text)}catch{throw new Error('gateway_non_json')}
@@ -214,7 +213,7 @@ function coreMarket(coreBoard,away,home){
   };
 }
 
-async function handler(req,res){
+export default async function handler(req,res){
   if(req.method!=='GET')return send(res,405,{ok:false,error:'method_not_allowed'});
   const eventId=String(req.query?.event_id||'').trim();
   const away=String(req.query?.away||'').trim();
@@ -245,7 +244,3 @@ async function handler(req,res){
     return send(res,503,{ok:false,error:'game_intelligence_unavailable',detail:error instanceof Error?error.message:String(error)});
   }
 }
-
-/* Public NFL route (api/_nfl-route-policy.js). */
-export { handler };
-export default handler;

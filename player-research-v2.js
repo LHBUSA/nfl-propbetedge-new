@@ -98,7 +98,7 @@
   }
 
   function modelSection() {
-    if(!isPro())return `<div class="pbe17-prolock"><strong>NFL Pro model context</strong><p>Unlock PBE fair line, model probability, fair-line gap and input audit for supported passing-yard props. Current sportsbook lines above remain visible.</p><button class="pbe17-btn gold" onclick="PBEPro.open('upgrade')">Unlock NFL Pro · from $3.99/week</button></div>`;
+    if(!isPro())return `<div class="pbe17-prolock"><strong>NFL Pro model context</strong><p>Unlock PBE fair line, model probability, fair-line gap and input audit for supported passing-yard props. Current sportsbook lines above remain visible.</p><button class="pbe17-btn gold" onclick="PBEPro.open('upgrade')">Unlock NFL Pro${window.PBEPricing?' · '+window.PBEPricing.ctaSuffix:''}</button></div>`;
     const m=findModel(state.model,state.player);
     if(!m)return `<div class="pbe17-empty"><div><strong>Production model unavailable</strong>The current PBE production model does not support this player/prop in the selected event or lacks required inputs. No synthetic model value is inserted.</div></div>`;
     const fair=num(m.fair_line),prob=num(m.model_over_at_consensus_pct),gap=num(m.fair_line_gap_yards),sd=num(m.predictive_sd),missing=Array.isArray(m.missing_inputs)?m.missing_inputs:[];

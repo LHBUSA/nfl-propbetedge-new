@@ -3,18 +3,11 @@
  * Runs only after deployment. It visits every route exposed by the live sports
  * shell and fails if a synthetic logo/initials fallback is visible, if a
  * visible image is broken, or if the global real-logo authority is missing.
- *
- * NFL is a subscription product: production serves the workspace only to a
- * verified NFL subscriber. Same-origin /api/* is therefore answered by this
- * checkout's API handlers under the QA subscriber (scripts/qa-entitled-api.mjs,
- * the mechanism the recovery and paywall gates use); the deployed static files
- * are what is audited. Production's paywall is never bypassed.
  */
 import { spawn } from 'node:child_process';
 import { mkdtempSync, rmSync, appendFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { startEntitledApi, accessProblem } from './qa-entitled-api.mjs';
 
 const TARGET = process.env.PBE_URL || 'https://nfl.propbetedge.ai';
 const CHROME = process.env.PBE_CHROME || '/usr/bin/google-chrome';
@@ -35,11 +28,8 @@ const chrome = spawn(CHROME, [
   'about:blank'
 ], { stdio: 'ignore' });
 
-const ORIGIN = new URL(TARGET).origin;
-const entitled = await startEntitledApi({ repo: process.cwd(), log: out });
 function finish(code) {
   try { chrome.kill(); } catch {}
-  try { entitled?.stop(); } catch {}
   setTimeout(() => {
     try { rmSync(dir, { recursive: true, force: true }); } catch {}
     process.exit(code);
@@ -78,11 +68,6 @@ ws.onmessage = (event) => {
     msg.error ? p.reject(new Error(msg.error.message)) : p.resolve(msg.result);
     return;
   }
-  if (msg.method === 'Fetch.requestPaused') {
-    if (entitled && new URL(msg.params.request.url).origin === ORIGIN) entitled.fulfill(send, msg.params, ORIGIN);
-    else send('Fetch.continueRequest', { requestId: msg.params.requestId }).catch(() => {});
-    return;
-  }
   if (msg.method === 'Runtime.exceptionThrown') {
     exceptions.push(String(msg.params.exceptionDetails?.exception?.description || msg.params.exceptionDetails?.text || '').slice(0, 280));
   }
@@ -90,7 +75,6 @@ ws.onmessage = (event) => {
 
 await send('Runtime.enable');
 await send('Page.enable');
-if (entitled) await send('Fetch.enable', { patterns: [{ urlPattern: `${ORIGIN}/api/*`, requestStage: 'Request' }] });
 const probe = async (expression, timeout = 9000) => {
   try {
     const result = await Promise.race([
@@ -118,13 +102,6 @@ if (await probe('1+1') !== 2) {
   await shot('wedged');
   ws.close();
   finish(1);
-}
-
-{
-  const verdict = await probe(`document.documentElement.dataset.pbeAccess ?? null`);
-  out(`access verdict         : ${JSON.stringify({ verdict, entitled: Boolean(entitled) })}`);
-  const issue = accessProblem(verdict, Boolean(entitled));
-  if (issue) { out(`FAIL ${issue}`); ws.close(); finish(1); }
 }
 
 const authority = await probe(`typeof window.PBENFLMediaV2?.scan === 'function'`);

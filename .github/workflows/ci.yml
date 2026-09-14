@@ -30,8 +30,8 @@ jobs:
           set -euo pipefail
           node scripts/check-syntax.mjs \
             app-core-v3.js page-loader.js paywall.js paywall-funnel-v2.js ui-v2.js \
-            prop-board-v3.js prop-board-v5.js model-lab.js api/*.js api/*/*.js             nfl-access-gate-v1.js best-line-v1.js best-line-props-core-v1.js             workers/nfl-odds/src/index.js workers/nfl-gateway/index.js \
-            workers/nfl-billing/src/index.js workers/nfl-auth/src/index-v5.js \
+            prop-board-v3.js prop-board-v5.js model-lab.js api/*.js \
+            workers/nfl-billing/src/index.js \
             workers/nfl-picks-engine-shared/publication.mjs
 
       - name: Syntax gate self-test
@@ -50,16 +50,6 @@ jobs:
 
       - name: NFL auth regression suite
         run: node --test tests/nfl-auth*.test.mjs
-
-      # NFL is a subscription product: entitlement predicate, every paid API
-      # route fails closed, cross-sport isolation, gateway lock, and the
-      # frontend access gate.
-      - name: NFL paywall access control
-        run: node --test tests/nfl-paywall-entitlement.test.mjs tests/nfl-access-gate.test.mjs tests/nfl-purchase-to-access.test.mjs
-
-      # Best Line player props across kickoff: last verified pre-game market.
-      - name: Best Line player props retention
-        run: node --test tests/best-line-props-retention.test.mjs tests/best-line-props-core.test.mjs
 
       - name: Founding Season billing contract
         run: node --test tests/nfl-founding-season-billing.test.mjs

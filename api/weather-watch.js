@@ -53,7 +53,7 @@ async function slate() {
   }).filter(g => g.home_team && g.away_team);
 }
 
-async function handler(req, res) {
+export default async function handler(req, res) {
   const q = req.query || {};
   const now = Date.now();
   const fetchNws = q.nws !== '0';
@@ -158,7 +158,3 @@ async function handler(req, res) {
     fetched_at: new Date(now).toISOString()
   }, 300);
 }
-
-/* Public NFL route (api/_nfl-route-policy.js). */
-export { handler };
-export default handler;

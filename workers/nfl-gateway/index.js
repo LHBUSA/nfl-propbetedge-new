@@ -4,17 +4,7 @@
 //         /api/scores /api/stats /api/picks
 //         /api/odds /api/injuries /api/schedule
 //         /api/news /api/historical
-// Deploy: D:\Workers\nfl-data-harvest\workers\nfl-gateway (wrangler deploy)
-//
-// PAID DATA LOCK. The browser no longer calls this gateway: nfl.propbetedge.ai
-// reads it through its same-origin /api/gw route, which verifies the NFL
-// session and a current NFL entitlement first, then forwards with the
-// server-only token. With REQUIRE_GATEWAY_TOKEN = "true" every route except
-// /api/health requires x-pbe-gateway-token == NFL_GATEWAY_TOKEN:
-//   token missing / wrong      -> 401, no data
-//   enforcement on, secret unset -> 503, no data (fail closed)
-// Rollout order is in docs/NFL_PAYWALL_ROLLOUT.md; enabling this before the
-// Vercel route and the Worker callers carry the token takes production down.
+// Deploy: C:\Workers\nfl-gateway\
 // ═══════════════════════════════════════════════
 
 const CORS = {
@@ -23,27 +13,6 @@ const CORS = {
   'Access-Control-Allow-Headers': 'Content-Type',
   'Content-Type': 'application/json',
 };
-
-export const GATEWAY_TOKEN_HEADER = 'x-pbe-gateway-token';
-
-function sameSecret(a, b) {
-  const x = new TextEncoder().encode(String(a || ''));
-  const y = new TextEncoder().encode(String(b || ''));
-  if (!x.length || x.length !== y.length) return false;
-  let diff = 0;
-  for (let i = 0; i < x.length; i += 1) diff |= x[i] ^ y[i];
-  return diff === 0;
-}
-
-/** null = allowed; otherwise the refusal to send. Exported for tests. */
-export function gatewayAccess(req, env) {
-  if (String(env?.REQUIRE_GATEWAY_TOKEN || '').toLowerCase() !== 'true') return null;
-  const expected = String(env?.NFL_GATEWAY_TOKEN || '');
-  if (!expected) return { status: 503, body: { error: 'gateway_access_not_configured' } };
-  const presented = req.headers.get(GATEWAY_TOKEN_HEADER) || '';
-  if (!sameSecret(presented, expected)) return { status: 401, body: { error: 'gateway_token_required' } };
-  return null;
-}
 
 // In dev/staging allow localhost
 const DEV_CORS = {
@@ -64,17 +33,7 @@ export default {
 
     // Health check
     if (path === '/api/health') {
-      return json({ status: 'ok', workers: 9, ts: Date.now(), token_required: String(env.REQUIRE_GATEWAY_TOKEN || '').toLowerCase() === 'true' }, cors);
-    }
-
-    const refusal = gatewayAccess(req, env);
-    if (refusal) return json(refusal.body, { ...cors, 'Cache-Control': 'no-store' }, refusal.status);
-
-    /* The token authorizes this hop only; upstream Workers never see it. */
-    if (req.headers.has(GATEWAY_TOKEN_HEADER)) {
-      const headers = new Headers(req.headers);
-      headers.delete(GATEWAY_TOKEN_HEADER);
-      req = new Request(req, { headers });
+      return json({ status: 'ok', workers: 9, ts: Date.now() }, cors);
     }
 
     try {

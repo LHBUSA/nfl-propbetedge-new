@@ -29,7 +29,7 @@
  * an unknown price, another sport's price — grants nothing.
  *
  * The recognized prices mirror workers/nfl-billing/src/index.js, the Stripe
- * webhook that writes these rows; tests/nfl-paywall-entitlement.test.mjs fails
+ * webhook that writes these rows; tests/nfl-access-v2.test.mjs fails
  * if the two lists drift apart.
  */
 

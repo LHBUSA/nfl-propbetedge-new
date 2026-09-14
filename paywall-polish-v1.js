@@ -14,9 +14,9 @@
     if(features[2]){setText(features[2].querySelector('strong'),'Market + Model Gap');setText(features[2].querySelector('span'),'See best numbers, consensus pricing and the distance between market and model without relabeling that distance as guaranteed edge.')}
     if(features[3]){setText(features[3].querySelector('strong'),'NFL Pro Research Suite');setText(features[3].querySelector('span'),'Model Lab, Market Watch, Line Simulator and SGP construction in one entitlement. Correlation and unsupported current-role inputs remain unavailable until validated.')}
     let today=pitch.querySelector('.pbe-pro-today');
-    if(!today){today=document.createElement('div');today.className='pbe-pro-today';today.innerHTML='<b>WHAT YOU UNLOCK TODAY</b><span>The market, scores, news and research stay open. NFL Pro adds the proprietary PBE model layer on top of them.</span>';pitch.querySelector('.pbe-pro-feature-list')?.before(today)}
+    if(!today){today=document.createElement('div');today.className='pbe-pro-today';today.innerHTML='<b>WHAT YOU UNLOCK TODAY</b><span>Current market intelligence stays visible. NFL Pro unlocks the proprietary model and premium research layer where coverage is production-ready.</span>';pitch.querySelector('.pbe-pro-feature-list')?.before(today)}
     setText(document.getElementById('pbe-pro-signin'),'Continue with email');
-    setText(document.getElementById('pbe-pro-upgrade'),'Unlock NFL Pro · from $3.99/week');
+    setText(document.getElementById('pbe-pro-upgrade'),`Unlock NFL Pro${window.PBEPricing?` · ${window.PBEPricing.ctaSuffix}`:''}`);
   }
   function schedule(){
     timers.forEach(clearTimeout);

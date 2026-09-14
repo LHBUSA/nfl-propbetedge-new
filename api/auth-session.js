@@ -6,7 +6,7 @@ import { getNflSession } from './_nfl-auth.js';
 
 export default async function handler(req, res) {
   res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('Cache-Control', 'private, no-store, max-age=0');
 
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
@@ -19,11 +19,11 @@ export default async function handler(req, res) {
     /* Stage + cookie counts only. No token bytes, no secrets. This is what
      * makes the auth loop observable in production. */
     console.log(
-      '[auth-session] stage=%s valid=%s pro=%s access=%s cookies_current=%d cookies_legacy=%d%s',
+      '[auth-session] stage=%s access=%s valid=%s pro=%s cookies_current=%d cookies_legacy=%d%s',
       session.stage,
+      session.access,
       session.valid,
       session.pro,
-      session.access,
       session.cookies?.current ?? 0,
       session.cookies?.legacy ?? 0,
       session.reason ? ` reason=${session.reason}` : (session.error ? ` error=${session.error}` : '')
@@ -36,6 +36,8 @@ export default async function handler(req, res) {
       valid: false,
       pro: false,
       access: 'unavailable',
+      role: null,
+      entitlement: null,
       user: null,
       subscription: null,
       stage: 'handler_exception',

@@ -110,7 +110,7 @@ function shapeEvent(ev) {
   };
 }
 
-async function handler(req, res) {
+export default async function handler(req, res) {
   const q = req.query || {};
   const kind = q.kind === 'receiving' ? 'receiving' : 'passing';
   let board;
@@ -276,7 +276,3 @@ async function handler(req, res) {
     provenance: provenance()
   }, 120);
 }
-
-/* Public NFL route (api/_nfl-route-policy.js). */
-export { handler };
-export default handler;

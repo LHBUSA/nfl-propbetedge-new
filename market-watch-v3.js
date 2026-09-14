@@ -220,7 +220,7 @@
           <h3>Dispersion, best executable price and Local &Delta; are NFL Pro</h3>
           <p>You are seeing every row and the live cross-book consensus. NFL Pro adds dispersion ranking across all ${rows.length} rows, the best over/under price with its book, a personal watchlist, and Local &Delta; against a baseline you capture yourself.</p>
         </div>
-        <button class="pbe22-btn gold" onclick="PBEPro.open('upgrade')">Unlock NFL Pro · from $3.99/week</button>
+        <button class="pbe22-btn gold" onclick="PBEPro.open('upgrade')">Unlock NFL Pro${window.PBEPricing?' · '+window.PBEPricing.ctaSuffix:''}</button>
       </div>
       <section class="pbe22-table-wrap pbe22-locked"><div class="pbe22-scroll"><table class="pbe22-table"><thead><tr><th>Watch</th><th>Player</th><th>Prop</th><th>Consensus</th><th>Book Range</th><th class="pbe22-th-locked">Dispersion</th><th class="pbe22-th-locked">Best Over</th><th class="pbe22-th-locked">Best Under</th><th class="pbe22-th-locked">Local &Delta;</th></tr></thead><tbody>${lockedBody()}</tbody></table></div><div class="pbe22-foot"><span>CURRENT = provider cross-section</span><span>${rows.length>24?`Showing 24 of ${rows.length} rows`:''}</span></div></section>`;
   }

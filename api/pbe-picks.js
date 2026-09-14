@@ -1,6 +1,4 @@
 import { getNflSession, verifiedEmail, supabaseAdminHeaders } from './_nfl-auth.js';
-import { withNflEntitlement } from './_nfl-access.js';
-import { gatewayHeaders } from './_nfl-gateway.js';
 import {
   currentSeason, matchupFromGameId, engineRuntime, composeEngineState,
 } from './_pbe-engine-runtime.js';
@@ -342,8 +340,7 @@ const PICK_COLUMNS = [
 async function requirePro(req, res) {
   let auth;
   try {
-    /* the route gate already verified this request; reuse its session */
-    auth = req.nflSession || await getNflSession(req);
+    auth = await getNflSession(req);
   } catch (_) {
     send(res, 503, { error: 'entitlement_unavailable', stage: 'session_exception' });
     return null;
@@ -411,7 +408,7 @@ async function gameStates(season) {
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 3500);
-    const response = await fetch(`${base}/api/scores`, { cache: 'no-store', headers: gatewayHeaders({ accept: 'application/json' }), signal: controller.signal });
+    const response = await fetch(`${base}/api/scores`, { cache: 'no-store', headers: { accept: 'application/json' }, signal: controller.signal });
     clearTimeout(timer);
     if (!response.ok) return new Map();
     const body = await response.json();
@@ -850,7 +847,7 @@ async function receiptView(req, res, secret) {
   }, 'public, max-age=300, s-maxage=300');
 }
 
-async function handler(req, res) {
+export default async function handler(req, res) {
   if (req.method !== 'GET') return send(res, 405, { error: 'method_not_allowed' });
   const secret = serviceSecret();
   if (!secret) return send(res, 503, { error: 'picks_backend_unavailable', stage: 'service_secret_missing' });
@@ -870,10 +867,3 @@ async function handler(req, res) {
     return send(res, 503, { error: 'picks_backend_unavailable' });
   }
 }
-
-/* Paid NFL route: a current, verified NFL entitlement is required (api/_nfl-access.js). */
-export { handler };
-/* Premium views carry live selections and model fields: current, validation-history, decision.
-   Everything else (state, preview, trackrecord, receipt) is public. */
-export const PREMIUM_VIEWS = Object.freeze(['current', 'validation-history', 'decision']);
-export default withNflEntitlement(handler, { isPublic: req => !PREMIUM_VIEWS.includes(String(req.query?.view || 'state').trim().toLowerCase()) });

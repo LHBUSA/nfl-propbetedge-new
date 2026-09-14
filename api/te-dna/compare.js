@@ -225,14 +225,10 @@ function contextMode(res, q) {
   }, 300);
 }
 
-function handler(req, res) {
+export default function handler(req, res) {
   const q = req.query || {};
   const mode = q.mode || (q.player_a || q.name_a ? 'players' : 'context');
   if (mode === 'players') return playersMode(res, q);
   if (mode === 'context') return contextMode(res, q);
   return send(res, 400, { ok: false, error: 'unknown_mode', supported: ['players', 'context'] });
 }
-
-/* Public NFL route (api/_nfl-route-policy.js). */
-export { handler };
-export default handler;

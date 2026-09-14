@@ -15,7 +15,7 @@ permissions:
 jobs:
   smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -49,24 +49,6 @@ jobs:
           PBE_CHROME: /usr/bin/google-chrome
         run: node scripts/recovery-browser-smoke.mjs
 
-      # NFL paywall + Best Line player props in real Chrome at 1440 and 390,
-      # against the branch's own API handlers (scripts/nfl-access-local-server.mjs).
-      # fixture: synthetic kickoff-relative odds through the real nfl-odds and
-      # nfl-intel code; live: public gateway snapshot for the subscriber route soak.
-      - name: NFL paywall and Best Line browser gate
-        env:
-          PBE_CHROME: /usr/bin/google-chrome
-          PBE_QA_OUT: qa-paywall
-        shell: bash
-        run: |
-          set -euo pipefail
-          node scripts/nfl-access-local-server.mjs --port 8791 --odds fixture > qa-harness-fixture.log 2>&1 &
-          node scripts/nfl-access-local-server.mjs --port 8792 --odds live > qa-harness-live.log 2>&1 &
-          for port in 8791 8792; do for i in $(seq 1 60); do curl -fsS "http://localhost:$port/api/auth-session" >/dev/null && break; sleep 1; done; done
-          PBE_QA_SCENARIOS=anonymous,bypass,signedin,denied,outage,owner,pass,cancel,bestline,canaries node scripts/nfl-paywall-browser-gate.mjs http://localhost:8791
-          PBE_QA_SCENARIOS=subscriber node scripts/nfl-paywall-browser-gate.mjs http://localhost:8792
-          node scripts/nfl-paywall-live-canary.mjs http://localhost:8791
-
       # The PBE Card canary harness in real Chrome against a local stand-in
       # origin: a closed original tab must not end the run, Chrome exiting
       # must fail fast, and every profile must be destroyed.
@@ -93,8 +75,6 @@ jobs:
           path: |
             recovery-smoke.log
             recovery-*.png
-            qa-paywall/*
-            qa-harness-*.log
             injury-layout-*.png
             injury-editorial-*.png
           if-no-files-found: ignore

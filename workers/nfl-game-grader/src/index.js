@@ -247,16 +247,10 @@ async function refreshRatings(env, { season, week }) {
 /* QB tier comes from the injury/role source already feeding Injury
  * Intelligence. If it is unavailable the tier is left null rather than
  * defaulted to a middle value that would look like real information. */
-/* Server-to-server gateway reads carry NFL_GATEWAY_TOKEN once the gateway
-   enforces it (workers/nfl-gateway REQUIRE_GATEWAY_TOKEN). Unset = no header. */
-function gatewayTokenHeaders(env) {
-  const token = String(env?.NFL_GATEWAY_TOKEN || '').trim();
-  return token ? { accept: 'application/json', 'x-pbe-gateway-token': token } : { accept: 'application/json' };
-}
 async function qbTierMap(env) {
   try {
     const base = String(env.NFL_GATEWAY || 'https://nfl-api.propbetedge.ai').replace(/\/$/, '');
-    const response = await fetch(`${base}/api/injuries`, { headers: gatewayTokenHeaders(env), cf: { cacheTtl: 600 } });
+    const response = await fetch(`${base}/api/injuries`, { cf: { cacheTtl: 600 } });
     if (!response.ok) return {};
     const body = await response.json();
     const rows = Array.isArray(body?.injuries) ? body.injuries : [];

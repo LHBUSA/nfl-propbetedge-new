@@ -1,6 +1,5 @@
 import { getNflSession, verifiedEmail, supabaseAdminHeaders } from './_nfl-auth.js';
 import { currentSeason, engineRuntime } from './_pbe-engine-runtime.js';
-import { withNflEntitlement } from './_nfl-access.js';
 
 const DEFAULT_SUPABASE_URL = 'https://tkmlnhmylqnttmnsnief.supabase.co';
 const OFFICIAL = 'official';
@@ -147,7 +146,7 @@ async function stateView(res, secret) {
 }
 
 async function currentView(req, res, secret) {
-  const auth = req.nflSession || await getNflSession(req);
+  const auth = await getNflSession(req);
   const email = verifiedEmail(auth);
   if (!email) {
     if (auth?.degraded) return send(res, 503, { error: 'entitlement_unavailable', stage: auth.stage });
@@ -194,7 +193,7 @@ async function trackRecordView(res, secret) {
   }, 'public, max-age=30, s-maxage=30, stale-while-revalidate=120');
 }
 
-async function handler(req, res) {
+export default async function handler(req, res) {
   if (req.method !== 'GET') return send(res, 405, { error: 'method_not_allowed' });
   const secret = serviceSecret();
   if (!secret) return send(res, 503, { error: 'prop_picks_backend_unavailable', stage: 'service_secret_missing' });
@@ -209,8 +208,3 @@ async function handler(req, res) {
     return send(res, 503, { error: 'prop_picks_backend_unavailable' });
   }
 }
-
-/* Paid NFL route: a current, verified NFL entitlement is required (api/_nfl-access.js). */
-export { handler };
-/* Only the open official prop picks are premium; state and the graded record are public. */
-export default withNflEntitlement(handler, { isPublic: req => String(req.query?.view || 'state').trim().toLowerCase() !== 'current' });

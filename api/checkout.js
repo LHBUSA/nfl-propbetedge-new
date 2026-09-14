@@ -8,18 +8,22 @@ import Stripe from 'stripe';
 import { getNflSession, verifiedEmail } from './_nfl-auth.js';
 
 const SITE_URL = 'https://nfl.propbetedge.ai';
-const SEASON_PASS_PRICE_ID = 'price_1U9oVzF3CaVzg4ORnk5NiJFA';
-const SEASON_PASS_EXPIRES_AT = '2027-02-14T23:59:59-06:00';
-const WEEKLY_PRICE_ID = 'price_1U9QUZF3CaVzg4OR3QNfwWCS';
+/* Only the 2026 Founding Season plans are sold (the same prices and Payment
+   Links as window.PBEPricing in paywall.js). The retired $9.99/week and $99
+   Season Pass prices are never offered here; existing holders of those prices
+   remain recognized by api/_nfl-entitlement.js and workers/nfl-billing. */
+const MONTHLY_PRICE_ID = 'price_1UEWAXF3CaVzg4ORGlsgboLq';
+const WEEKLY_PRICE_ID = 'price_1UEWAOF3CaVzg4ORjkWpwOz9';
 const PAYMENT_LINKS = {
-  [SEASON_PASS_PRICE_ID]: 'https://buy.stripe.com/cNidR9eeGbuCe05f2X7wA06',
-  [WEEKLY_PRICE_ID]: 'https://buy.stripe.com/fZueVd1rU0PYg8d8Ez7wA05'
+  [MONTHLY_PRICE_ID]: 'https://buy.stripe.com/eVqeVd1rUcyG5tz2gb7wA0y',
+  [WEEKLY_PRICE_ID]: 'https://buy.stripe.com/9B628rb2udCK5tzf2X7wA0x'
 };
 
 const VALID_PRICES = {
-  [SEASON_PASS_PRICE_ID]: { tier: 'season_pass', mode: 'payment' },
-  [WEEKLY_PRICE_ID]: { tier: 'weekly', mode: 'subscription' }
+  [MONTHLY_PRICE_ID]: { tier: 'founding_monthly', mode: 'subscription' },
+  [WEEKLY_PRICE_ID]: { tier: 'founding_weekly', mode: 'subscription' }
 };
+const PLAN_KEYS = { monthly: MONTHLY_PRICE_ID, weekly: WEEKLY_PRICE_ID };
 
 function normalizeEmail(value) {
   const email = String(value || '').trim().toLowerCase();
@@ -45,7 +49,8 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(204).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { priceId } = req.body || {};
+  const requested = String(req.body?.priceId || req.body?.plan || '');
+  const priceId = PLAN_KEYS[requested] || requested;
   const plan = VALID_PRICES[priceId];
   if (!plan) return res.status(400).json({ error: 'Invalid NFL Pro plan.' });
 
@@ -110,13 +115,7 @@ export default async function handler(req, res) {
         }
       };
     }
-
-    if (tier === 'season_pass') {
-      params.metadata.plan = 'nfl_season_pass';
-      params.metadata.billing_mode = 'one_time';
-      params.metadata.expires_at = SEASON_PASS_EXPIRES_AT;
-      params.metadata.access = 'pro';
-    }
+
 
     const checkout = await stripe.checkout.sessions.create(params);
     return res.status(200).json({

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-pbe-access="checking">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -57,17 +57,18 @@
     "offers": [
       {
         "@type": "Offer",
-        "name": "NFL Pro Weekly",
+        "name": "NFL Pro Founding Season Monthly",
         "price": "9.99",
         "priceCurrency": "USD",
+        "description": "Founding Season NFL Pro access billed monthly. No free trial. Cancel anytime.",
         "url": "https://nfl.propbetedge.ai/"
       },
       {
         "@type": "Offer",
-        "name": "NFL Pro Season Pass",
-        "price": "99.00",
+        "name": "NFL Pro Founding Season Weekly",
+        "price": "3.99",
         "priceCurrency": "USD",
-        "description": "One-time NFL Pro access through February 14, 2027.",
+        "description": "Founding Season NFL Pro access billed weekly. No free trial. Cancel anytime.",
         "url": "https://nfl.propbetedge.ai/"
       }
     ]
@@ -86,8 +87,6 @@
   <link rel="stylesheet" href="./base-v3.css?v=20260828y1">
   <link rel="stylesheet" href="./ui-v2.css?v=20260828y1">
   <link rel="stylesheet" href="./paywall.css?v=20260828y1">
-  <link rel="stylesheet" href="./paywall-funnel-v2.css?v=20260913access1">
-  <link rel="stylesheet" href="./nfl-access-gate-v1.css?v=20260914unlock1">
   <link rel="stylesheet" href="./prop-board-v3.css?v=20260828y1">
   <link rel="stylesheet" href="./model-lab.css?v=20260828y1">
   <style>
@@ -114,7 +113,6 @@
   </style>
 </head>
 <body>
-<noscript><p style="padding:24px;color:#f4ecdc;font:14px/1.5 Inter,sans-serif">PropBetEdge NFL needs JavaScript to verify your subscription.</p></noscript>
 <a class="pbe-skip" href="#main-content">Skip to content</a>
 <!-- The shell is built by JS and inserted above .shell. Without a reserved slot
      the whole page rendered at y=0 and then dropped by the shell's height,
@@ -199,12 +197,21 @@
   function pbeMbnActive(id){document.querySelectorAll('.mbn-item').forEach(el=>el.classList.remove('active'));document.getElementById('mbn-'+id)?.classList.add('active')}
   function pbeToggleSidebar(){App.toggleMobile()}
 </script>
-<!-- Session state and the NFL Pro purchase funnel load first; the access-state
-     script then loads the whole site for every visitor. Premium data is
-     enforced server-side per feature (api/_nfl-route-policy.js); premium
-     modules show a preview with an inline Unlock Pro action. -->
-<script src="./paywall.js?v=20260914unlock1"></script>
-<script src="./paywall-funnel-v2.js?v=20260914unlock1"></script>
-<script src="./nfl-access-gate-v1.js?v=20260914unlock1"></script>
+<script src="./app-core-v3.js?v=20260828y1"></script>
+<!-- Verified/frozen archive datasets; live game data is served separately by /api/nfl-live. -->
+<script src="./archive/utils.js?v=202604071125"></script>
+<script src="./archive/teams.js?v=202604071125"></script>
+<script src="./archive/superbowls.js?v=202604071125"></script>
+<script src="./archive/hof.js?v=202604071125"></script>
+<script src="./archive/seasons.js?v=202604071125"></script>
+<script src="./archive/records.js?v=202604071125"></script>
+<script src="./archive/stats-2025.js?v=20260829verified1"></script>
+<script src="./archive/standings-2025.js?v=20260829verified1"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="./paywall.js?v=20260914access2"></script>
+<script src="./ui-v2.js?v=20260828y1"></script>
+<script src="./prop-board-v3.js?v=20260828y1"></script>
+<script src="./model-lab.js?v=20260828y1"></script>
+<script src="./page-loader.js?v=20260911productdepth1"></script>
 </body>
 </html>

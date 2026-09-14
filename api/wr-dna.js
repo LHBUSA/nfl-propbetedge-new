@@ -38,7 +38,7 @@ function windowOf(rows, want, label) {
   };
 }
 
-function handler(req, res) {
+export default function handler(req, res) {
   const q = req.query || {};
 
   if (q.list) {
@@ -171,7 +171,3 @@ function handler(req, res) {
     provenance: provenance()
   }, 300);
 }
-
-/* Public NFL route (api/_nfl-route-policy.js). */
-export { handler };
-export default handler;

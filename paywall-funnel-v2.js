@@ -5,10 +5,8 @@
  * facing account and purchase experience so old pricing or utility-grade paid
  * states cannot become the final rendered UI.
  *
- * 2026 Founding Season:
- *   $9.99/month (default / best value)
- *   $3.99/week  (flexible)
- * No free trial. Existing legacy subscriptions are never migrated here.
+ * 2026 Founding Season: plans, prices and Payment Links come from
+ * window.PBEPricing (paywall.js), the single pricing source. No free trial.
  *
  * Runtime:
  *   Vercel serves this frontend file.
@@ -20,26 +18,10 @@
 
   const AUTH_WORKER = 'https://propbetedge-nfl-auth.sales-fd3.workers.dev';
   const STORAGE = 'pbe_nfl_pending_plan_v7';
-  const PLANS = {
-    monthly: {
-      label: 'Monthly',
-      badge: 'Best value',
-      price: '$9.99',
-      detail: '/ month',
-      priceId: 'price_1UEWAXF3CaVzg4ORGlsgboLq',
-      term: 'Founding Season rate · Renews monthly · Cancel anytime',
-      url: 'https://buy.stripe.com/eVqeVd1rUcyG5tz2gb7wA0y'
-    },
-    weekly: {
-      label: 'Weekly',
-      badge: 'Flexible',
-      price: '$3.99',
-      detail: '/ week',
-      priceId: 'price_1UEWAOF3CaVzg4ORjkWpwOz9',
-      term: 'Founding Season rate · Renews weekly · Cancel anytime',
-      url: 'https://buy.stripe.com/9B628rb2udCK5tzf2X7wA0x'
-    }
-  };
+  /* Plans come from the one pricing source, window.PBEPricing (paywall.js). */
+  const PRICING = window.PBEPricing;
+  if (!PRICING) { console.error('[nfl-funnel] window.PBEPricing is missing; purchase funnel not installed'); return; }
+  const PLANS = { monthly: PRICING.monthly, weekly: PRICING.weekly };
 
   let queued = false;
   let checkoutRunning = false;
@@ -97,7 +79,7 @@
       <div class="pbe-pro-auth-state pbe-funnel-auth">
         <input class="pbe-pro-email" id="pbe-funnel-email" type="email" autocomplete="email" inputmode="email" placeholder="you@example.com" aria-label="Email address">
         <button class="pbe-pro-cta" id="pbe-funnel-checkout" type="button"></button>
-        <div class="pbe-funnel-charge">Charged today · No free trial · Cancel anytime</div>
+        <div class="pbe-funnel-charge">${escapeHtml(PRICING.charge)}</div>
         <div class="pbe-funnel-divider"><span>Already have NFL Pro?</span></div>
         <button class="pbe-pro-cta secondary" id="pbe-funnel-signin" type="button">Sign in to NFL Pro</button>
         <div class="pbe-pro-message" id="pbe-funnel-message"></div>
@@ -108,11 +90,12 @@
 
   function signedInFreeMarkup(email) {
     const selected = selectedKey();
-    return `<div class="pbe-funnel-root" data-funnel-state="signed-in-free">
+    const note = window.PBEPro?.denialNote?.() || '';
+    return `<div class="pbe-funnel-root" data-funnel-state="signed-in-free" data-funnel-note="${escapeHtml(state().entitlement?.reason || '')}">
       <div class="pbe-funnel-head">
         <span>FOUNDING SEASON · NFL PRO</span>
-        <strong>Your account is ready. Choose Pro.</strong>
-        <p>Upgrade the verified email below. No new account setup and no free-trial handoff.</p>
+        <strong>${note ? 'Unlock NFL Pro again.' : 'Your account is ready. Choose Pro.'}</strong>
+        <p>${note ? escapeHtml(note) : 'Upgrade the verified email below. No new account setup and no free-trial handoff.'}</p>
       </div>
       <div class="pbe-funnel-user"><span>Signed in as</span><strong>${escapeHtml(email)}</strong></div>
       <div class="pbe-pro-plans pbe-funnel-plans" role="radiogroup" aria-label="NFL Pro plans">
@@ -121,7 +104,7 @@
       </div>
       <div class="pbe-pro-auth-state pbe-funnel-auth">
         <button class="pbe-pro-cta" id="pbe-funnel-checkout" type="button"></button>
-        <div class="pbe-funnel-charge">Charged today · No free trial · Cancel anytime</div>
+        <div class="pbe-funnel-charge">${escapeHtml(PRICING.charge)}</div>
         <button class="pbe-pro-cta secondary" id="pbe-funnel-refresh" type="button">Already paid? Refresh access</button>
         <div class="pbe-pro-message" id="pbe-funnel-message"></div>
       </div>
@@ -138,8 +121,8 @@
     return subscription?.cancel_at_period_end ? `Access remains active through ${label}.` : `Current billing period runs through ${label}.`;
   }
 
-  function activeProMarkup(email, subscription, owner) {
-    return `<div class="pbe-funnel-root pbe-funnel-active" data-funnel-state="active-pro">
+  function activeProMarkup(email, subscription, owner = false) {
+    return `<div class="pbe-funnel-root pbe-funnel-active" data-funnel-state="${owner ? 'active-owner' : 'active-pro'}">
       <div class="pbe-funnel-head">
         <span>NFL PRO · VERIFIED ACCESS</span>
         <strong>Your NFL intelligence desk is live.</strong>
@@ -186,7 +169,6 @@
   }
   function validEmail(email) { return /^\S+@\S+\.\S+$/.test(email) && email.length <= 254; }
   function message(text, type = '') {
-    if (window.PBEPro?.state) window.PBEPro.state.notice = null;
     const el = document.getElementById('pbe-funnel-message');
     if (!el) return;
     el.className = `pbe-pro-message ${type}`.trim();
@@ -302,20 +284,21 @@
     if (s.loading) return;
     const host = document.getElementById('pbe-pro-checkout');
     if (!host) return;
-    /* paywall.js owns the "Unable to verify access" screen; pricing is never
-       offered to someone whose subscription could not be checked */
+    /* paywall.js owns the "couldn't verify access" screen; no plans are pushed
+       at a reader whose subscription could not be checked */
     if (s.access === 'unavailable') return;
 
-    const mode = s.pro ? 'active-pro' : s.user ? 'signed-in-free' : 'signed-out';
-    const current = host.querySelector('.pbe-funnel-root')?.dataset?.funnelState;
-    if (current !== mode) {
+    const owner = s.pro && s.role === 'owner';
+    const mode = s.pro ? (owner ? 'active-owner' : 'active-pro') : s.user ? 'signed-in-free' : 'signed-out';
+    const root = host.querySelector('.pbe-funnel-root');
+    const current = root?.dataset?.funnelState;
+    const noteChanged = mode === 'signed-in-free' && (root?.dataset?.funnelNote || '') !== String(s.entitlement?.reason || '');
+    if (current !== mode || noteChanged) {
       host.innerHTML = s.pro
-        ? activeProMarkup(String(s.user?.email || '').toLowerCase(), s.subscription, s.entitlement?.reason === 'owner')
+        ? activeProMarkup(String(s.user?.email || '').toLowerCase(), s.subscription, owner)
         : s.user
           ? signedInFreeMarkup(String(s.user.email || '').toLowerCase())
           : signedOutMarkup();
-      /* a paywall.js notice (refused sign-in link, payment confirming) survives the swap */
-      window.PBEPro?.paintNotice?.();
     }
     wire(host);
   }
@@ -338,24 +321,14 @@
       try {
         const data = JSON.parse(node.textContent || '{}');
         if (data?.name !== 'PropBetEdge NFL') continue;
-        data.offers = [
-          {
-            '@type': 'Offer',
-            name: 'NFL Pro Founding Season Monthly',
-            price: '9.99',
-            priceCurrency: 'USD',
-            description: 'Founding Season NFL Pro access billed monthly. No free trial. Cancel anytime.',
-            url: 'https://nfl.propbetedge.ai/'
-          },
-          {
-            '@type': 'Offer',
-            name: 'NFL Pro Founding Season Weekly',
-            price: '3.99',
-            priceCurrency: 'USD',
-            description: 'Founding Season NFL Pro access billed weekly. No free trial. Cancel anytime.',
-            url: 'https://nfl.propbetedge.ai/'
-          }
-        ];
+        data.offers = PRICING.order.map(key => ({
+          '@type': 'Offer',
+          name: `NFL Pro Founding Season ${PRICING[key].label}`,
+          price: PRICING[key].amount,
+          priceCurrency: 'USD',
+          description: `Founding Season NFL Pro access billed ${PRICING[key].cadence === 'month' ? 'monthly' : 'weekly'}. No free trial. Cancel anytime.`,
+          url: 'https://nfl.propbetedge.ai/'
+        }));
         node.textContent = JSON.stringify(data);
         break;
       } catch (_) {}
