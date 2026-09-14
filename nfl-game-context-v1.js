@@ -16,6 +16,11 @@
  * unavailable. Nothing here estimates a value.
  *
  * One weather read per page (10-minute memo), never one per card.
+ *
+ * Consumers: games-v2.js (full strip on every card) and pbecast-v6.js (the
+ * compact environment row in the selected-game hero). Both build the game from
+ * the canonical /api/schedule row with fromSchedule(), so there is one reading
+ * of schedule identity, venue, broadcast and weather.
  */
 (function (root) {
   'use strict';
@@ -44,11 +49,32 @@
     };
   }
 
+  /* ---- the game, from the canonical schedule row --------------------------- */
+  /* row: one nfl-schedule /api/schedule game. opts.state: SCHEDULE|LIVE|FINAL
+     from the surface's own score semantics. */
+  function fromSchedule(row, opts = {}) {
+    if (!row || typeof row !== 'object') return null;
+    const st = String(opts.state || '').toUpperCase();
+    const kickoff = opts.kickoff_utc || (row.kickoff && typeof row.kickoff === 'object' ? row.kickoff.utc : null) || null;
+    return {
+      espn_event_id: row.espn_event_id ? String(row.espn_event_id) : null,
+      away_team: row.away_team || null,
+      home_team: row.home_team || null,
+      kickoff_utc: kickoff,
+      venue: row.venue && typeof row.venue === 'object' ? row.venue : null,
+      broadcast: row.broadcast ?? null,
+      final: st === 'FINAL',
+      state_label: st === 'LIVE' ? 'Live' : st === 'FINAL' ? 'Final' : 'Scheduled',
+      away_name: opts.away_name || row.away_team || null,
+      home_name: opts.home_name || row.home_team || null
+    };
+  }
+
   /* ---- weather ------------------------------------------------------------ */
   /* input: game {espn_event_id, away_team, home_team, kickoff_utc, venue, final}
      wx:    { status: 'ok'|'loading'|'error', body } from /api/game-weather */
   function weatherModel(game, wx, now = Date.now()) {
-    if (game.final) return { kind: 'final' };
+    if (game.final) return { kind: 'final', roof: game.venue?.status === 'VERIFIED' ? (game.venue.roof?.state || null) : null };
     const v = game.venue;
     if (!v || v.status !== 'VERIFIED') return { kind: 'unavailable', title: 'Weather unavailable', detail: 'Venue not confirmed' };
     const roof = v.roof?.state;
@@ -126,6 +152,40 @@
     return `<div class="pbe-gctx${opts.featured ? ' is-featured' : ''}" data-gctx-event="${esc(game.espn_event_id || '')}">${kick}${watch}${venue}${weather}</div>`;
   }
 
+  /* ---- compact environment row (PBEcast hero) ------------------------------ */
+  /* The same weatherModel, one line. selectedEventId is the game the surface
+     is showing: a schedule row for any other event renders nothing but an
+     explicit unavailable state, so another game's weather cannot appear. */
+  function environmentModel(game, wx, opts = {}) {
+    const sel = opts.selectedEventId != null ? String(opts.selectedEventId) : null;
+    if (!game) return { kind: 'unavailable', title: 'Weather unavailable', detail: opts.scheduleLoading ? 'Reading schedule…' : 'Game not on the 2026 schedule' };
+    if (sel && String(game.espn_event_id) !== sel) return { kind: 'unavailable', title: 'Weather unavailable', detail: 'Schedule identity did not match this game', rejected: true };
+    const m = weatherModel(game, wx, opts.now);
+    if (m.kind !== 'final') return m;
+    /* a completed game: the roof is still a fact, a kickoff forecast is not kept */
+    if (m.roof === 'INDOOR') return { kind: 'indoor', title: 'Indoor', detail: 'Weather neutralized' };
+    if (m.roof === 'ROOF_STATUS_UNKNOWN') return { kind: 'retractable', title: 'Retractable roof', detail: 'Status not confirmed' };
+    if (game.venue?.neutral_site === true) return { kind: 'unavailable', title: 'Weather unavailable', detail: 'Neutral-site venue not resolved for a forecast' };
+    return { kind: 'final', title: 'Game final', detail: 'Kickoff forecast not retained' };
+  }
+
+  function environmentHtml(game, wx, opts = {}) {
+    const m = environmentModel(game, wx, opts);
+    const detail = m.kind === 'forecast'
+      ? `${esc(m.lines.join(' · '))}${m.alerts.length ? ` <em class="pbe-env-alert">NWS: ${esc(m.alerts.join(', '))}</em>` : ''}`
+      : esc(m.detail || '');
+    const venue = game?.venue?.status === 'VERIFIED' ? game.venue : null;
+    const attrs = [
+      `data-env-event="${esc(opts.selectedEventId ?? '')}"`,
+      `data-wx-kind="${esc(m.kind)}"`,
+      m.event_id ? `data-wx-event="${esc(m.event_id)}"` : '',
+      venue ? `data-env-venue="${esc(venue.name)}"` : '',
+      venue?.roof?.state ? `data-env-roof="${esc(venue.roof.state)}"` : ''
+    ].filter(Boolean).join(' ');
+    const title = m.kind === 'forecast' ? ` title="${esc(`Kickoff-window forecast (Open-Meteo, CC BY 4.0) for ${venue?.name || 'this venue'}. Temperature at kickoff; wind, gusts and rain chance are the worst hour of the window.`)}"` : '';
+    return `<div class="pbe-env is-${esc(m.kind)}" ${attrs}${title}><span class="pbe-env-k">Weather</span><b>${esc(m.title || '')}</b>${detail ? `<small>${detail}</small>` : ''}</div>`;
+  }
+
   /* ---- the one weather read ------------------------------------------------ */
   const state = { status: 'idle', body: null, at: 0, promise: null };
   function load(force = false) {
@@ -140,5 +200,5 @@
     return state.promise;
   }
 
-  root.PBEGameContext = { html, weatherModel, kickoffParts, load, state, _team: team, _venueKey: venueKey };
+  root.PBEGameContext = { html, weatherModel, fromSchedule, environmentModel, environmentHtml, kickoffParts, load, state, _team: team, _venueKey: venueKey };
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -1,5 +1,11 @@
 /* PropBetEdge NFL — PBEcast v6
  * Authoritative live command center. One renderer, silent polling, real audio cues.
+ *
+ * The selected-game hero carries the same game context as Games: the canonical
+ * /api/schedule row for the selected ESPN event id (PBEBroadcast) turned into a
+ * game by PBEGameContext.fromSchedule, and its environment row rendered by
+ * PBEGameContext.environmentHtml from the one memoized /api/game-weather read.
+ * No weather is requested or polled here.
  */
 (() => {
   'use strict';
@@ -130,10 +136,23 @@
     return `${stamp}${state.syncing?' · SYNCING':''}`;
   }
 
+  /* Environment for the SELECTED game only: the schedule row is found by that
+     game's ESPN event id (never by team names), and environmentHtml refuses a
+     row or forecast for any other event. */
+  function envHtml(){
+    const C=window.PBEGameContext,B=window.PBEBroadcast;
+    const g=state.detail?.game;if(!C||!g?.id)return'';
+    const id=String(g.id);
+    const loaded=Boolean(B?.state?.games?.length);
+    const row=loaded?B.find({event:id}):null;
+    const ctx=row?C.fromSchedule(row,{state:semantics(state.detail),away_name:g?.teams?.away?.display_name,home_name:g?.teams?.home?.display_name}):null;
+    return C.environmentHtml(ctx,C.state,{selectedEventId:id,scheduleLoading:!loaded&&!B?.state?.error&&!B?.state?.disabled});
+  }
+
   function heroHtml(){
     const d=state.detail,g=d?.game||{},a=g?.teams?.away||{},h=g?.teams?.home||{},sem=semantics(d),facts=situationFacts(d);
     const fresh=freshnessBadge();
-    return `<section class="cast6-hero"><div class="cast6-hero-head"><div><span class="cast6-live ${fresh.cls}">${sem==='LIVE'?'<i></i>':''}${esc(fresh.label)}</span><b>${esc(sourceLabel(d))}</b></div><small data-cast6-stamp></small></div><div class="cast6-score"><div class="cast6-team">${teamLogo(a)}<span><b>${esc(a.abbreviation||'AWY')}</b><small>${esc(a.display_name||'Away')}${teamRecord(a)?` · ${esc(teamRecord(a))}`:''}</small></span></div><div class="cast6-score-center">${sem==='SCHEDULE'&&kickoffParts(g?.date)?`<strong class="is-kickoff">${esc(kickoffParts(g.date).time)}<small>ET</small></strong><span><em class="cast6-kick-k">Kickoff · </em>${esc(kickoffParts(g.date).day)}</span>`:`<strong>${esc(score(a,sem))}<i>:</i>${esc(score(h,sem))}</strong><span>${esc(statusLabel(g))}</span>`}<small>${esc([g?.venue?.name,[g?.venue?.city,g?.venue?.state].filter(Boolean).join(', ')].filter(Boolean).join(' · '))}${sem==='SCHEDULE'&&g?.id?(window.PBEBroadcast?.slot?.({event:g.id,away:a.display_name,home:h.display_name,lead:g?.venue?.name?' · ':''})||''):''}</small></div><div class="cast6-team home"><span><b>${esc(h.abbreviation||'HME')}</b><small>${esc(h.display_name||'Home')}${teamRecord(h)?` · ${esc(teamRecord(h))}`:''}</small></span>${teamLogo(h)}</div></div>${facts.length?`<div class="cast6-facts">${facts.map(([k,v])=>`<div><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}</div>`:''}</section>`;
+    return `<section class="cast6-hero"><div class="cast6-hero-head"><div><span class="cast6-live ${fresh.cls}">${sem==='LIVE'?'<i></i>':''}${esc(fresh.label)}</span><b>${esc(sourceLabel(d))}</b></div><small data-cast6-stamp></small></div><div class="cast6-score"><div class="cast6-team">${teamLogo(a)}<span><b>${esc(a.abbreviation||'AWY')}</b><small>${esc(a.display_name||'Away')}${teamRecord(a)?` · ${esc(teamRecord(a))}`:''}</small></span></div><div class="cast6-score-center">${sem==='SCHEDULE'&&kickoffParts(g?.date)?`<strong class="is-kickoff">${esc(kickoffParts(g.date).time)}<small>ET</small></strong><span><em class="cast6-kick-k">Kickoff · </em>${esc(kickoffParts(g.date).day)}</span>`:`<strong>${esc(score(a,sem))}<i>:</i>${esc(score(h,sem))}</strong><span>${esc(statusLabel(g))}</span>`}<small>${esc([g?.venue?.name,[g?.venue?.city,g?.venue?.state].filter(Boolean).join(', ')].filter(Boolean).join(' · '))}${sem==='SCHEDULE'&&g?.id?(window.PBEBroadcast?.slot?.({event:g.id,away:a.display_name,home:h.display_name,lead:g?.venue?.name?' · ':''})||''):''}</small></div><div class="cast6-team home"><span><b>${esc(h.abbreviation||'HME')}</b><small>${esc(h.display_name||'Home')}${teamRecord(h)?` · ${esc(teamRecord(h))}`:''}</small></span>${teamLogo(h)}</div></div>${envHtml()}${facts.length?`<div class="cast6-facts">${facts.map(([k,v])=>`<div><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}</div>`:''}</section>`;
   }
 
   function currentActionHtml(){
@@ -598,6 +617,8 @@
      never painted. */
   async function load(){
     stopLegacyTransports();stopLanes();
+    /* the schedule row and the forecast: each one memoized read, shared with Games */
+    window.PBEBroadcast?.load?.();window.PBEGameContext?.load?.();
     state.date=sportsDay();restore();takeFocus();ensureRoot();patchAll();
     await refresh(true);
   }
@@ -605,6 +626,10 @@
   /* A hidden tab should not hold a 2.5s loop open against the live feed, and a
      tab coming back must not show a minutes-old score while it waits for the
      next tick. Sync once, immediately, on the way back in. */
+  /* When the schedule or the forecast lands, only the hero is re-diffed: no
+     lane, timer, selection, play or audio state is touched. */
+  ['pbe:game-weather','pbe:broadcast-ready'].forEach(name=>window.addEventListener(name,()=>{if(mounted())patchFreshness()}));
+
   document.addEventListener('visibilitychange',()=>{
     if(!mounted())return;
     if(!visible()){stopLanes();return}
@@ -641,6 +666,6 @@
     return true;
   }
 
-  window.PBEcastV6={state,load,refresh,focus,toggleSound,takeFocus,stopLegacyTransports,telemetry};
+  window.PBEcastV6={state,load,refresh,focus,toggleSound,takeFocus,stopLegacyTransports,telemetry,envHtml,patchFreshness,lanes};
   if(!install())document.addEventListener('DOMContentLoaded',install,{once:true});
 })();

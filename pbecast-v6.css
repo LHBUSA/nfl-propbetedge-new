@@ -67,3 +67,7 @@
 .cast6-hero-head>small.is-syncing{color:var(--pbe-paper-2);opacity:.85}
 .cast6-hero-head>small.is-stale{color:#f0c45b}
 @media(prefers-reduced-motion:reduce){.cast6-live.is-delayed i{animation:none}}
+/* Selected-game environment row (PBEGameContext.environmentHtml), directly
+   under the scoreboard and venue. */
+.cast6-hero>.pbe-env{justify-content:center;max-width:980px;margin:14px auto 0;padding:9px 14px;border:1px solid var(--cast6-line-strong,rgba(255,245,220,.18));border-radius:12px;background:rgba(0,0,0,.28);text-align:center}
+@media (max-width:640px){.cast6-hero>.pbe-env{justify-content:flex-start;text-align:left;padding:9px 11px}.cast6-hero>.pbe-env>small{flex-basis:100%}}

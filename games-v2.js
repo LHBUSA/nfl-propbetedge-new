@@ -53,9 +53,7 @@
       season:Number(raw?.season||raw?.year||2026)||2026,
       seasonType,
       espnEventId:raw?.espn_event_id?String(raw.espn_event_id):null,
-      awayCode:raw?.away_team||null,homeCode:raw?.home_team||null,
       /* the per-game venue object from nfl-schedule; a legacy string still reads */
-      venueInfo:raw?.venue&&typeof raw.venue==='object'?raw.venue:null,
       venue:raw?.venue&&typeof raw.venue==='object'?(raw.venue.status==='VERIFIED'?raw.venue.name:null):(raw?.stadium||raw?.venue||raw?.site||null),
       /* nfl-schedule publishes a normalized broadcast object (status, networks,
          streaming, verified destinations). A legacy string is still accepted. */
@@ -178,9 +176,10 @@
   }
 
   /* The context strip for one game: kickoff ET, watch, venue, weather. */
+  /* the one schedule-row adapter, shared with PBEcast (PBEGameContext.fromSchedule) */
   function contextModel(g,at,ht){
     const gs=gameState(g);
-    return{espn_event_id:g.espnEventId,away_team:g.awayCode,home_team:g.homeCode,kickoff_utc:date(g.start)?date(g.start).toISOString():null,venue:g.venueInfo,broadcast:g.broadcast,final:gs.kind==='FINAL',state_label:gs.kind==='LIVE'?'Live':gs.kind==='FINAL'?'Final':'Scheduled',away_name:at?.name||g.away,home_name:ht?.name||g.home};
+    return window.PBEGameContext.fromSchedule(g.raw,{state:gs.kind,kickoff_utc:date(g.start)?date(g.start).toISOString():null,away_name:at?.name||g.away,home_name:ht?.name||g.home});
   }
   function contextHtml(g,at,ht,featured=false){
     const C=window.PBEGameContext;
