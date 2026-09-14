@@ -1,23 +1,27 @@
-/* NFL paywall + Best Line browser gate (real Chrome, raw CDP).
+/* NFL access unlock + owner access + Best Line browser gate (real Chrome, raw CDP).
  *
  *   node scripts/nfl-access-local-server.mjs --port 8791 --odds fixture   (terminal 1)
  *   node scripts/nfl-paywall-browser-gate.mjs http://localhost:8791       (terminal 2)
  *
  * Every scenario runs in its own browser context (own cookie jar), at desktop
  * 1440x900 and phone 390x844 where layout matters. Identities come from the
- * harness ledger through the REAL passwordless landing (/api/auth-verify).
+ * harness ledger through the REAL passwordless landing (/api/auth-verify) and
+ * the REAL auth Worker exchange (single-use links).
  *
- * Scenarios: anonymous wall; client-side bypass attempt; signed-in with no
- * subscription; orphan / null-expiry / expired / canceled / MLB / UFC / NBA /
- * NHL rows; entitlement outage; valid monthly subscriber (workspace + route
- * soak); season pass; mid-session cancellation; Best Line player props across
- * kickoff; direct API negative-access canaries.
+ * The site is public; premium features and their data are NFL Pro
+ * (api/_nfl-route-policy.js). Scenarios: anonymous visitor (site opens, premium
+ * refused, inline Unlock Pro); client-side bypass attempt; signed in with no
+ * subscription; orphan / null-expiry / expired / canceled / other-sport rows;
+ * entitlement outage; verified owner (and reused / expired links, sign-out);
+ * valid monthly subscriber (route soak); season pass; mid-session cancellation;
+ * Best Line player props across kickoff; direct API canaries.
  *
  * Env: PBE_CHROME (chrome binary), PBE_QA_OUT (screenshots + log directory),
- *      PBE_QA_SCENARIOS (comma list; default all): wall,bypass,signedin,denied,
- *      outage,subscriber,pass,cancel,bestline,canaries. Run `subscriber` against
- *      a `--odds live` harness: in fixture mode the product's real current event
- *      is not in the synthetic odds store, so board-driven routes answer 404.
+ *      PBE_QA_SCENARIOS (comma list; default all): anonymous,bypass,signedin,
+ *      denied,outage,owner,subscriber,pass,cancel,bestline,canaries. Run
+ *      `subscriber` against a `--odds live` harness: in fixture mode the
+ *      product's real current event is not in the synthetic odds store, so
+ *      board-driven routes answer 404.
  */
 import { spawn, execSync } from 'node:child_process';
 import { mkdtempSync, rmSync, writeFileSync, mkdirSync, appendFileSync } from 'node:fs';
@@ -37,7 +41,7 @@ const profile = mkdtempSync(join(process.env.PBE_QA_PROFILE_ROOT || tmpdir(), 'p
 const chrome = spawn(CHROME, [`--remote-debugging-port=${PORT}`, `--user-data-dir=${profile}`, '--headless=new', '--no-first-run', '--no-default-browser-check',
   '--disable-extensions', '--disable-background-timer-throttling', '--disable-renderer-backgrounding', '--hide-scrollbars', 'about:blank'], { stdio: 'ignore' });
 
-const SCENARIOS = new Set(String(process.env.PBE_QA_SCENARIOS || 'wall,bypass,signedin,denied,outage,subscriber,pass,cancel,bestline,canaries').split(',').map(x => x.trim()));
+const SCENARIOS = new Set(String(process.env.PBE_QA_SCENARIOS || 'anonymous,bypass,signedin,denied,outage,owner,subscriber,pass,cancel,bestline,canaries').split(',').map(x => x.trim()));
 const want = name => SCENARIOS.has(name);
 const results = [];
 function check(name, ok, detail = '') { results.push({ name, ok: Boolean(ok), detail }); log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? `  ${typeof detail === 'string' ? detail : JSON.stringify(detail)}` : ''}`); }
@@ -105,6 +109,7 @@ async function withPage(view, fn) {
       await page.goto(`${BASE}/__qa/magic?email=${encodeURIComponent(email)}`, 400);
       const token = await page.eval(`JSON.parse(document.body.innerText).token`);
       await page.goto(`${BASE}/api/auth-verify?token=${encodeURIComponent(token)}`, 300);
+      return token;
     },
   };
   try { return await fn(page); }
@@ -112,59 +117,96 @@ async function withPage(view, fn) {
 }
 
 const accessState = page => page.eval(`document.documentElement.dataset.pbeAccess`);
-const workspaceLoaded = page => page.eval(`document.querySelectorAll('script[data-pbe-workspace]').length`);
-const wall = page => page.eval(`(()=>{const b=document.getElementById('pbe-pro-backdrop');const c=b?.querySelector('.pbe-pro-close');const shell=document.querySelector('.shell');return{open:!!b?.classList.contains('open'),isWall:!!b?.classList.contains('is-wall'),closeVisible:!!c&&getComputedStyle(c).display!=='none',shellHidden:!shell||getComputedStyle(shell).display==='none',funnel:document.querySelector('#pbe-pro-checkout .pbe-funnel-root')?.dataset.funnelState||null,plans:document.querySelectorAll('#pbe-pro-checkout [data-funnel-plan]').length,note:document.querySelector('.pbe-access-note')?.textContent||'',account:document.querySelector('#pbe-pro-checkout .pbe-funnel-user strong')?.textContent||'',signOut:!!document.querySelector('[data-pbe-access-signout]'),app:typeof window.App,overflow:document.documentElement.scrollWidth-innerWidth}})()`);
-const apiStatus = (page, path) => page.eval(`fetch(${JSON.stringify(path)},{credentials:'same-origin',cache:'no-store'}).then(r=>r.status)`);
+const settled = page => page.waitFor(`document.documentElement.dataset.pbeAccess && document.documentElement.dataset.pbeAccess!=='checking'`);
+const siteOpen = page => page.waitFor(`window.App && window.PBEUpgrades && window.PBEUpgrades.loading===false && (document.querySelector('#view-container')?.textContent||'').trim().length>80`, 60000);
+const view = page => page.eval(`(()=>{const b=document.getElementById('pbe-pro-backdrop');const c=b?.querySelector('.pbe-pro-close');const shell=document.querySelector('.shell');return{app:typeof window.App,workspace:document.querySelectorAll('script[data-pbe-workspace]').length,shellVisible:!!shell&&getComputedStyle(shell).display!=='none',chars:(document.querySelector('#view-container')?.textContent||'').trim().length,modalOpen:!!b?.classList.contains('open'),isWall:!!b?.classList.contains('is-wall'),closeVisible:!!c&&getComputedStyle(c).display!=='none',funnel:document.querySelector('#pbe-pro-checkout .pbe-funnel-root')?.dataset.funnelState||null,plans:document.querySelectorAll('#pbe-pro-checkout [data-funnel-plan]').length,note:document.querySelector('.pbe-access-note')?.textContent||'',message:[...document.querySelectorAll('#pbe-pro-backdrop [id*="message"]')].map(e=>e.textContent).join(' ').trim(),account:document.querySelector('#pbe-pro-checkout .pbe-funnel-user strong')?.textContent||'',overflow:document.documentElement.scrollWidth-innerWidth}})()`);
+/* {status, access}: x-pbe-access is set only by the entitlement gate */
+const api = (page, path) => page.eval(`fetch(${JSON.stringify(path)},{credentials:'same-origin',cache:'no-store'}).then(r=>({status:r.status,access:r.headers.get('x-pbe-access')}))`);
+const probeAll = async (page, list) => { const out = {}; for (const p of list) out[p] = await api(page, p); return out; };
 const leakedGateway = page => page.requests.filter(u => u.startsWith('https://nfl-api.propbetedge.ai'));
+const openUnlock = page => page.eval(`(()=>{const b=document.querySelector('[data-pbe-open-pro]');if(b){b.click();return 'cta'}window.PBEPro.open();return 'api'})()`);
+const closeModal = page => page.eval(`(()=>{document.querySelector('#pbe-pro-backdrop .pbe-pro-close')?.click();return !document.getElementById('pbe-pro-backdrop')?.classList.contains('open')})()`);
 
-const GATED_PROBES = ['/api/gw/api/best-line', '/api/gw/api/odds/board?event_id=x&markets=player_pass_yds', '/api/gw/api/odds/prop-coverage', '/api/pro-model?event_id=x',
-  '/api/home-market?away=a&home=b', '/api/game-intel?event_id=x', '/api/qb-dna?list=1', '/api/wr-dna?list=1', '/api/rb-dna?list=1', '/api/te-dna?list=1',
-  '/api/qb-dna/prop-lab?player_id=x', '/api/pbe-picks?view=current', '/api/pbe-picks?view=trackrecord', '/api/pbe-prop-picks?view=trackrecord', '/api/pbe-validation', '/api/weather-watch'];
+/* Premium = proprietary PBE model output. Public = everything a visitor reads. */
+const PREMIUM_PROBES = ['/api/gw/api/picks/pass', '/api/pro-model?event_id=x', '/api/pbe-picks?view=current', '/api/pbe-picks?view=validation-history', '/api/pbe-picks?view=decision', '/api/pbe-prop-picks?view=current'];
+const PUBLIC_PROBES = ['/api/gw/api/best-line', '/api/gw/api/odds/prop-coverage', '/api/home-market?away=a&home=b', '/api/game-intel?event_id=x', '/api/qb-dna?list=1', '/api/wr-dna?list=1',
+  '/api/qb-dna/prop-lab?player_id=x', '/api/pbe-picks?view=state', '/api/pbe-picks?view=trackrecord', '/api/pbe-prop-picks?view=trackrecord', '/api/pbe-validation', '/api/weather-watch', '/api/auth-session'];
+const refusedAll = (probes, status, access) => Object.values(probes).every(r => r.status === status && r.access === access);
+const neverRefused = probes => Object.values(probes).every(r => ![401, 403].includes(r.status) && !r.access);
+const grantedAll = probes => Object.values(probes).every(r => r.access === 'granted' && ![401, 403].includes(r.status));
 
 /* ============================================================= scenarios */
 log(`TARGET ${BASE}`);
 
-if (want('wall')) for (const view of [DESKTOP, PHONE]) {
-  await withPage(view, async page => {
+if (want('anonymous')) for (const vp of [DESKTOP, PHONE]) {
+  await withPage(vp, async page => {
     await page.goto(`${BASE}/`, 2500);
-    await page.waitFor(`document.documentElement.dataset.pbeAccess!=='checking'`);
-    const w = await wall(page);
-    check(`[${view.label}] anonymous -> subscription wall`, (await accessState(page)) === 'anonymous' && w.open && w.isWall && !w.closeVisible && w.funnel === 'signed-out' && w.plans === 2, w);
-    check(`[${view.label}] anonymous -> no paid workspace rendered or requested`, w.shellHidden && w.app === 'undefined' && (await workspaceLoaded(page)) === 0 && leakedGateway(page).length === 0, { app: w.app, gatewayRequests: leakedGateway(page).length });
-    check(`[${view.label}] anonymous wall fits the viewport`, w.overflow <= 0, { overflow: w.overflow });
-    await page.eval(`document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape'}));document.getElementById('pbe-pro-backdrop')?.click();window.PBEPro?.close?.();true`);
-    check(`[${view.label}] the wall cannot be dismissed`, (await wall(page)).open === true);
-    log(`  screenshot ${await page.shot('paywall-anonymous')}`);
+    await settled(page);
+    const opened = await siteOpen(page);
+    let v = await view(page);
+    check(`[${vp.label}] anonymous -> the site opens with no wall`, (await accessState(page)) === 'anonymous' && opened && v.app === 'object' && v.workspace > 0 && v.shellVisible && !v.modalOpen, v);
+    check(`[${vp.label}] anonymous -> premium APIs 401, public APIs open`, refusedAll(await probeAll(page, PREMIUM_PROBES), 401, 'anonymous') && neverRefused(await probeAll(page, PUBLIC_PROBES)));
+    check(`[${vp.label}] anonymous -> no direct gateway calls from the browser`, leakedGateway(page).length === 0, leakedGateway(page).slice(0, 3));
+    check(`[${vp.label}] anonymous home fits the viewport`, v.overflow <= 0, { overflow: v.overflow });
+    log(`  screenshot ${await page.shot('unlock-anonymous-home')}`);
+    /* public research reads for a visitor */
+    for (const route of ['bestline', 'games', 'qbdna', 'injuries']) {
+      await page.eval(`window.App.nav(${JSON.stringify(route)})`); await sleep(1400);
+      await page.waitFor(`(document.querySelector('#view-container')?.textContent||'').trim().length>80`, 8000);
+      const r = await page.eval(`({route:window.App?.current,chars:(document.querySelector('#view-container')?.textContent||'').trim().length,modal:!!document.querySelector('#pbe-pro-backdrop.open')})`);
+      check(`[${vp.label}] anonymous -> public route ${route} renders`, r.route === route && r.chars > 80 && !r.modal, r);
+    }
+    /* premium modules: a preview with an inline unlock (Prop Board renders on
+       harness data; PBE Picks needs the picks tables, so it is only logged here
+       and checked against production) */
+    const unlocks = `[...document.querySelectorAll('#view-container button,#view-container a')].filter(b=>b.offsetParent&&/unlock/i.test(b.textContent))`;
+    const locks = {};
+    for (const route of ['pbepicks', 'modellab', 'marketwatch', 'propboard']) {
+      await page.eval(`window.App.nav(${JSON.stringify(route)})`); await sleep(1500);
+      await page.waitFor(`${unlocks}.length>0`, 6000);
+      locks[route] = await page.eval(`${unlocks}.map(b=>b.textContent.trim()).slice(0,2)`);
+    }
+    log(`  inline unlock controls ${JSON.stringify(locks)}`);
+    check(`[${vp.label}] anonymous -> Prop Board shows the market with an inline Unlock Pro`, locks.propboard.some(t => /Unlock/i.test(t)), locks.propboard);
+    log(`  screenshot ${await page.shot('unlock-anonymous-propboard')}`);
+    const how = await page.eval(`(()=>{const b=${unlocks}[0];b.scrollIntoView({block:'center'});b.click();return true})()`);
+    await sleep(600);
+    v = await view(page);
+    check(`[${vp.label}] Unlock Pro -> plans for a visitor, dismissible (not a wall)`, how && v.modalOpen && !v.isWall && v.closeVisible && v.funnel === 'signed-out' && v.plans === 2, v);
+    check(`[${vp.label}] Unlock Pro modal fits the viewport`, v.overflow <= 0, { overflow: v.overflow });
+    log(`  screenshot ${await page.shot('unlock-anonymous-modal')}`);
+    check(`[${vp.label}] Unlock Pro modal closes back to the site`, await closeModal(page) && (await view(page)).app === 'object');
+    check(`[${vp.label}] anonymous -> no uncaught page exceptions`, page.exceptions.length === 0, page.exceptions.slice(0, 5));
   });
 }
 
 if (want('bypass')) await withPage(DESKTOP, async page => {
   await page.goto(`${BASE}/`, 2500);
   await page.waitFor(`document.documentElement.dataset.pbeAccess==='anonymous'`);
-  /* Force every client-side signal a tamperer could set. */
-  await page.eval(`(()=>{try{localStorage.setItem('pbe_pro','1')}catch(_){};document.cookie='subscribed=true; path=/';const s=window.PBEPro.state;s.access='granted';s.pro=true;s.user={email:'hacker@qa.test'};window.dispatchEvent(new CustomEvent('pbe:pro-state'));return true})()`);
-  await sleep(3500);
-  const statuses = {};
-  for (const probe of GATED_PROBES) statuses[probe] = await apiStatus(page, probe);
-  check('client-side bypass: forcing granted in the page still gets 401 from every paid route', Object.values(statuses).every(s => s === 401), statuses);
-  const bestLine = await page.eval(`(async()=>{window.App?.nav?.('bestline');await new Promise(r=>setTimeout(r,2500));return (document.querySelector('.pbebl')?.textContent||'').slice(0,160)})()`, 8000);
-  check('client-side bypass: the forced workspace shows no market data', !/DraftKings|FanDuel|BetMGM/.test(String(bestLine)), bestLine);
+  /* Every client-side signal a tamperer could set, including an owner claim. */
+  await page.eval(`(()=>{try{localStorage.setItem('pbe_pro','1');localStorage.setItem('pbe_role','owner')}catch(_){};document.cookie='subscribed=true; path=/';document.cookie='pbe_role=owner; path=/';document.cookie='pbe_nfl_session_v2=forged.forged.forged; path=/';const s=window.PBEPro.state;s.access='granted';s.pro=true;s.role='owner';s.user={email:'justin@proptechusa.ai'};window.dispatchEvent(new CustomEvent('pbe:pro-state'));return true})()`);
+  await sleep(2500);
+  const statuses = await probeAll(page, PREMIUM_PROBES);
+  check('client-side bypass: forcing granted / owner in the page still gets 401 from every premium route', Object.values(statuses).every(r => r.status === 401 && r.access === 'anonymous'), statuses);
+  const withEmail = await page.eval(`fetch('/api/pbe-picks?view=current&email=justin@proptechusa.ai&role=owner',{headers:{'x-pbe-role':'owner','x-user-email':'justin@proptechusa.ai'}}).then(r=>r.status)`);
+  check('client-side bypass: typing the owner email into a request grants nothing', withEmail === 401, withEmail);
 });
 
-if (want('signedin')) for (const view of [DESKTOP, PHONE]) {
-  await withPage(view, async page => {
+if (want('signedin')) for (const vp of [DESKTOP, PHONE]) {
+  await withPage(vp, async page => {
     await page.signIn('free@qa.test');
-    await page.waitFor(`document.documentElement.dataset.pbeAccess!=='checking'`);
-    const w = await wall(page);
-    check(`[${view.label}] signed in, no subscription -> wall with account email and plans`, (await accessState(page)) === 'no_entitlement' && w.funnel === 'signed-in-free' && w.plans === 2 && w.account === 'free@qa.test' && w.signOut && /No current NFL Pro subscription/.test(w.note), w);
-    check(`[${view.label}] signed in, no subscription -> no workspace`, (await workspaceLoaded(page)) === 0 && w.shellHidden && w.app === 'undefined');
-    const s = await page.eval(`fetch('/api/auth-session',{cache:'no-store'}).then(r=>r.json()).then(j=>({valid:j.valid,pro:j.pro,access:j.access}))`);
-    check(`[${view.label}] sign-in alone: identity valid, pro false, access no_entitlement`, s.valid === true && s.pro === false && s.access === 'no_entitlement', s);
-    check(`[${view.label}] signed-in wall fits the viewport`, w.overflow <= 0, { overflow: w.overflow });
-    log(`  screenshot ${await page.shot('paywall-signed-in-no-subscription')}`);
-    const direct = {};
-    for (const probe of GATED_PROBES) direct[probe] = await apiStatus(page, probe);
-    check(`[${view.label}] direct API calls with a session but no entitlement -> 403`, Object.values(direct).every(s => s === 403), direct);
+    await settled(page);
+    const opened = await siteOpen(page);
+    const s = await page.eval(`fetch('/api/auth-session',{cache:'no-store'}).then(r=>r.json()).then(j=>({valid:j.valid,pro:j.pro,access:j.access,role:j.role||null}))`);
+    check(`[${vp.label}] sign-in alone: identity valid, pro false, access no_entitlement`, s.valid === true && s.pro === false && s.access === 'no_entitlement' && s.role === null, s);
+    const v0 = await view(page);
+    check(`[${vp.label}] signed in, no subscription -> the site opens, no wall`, opened && v0.app === 'object' && !v0.modalOpen, v0);
+    check(`[${vp.label}] signed in, no subscription -> premium APIs 403, public APIs open`, refusedAll(await probeAll(page, PREMIUM_PROBES), 403, 'no_entitlement') && neverRefused(await probeAll(page, PUBLIC_PROBES)));
+    await openUnlock(page); await sleep(600);
+    const v = await view(page);
+    check(`[${vp.label}] signed in, no subscription -> Unlock Pro shows the account and plans`, v.modalOpen && !v.isWall && v.funnel === 'signed-in-free' && v.plans === 2 && v.account === 'free@qa.test' && /No current NFL Pro subscription/.test(v.note), v);
+    check(`[${vp.label}] signed-in Unlock Pro fits the viewport`, v.overflow <= 0, { overflow: v.overflow });
+    log(`  screenshot ${await page.shot('unlock-signed-in-no-subscription')}`);
   });
 }
 
@@ -173,26 +215,74 @@ const DENIED = [['orphan@qa.test', /No current NFL Pro subscription/], ['nullexp
 if (want('denied')) for (const [email, note] of DENIED) {
   await withPage(DESKTOP, async page => {
     await page.signIn(email);
-    await page.waitFor(`document.documentElement.dataset.pbeAccess!=='checking'`);
-    const w = await wall(page);
-    const gw = await apiStatus(page, '/api/gw/api/best-line');
-    check(`${email} -> denied, wall shown, no workspace`, (await accessState(page)) === 'no_entitlement' && w.funnel === 'signed-in-free' && note.test(w.note) && (await workspaceLoaded(page)) === 0 && gw === 403, { note: w.note, gw });
-    if (email === 'expired@qa.test') log(`  screenshot ${await page.shot('paywall-expired')}`);
+    await settled(page);
+    const premium = await probeAll(page, PREMIUM_PROBES);
+    await page.waitFor(`window.PBEPro && window.App`, 30000);
+    await openUnlock(page); await sleep(500);
+    const v = await view(page);
+    check(`${email} -> no Pro: premium 403, reason shown on Unlock Pro`, (await accessState(page)) === 'no_entitlement' && refusedAll(premium, 403, 'no_entitlement') && note.test(v.note), { note: v.note });
   });
 }
 
-if (want('outage')) for (const view of [DESKTOP, PHONE]) {
-  await withPage(view, async page => {
+if (want('outage')) for (const vp of [DESKTOP, PHONE]) {
+  await withPage(vp, async page => {
     await page.goto(`${BASE}/__qa/supabase?mode=down`, 300);
     try {
       await page.signIn('pro@qa.test');
-      await page.waitFor(`document.documentElement.dataset.pbeAccess!=='checking'`);
-      const w = await wall(page);
-      const text = await page.eval(`document.querySelector('#pbe-pro-checkout')?.textContent||''`);
-      check(`[${view.label}] entitlement outage -> "Unable to verify access", fail closed`, (await accessState(page)) === 'unavailable' && /Unable to verify access/.test(text) && w.plans === 0 && (await workspaceLoaded(page)) === 0, { funnel: w.funnel, plans: w.plans });
-      check(`[${view.label}] entitlement outage -> paid API answers 503`, (await apiStatus(page, '/api/gw/api/best-line')) === 503);
-      log(`  screenshot ${await page.shot('paywall-unavailable')}`);
+      await settled(page);
+      const opened = await siteOpen(page);
+      const premium = await probeAll(page, PREMIUM_PROBES);
+      check(`[${vp.label}] entitlement outage -> access unavailable, premium 503 (fail closed), site still opens`, (await accessState(page)) === 'unavailable' && opened && Object.values(premium).every(r => r.status === 503 && r.access === 'unavailable'), premium);
+      log(`  screenshot ${await page.shot('unlock-unavailable')}`);
     } finally { await page.goto(`${BASE}/__qa/supabase?mode=ok`, 300); }
+  });
+}
+
+if (want('owner')) {
+  for (const vp of [DESKTOP, PHONE]) {
+    await withPage(vp, async page => {
+      const token = await page.signIn('owner@qa.test');
+      await page.waitFor(`document.documentElement.dataset.pbeAccess==='granted'`, 20000);
+      const s = await page.eval(`fetch('/api/auth-session',{cache:'no-store'}).then(r=>r.json()).then(j=>({access:j.access,pro:j.pro,role:j.role||null,reason:j.entitlement?.reason,email:j.user?.email}))`);
+      check(`[${vp.label}] owner via verified magic link -> granted as owner with no subscription row`, s.access === 'granted' && s.pro === true && s.role === 'owner' && s.reason === 'owner' && s.email === 'owner@qa.test', s);
+      const premium = await probeAll(page, PREMIUM_PROBES);
+      check(`[${vp.label}] owner -> every premium API passes the entitlement gate`, grantedAll(premium), premium);
+      await siteOpen(page);
+      await page.eval(`window.App.nav('pbepicks')`); await sleep(2500);
+      const lock = await page.eval(`document.querySelectorAll('#view-container [data-pbe-open-pro]').length`);
+      check(`[${vp.label}] owner -> PBE Picks shows no Unlock Pro prompt`, lock === 0, { unlockButtons: lock });
+      log(`  screenshot ${await page.shot('owner-pbepicks')}`);
+      if (vp === DESKTOP) {
+        /* the same emailed link, clicked again in the same browser: refused */
+        await page.goto(`${BASE}/api/auth-verify?token=${encodeURIComponent(token)}`, 1500);
+        await sleep(1500);
+        const reuse = await page.eval(`[...document.querySelectorAll('#pbe-pro-backdrop [id*="message"]')].map(e=>e.textContent).join(' ')`);
+        log(`  reuse page ${JSON.stringify(await page.eval(`({url:location.href,access:document.documentElement.dataset.pbeAccess,open:!!document.querySelector('#pbe-pro-backdrop.open'),text:(document.querySelector('#pbe-pro-checkout')?.textContent||'').trim().slice(0,200)})`))}`);
+        log(`  screenshot ${await page.shot('owner-link-reused')}`);
+        check('owner link reused -> refused (link_already_used)', /already used/i.test(reuse) || /link_already_used/.test(reuse), reuse);
+        /* sign-out removes owner access */
+        await page.eval(`fetch('/api/auth-logout',{method:'POST',credentials:'same-origin'}).then(r=>r.status)`);
+        const after = await probeAll(page, PREMIUM_PROBES);
+        const sess = await page.eval(`fetch('/api/auth-session',{cache:'no-store'}).then(r=>r.json()).then(j=>({access:j.access,role:j.role||null}))`);
+        check('owner signs out -> premium 401, session anonymous', refusedAll(after, 401, 'anonymous') && sess.access === 'anonymous' && sess.role === null, sess);
+      }
+    });
+  }
+  await withPage(DESKTOP, async page => {
+    /* a link clicked after sign-out / in a new browser a second time: no session */
+    const token = await page.signIn('owner@qa.test');
+    await page.eval(`fetch('/api/auth-logout',{method:'POST',credentials:'same-origin'}).then(r=>r.status)`);
+    await page.goto(`${BASE}/api/auth-verify?token=${encodeURIComponent(token)}`, 1500);
+    await settled(page);
+    check('owner link replayed after sign-out -> no session, premium 401', (await accessState(page)) === 'anonymous' && refusedAll(await probeAll(page, PREMIUM_PROBES), 401, 'anonymous'));
+  });
+  await withPage(DESKTOP, async page => {
+    await page.goto(`${BASE}/__qa/magic?email=owner@qa.test&expired=1`, 400);
+    const token = await page.eval(`JSON.parse(document.body.innerText).token`);
+    await page.goto(`${BASE}/api/auth-verify?token=${encodeURIComponent(token)}`, 1500);
+    await settled(page);
+    const msg = await page.eval(`[...document.querySelectorAll('#pbe-pro-backdrop [id*="message"]')].map(e=>e.textContent).join(' ')`);
+    check('expired owner link -> no session, premium 401, "expired" shown', (await accessState(page)) === 'anonymous' && refusedAll(await probeAll(page, PREMIUM_PROBES), 401, 'anonymous') && /expired/i.test(msg), msg);
   });
 }
 
@@ -202,9 +292,9 @@ const RESEARCH = ['simulator', 'sgplab', 'propchain', 'teams', 'standings', 'sta
 if (want('subscriber')) await withPage(DESKTOP, async page => {
   await page.signIn('pro@qa.test');
   const opened = await page.waitFor(`document.documentElement.dataset.pbeAccess==='granted' && window.App && window.PBEUpgrades && window.PBEUpgrades.loading===false`, 60000);
-  const w = await wall(page);
-  check('valid NFL subscriber -> product opens, no wall', opened && !w.open && !w.shellHidden && w.app === 'object', w);
-  check('valid NFL subscriber -> paid API 200 through the same-origin route', (await apiStatus(page, '/api/gw/api/best-line')) === 200);
+  const v = await view(page);
+  check('valid NFL subscriber -> Pro granted, no modal', opened && !v.modalOpen && v.app === 'object', v);
+  check('valid NFL subscriber -> premium APIs pass the gate through the same-origin route', grantedAll(await probeAll(page, PREMIUM_PROBES)));
   check('valid NFL subscriber -> the browser never calls the gateway directly', leakedGateway(page).length === 0, leakedGateway(page).slice(0, 3));
   await sleep(2500);
   log(`  screenshot ${await page.shot('subscriber-home')}`);
@@ -213,11 +303,11 @@ if (want('subscriber')) await withPage(DESKTOP, async page => {
     await page.eval(`window.App.nav(${JSON.stringify(route)})`); await sleep(1400);
     /* a workspace that is still reading its data gets up to 8s more */
     await page.waitFor(`(document.querySelector('#view-container')?.textContent||'').trim().length>80`, 8000);
-    const r = await page.eval(`({alive:1+1===2,route:window.App?.current,chars:(document.querySelector('#view-container')?.textContent||'').trim().length,text:(document.querySelector('#view-container')?.textContent||'').trim().replace(/\s+/g,' ').slice(0,140),access:document.documentElement.dataset.pbeAccess,wall:!!document.querySelector('#pbe-pro-backdrop.open')})`);
+    const r = await page.eval(`({route:window.App?.current,chars:(document.querySelector('#view-container')?.textContent||'').trim().length,access:document.documentElement.dataset.pbeAccess,modal:!!document.querySelector('#pbe-pro-backdrop.open')})`);
     soak.push({ route, ...r });
-    if (!(r.alive && r.route === route && r.chars > 80 && r.access === 'granted' && !r.wall)) { check(`route soak: ${route}`, false, { ...r, http_errors: page.failures.slice(-6) }); }
+    if (!(r.route === route && r.chars > 80 && r.access === 'granted' && !r.modal)) check(`route soak: ${route}`, false, { ...r, http_errors: page.failures.slice(-6) });
   }
-  const bad = soak.filter(r => !(r.alive && r.route === r.route && r.chars > 80 && r.access === 'granted' && !r.wall));
+  const bad = soak.filter(r => !(r.chars > 80 && r.access === 'granted' && !r.modal));
   check(`route navigation smoke: ${soak.length} routes open for a subscriber`, bad.length === 0, { failed: bad.map(r => r.route) });
   check('route navigation smoke: no uncaught page exceptions', page.exceptions.length === 0, page.exceptions.slice(0, 5));
   check('route navigation smoke: still no direct gateway calls', leakedGateway(page).length === 0, leakedGateway(page).slice(0, 3));
@@ -227,18 +317,19 @@ if (want('pass')) await withPage(PHONE, async page => {
   await page.signIn('pass@qa.test');
   const opened = await page.waitFor(`document.documentElement.dataset.pbeAccess==='granted' && window.App`, 60000);
   const s = await page.eval(`fetch('/api/auth-session',{cache:'no-store'}).then(r=>r.json()).then(j=>j.entitlement)`);
-  check('[mobile] valid season pass (one-time) -> product opens', opened && s?.plan === 'season_pass', s);
+  check('[mobile] valid season pass (one-time) -> Pro granted', opened && s?.plan === 'season_pass', s);
   await sleep(2500);
-  log(`  screenshot ${await page.shot('subscriber-home')}`);
+  log(`  screenshot ${await page.shot('season-pass-home')}`);
 });
 
 if (want('cancel')) await withPage(DESKTOP, async page => {
   await page.signIn('weekly@qa.test');
   await page.waitFor(`document.documentElement.dataset.pbeAccess==='granted' && window.App`, 60000);
   await page.eval(`fetch('/__qa/ledger?email=weekly@qa.test&state=canceled').then(()=>window.PBEPro.refreshAccess()).then(()=>true)`);
-  const back = await page.waitFor(`document.documentElement.dataset.pbeAccess==='no_entitlement' && !window.App`, 20000);
-  const w = await wall(page);
-  check('subscription canceled mid-session -> workspace torn down, back to the wall', back && w.open && /canceled/.test(w.note), { note: w.note, app: w.app });
+  const back = await page.waitFor(`document.documentElement.dataset.pbeAccess==='no_entitlement'`, 20000);
+  const premium = await probeAll(page, PREMIUM_PROBES);
+  const v = await view(page);
+  check('subscription canceled mid-session -> Pro removed (premium 403), public site stays open', back && refusedAll(premium, 403, 'no_entitlement') && v.app === 'object' && !v.isWall, { app: v.app });
   await page.goto(`${BASE}/__qa/ledger?email=weekly@qa.test&state=weekly`, 300);
 });
 
@@ -302,13 +393,14 @@ if (slate === undefined) {
   }
 }
 
-/* ------------------------------------------------ negative canaries (server) */
+/* ------------------------------------------------ direct API canaries (server) */
 if (want('canaries')) {
-  const statuses = {};
-  for (const probe of GATED_PROBES) statuses[probe] = (await fetch(`${BASE}${probe}`, { headers: { cookie: 'subscribed=true; pbe_pro=1' } })).status;
-  check('direct API negative canaries (no browser, client flags only) -> 401 on every paid route', Object.values(statuses).every(s => s === 401), statuses);
-  const publicOk = (await fetch(`${BASE}/api/auth-session`)).status === 200;
-  check('public routes stay public: /api/auth-session', publicOk);
+  const premium = {};
+  for (const probe of PREMIUM_PROBES) { const r = await fetch(`${BASE}${probe}`, { headers: { cookie: 'subscribed=true; pbe_pro=1; pbe_role=owner', 'x-pbe-role': 'owner' } }); premium[probe] = { status: r.status, access: r.headers.get('x-pbe-access') }; }
+  check('direct API canaries (no browser, client flags only) -> 401 on every premium route', refusedAll(premium, 401, 'anonymous'), premium);
+  const pub = {};
+  for (const probe of PUBLIC_PROBES) { const r = await fetch(`${BASE}${probe}`); pub[probe] = { status: r.status, access: r.headers.get('x-pbe-access') }; }
+  check('direct API canaries -> public routes are never refused for lack of a subscription', neverRefused(pub), pub);
 }
 
 const failed = results.filter(r => !r.ok);

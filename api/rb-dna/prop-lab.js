@@ -15,7 +15,6 @@ import { resolvePlayer, gamesFor, propThreshold, tdHistory, splitRows,
          provenance, dataWindow, MARKETS, CONDITIONS } from '../_rbdna/engine.js';
 import { eventMarkets, RUSHING_MARKET_MAP, MARKET_UNAVAILABLE } from '../_playerdna/markets.js';
 import { playerMedia, teamBlock } from '../_playerdna/media.js';
-import { withNflEntitlement } from '../_nfl-access.js';
 
 function send(res, status, body, ttl = 0) {
   res.statusCode = status;
@@ -191,6 +190,6 @@ async function handler(req, res) {
   }, 120);
 }
 
-/* Paid NFL route: a current, verified NFL entitlement is required (api/_nfl-access.js). */
+/* Public NFL route (api/_nfl-route-policy.js). */
 export { handler };
-export default withNflEntitlement(handler);
+export default handler;

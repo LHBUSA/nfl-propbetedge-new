@@ -138,7 +138,7 @@
     return subscription?.cancel_at_period_end ? `Access remains active through ${label}.` : `Current billing period runs through ${label}.`;
   }
 
-  function activeProMarkup(email, subscription) {
+  function activeProMarkup(email, subscription, owner) {
     return `<div class="pbe-funnel-root pbe-funnel-active" data-funnel-state="active-pro">
       <div class="pbe-funnel-head">
         <span>NFL PRO · VERIFIED ACCESS</span>
@@ -155,7 +155,7 @@
           <div class="pbe-funnel-check">✓</div>
         </div>
         <div class="pbe-funnel-active-title">Pro intelligence is enabled</div>
-        <div class="pbe-pro-renew">${escapeHtml(accessPeriodCopy(subscription))}</div>
+        <div class="pbe-pro-renew">${escapeHtml(owner ? 'Owner access · every NFL Pro feature, no subscription required.' : accessPeriodCopy(subscription))}</div>
       </div>
       <div class="pbe-funnel-email-label pbe-funnel-capabilities">
         <b>Your Pro desk</b>
@@ -166,7 +166,7 @@
         <button class="pbe-pro-cta secondary" id="pbe-funnel-refresh" type="button">Refresh verified access</button>
         <div class="pbe-pro-message" id="pbe-funnel-message"></div>
       </div>
-      <div class="pbe-pro-secure">◆ NFL Pro active · Stripe-backed entitlement verified by PropBetEdge</div>
+      <div class="pbe-pro-secure">◆ ${owner ? 'Owner access verified server-side from your emailed sign-in link' : 'NFL Pro active · Stripe-backed entitlement verified by PropBetEdge'}</div>
     </div>`;
   }
 
@@ -186,6 +186,7 @@
   }
   function validEmail(email) { return /^\S+@\S+\.\S+$/.test(email) && email.length <= 254; }
   function message(text, type = '') {
+    if (window.PBEPro?.state) window.PBEPro.state.notice = null;
     const el = document.getElementById('pbe-funnel-message');
     if (!el) return;
     el.className = `pbe-pro-message ${type}`.trim();
@@ -309,10 +310,12 @@
     const current = host.querySelector('.pbe-funnel-root')?.dataset?.funnelState;
     if (current !== mode) {
       host.innerHTML = s.pro
-        ? activeProMarkup(String(s.user?.email || '').toLowerCase(), s.subscription)
+        ? activeProMarkup(String(s.user?.email || '').toLowerCase(), s.subscription, s.entitlement?.reason === 'owner')
         : s.user
           ? signedInFreeMarkup(String(s.user.email || '').toLowerCase())
           : signedOutMarkup();
+      /* a paywall.js notice (refused sign-in link, payment confirming) survives the swap */
+      window.PBEPro?.paintNotice?.();
     }
     wire(host);
   }

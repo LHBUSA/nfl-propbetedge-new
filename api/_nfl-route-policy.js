@@ -1,29 +1,28 @@
 /* PropBetEdge NFL — every Vercel API route and who may call it.
  *
- * tests/nfl-paywall-entitlement.test.mjs reads the api/ directory and fails
- * when a route is missing from this table, and proves every ENTITLED route
- * answers 401 / 403 / 503 without a current NFL entitlement. Adding a route
- * means deciding its access here first.
+ * Access unlock, not a site-wide paywall: visitors read the site and its
+ * public data; the proprietary PBE layer (the passing model and live picks) is
+ * premium and is enforced server-side here.
  *
- * ENTITLED  wrapped with withNflEntitlement (api/_nfl-access.js)
- * PUBLIC    reachable without a subscription, with the reason it must be
+ * tests/nfl-paywall-entitlement.test.mjs reads the api/ directory and fails
+ * when a route is missing from this table, proves every PREMIUM route (and
+ * premium variant) answers 401 / 403 / 503 without a current NFL entitlement
+ * or the verified owner, and proves PUBLIC routes are not refused.
+ *
+ * PREMIUM   wrapped with withNflEntitlement (api/_nfl-access.js)
+ * MIXED     wrapped, with an explicit public predicate for non-premium variants
+ * PUBLIC    no subscription needed, with the reason
  */
 
-export const ENTITLED_ROUTES = Object.freeze([
-  'gw.js',                      // same-origin protected gateway reads (odds, best line, changes, injuries, season, picks/pass, replay …)
-  'pro-model.js',               // the passing model for one event
-  'game-intel.js',              // Games: odds board + core market per game
-  'home-market.js',             // Dashboard core market
-  'weather-watch.js',           // PBE Breaking weather rail
-  'pbe-picks.js',               // PBE Picks / Track Record / receipts (view=preview is the one public variant)
-  'pbe-prop-picks.js',          // player prop picks, including the track record with model fields
-  'pbe-validation.js',          // validation telemetry
-  'qb-dna.js', 'wr-dna.js', 'rb-dna.js', 'te-dna.js',
-  'qb-dna/compare.js', 'qb-dna/game-context.js', 'qb-dna/prop-history.js', 'qb-dna/prop-lab.js',
-  'rb-dna/compare.js', 'rb-dna/prop-lab.js',
-  'wr-dna/compare.js', 'wr-dna/prop-lab.js',
-  'te-dna/compare.js', 'te-dna/prop-lab.js',
+export const PREMIUM_ROUTES = Object.freeze([
+  'pro-model.js',               // PBE passing model for one event
 ]);
+
+export const MIXED_ROUTES = Object.freeze({
+  'gw.js': 'gateway reads are public except PREMIUM_GATEWAY_ROUTES (/api/picks/pass, the passing model)',
+  'pbe-picks.js': 'view=current|validation-history|decision are premium; state, preview, trackrecord, receipt are public',
+  'pbe-prop-picks.js': 'view=current is premium; state and trackrecord are public',
+});
 
 export const PUBLIC_ROUTES = Object.freeze({
   'auth-email.js': 'passwordless sign-in request',
@@ -34,16 +33,16 @@ export const PUBLIC_ROUTES = Object.freeze({
   'checkout.js': 'subscription checkout',
   'checkout-complete.js': 'Stripe return; sends the access email',
   'stripe-webhook.js': 'Stripe-signed entitlement writes',
-  'news-feed.js': 'public NFL news (explicitly public)',
+  'news-feed.js': 'public NFL news',
   'nfl-media.js': 'team logos and player headshot lookups',
-  /* nfl-live is an ESPN scoreboard/box-score relay, and it is consumed server-
-     to-server by the frozen nfl-current Worker (?range, ?standings, ?event) and
-     by nfl-prop-picks-grader (?event). Gating it would stop the season authority
-     and the grader. It carries no PropBetEdge model or market data. Closing it
-     requires those Workers to present a server token first. */
-  'nfl-live.js': 'ESPN relay required by frozen server-side consumers (nfl-current, nfl-prop-picks-grader)',
-});
-
-export const PUBLIC_VARIANTS = Object.freeze({
-  'pbe-picks.js': 'view=preview: locked teaser cards, assertNoSelection() guarantees no selection data',
+  'nfl-live.js': 'ESPN scoreboard relay; also required by frozen server-side consumers (nfl-current, nfl-prop-picks-grader)',
+  'game-intel.js': 'Games: sportsbook odds board + core market per game',
+  'home-market.js': 'Dashboard core sportsbook market',
+  'weather-watch.js': 'weather rail',
+  'pbe-validation.js': 'aggregate validation telemetry (no selections)',
+  'qb-dna.js': 'Player DNA research', 'wr-dna.js': 'Player DNA research', 'rb-dna.js': 'Player DNA research', 'te-dna.js': 'Player DNA research',
+  'qb-dna/compare.js': 'Player DNA research', 'qb-dna/game-context.js': 'Player DNA research', 'qb-dna/prop-history.js': 'Player DNA research', 'qb-dna/prop-lab.js': 'Player DNA research',
+  'rb-dna/compare.js': 'Player DNA research', 'rb-dna/prop-lab.js': 'Player DNA research',
+  'wr-dna/compare.js': 'Player DNA research', 'wr-dna/prop-lab.js': 'Player DNA research',
+  'te-dna/compare.js': 'Player DNA research', 'te-dna/prop-lab.js': 'Player DNA research',
 });

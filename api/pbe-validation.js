@@ -1,5 +1,4 @@
 import { supabaseAdminHeaders } from './_nfl-auth.js';
-import { withNflEntitlement } from './_nfl-access.js';
 
 const DEFAULT_SUPABASE_URL = 'https://tkmlnhmylqnttmnsnief.supabase.co';
 const MIN_GRADED_PICKS = 100;
@@ -178,6 +177,6 @@ async function handler(req, res) {
   }
 }
 
-/* Paid NFL route: a current, verified NFL entitlement is required (api/_nfl-access.js). */
+/* Public NFL route (api/_nfl-route-policy.js). */
 export { handler };
-export default withNflEntitlement(handler);
+export default handler;

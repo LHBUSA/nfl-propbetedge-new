@@ -1,11 +1,13 @@
-/* P0 — NFL is a subscription product. Identity != entitlement.
+/* NFL access unlock. Identity != entitlement.
  *
  * Proves, against the real handlers and a stubbed Supabase / gateway:
- *   · only a verifiable, current, explicitly-NFL purchase opens the product
- *   · every paid API route fails closed (401 / 403 / 503) and leaks nothing
- *   · a granted response can never be shared by a cache
+ *   · only a verifiable, current, explicitly-NFL purchase — or the verified
+ *     owner — unlocks premium data
+ *   · every premium route and premium variant fails closed (401 / 403 / 503)
+ *     and leaks nothing; public routes are never refused
+ *   · a premium response can never be shared by a cache
  *   · MLB / UFC / NBA / NHL subscriptions are not NFL subscriptions
- *   · signing in never changes access
+ *   · signing in never changes access; typing the owner email grants nothing
  *   · the gateway lock refuses callers without the server token
  * No network call leaves the process.
  */
@@ -23,11 +25,12 @@ Object.assign(process.env, {
   NFL_GATEWAY: 'https://gateway.test',
   NFL_GATEWAY_TOKEN: 'gateway-token-test-value',
   NFL_AUTH_WORKER_URL: 'https://auth-worker.test',
+  NFL_OWNER_EMAILS: 'owner@propbetedge.test',
 });
 
 const auth = await import('../api/_nfl-auth.js');
 const E = await import('../api/_nfl-entitlement.js');
-const { ENTITLED_ROUTES, PUBLIC_ROUTES } = await import('../api/_nfl-route-policy.js');
+const { PREMIUM_ROUTES, MIXED_ROUTES, PUBLIC_ROUTES } = await import('../api/_nfl-route-policy.js');
 const { forwardablePath } = await import('../api/gw.js');
 
 const API_DIR = fileURLToPath(new URL('../api/', import.meta.url));
@@ -204,8 +207,8 @@ test('MLB-only, UFC-only, NBA-only and NHL-only subscriptions are not NFL subscr
     assert.equal(s.access, 'no_entitlement', sport);
     assert.equal(s.pro, false, sport);
     assert.equal(s.entitlement.reason, 'not_an_nfl_price', sport);
-    const r = await call('gw.js', { cookie: cookieFor(email), query: { __gw_path: 'api/odds/board', event_id: 'e1' } });
-    assert.equal(r.status, 403, `${sport} subscriber is refused paid NFL data`);
+    const r = await call('gw.js', { cookie: cookieFor(email), query: { __gw_path: 'api/picks/pass', event_id: 'e1' } });
+    assert.equal(r.status, 403, `${sport} subscriber is refused premium NFL data`);
   }
   assert.ok(calls.supabase.every(c => c.path === '/rest/v1/nfl_subscriptions'), 'only the NFL ledger is ever consulted');
   assert.equal(calls.gateway.length, 0);
@@ -255,7 +258,7 @@ test('entitlement lookup outage fails closed: HTTP 500, network error, unreadabl
     LEDGER.set('pro@propbetedge.test', [recurring('pro@propbetedge.test')]);
     const s = await session('pro@propbetedge.test');
     assert.equal(s.access, 'unavailable', mode); assert.equal(s.pro, false, mode); assert.equal(s.degraded, true, mode);
-    const r = await call('gw.js', { cookie: cookieFor('pro@propbetedge.test'), query: { __gw_path: 'api/best-line' } });
+    const r = await call('gw.js', { cookie: cookieFor('pro@propbetedge.test'), query: { __gw_path: 'api/picks/pass', event_id: 'e1' } });
     assert.equal(r.status, 503, mode); assert.equal(r.headers['x-pbe-access'], 'unavailable');
   }
   resetWorld();
@@ -296,7 +299,7 @@ test('sign-in alone never changes Pro/access status', async () => {
   assert.equal(body.user.email, 'brand-new@propbetedge.test');
   assert.equal(body.pro, false);
   assert.equal(body.access, 'no_entitlement');
-  const data = await call('gw.js', { cookie, query: { __gw_path: 'api/odds/board', event_id: 'e1' } });
+  const data = await call('gw.js', { cookie, query: { __gw_path: 'api/picks/pass', event_id: 'e1' } });
   assert.equal(data.status, 403);
   assert.equal(calls.gateway.length, 0);
 });
@@ -314,41 +317,46 @@ function apiRoutes(dir = API_DIR) {
   return out.sort();
 }
 
-test('every Vercel API route is classified ENTITLED or PUBLIC, and nothing twice', () => {
+test('every Vercel API route is classified PREMIUM, MIXED or PUBLIC, and nothing twice', () => {
   const routes = apiRoutes();
-  const classified = [...ENTITLED_ROUTES, ...Object.keys(PUBLIC_ROUTES)];
+  const classified = [...PREMIUM_ROUTES, ...Object.keys(MIXED_ROUTES), ...Object.keys(PUBLIC_ROUTES)];
   assert.deepEqual(routes.filter(r => !classified.includes(r)), [], 'unclassified routes');
   assert.deepEqual(classified.filter(r => !routes.includes(r)), [], 'policy names a route that does not exist');
   assert.equal(new Set(classified).size, classified.length);
-  for (const route of ENTITLED_ROUTES) {
+  for (const route of [...PREMIUM_ROUTES, ...Object.keys(MIXED_ROUTES)]) {
     const src = readFileSync(join(API_DIR, route), 'utf8');
     assert.match(src, /export default withNflEntitlement\(handler/, `${route} is wrapped by the one gate`);
   }
+  for (const route of Object.keys(PUBLIC_ROUTES)) {
+    const src = readFileSync(join(API_DIR, route), 'utf8');
+    assert.doesNotMatch(src, /export default withNflEntitlement/, `${route} is public: no site-wide gate`);
+  }
 });
 
-const PROBE_QUERY = {
-  'gw.js': { __gw_path: 'api/odds/board', event_id: 'e1', markets: 'player_reception_yds' },
-  'pro-model.js': { event_id: 'e1' },
-  'pbe-picks.js': { view: 'current' },
-  'pbe-prop-picks.js': { view: 'trackrecord' },
-  'qb-dna.js': { list: '1' },
-};
+/* every premium route and premium variant of a mixed route */
+const PREMIUM_PROBES = [
+  ['pro-model.js', { event_id: 'e1' }],
+  ['gw.js', { __gw_path: 'api/picks/pass', event_id: 'e1' }],
+  ['pbe-picks.js', { view: 'current' }],
+  ['pbe-picks.js', { view: 'validation-history' }],
+  ['pbe-picks.js', { view: 'decision', id: '11111111-1111-4111-8111-111111111111' }],
+  ['pbe-prop-picks.js', { view: 'current' }],
+];
 
-for (const route of ENTITLED_ROUTES) {
-  test(`direct protected API call without entitlement is denied: /api/${route}`, async () => {
+for (const [route, query] of PREMIUM_PROBES) {
+  test(`premium data without entitlement is denied: /api/${route}?${new URLSearchParams(query)}`, async () => {
     resetWorld();
     LEDGER.set('orphan@propbetedge.test', [ORPHAN('orphan@propbetedge.test')]);
-    const query = PROBE_QUERY[route] || {};
     const cases = [
       ['anonymous', '', 401, 'anonymous'],
       ['forged cookie', `${auth.SESSION_COOKIE}=eyJhbGciOiJIUzI1NiJ9.eyJlbWFpbCI6InByb0B4LmNvbSJ9.AAAA`, 401, 'anonymous'],
       ['signed in, no subscription', cookieFor('free@propbetedge.test'), 403, 'no_entitlement'],
       ['active orphan row', cookieFor('orphan@propbetedge.test'), 403, 'no_entitlement'],
-      /* client-side claims are ignored */
-      ['client flags', `pbe_pro=1; subscribed=true; ${auth.LEGACY_SESSION_COOKIE}=granted`, 401, 'anonymous'],
+      /* client-side claims are ignored, including a claimed owner role */
+      ['client flags', `pbe_pro=1; subscribed=true; role=owner; owner=owner@propbetedge.test; ${auth.LEGACY_SESSION_COOKIE}=granted`, 401, 'anonymous'],
     ];
     for (const [label, cookie, status, access] of cases) {
-      const r = await call(route, { cookie, query: { ...query, subscribed: 'true', pro: '1' } });
+      const r = await call(route, { cookie, query: { ...query, subscribed: 'true', pro: '1', role: 'owner', email: 'owner@propbetedge.test' } });
       assert.equal(r.status, status, `${route} ${label}`);
       assert.equal(r.headers['x-pbe-access'], access, `${route} ${label}`);
       assert.equal(r.headers['cache-control'], 'private, no-store, max-age=0', `${route} ${label} is never cacheable`);
@@ -362,24 +370,40 @@ for (const route of ENTITLED_ROUTES) {
   });
 }
 
-test('PBE Picks locked preview is the one public variant; every other view is gated', async () => {
-  resetWorld();
-  for (const view of ['state', 'current', 'trackrecord', 'validation-history', 'decision', 'receipt']) {
-    assert.equal((await call('pbe-picks.js', { query: { view } })).status, 401, view);
+/* public routes and the public variants of mixed routes: never refused for
+   lack of a subscription (the handlers may still fail on their stubbed
+   upstreams — that is not an access decision) */
+const PUBLIC_PROBES = [
+  ['gw.js', { __gw_path: 'api/best-line' }], ['gw.js', { __gw_path: 'api/odds/board', event_id: 'e1', markets: 'player_pass_yds' }],
+  ['pbe-picks.js', { view: 'state' }], ['pbe-picks.js', { view: 'preview' }], ['pbe-picks.js', { view: 'trackrecord' }], ['pbe-picks.js', { view: 'receipt' }],
+  ['pbe-prop-picks.js', { view: 'state' }], ['pbe-prop-picks.js', { view: 'trackrecord' }],
+  ['game-intel.js', { event_id: 'e1' }], ['home-market.js', { away: 'a', home: 'b' }], ['weather-watch.js', {}], ['pbe-validation.js', {}],
+  ['qb-dna.js', { list: '1' }], ['wr-dna.js', { list: '1' }], ['rb-dna.js', { list: '1' }], ['te-dna.js', { list: '1' }],
+];
+test('public site data is never refused for a visitor without a subscription', async () => {
+  for (const [route, query] of PUBLIC_PROBES) {
+    resetWorld();
+    const r = await call(route, { query });
+    assert.ok(![401, 403].includes(r.status), `${route} ${JSON.stringify(query)} -> ${r.status}`);
+    assert.equal(r.headers['x-pbe-access'], undefined, `${route} ${JSON.stringify(query)} made no access decision`);
   }
-  const src = readFileSync(join(API_DIR, 'pbe-picks.js'), 'utf8');
-  assert.match(src, /isPublic: req => String\(req\.query\?\.view \|\| ''\)\.trim\(\)\.toLowerCase\(\) === 'preview'/);
+});
+
+test('PBE Picks: live selections are premium; state, preview, record and receipts are public', async () => {
+  resetWorld();
+  for (const view of ['current', 'validation-history', 'decision']) assert.equal((await call('pbe-picks.js', { query: { view } })).status, 401, view);
+  for (const view of ['state', 'preview', 'trackrecord', 'receipt']) assert.ok(![401, 403].includes((await call('pbe-picks.js', { query: { view } })).status), view);
 });
 
 /* ============================================================ granted path */
 
-test('direct protected API call with a valid entitlement is allowed and forwarded with the server token', async () => {
+test('premium data with a valid entitlement is allowed, forwarded with the server token, and private', async () => {
   resetWorld();
   LEDGER.set('pro@propbetedge.test', [recurring('pro@propbetedge.test')]);
-  const r = await call('gw.js', { cookie: cookieFor('pro@propbetedge.test'), query: { __gw_path: 'api/odds/board', event_id: 'e1', markets: 'player_reception_yds' } });
+  const r = await call('gw.js', { cookie: cookieFor('pro@propbetedge.test'), query: { __gw_path: 'api/picks/pass', event_id: 'e1' } });
   assert.equal(r.status, 200);
-  assert.equal(r.body.path, '/api/odds/board');
-  assert.equal(r.body.query, '?event_id=e1&markets=player_reception_yds', '__gw_path is not forwarded');
+  assert.equal(r.body.path, '/api/picks/pass');
+  assert.equal(r.body.query, '?event_id=e1', '__gw_path is not forwarded');
   assert.equal(calls.gateway[0].token, 'gateway-token-test-value', 'server-only token attached upstream');
   assert.equal(r.headers['cache-control'], 'private, no-store, max-age=0', 'upstream public caching is not passed through');
   assert.equal(r.headers['x-pbe-access'], 'granted');
@@ -392,15 +416,71 @@ test('direct protected API call with a valid entitlement is allowed and forwarde
   assert.equal(calls.gateway.at(-1).token, 'gateway-token-test-value');
 });
 
-test('a wrapped handler that asks for public CDN caching still answers private, and drops wildcard CORS', async () => {
+test('a public gateway read needs no session, is shared-cacheable, and still never exposes the token', async () => {
   resetWorld();
-  LEDGER.set('pro@propbetedge.test', [recurring('pro@propbetedge.test')]);
-  const r = await call('qb-dna.js', { cookie: cookieFor('pro@propbetedge.test'), query: { list: '1' } });
+  const r = await call('gw.js', { query: { __gw_path: 'api/odds/board', event_id: 'e1', markets: 'player_pass_yds' } });
   assert.equal(r.status, 200);
-  const src = readFileSync(join(API_DIR, 'qb-dna.js'), 'utf8');
-  assert.match(src, /public, s-maxage/, 'the handler itself still asks for public caching');
-  assert.equal(r.headers['cache-control'], 'private, no-store, max-age=0');
-  assert.equal(r.headers['access-control-allow-origin'], undefined);
+  assert.equal(r.headers['cache-control'], 'public, max-age=30, s-maxage=60');
+  assert.equal(calls.gateway[0].token, 'gateway-token-test-value');
+  assert.equal(r.text.includes('gateway-token-test-value'), false);
+});
+
+/* ============================================================ owner access */
+
+test('owner: a verified owner session unlocks every premium route without a subscription or ledger read', async () => {
+  resetWorld();
+  const cookie = cookieFor('Owner@PropBetEdge.test'.toLowerCase());
+  const s = await session('owner@propbetedge.test');
+  assert.equal(s.access, 'granted'); assert.equal(s.pro, true); assert.equal(s.role, 'owner');
+  assert.equal(s.entitlement.plan, 'owner');
+  for (const [route, query] of PREMIUM_PROBES) {
+    const r = await call(route, { cookie, query });
+    /* the gate's decision; a stubbed picks backend may still answer 503 after it */
+    assert.equal(r.headers['x-pbe-access'], 'granted', `${route} ${JSON.stringify(query)} -> ${r.status}`);
+    assert.ok(![401, 403].includes(r.status), `${route} ${JSON.stringify(query)} -> ${r.status}`);
+  }
+  assert.equal(calls.supabase.filter(c => c.path === '/rest/v1/nfl_subscriptions').length, 0, 'owner is not a subscription lookup');
+  supabaseMode = 'http500';
+  assert.equal((await session('owner@propbetedge.test')).access, 'granted', 'an entitlement-store outage does not lock the owner out');
+});
+
+test('owner: typing the owner email, a request field, a client role or a forged session grants nothing', async () => {
+  resetWorld();
+  const q = { __gw_path: 'api/picks/pass', event_id: 'e1', email: 'owner@propbetedge.test', role: 'owner', owner: '1' };
+  assert.equal((await call('gw.js', { query: q })).status, 401, 'email in the request');
+  assert.equal((await call('gw.js', { cookie: 'role=owner; email=owner@propbetedge.test; pbe_owner=1', query: q })).status, 401, 'client cookies');
+  const b64 = v => Buffer.from(v).toString('base64url');
+  const unsigned = `${b64(JSON.stringify({ alg: 'none' }))}.${b64(JSON.stringify({ email: 'owner@propbetedge.test', type: 'session', exp: Math.floor(Date.now() / 1000) + 600 }))}.`;
+  assert.equal((await call('gw.js', { cookie: `${auth.SESSION_COOKIE}=${unsigned}`, query: q })).status, 401, 'unsigned session');
+  const wrongKey = createHmac('sha256', `${auth.HMAC_NAMESPACE}:not-the-secret`);
+  const data = `${b64(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))}.${b64(JSON.stringify({ email: 'owner@propbetedge.test', type: 'session', iat: 1, exp: Math.floor(Date.now() / 1000) + 600 }))}`;
+  assert.equal((await call('gw.js', { cookie: `${auth.SESSION_COOKIE}=${data}.${b64(wrongKey.update(data).digest())}`, query: q })).status, 401, 'session signed with another key');
+  const magic = sessionToken('owner@propbetedge.test', { type: 'magic' });
+  assert.equal((await call('gw.js', { cookie: `${auth.SESSION_COOKIE}=${magic}`, query: q })).status, 401, 'a magic-link token is not a session');
+  const expired = sessionToken('owner@propbetedge.test', { exp: Math.floor(Date.now() / 1000) - 5 });
+  assert.equal((await call('gw.js', { cookie: `${auth.SESSION_COOKIE}=${expired}`, query: q })).status, 401, 'expired owner session');
+});
+
+test('owner: the designation is server configuration; without it the same account is an ordinary user', async () => {
+  resetWorld();
+  const saved = process.env.NFL_OWNER_EMAILS;
+  try {
+    delete process.env.NFL_OWNER_EMAILS;
+    const s = await session('owner@propbetedge.test');
+    assert.equal(s.access, 'no_entitlement'); assert.equal(s.role, undefined);
+    process.env.NFL_OWNER_EMAILS = 'not-an-email, ,';
+    assert.equal((await session('owner@propbetedge.test')).access, 'no_entitlement');
+  } finally { process.env.NFL_OWNER_EMAILS = saved; }
+  assert.equal(auth.isOwnerEmail('someone@propbetedge.test'), false);
+});
+
+test('owner: signing out clears the session cookie and access with it', async () => {
+  resetWorld();
+  const { default: logout } = await import('../api/auth-logout.js');
+  const res = mockRes();
+  await logout({ method: 'POST', headers: { cookie: cookieFor('owner@propbetedge.test') } }, res);
+  assert.ok(res.headers['set-cookie'].some(c => c.startsWith(`${auth.SESSION_COOKIE}=;`) && /Max-Age=0/.test(c)));
+  assert.equal((await call('gw.js', { query: { __gw_path: 'api/picks/pass', event_id: 'e1' } })).status, 401, 'no cookie after sign-out: no access');
 });
 
 test('gw forwards only allow-listed read routes', async () => {
@@ -424,7 +504,7 @@ test('grants are cached briefly for data routes; denials never are, and a fresh 
   resetWorld();
   const email = 'cache@propbetedge.test';
   LEDGER.set(email, [recurring(email)]);
-  const q = { __gw_path: 'api/best-line' };
+  const q = { __gw_path: 'api/picks/pass', event_id: 'e1' };
   assert.equal((await call('gw.js', { cookie: cookieFor(email), query: q })).status, 200);
   assert.equal((await call('gw.js', { cookie: cookieFor(email), query: q })).status, 200);
   assert.equal(calls.supabase.length, 1, 'second data read reused the grant');

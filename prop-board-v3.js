@@ -396,7 +396,7 @@
 
   function signalCards() {
     if (!isPro()) {
-      return `<div class="pbe3-pro-locked"><div><strong>Pro Signal Board</strong><p>Unlock the largest current model gaps, PBE fair lines and model probabilities without hiding the sportsbook market beneath them.</p><button class="pbe3-button gold" type="button" onclick="PBEPro.open('upgrade')">Unlock NFL Pro · $9.99/week</button></div></div>`;
+      return `<div class="pbe3-pro-locked"><div><strong>Pro Signal Board</strong><p>Unlock the largest current model gaps, PBE fair lines and model probabilities without hiding the sportsbook market beneath them.</p><button class="pbe3-button gold" type="button" onclick="PBEPro.open('upgrade')">Unlock NFL Pro · from $3.99/week</button></div></div>`;
     }
     const modeled = state.rows
       .filter(row => row.model && Number.isFinite(modelGap(row)))

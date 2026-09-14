@@ -18,7 +18,6 @@
  * Given a durable store this moves server-side unchanged, because
  * weatherEvents(next, prev) is already a pure function of two snapshots.
  */
-import { withNflEntitlement } from './_nfl-access.js';
 import { gameSnapshot, weatherEvents, pollIntervalMinutes, THRESHOLDS, venues }
   from './_breaking/weather.js';
 
@@ -160,6 +159,6 @@ async function handler(req, res) {
   }, 300);
 }
 
-/* Paid NFL route: a current, verified NFL entitlement is required (api/_nfl-access.js). */
+/* Public NFL route (api/_nfl-route-policy.js). */
 export { handler };
-export default withNflEntitlement(handler);
+export default handler;

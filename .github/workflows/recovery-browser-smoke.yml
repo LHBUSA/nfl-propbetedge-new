@@ -63,7 +63,7 @@ jobs:
           node scripts/nfl-access-local-server.mjs --port 8791 --odds fixture > qa-harness-fixture.log 2>&1 &
           node scripts/nfl-access-local-server.mjs --port 8792 --odds live > qa-harness-live.log 2>&1 &
           for port in 8791 8792; do for i in $(seq 1 60); do curl -fsS "http://localhost:$port/api/auth-session" >/dev/null && break; sleep 1; done; done
-          PBE_QA_SCENARIOS=wall,bypass,signedin,denied,outage,pass,cancel,bestline,canaries node scripts/nfl-paywall-browser-gate.mjs http://localhost:8791
+          PBE_QA_SCENARIOS=anonymous,bypass,signedin,denied,outage,owner,pass,cancel,bestline,canaries node scripts/nfl-paywall-browser-gate.mjs http://localhost:8791
           PBE_QA_SCENARIOS=subscriber node scripts/nfl-paywall-browser-gate.mjs http://localhost:8792
           node scripts/nfl-paywall-live-canary.mjs http://localhost:8791
 

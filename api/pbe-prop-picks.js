@@ -212,4 +212,5 @@ async function handler(req, res) {
 
 /* Paid NFL route: a current, verified NFL entitlement is required (api/_nfl-access.js). */
 export { handler };
-export default withNflEntitlement(handler);
+/* Only the open official prop picks are premium; state and the graded record are public. */
+export default withNflEntitlement(handler, { isPublic: req => String(req.query?.view || 'state').trim().toLowerCase() !== 'current' });

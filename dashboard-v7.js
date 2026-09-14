@@ -257,7 +257,7 @@
         <strong>We don't publish opinions. We make the market prove us wrong.</strong>
         <em>Read the decision system →</em>
       </a>
-      <div class="pbe7-pro-card ${pro ? 'active' : ''}"><div><span>${pro ? 'NFL PRO ACTIVE' : 'NFL PRO'}</span><strong>${pro ? 'Premium intelligence unlocked.' : signedIn ? 'Your account is ready to upgrade.' : 'Unlock the proprietary PBE layer.'}</strong><p>${pro ? 'Model-backed Pro modules are available on this signed-in email.' : '$9.99/week or $99 Season Pass. One email ties sign-in and Stripe entitlement together.'}</p></div><button data-pro>${pro ? 'View Account' : signedIn ? 'Choose Plan' : 'Sign In · Pro'}</button></div>
+      <div class="pbe7-pro-card ${pro ? 'active' : ''}"><div><span>${pro ? 'NFL PRO ACTIVE' : 'NFL PRO'}</span><strong>${pro ? 'Premium intelligence unlocked.' : signedIn ? 'Your account is ready to upgrade.' : 'Unlock the proprietary PBE layer.'}</strong><p>${pro ? 'Model-backed Pro modules are available on this signed-in email.' : 'Founding Season: $9.99/month or $3.99/week. One email ties sign-in and Stripe entitlement together.'}</p></div><button data-pro>${pro ? 'View Account' : signedIn ? 'Choose Plan' : 'Sign In · Pro'}</button></div>
     </aside>`;
   }
 
