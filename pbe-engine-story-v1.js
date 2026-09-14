@@ -39,8 +39,11 @@
 
   function architecture(){
     const s=snapshot||{};
+    /* Until the state read answers, the gate numbers are unknown ('—'), never 0. */
+    const known=v=>v!==null&&v!==undefined&&v!==''&&Number.isFinite(Number(v));
     const grades=Number(s.graded_sample||0),gradeReq=Number(s.graded_sample_required||100);
     const weeks=Number(s.distinct_weeks||0),weekReq=Number(s.distinct_weeks_required||4);
+    const gradeText=known(s.graded_sample)?`${grades}/${gradeReq}`:'—',weekText=known(s.distinct_weeks)?`${weeks}/${weekReq}`:'—';
     const trained=s.champion_trained===true;
     return `<section class="pbe-engine-story" data-trained="${trained?'1':'0'}">
       <div class="pbe-engine-story-grid"></div>
@@ -51,8 +54,8 @@
           <p>Every NFL decision starts with the sportsbook market, removes the vig, freezes a game-state feature vector, prices the outcome with the active champion model, and measures the difference. If the edge is not large enough, there is no pick.</p>
         </div>
         <aside class="pbe-engine-state">
-          <span>${trained?'PRODUCTION CHAMPION':'VALIDATION CHAMPION'}</span>
-          <strong>v${esc(s.champion_version??'1')}</strong>
+          <span>PBE PICKS ENGINE</span>
+          <strong class="is-word">${snapshot?(trained?'LIVE':'VALIDATING'):'—'}</strong>
           <small>${trained?'Official publication enabled':'Bootstrap decisions stay hidden from the public record'}</small>
         </aside>
       </header>
@@ -75,8 +78,8 @@
         </div>
         <div class="pbe-engine-gate">
           <div class="pbe-engine-gate-title"><span>LIVE VALIDATION GATE</span><b>${trained?'OPEN':'BUILDING'}</b></div>
-          <div class="pbe-engine-meter"><div><span>Finalized decisions</span><strong>${grades}/${gradeReq}</strong></div><i><b style="width:${pct(grades,gradeReq).toFixed(1)}%"></b></i></div>
-          <div class="pbe-engine-meter"><div><span>Distinct weeks</span><strong>${weeks}/${weekReq}</strong></div><i><b style="width:${pct(weeks,weekReq).toFixed(1)}%"></b></i></div>
+          <div class="pbe-engine-meter"><div><span>Finalized decisions</span><strong>${gradeText}</strong></div><i><b style="width:${pct(grades,gradeReq).toFixed(1)}%"></b></i></div>
+          <div class="pbe-engine-meter"><div><span>Distinct weeks</span><strong>${weekText}</strong></div><i><b style="width:${pct(weeks,weekReq).toFixed(1)}%"></b></i></div>
           <small>${trained?'The active champion has cleared the publication contract.':'Only after the volume gate opens can a trained challenger attempt to replace the current champion.'}</small>
         </div>
       </div>

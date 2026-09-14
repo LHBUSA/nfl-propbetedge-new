@@ -134,7 +134,7 @@ const ASSERT={
   home:`(() => {const r=[];const cc=document.querySelector('.pbecc');r.push({name:'command center mounted',ok:!!cc});
     const slate=document.querySelector('.pbecc-slate');r.push({name:'slate renders games or an honest empty state',ok:!!slate&&(slate.querySelectorAll('.pbecc-game').length>0||!!slate.querySelector('.pbecc-empty'))});
     const ch=document.querySelector('.pbecc-changes');r.push({name:'what changed section present',ok:!!ch,detail:ch?.querySelectorAll('.pbecc-change').length+' items'});
-    const pk=document.querySelector('.pbecc-picks');r.push({name:'picks section states engine truth',ok:!!pk&&/ENGINE|PICKS|UNAVAILABLE/i.test(pk.innerText)});
+    const pk=document.querySelector('.pbecc-picks');r.push({name:'picks section is a consumer track-record state',ok:!!pk&&/PBE PICKS/i.test(pk.innerText)&&!/ENGINE DEGRADED|SOURCE UNAVAILABLE|Runtime [A-Z]|Champion v|run ledger/i.test(pk.innerText),detail:pk?.dataset?.picksState});
     const loop=document.querySelector('.pbecc-loop');r.push({name:'product loop strip present',ok:!!loop&&loop.querySelectorAll('[data-route]').length>=6});
     const hero=document.querySelector('.pbe7-hero');const s=slate?.getBoundingClientRect(),h=hero?.getBoundingClientRect();r.push({name:'slate sits above the featured hero',ok:!!s&&!!h&&s.top<h.top});
     r.push({name:'no manifesto above the fold',ok:!/WE DON.T PUBLISH OPINIONS/i.test(document.querySelector('.pbehome7')?.innerText?.slice(0,800)||'')});

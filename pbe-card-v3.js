@@ -170,8 +170,11 @@
   const mode = () => store.data?.display_mode || 'VALIDATION';
   function ribbon(data = store.data) {
     const m = data?.display_mode;
-    if (m === 'DEGRADED') return '<div class="pbec-ribbon is-degraded"><i></i><b>ENGINE DEGRADED</b><span>Signals below are shown as last confirmed by the engine, not as live decisions.</span></div>';
-    if (m === 'OFFICIAL') return `<div class="pbec-ribbon is-official"><i></i><b>OFFICIAL PBE CARD</b><span>Champion v${esc(data?.champion_version ?? '—')} · every official pick enters the permanent Official Track Record.</span></div>`;
+    /* Consumer copy. The DEGRADED display mode (and everything it suppresses)
+       is the server's; runtime lanes, reasons and the champion version stay in
+       the API payload for observability and are not printed here. */
+    if (m === 'DEGRADED') return '<div class="pbec-ribbon is-degraded"><i></i><b>UPDATES PAUSED</b><span>Signals below are shown as last confirmed, not as live decisions.</span></div>';
+    if (m === 'OFFICIAL') return '<div class="pbec-ribbon is-official"><i></i><b>OFFICIAL PBE CARD</b><span>Every official pick enters the permanent Official Track Record.</span></div>';
     return '<div class="pbec-ribbon is-validation"><i></i><b>LIVE VALIDATION</b><span>Real pre-game decisions from a champion still under validation · not the Official Track Record.</span></div>';
   }
   function scopeChip(c) {
@@ -375,7 +378,7 @@
       ${liveBlock(c)}${finalBlock(c)}${c.lifecycle !== 'FINAL' ? marketBlock(c) : ''}
       ${lockNote(c)}
       ${auditBlock(c)}
-      <footer class="pbec-card-foot">${esc(c.tag || '')}</footer>
+      <footer class="pbec-card-foot">${c.publication_scope === 'official' ? 'OFFICIAL PBE PICK · OFFICIAL TRACK RECORD' : 'LIVE VALIDATION · REAL PRE-GAME DECISION · NOT IN THE OFFICIAL TRACK RECORD'}</footer>
     </article>`;
   }
 
@@ -404,7 +407,7 @@
       ['Active signals', `${num(s.active) ?? 0}`, `${num(s.locked) ?? 0} locked · ${num(s.final) ?? 0} final${pro ? ` · ${num(s.replaced_before_lock) ?? 0} replaced before lock` : ''}`],
       ['Strongest signal', strongest ? `${strongest.selection?.display || '—'} ${american(strongest.issue?.price)}` : pro ? '—' : 'NFL Pro', strongest ? `${pp(strongest.edge_pct)}pp edge · ${strongest.matchup?.away} @ ${strongest.matchup?.home}` : pro ? 'No active signal' : 'Highest persisted edge on the card'],
       ['Next kickoff', s.next_kickoff ? etStamp(s.next_kickoff) : '—', s.next_kickoff ? until(s.next_kickoff) : 'No pending kickoff'],
-      ['Last engine evaluation', ago(f.last_evaluation_at || d.last_evaluation_at), f.last_evaluation_at || d.last_evaluation_at ? etStamp(f.last_evaluation_at || d.last_evaluation_at) : 'No run recorded'],
+      ['Last engine evaluation', ago(f.last_evaluation_at || d.last_evaluation_at), f.last_evaluation_at || d.last_evaluation_at ? etStamp(f.last_evaluation_at || d.last_evaluation_at) : 'Not yet evaluated'],
       ['Market tape', f.tape_captured_at ? ago(f.tape_captured_at) : pro ? '—' : 'NFL Pro', f.tape_captured_at ? `${f.tape_state === 'STALE' ? 'STALE · ' : ''}${etStamp(f.tape_captured_at)}` : pro ? 'No snapshot' : 'Snapshot freshness per signal'],
     ];
     const weekRecord = pro && s.week_record ? `<div class="pbec-hero-week"><span>${d.display_mode === 'OFFICIAL' ? 'This week' : 'Validation · this week'}</span><b>${s.week_record.win}-${s.week_record.loss}${s.week_record.push ? `-${s.week_record.push}` : ''}</b><em>${esc(signedUnits(s.week_units))}</em></div>` : '';
@@ -421,7 +424,7 @@
 
   function emptyHtml() {
     const d = store.data || {};
-    return `<section class="pbec-empty"><b>No current decisions on the card</b><span>${d.display_mode === 'DEGRADED' ? 'The engine is degraded; nothing is presented as live.' : 'The engine evaluated the slate and holds no qualifying decision right now. Nothing is manufactured to fill the card.'}</span></section>`;
+    return `<section class="pbec-empty"><b>No current decisions on the card</b><span>${d.display_mode === 'DEGRADED' ? 'Live updates are paused; nothing is presented as live.' : 'The engine evaluated the slate and holds no qualifying decision right now. Nothing is manufactured to fill the card.'}</span></section>`;
   }
 
   function withdrawnHtml() {
@@ -440,7 +443,7 @@
   /* The flagship section on the PBE Picks page. */
   function flagshipHtml() {
     if (!store.data) {
-      if (store.error) return `<section class="pbec-empty is-error"><b>PBE Card unavailable</b><span>${esc(store.error)}. A failed read is never shown as an empty card.</span><button type="button" class="pbec-link" data-pbec-retry>Retry</button></section>`;
+      if (store.error) return `<section class="pbec-empty is-error"><b>PBE Card temporarily unavailable</b><span>A failed read is never shown as an empty card.</span><button type="button" class="pbec-link" data-pbec-retry>Retry</button></section>`;
       return '<section class="pbec-empty"><b>Loading today\'s PBE card</b><span>Reading the engine\'s current decisions.</span></section>';
     }
     const pro = store.mode === 'pro';
@@ -490,15 +493,15 @@
     ensure();
     const d = store.data;
     const head = t => `<div class="pbecc-head"><div><span class="pbecc-eyebrow">TODAY'S PBE CARD${d ? ` · WEEK ${esc(d.week ?? '')}` : ''}</span><h2>${esc(t)}</h2></div><button type="button" data-route="pbepicks">Full card →</button></div>`;
-    if (!d) return `<section class="pbecc-panel pbec-dash">${head('The engine\'s current decisions')}<div class="pbecc-empty ${store.error ? 'is-error' : ''}"><b>${store.error ? 'PBE Card unavailable' : 'Reading the card'}</b><span>${store.error ? `${esc(store.error)}. A failed read is never shown as an empty card.` : 'Current decisions from the engine.'}</span></div></section>`;
+    if (!d) return `<section class="pbecc-panel pbec-dash">${head('The engine\'s current decisions')}<div class="pbecc-empty ${store.error ? 'is-error' : ''}"><b>${store.error ? 'PBE Card temporarily unavailable' : 'Reading the card'}</b><span>${store.error ? 'A failed read is never shown as an empty card.' : 'Current decisions from the engine.'}</span></div></section>`;
     const pro = store.mode === 'pro';
     const s = d.summary || {};
-    const label = d.display_mode === 'OFFICIAL' ? 'OFFICIAL PBE PICKS' : d.display_mode === 'DEGRADED' ? 'ENGINE DEGRADED' : 'PBE VALIDATION SIGNALS';
+    const label = d.display_mode === 'OFFICIAL' ? 'OFFICIAL PBE PICKS' : d.display_mode === 'DEGRADED' ? 'UPDATES PAUSED' : 'PBE VALIDATION SIGNALS';
     if (pro) {
       const list = cards();
       const top = [...list.filter(c => c.id === s.strongest?.id), ...list.filter(c => c.id !== s.strongest?.id && c.lifecycle !== 'FINAL')].slice(0, 4);
       return `<section class="pbecc-panel pbec-dash is-${esc(String(d.display_mode).toLowerCase())}">${head(`${num(s.active) ?? 0} active · ${num(s.locked) ?? 0} locked`)}
-        <p class="pbec-dash-mode">${esc(label)} · ${d.display_mode === 'VALIDATION' ? 'real pre-game decisions, not the Official Track Record' : d.display_mode === 'DEGRADED' ? 'shown as last confirmed, not live' : `champion v${esc(d.champion_version)}`}</p>
+        <p class="pbec-dash-mode">${esc(label)} · ${d.display_mode === 'VALIDATION' ? 'real pre-game decisions, not the Official Track Record' : d.display_mode === 'DEGRADED' ? 'shown as last confirmed, not live' : 'every pick enters the Official Track Record'}</p>
         ${top.length ? `<div class="pbec-mini-grid">${top.map(compactCard).join('')}</div>` : '<div class="pbecc-empty"><b>No current decisions</b><span>Nothing is manufactured to fill the card.</span></div>'}
       </section>`;
     }

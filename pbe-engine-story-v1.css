@@ -10,6 +10,7 @@
 .pbe-engine-story[data-trained="0"] .pbe-engine-state{border-color:rgba(216,183,91,.18);background:linear-gradient(180deg,rgba(216,183,91,.07),rgba(255,255,255,.02))}
 .pbe-engine-state span{display:block;font-size:11px;font-weight:900;letter-spacing:1.4px;color:rgba(255,255,255,.35)}
 .pbe-engine-state strong{display:block;font-family:var(--font-d);font-size:54px;line-height:.9;color:var(--pbe-gold);margin:7px 0 9px}
+.pbe-engine-state strong.is-word{font-size:clamp(26px,2.3vw,34px);line-height:1;white-space:nowrap}
 .pbe-engine-story[data-trained="0"] .pbe-engine-state strong{color:var(--pbe-gold)}
 .pbe-engine-state small{font-size:12px;line-height:1.5;color:rgba(255,255,255,.4)}
 .pbe-engine-flow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:rgba(255,255,255,.06);border-bottom:1px solid rgba(255,255,255,.06)}
