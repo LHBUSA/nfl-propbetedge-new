@@ -5,8 +5,9 @@
  * Entitlement: nfl_subscriptions, decided server-side (api/_nfl-entitlement.js)
  *
  * Identity is not access. `state.user` is who signed in; `state.access` is the
- * server's verdict on the NFL subscription: anonymous | no_entitlement |
- * unavailable | granted. Only `granted` opens the product (nfl-access-gate-v1.js).
+ * server's verdict: anonymous | no_entitlement | unavailable | granted
+ * (a current NFL Pro subscription or the verified owner). The site is public;
+ * `granted` unlocks the premium modules, whose data the server also enforces.
  * An unreadable or failed answer is `unavailable`, never granted.
  */
 (() => {
@@ -113,13 +114,13 @@
           <section class="pbe-pro-pitch">
             <div class="pbe-pro-kicker">PROPBETEDGE NFL PRO</div>
             <h2>See the market.<br><em>Own the intelligence.</em></h2>
-            <p>PropBetEdge NFL is a subscription product. Best Line, Prop Board, Game Center, Model Lab, PBE Picks, Track Record, Player DNA and every other NFL workspace open with a current NFL Pro subscription.</p>
+            <p>The market, scores, news and research stay open. NFL Pro unlocks the proprietary PBE layer on top: the model's fair lines and probabilities, live PBE Picks, Model Lab, Market Watch, Line Simulator and SGP Lab.</p>
             <div class="pbe-access-status" id="pbe-access-status" hidden></div>
             <div class="pbe-pro-feature-list">
               <div class="pbe-pro-feature"><div class="pbe-pro-feature-icon">◇</div><div><strong>PBE Fair Line</strong><span>See where the current passing model prices the prop independent of the sportsbook consensus.</span></div></div>
               <div class="pbe-pro-feature"><div class="pbe-pro-feature-icon">%</div><div><strong>Model Probability</strong><span>Unlock the model's probability at the current consensus line with explicit model provenance.</span></div></div>
               <div class="pbe-pro-feature"><div class="pbe-pro-feature-icon">↗</div><div><strong>Model Gap</strong><span>Compare market consensus with PBE fair value without relabeling the difference as guaranteed edge.</span></div></div>
-              <div class="pbe-pro-feature"><div class="pbe-pro-feature-icon">＋</div><div><strong>Every NFL workspace</strong><span>Best Line, Prop Board, Game Center, PBE Picks, Track Record, Market Watch, Simulator, SGP Lab and Player DNA, on one NFL Pro subscription.</span></div></div>
+              <div class="pbe-pro-feature"><div class="pbe-pro-feature-icon">＋</div><div><strong>Live PBE Picks and Pro tools</strong><span>Today's picks with model detail, Model Lab, Market Watch, Line Simulator and SGP Lab on one NFL Pro subscription.</span></div></div>
             </div>
           </section>
           <section class="pbe-pro-checkout" id="pbe-pro-checkout"></section>
@@ -132,7 +133,7 @@
     return `<div class="pbe-pro-price-card">
       <div class="pbe-pro-plan-label">NFL PRO</div>
       <div class="pbe-pro-price"><strong>2</strong><span>ways to unlock</span></div>
-      <div class="pbe-pro-renew">Sign in once, then choose $9.99/week or the $99 Season Pass.</div>
+      <div class="pbe-pro-renew">Sign in once, then choose $9.99/month or $3.99/week.</div>
     </div>
     <div class="pbe-pro-auth-state">
       <input class="pbe-pro-email" id="pbe-pro-email" type="email" autocomplete="email" inputmode="email" placeholder="you@example.com" aria-label="Email address">
@@ -149,12 +150,12 @@
     payment_failed: 'Your last NFL Pro payment did not go through.',
   };
 
-  /* The account line and the reason the wall is showing. Lives in the pitch
-   * column so the purchase funnel never overwrites it. */
+  /* The account line and why Pro is not unlocked for this visitor. Lives in the
+   * pitch column so the purchase funnel never overwrites it. */
   function renderAccessStatus() {
     const el = document.getElementById('pbe-access-status');
     if (!el) return;
-    if (!state.wall || state.loading || state.access === 'granted') {
+    if (state.loading || state.access === 'granted') {
       el.hidden = true;
       setHtml(el,'');
       return;
@@ -181,14 +182,14 @@
       <div class="pbe-funnel-head">
         <span>NFL PRO · ACCESS CHECK</span>
         <strong>Unable to verify access</strong>
-        <p>The subscription check is temporarily unavailable, so the NFL workspace stays closed. Nothing about your subscription has changed.</p>
+        <p>The subscription check is temporarily unavailable, so Pro features stay locked for now. The rest of the site is open, and nothing about your subscription has changed.</p>
       </div>
       ${email ? `<div class="pbe-funnel-user"><span>Signed in as</span><strong>${esc(email)}</strong></div>` : ''}
       <div class="pbe-pro-auth-state pbe-funnel-auth">
         <button class="pbe-pro-cta" id="pbe-access-retry" type="button">Retry access check</button>
         <div class="pbe-pro-message" id="pbe-pro-message">${esc(state.error || '')}</div>
       </div>
-      <div class="pbe-pro-secure">◆ Fails closed · access is never granted without a verified NFL subscription</div>
+      <div class="pbe-pro-secure">◆ Fails closed · Pro is never unlocked without a verified NFL subscription</div>
     </div>`;
   }
 
@@ -218,21 +219,22 @@
 
   function proUserHtml() {
     const email = state.user?.email || 'NFL Pro account';
+    const owner = state.entitlement?.reason === 'owner';
     const periodEnd = state.subscription?.current_period_end ? new Date(state.subscription.current_period_end) : null;
     const renewCopy = periodEnd && !Number.isNaN(periodEnd.getTime())
       ? `${state.subscription?.cancel_at_period_end ? 'Access through' : 'Current period through'} ${periodEnd.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}`
-      : 'NFL Pro entitlement verified by PropBetEdge.';
+      : owner ? 'Owner access · every NFL Pro feature' : 'NFL Pro entitlement verified by PropBetEdge.';
     return `<div class="pbe-pro-price-card" style="border-color:rgba(85,214,140,.20);background:linear-gradient(145deg,rgba(85,214,140,.07),rgba(255,255,255,.018))">
       <div class="pbe-pro-plan-label" style="color:#55d68c">NFL PRO · ACTIVE</div>
       <div class="pbe-pro-price"><strong style="font-size:42px;color:#55d68c">UNLOCKED</strong></div>
       <div class="pbe-pro-renew">${esc(renewCopy)}</div>
     </div>
-    <div class="pbe-pro-user-card"><strong>${esc(email)}</strong><span>Verified NFL Pro subscriber</span></div>
+    <div class="pbe-pro-user-card"><strong>${esc(email)}</strong><span>${owner ? 'Verified owner' : 'Verified NFL Pro subscriber'}</span></div>
     <button class="pbe-pro-cta" type="button" id="pbe-pro-open-board">Open Pro Prop Board</button>
     <button class="pbe-pro-cta secondary" id="pbe-pro-refresh" type="button">Refresh access</button>
     <button class="pbe-pro-cta secondary" id="pbe-pro-signout" type="button">Sign out</button>
     <div class="pbe-pro-message" id="pbe-pro-message"></div>
-    <div class="pbe-pro-secure">◆ Access verified against your Stripe-backed NFL entitlement</div>`;
+    <div class="pbe-pro-secure">◆ ${owner ? 'Owner access verified server-side from your emailed sign-in link' : 'Access verified against your Stripe-backed NFL entitlement'}</div>`;
   }
 
   function ensureModal() {
@@ -250,7 +252,14 @@
    * checkout UI. Rendering signedOutHtml() here as well made the two fight over
    * #pbe-pro-checkout on every mutation, wiping whatever email had been typed.
    * signedOutHtml() is now only the fallback for when the funnel never loaded. */
+  /* A notice (sign-in link refused, payment confirming…) survives the modal
+   * re-rendering on every access-state change. */
   function renderModal() {
+    renderModalBody();
+    paintNotice();
+  }
+
+  function renderModalBody() {
     const backdrop = ensureModal();
     const host = backdrop?.querySelector('#pbe-pro-checkout');
     if (!host) return;
@@ -264,23 +273,35 @@
       if (setHtml(host,unavailableHtml())) wireModalActions();
       return;
     }
-    if (state.pro || state.user) {
-      if (setHtml(host,state.pro ? proUserHtml() : freeUserHtml())) wireModalActions();
-      return;
-    }
+    /* the Founding Season funnel owns every purchase and account screen */
     if (window.PBECheckoutFunnel?.apply) {
       window.PBECheckoutFunnel.apply();
+      return;
+    }
+    if (state.pro || state.user) {
+      if (setHtml(host,state.pro ? proUserHtml() : freeUserHtml())) wireModalActions();
       return;
     }
     if (setHtml(host,signedOutHtml())) wireModalActions();
   }
 
   function message(text,type='') {
-    const el = document.getElementById('pbe-pro-message');
-    if (!el) return;
-    const className = `pbe-pro-message ${type}`.trim();
+    state.notice = text ? { text, type } : null;
+    if (!paintNotice()) {
+      const el = document.getElementById('pbe-pro-message') || document.getElementById('pbe-funnel-message');
+      if (el) { el.className = 'pbe-pro-message'; setText(el,''); }
+    }
+  }
+
+  function paintNotice() {
+    if (!state.notice) return false;
+    /* the funnel owns the signed-out / signed-in-free markup and its own message line */
+    const el = document.getElementById('pbe-pro-message') || document.getElementById('pbe-funnel-message');
+    if (!el) return true;
+    const className = `pbe-pro-message ${state.notice.type}`.trim();
     if (el.className !== className) el.className = className;
-    setText(el,text || '');
+    setText(el,state.notice.text);
+    return true;
   }
 
   async function signIn() {
@@ -451,7 +472,7 @@
     if (strip.className !== nextClass) strip.className = nextClass;
     const next = state.pro
       ? `<div><div class="pbe-pro-dashboard-title"><span>NFL PRO ACTIVE</span> · Proprietary PBE model intelligence is unlocked.</div><div class="pbe-pro-dashboard-copy">Fair lines, probability and model-gap output are available anywhere the production model supports the current market.</div></div><button class="pbe-pro-mini-cta" data-pbe-route="propboard">Open Pro Board</button>`
-      : `<div><div class="pbe-pro-dashboard-title"><span>NFL PRO</span> · A current NFL Pro subscription is required.</div><div class="pbe-pro-dashboard-copy">Every NFL workspace opens with an active subscription.</div></div><button class="pbe-pro-mini-cta" data-pbe-open-pro>View NFL Pro</button>`;
+      : `<div><div class="pbe-pro-dashboard-title"><span>NFL PRO</span> · Unlock the proprietary layer above the sportsbook market.</div><div class="pbe-pro-dashboard-copy">The market stays open. Pro adds PBE fair lines, model probability, live PBE Picks and the Pro research tools.</div></div><button class="pbe-pro-mini-cta" data-pbe-open-pro>Unlock Pro</button>`;
     setHtml(strip,next);
     strip.querySelector('[data-pbe-route="propboard"]')?.addEventListener('click',()=>window.App?.nav?.('propboard'));
     strip.querySelector('[data-pbe-open-pro]')?.addEventListener('click',()=>open('upgrade'));
@@ -470,7 +491,7 @@
     if (banner.className !== nextClass) banner.className = nextClass;
     const next = state.pro
       ? `<div><strong>NFL Pro is active.</strong><span>PBE fair line, probability and model gap are unlocked for supported props. Market and model provenance remain separate.</span></div><span class="pbe-pro-active-badge">◆ PRO UNLOCKED</span>`
-      : `<div><strong>A current NFL Pro subscription is required.</strong><span>Sign in with your subscription email or choose a plan.</span></div><button class="pbe-pro-mini-cta" data-pbe-open-pro>View NFL Pro</button>`;
+      : `<div><strong>Sportsbook prices are open. PBE model intelligence is NFL Pro.</strong><span>Unlock fair line, model probability and model gap next to the market you are already reading.</span></div><button class="pbe-pro-mini-cta" data-pbe-open-pro>Unlock Pro</button>`;
     setHtml(banner,next);
     banner.querySelector('[data-pbe-open-pro]')?.addEventListener('click',()=>open('upgrade'));
   }
@@ -567,6 +588,7 @@
    * dismissed to reveal a workspace, because no workspace was loaded. */
   function close() {
     if (state.wall) return;
+    state.notice = null;
     document.getElementById('pbe-pro-backdrop')?.classList.remove('open');
     document.body.style.overflow = '';
   }
@@ -611,25 +633,35 @@
     }
 
     open('auth-failed');
-    message(`Your sign-in link could not be used (${auth}). Request a new secure link.`,'error');
+    const reason = auth === 'link_already_used' ? 'That sign-in link was already used. Each link works once.'
+      : auth === 'token_expired' ? 'That sign-in link has expired.'
+        : `Your sign-in link could not be used (${auth}).`;
+    message(`${reason} Request a new secure link.`,'error');
   }
 
+  /* Stripe return (?checkout=success). The purchase reaches the NFL ledger via
+   * the billing webhook a few seconds later, so the page shows an explicit
+   * confirming state and polls for up to a minute. A buyer who is not signed in
+   * gets the access email at the checkout address and signs in from it. */
   async function syncCheckoutSuccess() {
     const params = new URLSearchParams(location.search);
     if (params.get('checkout') !== 'success') return;
+    cleanQuery(['checkout','session_id','tier']);
     state.checkoutSyncing = true;
-    for (let i = 0; i < 7; i++) {
+    open('checkout-success');
+    message('Payment received. Confirming your NFL Pro access…');
+    const deadline = Date.now() + 60000;
+    while (Date.now() < deadline) {
       await refreshAccess();
-      if (state.pro) break;
-      await new Promise(resolve => setTimeout(resolve,1400));
+      if (state.pro || !state.user) break;
+      message('Payment received. Confirming your NFL Pro access… this usually takes a few seconds.');
+      await new Promise(resolve => setTimeout(resolve,3000));
     }
     state.checkoutSyncing = false;
-    open('checkout-success');
-    renderAccessStatus();
-    if (state.pro) message('NFL Pro is active. Your premium model intelligence is unlocked.','success');
-    else if (!state.user) message('Purchase received. Sign in with the same email you used at Stripe to unlock NFL Pro.');
-    else message('Stripe checkout completed. Access is still syncing; use Refresh Access in a few seconds.');
-    cleanQuery(['checkout','session_id','tier']);
+    renderModal();
+    if (state.pro) message('NFL Pro is active. Premium features are unlocked.','success');
+    else if (!state.user) message('Payment received. Open the NFL Pro access link we emailed to your checkout address to sign in and unlock Pro. You can also use “Sign in to NFL Pro” with that email.','success');
+    else message('Payment received, still confirming. Use “Refresh access” in a minute; you will not be charged again.');
   }
 
   async function init() {
@@ -647,6 +679,7 @@
     paymentLinks: { weekly: WEEKLY_PAYMENT_LINK, seasonPass: SEASON_PASS_PAYMENT_LINK },
     open,
     close,
+    paintNotice,
     setWall,
     checkout,
     refreshAccess,

@@ -15,7 +15,6 @@ import { join } from 'node:path';
 import { eventMarkets, events as marketEvents, MARKET_UNAVAILABLE } from '../_playerdna/markets.js';
 import { dataWindow, provenance } from '../_qbdna/engine.js';
 import { teamBlock } from '../_playerdna/media.js';
-import { withNflEntitlement } from '../_nfl-access.js';
 
 const SCOREBOARD = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard';
 const FORECAST = 'https://api.open-meteo.com/v1/forecast';
@@ -278,6 +277,6 @@ async function handler(req, res) {
   }, 120);
 }
 
-/* Paid NFL route: a current, verified NFL entitlement is required (api/_nfl-access.js). */
+/* Public NFL route (api/_nfl-route-policy.js). */
 export { handler };
-export default withNflEntitlement(handler);
+export default handler;

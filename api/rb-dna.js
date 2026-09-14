@@ -13,7 +13,6 @@ import { resolvePlayer, gamesFor, baseline, conditionProfile, dnaSignals,
          usageProfile, provenance, dataWindow, SAMPLE, dataset }
   from './_rbdna/engine.js';
 import { playerMedia, teamBlock } from './_playerdna/media.js';
-import { withNflEntitlement } from './_nfl-access.js';
 
 function send(res, status, body, ttl = 0) {
   res.statusCode = status;
@@ -198,6 +197,6 @@ function handler(req, res) {
   }, 300);
 }
 
-/* Paid NFL route: a current, verified NFL entitlement is required (api/_nfl-access.js). */
+/* Public NFL route (api/_nfl-route-policy.js). */
 export { handler };
-export default withNflEntitlement(handler);
+export default handler;

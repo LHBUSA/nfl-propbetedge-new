@@ -1,5 +1,5 @@
 const SERVICE='propbetedge-nfl-auth';
-const VERSION='v6.1';
+const VERSION='v6.2';
 const APP_ORIGIN_DEFAULT='https://nfl.propbetedge.ai';
 const FROM_EMAIL='PropBetEdge Picks <picks@propbetedge.ai>';
 const MAGIC_TTL=15*60;
@@ -45,6 +45,11 @@ async function exchangeLink(req,env,origin,app){
     const verified=await verifyWithSecrets(token,signing);
     const p=verified.payload,email=normEmail(p?.email);
     if(p?.type!=='magic'||!email)throw new Error('invalid_magic');
+    /* Single use: the first exchange consumes the link's jti in a Durable
+       Object keyed by that jti (strongly consistent); any later exchange of the
+       same link is refused. No ledger, no session. */
+    const consumed=await consumeMagicLink(env,p);
+    if(consumed!=='ok')return out({error:consumed},consumed==='link_ledger_unavailable'?503:401,origin,app);
     const now=Math.floor(Date.now()/1000);
     const session=await sign({email,type:'session',iat:now,exp:now+SESSION_TTL,jti:crypto.randomUUID()},signing.primary);
     return out({ok:true,email,session_token:session,expires_in:SESSION_TTL,auth_issuer:'propbetedge'},200,origin,app);
@@ -61,6 +66,37 @@ async function selfTest(env,origin,app){
   const now=Math.floor(Date.now()/1000);
   const probe=await sign({type:'probe',iat:now,exp:now+120,jti:crypto.randomUUID()},signing.primary);
   return out({ok:true,service:SERVICE,version:VERSION,namespace:'pbe-nfl-auth-v5',probe_token:probe,expires_in:120,signing_mode:signing.mode},200,origin,app);
+}
+
+async function consumeMagicLink(env,p){
+  const jti=String(p?.jti||'');
+  if(!/^[0-9a-f-]{36}$/i.test(jti))return 'link_invalid';
+  if(!env.MAGIC_LINKS)return 'link_ledger_unavailable';
+  try{
+    const stub=env.MAGIC_LINKS.get(env.MAGIC_LINKS.idFromName(jti));
+    const r=await stub.fetch('https://magic-links/consume',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({exp:Number(p.exp)||0})});
+    if(r.status===200)return 'ok';
+    if(r.status===409)return 'link_already_used';
+    return 'link_ledger_unavailable';
+  }catch(e){console.error('[nfl-auth] magic ledger',e?.message||e);return 'link_ledger_unavailable'}
+}
+
+/* One instance per magic-link jti. storage.get/put inside one Durable Object
+   run to completion without interleaving, so two simultaneous exchanges of the
+   same link cannot both succeed. The record deletes itself after expiry. */
+export class MagicLinkLedger{
+  constructor(state){this.state=state}
+  async fetch(req){
+    if(req.method!=='POST')return new Response('method_not_allowed',{status:405});
+    const used=await this.state.storage.get('used_at');
+    if(used)return new Response(JSON.stringify({error:'link_already_used'}),{status:409});
+    let exp=0;try{exp=Number((await req.json())?.exp)||0}catch{}
+    const now=Date.now();
+    await this.state.storage.put('used_at',now);
+    await this.state.storage.setAlarm(Math.max(now+60000,(exp*1000)+3600000));
+    return new Response(JSON.stringify({ok:true}),{status:200});
+  }
+  async alarm(){await this.state.storage.deleteAll()}
 }
 
 function signingSecrets(env){

@@ -12,7 +12,6 @@ import { resolvePlayer, gamesFor, baseline, conditionProfile, dnaSignals, proven
          dataWindow, MARKETS, SAMPLE, dataset } from './_qbdna/engine.js';
 import { gateReport, SERVED_FIELDS } from './_qbdna/gating.js';
 import { playerMedia, teamBlock } from './_playerdna/media.js';
-import { withNflEntitlement } from './_nfl-access.js';
 
 function send(res, status, body, ttl = 0) {
   res.statusCode = status;
@@ -217,6 +216,6 @@ function handler(req, res) {
   }, 300);
 }
 
-/* Paid NFL route: a current, verified NFL entitlement is required (api/_nfl-access.js). */
+/* Public NFL route (api/_nfl-route-policy.js). */
 export { handler };
-export default withNflEntitlement(handler);
+export default handler;

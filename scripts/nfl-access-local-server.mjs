@@ -9,7 +9,9 @@
  *   Supabase      /__supabase   in-memory nfl_subscriptions ledger (below); every
  *                               other table answers 503, so Supabase-backed
  *                               surfaces show their own degraded state
- *   auth Worker   /__authworker magic-link exchange for QA addresses only
+ *   auth Worker   /__authworker the REAL auth Worker exchange (workers/nfl-auth)
+ *                               with an in-memory single-use link ledger; link
+ *                               requests send no email
  *   gateway       /__gateway    --odds fixture: the REAL nfl-odds and nfl-intel
  *                               Worker code over an in-memory KV seeded by real
  *                               ingests (stubbed provider, kickoff-relative
@@ -18,14 +20,16 @@
  *                               gateway (KV snapshot reads, zero provider spend)
  *
  * QA controls (harness only, never part of the product):
- *   GET /__qa/magic?email=      a magic token the real /api/auth-verify accepts
+ *   GET /__qa/magic?email=[&expired=1]  a magic link token, as the auth Worker
+ *                               would email it (single use, 15 minutes)
  *   GET /__qa/ledger?email=&state=valid|canceled|expired|none
  *   GET /__qa/supabase?mode=ok|down
  *
  * QA identities: pro@qa.test (monthly), weekly@qa.test, pass@qa.test (season
  * pass), free@qa.test (none), orphan@qa.test (active, no Stripe proof, null
  * expiry), nullexp@qa.test, expired@qa.test, canceled@qa.test,
- * mlb@qa.test / ufc@qa.test / nba@qa.test / nhl@qa.test (other sports' prices).
+ * mlb@qa.test / ufc@qa.test / nba@qa.test / nhl@qa.test (other sports' prices),
+ * owner@qa.test (the configured owner: NFL_OWNER_EMAILS, no subscription row).
  */
 import http from 'node:http';
 import { readFileSync, existsSync, statSync } from 'node:fs';
@@ -46,11 +50,13 @@ Object.assign(process.env, {
   NFL_AUTH_WORKER_URL: `${ORIGIN}/__authworker`,
   NFL_GATEWAY: `${ORIGIN}/__gateway`,
   NFL_GATEWAY_TOKEN: 'local-qa-gateway-token',
+  NFL_OWNER_EMAILS: 'owner@qa.test',
 });
 
 const auth = await import('../api/_nfl-auth.js');
 const { NFL_PRICES } = await import('../api/_nfl-entitlement.js');
-const { createHmac } = await import('node:crypto');
+const { createHmac, randomUUID } = await import('node:crypto');
+const authWorker = await import('../workers/nfl-auth/src/index-v5.js');
 
 /* ------------------------------------------------------------ ledger */
 const DAY = 86400000;
@@ -145,6 +151,23 @@ function sign(payload) {
   const data = `${b64u(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))}.${b64u(JSON.stringify(payload))}`;
   return `${data}.${b64u(createHmac('sha256', `${auth.HMAC_NAMESPACE}:${process.env.NFL_SESSION_SIGNING_SECRET}`).update(data).digest())}`;
 }
+/* The auth Worker's MAGIC_LINKS Durable Object namespace, in memory: one real
+   MagicLinkLedger per link jti, requests serialized like the DO input gate. */
+const magicLedger = (() => {
+  const objects = new Map(); let queue = Promise.resolve();
+  return {
+    idFromName: name => ({ name }),
+    get(id) {
+      if (!objects.has(id.name)) {
+        const store = new Map();
+        objects.set(id.name, new authWorker.MagicLinkLedger({ storage: { get: async k => store.get(k), put: async (k, v) => { store.set(k, v); }, setAlarm: async () => {}, deleteAll: async () => store.clear() } }));
+      }
+      const obj = objects.get(id.name);
+      return { fetch: (u, init) => (queue = queue.then(() => obj.fetch(new Request(u, init)))) };
+    },
+  };
+})();
+const AUTH_WORKER_ENV = { NFL_SESSION_SIGNING_SECRET: process.env.NFL_SESSION_SIGNING_SECRET, APP_ORIGIN: 'https://nfl.propbetedge.ai', MAGIC_LINKS: magicLedger };
 const moduleCache = new Map();
 async function apiModule(rel) {
   if (!moduleCache.has(rel)) moduleCache.set(rel, import(pathToFileURL(join(REPO, 'api', rel)).href));
@@ -170,7 +193,10 @@ async function handle(req, res) {
 
   if (path.startsWith('/__qa/')) {
     const email = String(url.searchParams.get('email') || '').toLowerCase();
-    if (path === '/__qa/magic') return send(res, 200, { token: sign({ email, type: 'magic', purpose: 'signin', iat: Math.floor(Date.now() / 1000), exp: Math.floor(Date.now() / 1000) + 900 }) });
+    if (path === '/__qa/magic') {
+      const now = Math.floor(Date.now() / 1000), expired = url.searchParams.get('expired') === '1';
+      return send(res, 200, { token: sign({ email, type: 'magic', purpose: 'signin', iat: now - (expired ? 1000 : 0), exp: expired ? now - 100 : now + 900, jti: randomUUID() }) });
+    }
     if (path === '/__qa/ledger') { setLedger(email, url.searchParams.get('state')); return send(res, 200, { ok: true, email, rows: LEDGER.get(email) || [] }); }
     if (path === '/__qa/supabase') { supabaseMode = url.searchParams.get('mode') === 'down' ? 'down' : 'ok'; auth.clearEntitlementCache(); return send(res, 200, { mode: supabaseMode }); }
     if (path === '/__qa/slate') return send(res, 200, fixtureGateway?.slate || null);
@@ -183,11 +209,8 @@ async function handle(req, res) {
     return send(res, 200, LEDGER.get(raw) || []);
   }
   if (path === '/__authworker/v1/auth/exchange') {
-    const body = JSON.parse(await readBody(req) || '{}');
-    try {
-      const magic = auth.verifyWorkerJwt(body.token, process.env.NFL_SESSION_SIGNING_SECRET, 'magic');
-      return send(res, 200, { ok: true, email: magic.email, session_token: sign({ email: magic.email, type: 'session', iat: Math.floor(Date.now() / 1000), exp: Math.floor(Date.now() / 1000) + 86400, jti: 'qa' }) });
-    } catch (error) { return send(res, 401, { error: error.message }); }
+    const r = await authWorker.default.fetch(new Request('https://auth.qa/v1/auth/exchange', { method: 'POST', headers: { 'content-type': 'application/json', origin: req.headers.origin || '' }, body: await readBody(req) }), AUTH_WORKER_ENV);
+    return send(res, r.status, await r.text());
   }
   if (path.startsWith('/__authworker/')) return send(res, 200, { ok: true, provider: 'resend', auth_issuer: 'propbetedge', message: 'QA harness: no email sent' });
   if (path.startsWith('/__gateway/')) {

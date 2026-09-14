@@ -208,7 +208,7 @@ test('degraded entitlement fails closed', async () => {
   assertNoSecrets(broken.text);
 });
 
-test('public preview carries no selection data; state is subscriber-only', async () => {
+test('public preview and state carry no selection data', async () => {
   const preview = await call('preview');
   assert.equal(preview.status, 200);
   assertNoSecrets(preview.text);
@@ -217,7 +217,7 @@ test('public preview carries no selection data; state is subscriber-only', async
   assert.deepEqual(preview.json.previews.map(p => p.matchup.away).sort(), ['BUF', 'MIA', 'NE', 'SF']);
   assert.equal(preview.json.unlock.cta, "Unlock today's PBE card");
   const anonState = await call('state');
-  assert.equal(anonState.status, 401, 'PBE Picks state is part of the paid product');
+  assert.equal(anonState.status, 200, 'PBE Picks state is public (access unlock)');
   assertNoSecrets(anonState.text);
   const state = await call('state', sessionCookie('pro@propbetedge.test'));
   assertNoSecrets(state.text);
@@ -272,7 +272,8 @@ test('degraded engine suppresses actionable framing', async () => {
 
 test('the Official Track Record stays official-only; validation history is Pro-only and separate', async () => {
   mock.requested.length = 0;
-  assert.equal((await call('trackrecord')).status, 401, 'Track Record is part of the paid product');
+  assert.equal((await call('trackrecord')).status, 200, 'the Official Track Record is public (access unlock)');
+  assert.equal((await call('validation-history')).status, 401, 'validation history is NFL Pro');
   mock.requested.length = 0;
   const track = await call('trackrecord', sessionCookie('pro@propbetedge.test'));
   assert.equal(track.status, 200);

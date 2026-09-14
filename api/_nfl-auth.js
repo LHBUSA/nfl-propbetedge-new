@@ -9,7 +9,16 @@
  *   anonymous       no usable session
  *   no_entitlement  signed in, no current verified NFL purchase
  *   unavailable     the entitlement authority could not answer (fail closed)
- *   granted         signed in with a current verified NFL purchase
+ *   granted         signed in with a current verified NFL purchase, or the
+ *                   verified owner account
+ *
+ * Owner access. The owner designation lives in trusted server configuration
+ * (NFL_OWNER_EMAILS on the Vercel project), never in the browser. It applies
+ * only to a session the auth Worker issued after a Resend-delivered, single-
+ * use magic link proved mailbox ownership; the session's verified email is the
+ * account principal in this auth system. Typing the email, a request field, a
+ * client cookie or storage value grants nothing. Admin routes keep their own
+ * tokens and never honour the owner role.
  */
 
 import { createHmac, timingSafeEqual } from 'node:crypto';
@@ -160,6 +169,14 @@ async function entitlementByEmail(email, secret, { allowCachedGrant = false } = 
   return entitlement;
 }
 
+export function ownerEmails() {
+  return String(process.env.NFL_OWNER_EMAILS || '').split(',').map(e => e.trim().toLowerCase()).filter(e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
+}
+export function isOwnerEmail(email) {
+  const e = String(email || '').trim().toLowerCase();
+  return Boolean(e) && ownerEmails().includes(e);
+}
+
 const SIGNED_OUT = {
   valid: false, pro: false, access: 'anonymous', entitlement: null, user: null, subscription: null,
   authority: 'vercel-local', degraded: false,
@@ -201,6 +218,16 @@ export async function getNflSession(req, { allowCachedGrant = false } = {}) {
 
   if (!payload) {
     return { ...SIGNED_OUT, stage: 'cookie_present_invalid', cookies, reason };
+  }
+
+  if (isOwnerEmail(payload.email)) {
+    return {
+      valid: true, pro: true, access: ACCESS.granted, role: 'owner',
+      entitlement: { product: NFL_PRODUCT, entitled: true, reason: 'owner', plan: 'owner', billing: 'owner', status: 'owner', expires_at: null },
+      user: { email: payload.email }, subscription: null,
+      authority: 'vercel-local', stage: 'owner_verified', cookies, degraded: false,
+      signing: { mode: signing.mode, verified_by: signatureSource },
+    };
   }
 
   const entitlementSecret = String(process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();

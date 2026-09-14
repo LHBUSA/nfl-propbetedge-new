@@ -873,4 +873,7 @@ async function handler(req, res) {
 
 /* Paid NFL route: a current, verified NFL entitlement is required (api/_nfl-access.js). */
 export { handler };
-export default withNflEntitlement(handler, { isPublic: req => String(req.query?.view || '').trim().toLowerCase() === 'preview' });
+/* Premium views carry live selections and model fields: current, validation-history, decision.
+   Everything else (state, preview, trackrecord, receipt) is public. */
+export const PREMIUM_VIEWS = Object.freeze(['current', 'validation-history', 'decision']);
+export default withNflEntitlement(handler, { isPublic: req => !PREMIUM_VIEWS.includes(String(req.query?.view || 'state').trim().toLowerCase()) });

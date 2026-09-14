@@ -1,5 +1,4 @@
 import { TEAM_NAME_TO_CODE } from '../workers/nfl-picks-engine-shared/odds-normalize.mjs';
-import { withNflEntitlement } from './_nfl-access.js';
 import { gatewayHeaders } from './_nfl-gateway.js';
 
 const NFL_GATEWAY=process.env.NFL_GATEWAY||'https://nfl-api.propbetedge.ai';
@@ -223,6 +222,6 @@ async function handler(req,res){
   }
 }
 
-/* Paid NFL route: a current, verified NFL entitlement is required (api/_nfl-access.js). */
+/* Public NFL route (api/_nfl-route-policy.js). */
 export { handler };
-export default withNflEntitlement(handler);
+export default handler;

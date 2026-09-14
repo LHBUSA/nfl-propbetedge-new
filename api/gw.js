@@ -1,10 +1,12 @@
-/* PropBetEdge NFL — same-origin protected data route (BFF).
+/* PropBetEdge NFL — same-origin gateway data route (BFF).
  *
  *   browser ── /api/gw/<gateway path> ──> this function
- *     1. verify the HttpOnly NFL session            (401)
- *     2. verify a current NFL entitlement           (403 / 503, fail closed)
- *     3. forward an allow-listed GET to nfl-api.propbetedge.ai with the
- *        server-only gateway token
+ *     public paths (market snapshot, best line, changes, season …): forwarded
+ *     premium paths (PREMIUM_GATEWAY_ROUTES — the PBE passing model):
+ *       1. verify the HttpOnly NFL session            (401)
+ *       2. verify a current NFL entitlement or owner   (403 / 503, fail closed)
+ *     then an allow-listed GET goes to nfl-api.propbetedge.ai with the
+ *     server-only gateway token
  *
  * vercel.json rewrites /api/gw/:path* here as ?__gw_path=:path*. The browser
  * never holds the gateway token or any service credential; responses are
@@ -35,6 +37,10 @@ export const GATEWAY_READ_ROUTES = Object.freeze([
   /^\/api\/schedule$/,
   /^\/api\/replay\/enrich$/,
 ]);
+
+/* Proprietary model output: subscribers and the owner only. */
+export const PREMIUM_GATEWAY_ROUTES = Object.freeze([/^\/api\/picks\/pass$/]);
+export function isPremiumPath(path) { return Boolean(path) && PREMIUM_GATEWAY_ROUTES.some(rx => rx.test(path)); }
 
 const UPSTREAM_TIMEOUT_MS = 15000;
 
@@ -87,7 +93,9 @@ export async function handler(req, res) {
     const body = await upstream.text();
     res.statusCode = upstream.status;
     res.setHeader('content-type', upstream.headers.get('content-type') || 'application/json; charset=utf-8');
-    res.setHeader('cache-control', PRIVATE_CACHE);
+    /* public reads are identical for every visitor and may be shared-cached
+       briefly; a premium read is private (the gate also forces this) */
+    res.setHeader('cache-control', isPremiumPath(path) || upstream.status !== 200 ? PRIVATE_CACHE : 'public, max-age=30, s-maxage=60');
     res.setHeader('x-content-type-options', 'nosniff');
     res.setHeader('x-pbe-gateway-path', path);
     return res.end(req.method === 'HEAD' ? '' : body);
@@ -99,4 +107,4 @@ export async function handler(req, res) {
   }
 }
 
-export default withNflEntitlement(handler);
+export default withNflEntitlement(handler, { isPublic: req => !isPremiumPath(forwardablePath(req.query?.__gw_path)) });

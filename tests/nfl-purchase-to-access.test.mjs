@@ -84,7 +84,7 @@ function res() {
 async function access(email) {
   auth.clearEntitlementCache();
   const s = res(); await authSession({ method: 'GET', headers: { cookie: cookieFor(email) } }, s);
-  const d = res(); await gw({ method: 'GET', query: { __gw_path: 'api/best-line' }, headers: { cookie: cookieFor(email) } }, d);
+  const d = res(); await gw({ method: 'GET', query: { __gw_path: 'api/picks/pass', event_id: 'e1' }, headers: { cookie: cookieFor(email) } }, d);
   return { session: JSON.parse(s.body), data: d.statusCode };
 }
 
@@ -118,7 +118,7 @@ test('a Founding weekly purchase, delivered checkout-first, opens paid access fo
   assert.equal(after.session.pro, true);
   assert.equal(after.session.entitlement.plan, 'founding_weekly');
   assert.ok(Date.parse(after.session.entitlement.expires_at) > Date.now());
-  assert.equal(after.data, 200, 'paid NFL API opens');
+  assert.equal(after.data, 200, 'premium NFL model opens');
   assert.deepEqual(emails, [{ email: buyer.toLowerCase(), purpose: 'purchase' }], 'one access email to the purchaser');
 
   const stranger = await access('someone.else@propbetedge.test');
