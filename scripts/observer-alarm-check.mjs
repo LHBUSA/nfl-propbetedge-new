@@ -7,12 +7,19 @@
  *
  * It then actively provokes a mutation storm to prove the detector still works,
  * because a guard that cannot fire is not a guard.
+ *
+ * NFL is a subscription product: production serves the workspace only to a
+ * verified NFL subscriber. Same-origin /api/* is therefore answered by this
+ * checkout's API handlers under the QA subscriber (scripts/qa-entitled-api.mjs,
+ * the mechanism the recovery and paywall gates use); the deployed static files
+ * are what is audited. Production's paywall is never bypassed.
  */
 
 import { spawn } from 'node:child_process';
 import { mkdtempSync, rmSync, appendFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { startEntitledApi, accessProblem } from './qa-entitled-api.mjs';
 
 const URL_TARGET = process.env.PBE_URL || 'https://nfl.propbetedge.ai';
 const CHROME = process.env.PBE_CHROME
@@ -33,8 +40,11 @@ const chrome = spawn(CHROME, [
   '--window-size=1440,900', 'about:blank',
 ], { stdio: 'ignore' });
 
+const ORIGIN = new URL(URL_TARGET).origin;
+const entitled = await startEntitledApi({ repo: process.cwd(), log: out });
 function finish(code) {
   try { chrome.kill(); } catch (_) {}
+  try { entitled?.stop(); } catch (_) {}
   setTimeout(() => { try { rmSync(dir, { recursive: true, force: true }); } catch (_) {} process.exit(code); }, 300);
 }
 const hard = setTimeout(() => { out('HARD_DEADLINE'); finish(3); }, 150000);
@@ -71,6 +81,11 @@ ws.onmessage = ev => {
     m.error ? reject(new Error(m.error.message)) : resolve(m.result);
     return;
   }
+  if (m.method === 'Fetch.requestPaused') {
+    if (entitled && new URL(m.params.request.url).origin === ORIGIN) entitled.fulfill(send, m.params, ORIGIN);
+    else send('Fetch.continueRequest', { requestId: m.params.requestId }).catch(() => {});
+    return;
+  }
   if (m.method === 'Runtime.consoleAPICalled' && m.params.type === 'error') {
     const text = (m.params.args || []).map(a => a.value ?? a.description ?? '').join(' ');
     consoleErrors.push(text.slice(0, 240));
@@ -79,6 +94,7 @@ ws.onmessage = ev => {
 
 await send('Runtime.enable');
 await send('Page.enable');
+if (entitled) await send('Fetch.enable', { patterns: [{ urlPattern: `${ORIGIN}/api/*`, requestStage: 'Request' }] });
 out(`TARGET ${URL_TARGET}`);
 await send('Page.navigate', { url: URL_TARGET });
 await sleep(11000);
@@ -91,6 +107,13 @@ async function probe(expr, ms = 6000) {
     ]);
     return r.result?.value;
   } catch (e) { return `<${e.message}>`; }
+}
+
+{
+  const verdict = await probe(`document.documentElement.dataset.pbeAccess ?? null`);
+  out(`access verdict: ${JSON.stringify({ verdict, entitled: Boolean(entitled) })}`);
+  const issue = accessProblem(verdict, Boolean(entitled));
+  if (issue) { out(`FAIL ${issue}`); ws.close(); finish(1); }
 }
 
 if (await probe('1+1') !== 2) { out('RESULT MAIN THREAD WEDGED'); ws.close(); finish(1); }
