@@ -1,7 +1,7 @@
 /* PropBetEdge NFL - ordered page/product upgrade loader v45 recovery */
 (() => {
   'use strict';
-  const VERSION='20260914track3';
+  const VERSION='20260914props1';
   const upgrades=[
     /* Establish the final homepage authority first. v6 replaces the v5 DOM with
        .pbehome6; v7 historically registered itself after that without repainting
@@ -28,6 +28,9 @@
     {css:'./pbe-card-v3.css',js:'./pbe-card-v3.js'},
     {css:'./nfl-command-center-v1.css',js:'./nfl-command-center-v1.js'},
     {css:'./what-changed-v1.css',js:'./what-changed-v1.js'},
+    /* Player-props rules for Best Line (identity, best price, model state): pure,
+       read by best-line-v1.js at render time. */
+    {js:'./best-line-props-core-v2.js'},
     {css:'./best-line-v1.css',js:'./best-line-v1.js'},
     {css:'./dashboard-v7.css',js:'./dashboard-v7.js'},
     {css:'./dashboard-v8-enhance.css',js:'./dashboard-v8-enhance.js'},
