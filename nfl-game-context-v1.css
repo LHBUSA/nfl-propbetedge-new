@@ -1,0 +1,22 @@
+/* Game context strip (nfl-game-context-v1.js): kickoff ET, where to watch,
+   venue, weather. Every cell is visible at every width — it reflows, it never
+   hides. */
+.pbe25-card>.pbe-gctx{grid-column:1/-1}
+.pbe-gctx{display:grid;grid-template-columns:minmax(120px,.8fr) minmax(150px,1fr) minmax(170px,1.2fr) minmax(210px,1.5fr);gap:1px;margin:2px 0 0;border:1px solid rgba(180,211,241,.10);border-radius:10px;overflow:hidden;background:rgba(180,211,241,.08)}
+.pbe-gctx-cell{display:grid;align-content:start;gap:3px;min-width:0;padding:9px 12px;background:rgba(7,11,17,.92)}
+.pbe-gctx-k{font:800 9.5px/1.2 'JetBrains Mono',ui-monospace,monospace;letter-spacing:.14em;text-transform:uppercase;color:#8d9aab}
+.pbe-gctx-cell>b{font:800 13.5px/1.3 'Inter',system-ui,sans-serif;color:#f2f5f9;overflow-wrap:anywhere}
+.pbe-gctx-cell>small{font:600 11.5px/1.35 'Inter',system-ui,sans-serif;color:#aab4c1;overflow-wrap:anywhere}
+.pbe-gctx-cell.is-kick>b{font-family:'JetBrains Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;letter-spacing:.01em}
+.pbe-gctx-cell.is-watch .pbe-tv{white-space:normal}
+.pbe-gctx-cell.is-watch .pbe-tv-link{color:#9cc2ff;text-decoration-style:solid;text-decoration-color:rgba(156,194,255,.45);display:inline-flex;align-items:center;min-height:24px}
+.pbe-gctx-cell.is-watch .pbe-tv-link:hover{color:#fff}
+.pbe-gctx-cell.is-watch .pbe-tv-sep{margin:0 3px}
+.pbe-gctx-na,.pbe-gctx-state{color:#b8c0cb;font-weight:700}
+.pbe-gctx-cell.is-weather.is-forecast>b{color:#fff}
+.pbe-gctx-cell.is-weather.is-indoor .pbe-gctx-state,.pbe-gctx-cell.is-weather.is-retractable .pbe-gctx-state{color:#dfe7f1;text-transform:uppercase;letter-spacing:.05em;font-size:12px}
+.pbe-gctx-cell.is-weather.is-unavailable .pbe-gctx-state,.pbe-gctx-cell.is-weather.is-pending .pbe-gctx-state{text-transform:uppercase;letter-spacing:.05em;font-size:12px}
+.pbe-gctx-alert{display:block;margin-top:2px;font-style:normal;font-weight:800;color:#ffb35c}
+.pbe-gctx.is-featured{margin-top:12px;grid-template-columns:repeat(2,minmax(0,1fr))}
+@media (max-width:1180px){.pbe-gctx{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:520px){.pbe-gctx,.pbe-gctx.is-featured{grid-template-columns:1fr}.pbe-gctx-cell{padding:8px 11px}}

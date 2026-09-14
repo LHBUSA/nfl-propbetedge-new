@@ -1,6 +1,11 @@
 /* PropBetEdge NFL — Games & Schedule v3
  * Factual schedule first. LIVE/FINAL only when explicitly supported by score semantics.
  * The page is a game-context command surface for the rest of the NFL Intelligence OS.
+ *
+ * Every card and the featured next game carry one context strip
+ * (nfl-game-context-v1.js): kickoff in ET, the schedule authority's broadcast
+ * with verified official links, the venue ESPN lists for that game, and the
+ * nfl-intel kickoff-window forecast joined by ESPN event id.
  */
 (() => {
   'use strict';
@@ -33,7 +38,9 @@
        Wednesday evening Eastern — so Thursday night's game read as already over
        and the page named a Sunday game, at an invented Saturday time, as the
        next kickoff. Combine the two in America/New_York instead. */
-    const start=raw?.kickoff||raw?.start_time||raw?.game_time||raw?.commence_time||raw?.datetime
+    /* nfl-schedule publishes kickoff as { utc, source }: ESPN's confirmed
+       kickoff when joined exactly, the schedule's Eastern wall clock otherwise. */
+    const start=(raw?.kickoff&&typeof raw.kickoff==='object'?raw.kickoff.utc:raw?.kickoff)||raw?.start_time||raw?.game_time||raw?.commence_time||raw?.datetime
       ||(raw?.gameday&&raw?.gametime?easternInstant(raw.gameday,raw.gametime):null)
       ||raw?.date||raw?.gameday;
     if(!away||!home||!start)return null;
@@ -45,8 +52,14 @@
       week:Number.isFinite(week)?week:null,
       season:Number(raw?.season||raw?.year||2026)||2026,
       seasonType,
-      venue:raw?.stadium||raw?.venue||raw?.site||null,
-      broadcast:raw?.network||raw?.tv||raw?.broadcast||null,
+      espnEventId:raw?.espn_event_id?String(raw.espn_event_id):null,
+      awayCode:raw?.away_team||null,homeCode:raw?.home_team||null,
+      /* the per-game venue object from nfl-schedule; a legacy string still reads */
+      venueInfo:raw?.venue&&typeof raw.venue==='object'?raw.venue:null,
+      venue:raw?.venue&&typeof raw.venue==='object'?(raw.venue.status==='VERIFIED'?raw.venue.name:null):(raw?.stadium||raw?.venue||raw?.site||null),
+      /* nfl-schedule publishes a normalized broadcast object (status, networks,
+         streaming, verified destinations). A legacy string is still accepted. */
+      broadcast:raw?.broadcast&&typeof raw.broadcast==='object'?raw.broadcast:(raw?.network||raw?.tv||raw?.broadcast||null),
       raw
     };
   }
@@ -73,11 +86,16 @@
     const cityMatches=values.filter(t=>text===String(t.city||'').toLowerCase());
     return cityMatches.length===1?cityMatches[0]:null;
   }
+  /* TV label from the canonical broadcast object; never a derived network. */
+  function tvText(g){return window.PBEBroadcast?.text?.(g.broadcast)||(typeof g.broadcast==='string'?g.broadcast:'');}
   function crest(t,size=42){try{if(t?.abbr&&typeof teamCrest==='function')return teamCrest(t.abbr,size)}catch(_){}return `<strong style="color:#fff;font:900 13px 'Inter',sans-serif">${esc(t?.abbr||'NFL')}</strong>`;}
   function date(value){const d=new Date(value);return Number.isNaN(d.getTime())?null:d;}
-  function dateLabel(value){const d=date(value);return d?d.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'}):'Date unavailable';}
-  function shortDate(value){const d=date(value);return d?d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}):'Date unavailable';}
-  function timeLabel(value){const d=date(value);return d?d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}):'Time unavailable';}
+  /* Always America/New_York, always labelled ET: a reader in another time zone
+     must never see their own clock presented as the kickoff. */
+  const ET={timeZone:'America/New_York'};
+  function dateLabel(value){const d=date(value);return d?d.toLocaleDateString('en-US',{...ET,weekday:'long',month:'long',day:'numeric'}):'Date unavailable';}
+  function shortDate(value){const d=date(value);return d?d.toLocaleDateString('en-US',{...ET,weekday:'short',month:'short',day:'numeric'}):'Date unavailable';}
+  function timeLabel(value){const d=date(value);return d?`${d.toLocaleTimeString('en-US',{...ET,hour:'numeric',minute:'2-digit'})} ET`:'Time unavailable';}
   function sameTeam(a,b){const ta=team(a),tb=team(b);if(ta&&tb)return ta.abbr===tb.abbr;const x=String(a||'').toLowerCase(),y=String(b||'').toLowerCase();return x===y||x.includes(y)||y.includes(x);}
   function gameId(raw){return String(raw?.game_id||raw?.id||raw?.gameId||raw?.key||'');}
   function eventStart(raw){return raw?.kickoff||raw?.start_time||raw?.game_time||raw?.commence_time||raw?.date||raw?.gameday||raw?.datetime||null;}
@@ -128,7 +146,7 @@
   function filtered(){
     const q=state.query.trim().toLowerCase(),nw=nextWeek();
     return state.games.filter(g=>{
-      const qOk=!q||`${g.away} ${g.home} ${g.venue||''} ${g.broadcast||''}`.toLowerCase().includes(q);
+      const qOk=!q||`${g.away} ${g.home} ${g.venue||''} ${tvText(g)}`.toLowerCase().includes(q);
       const wOk=state.week==='all'||(state.week==='next'&&g.week===nw)||String(g.week)===state.week;
       const tOk=state.team==='all'||sameTeam(g.away,state.team)||sameTeam(g.home,state.team);
       return qOk&&wOk&&tOk;
@@ -159,6 +177,17 @@
     return abbr?`<button class="pbe25-btn blue" data-team="${esc(abbr)}">${esc(label)}</button>`:'';
   }
 
+  /* The context strip for one game: kickoff ET, watch, venue, weather. */
+  function contextModel(g,at,ht){
+    const gs=gameState(g);
+    return{espn_event_id:g.espnEventId,away_team:g.awayCode,home_team:g.homeCode,kickoff_utc:date(g.start)?date(g.start).toISOString():null,venue:g.venueInfo,broadcast:g.broadcast,final:gs.kind==='FINAL',state_label:gs.kind==='LIVE'?'Live':gs.kind==='FINAL'?'Final':'Scheduled',away_name:at?.name||g.away,home_name:ht?.name||g.home};
+  }
+  function contextHtml(g,at,ht,featured=false){
+    const C=window.PBEGameContext;
+    if(!C)return'';
+    return C.html(contextModel(g,at,ht),C.state,{featured});
+  }
+
   function featured(){
     const g=upcoming()[0];
     if(!g)return'';
@@ -174,7 +203,7 @@
           <div class="pbe25-feature-at">@</div>
           <div class="pbe25-feature-team"><div class="pbe25-feature-crest">${crest(ht,52)}</div><strong>${esc(ht?.abbr||g.home)}</strong><span>${esc(ht?.name||g.home)}</span></div>
         </div>
-        <div class="pbe25-feature-meta"><span>${esc(g.venue||'Venue TBA')}</span>${g.broadcast?`<span>${esc(g.broadcast)}</span>`:''}</div>
+        ${contextHtml(g,at,ht,true)}
       </div>
       <div class="pbe25-feature-actions">
         ${provider?`${providerAction(provider,selected?'Open Active Props':'Open Props','propboard','primary')}${providerAction(provider,'Game Center','pbecast','blue')}`:`${teamAction(at,'Away Research')}${teamAction(ht,'Home Research')}`}
@@ -190,7 +219,7 @@
       <div class="pbe25-time">
         <span class="pbe25-state-pill ${gs.kind==='LIVE'?'live':gs.kind==='FINAL'?'final':''}">${esc(gs.label)}</span>
         <strong>${esc(timeLabel(g.start))}</strong>
-        <small>WK ${esc(g.week??'—')}${g.broadcast?` · ${esc(g.broadcast)}`:''}</small>
+        <small>WK ${esc(g.week??'—')}</small>
       </div>
       <div class="pbe25-match">
         <button class="pbe25-team-btn" type="button" ${at?.abbr?`data-team="${esc(at.abbr)}"`:''}>
@@ -206,6 +235,7 @@
           <span class="pbe25-crest">${crest(ht,42)}</span>
         </button>
       </div>
+      ${contextHtml(g,at,ht)}
       <div class="pbe25-actions">
         ${provider?`${providerAction(provider,selected?'Active · Props':'Open Props','propboard','primary')}${providerAction(provider,'Game Center','pbecast','blue')}`:`${teamAction(at,'Away Research')}${teamAction(ht,'Home Research')}`}
       </div>
@@ -264,13 +294,29 @@
     document.querySelectorAll('[data-team]').forEach(btn=>btn.addEventListener('click',()=>{const abbr=btn.dataset.team;if(abbr)window.PBETeamsV2?.openTeam(abbr);}));
   }
   function refreshList(){const host=document.getElementById('pbe25-list');if(host)host.innerHTML=list();wireCards();}
+  /* When the forecast read lands, only the context strips are repainted, so
+     the rest of each card (and every enhancement layered on it) stays put. */
+  function repaintContext(){
+    const strips=[...document.querySelectorAll('.pbe25-games .pbe-gctx[data-gctx-event]')];
+    if(!strips.length)return;
+    const byId=new Map(state.games.filter(g=>g.espnEventId).map(g=>[g.espnEventId,g]));
+    strips.forEach(el=>{
+      const g=byId.get(el.dataset.gctxEvent);if(!g)return;
+      const html=contextHtml(g,team(g.away),team(g.home),el.classList.contains('is-featured'));
+      if(html&&el.outerHTML!==html)el.outerHTML=html;
+    });
+  }
   function renderShell(){const vc=document.getElementById('view-container');if(vc){vc.innerHTML=shell();wire();}}
 
   async function loadSchedule(){
     let last='schedule_unavailable';
     for(const path of ['/api/schedule?season=2026&season_type=REG','/api/schedule?season=2026','/api/schedule']){
       try{
-        const payload=await fetchJson(`${API}${path}`),rows=arrayOf(payload).map(normalize).filter(Boolean).filter(g=>g.season===2026&&(!g.seasonType||g.seasonType==='REG'||g.seasonType==='REGULAR'));
+        const payload=await fetchJson(`${API}${path}`);
+        /* hand the same payload to the broadcast client so other surfaces on
+           this page never need a second schedule call */
+        window.PBEBroadcast?.ingest?.(payload);
+        const rows=arrayOf(payload).map(normalize).filter(Boolean).filter(g=>g.season===2026&&(!g.seasonType||g.seasonType==='REG'||g.seasonType==='REGULAR'));
         if(rows.length)return rows;
         last='empty_schedule';
       }catch(error){last=error instanceof Error?error.message:String(error);}
@@ -284,6 +330,7 @@
     if(!vc){state.loading=false;return;}
     vc.innerHTML='<section class="pbe25-games"><div class="pbe25-empty">Loading the 2026 NFL game board…</div></section>';
     try{
+      window.PBEGameContext?.load?.();
       const [games,scores]=await Promise.all([loadSchedule(),fetchJson(`${API}/api/scores`).catch(()=>null)]);
       state.games=games;
       state.scores=scores;
@@ -314,4 +361,5 @@
   document.addEventListener('DOMContentLoaded',install,{once:true});
   window.addEventListener('pbe:event-changed',()=>{if(document.querySelector('.pbe25-games')&&!state.loading)renderShell();});
   window.addEventListener('pbe:events-loaded',()=>{if(document.querySelector('.pbe25-games')&&!state.loading)renderShell();});
+  window.addEventListener('pbe:game-weather',repaintContext);
 })();

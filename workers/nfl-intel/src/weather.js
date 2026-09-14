@@ -10,7 +10,7 @@
  * forecasting a neutral-site game at the wrong venue.
  */
 import VENUE_TABLE from '../../../data/dist/nfl-venues.json' with { type: 'json' };
-import { setVenues, gameSnapshot, weatherEvents, THRESHOLDS } from '../../../api/_breaking/weather.js';
+import { setVenues, gameSnapshot, weatherEvents, wmoDescription, THRESHOLDS } from '../../../api/_breaking/weather.js';
 
 setVenues(VENUE_TABLE);
 
@@ -62,4 +62,58 @@ export async function refreshWeather(env, { games, now = Date.now(), fetchImpl =
   };
   await env.INTEL_KV.put(WX_KEY, JSON.stringify(snapshot));
   return { ok: true, status: 'ok', monitored: snaps.length, events: current.length, shifts: shifts.length };
+}
+
+/* ---- GET /api/game-weather ------------------------------------------------
+   The persisted snapshot, one compact row per game, keyed by the ESPN event id
+   the schedule authority publishes for the same game. A read never contacts a
+   source. Values are the kickoff-window FORECAST: temperature at the kickoff
+   hour; wind, gusts and precipitation chance as the worst hour of the window. */
+export const WX_STALE_MS = 2 * 3600000;
+export function gameWeatherView(snapshot, now = Date.now()) {
+  const fetchedMs = Date.parse(snapshot?.fetched_at || '');
+  const age = Number.isFinite(fetchedMs) ? now - fetchedMs : null;
+  const round = v => (typeof v === 'number' && Number.isFinite(v) ? Math.round(v) : null);
+  const games = (Array.isArray(snapshot?.games) ? snapshot.games : []).map(s => {
+    const w = s.window || null;
+    return {
+      event_id: String(s.event_id || s.game_id || ''),
+      matchup: s.matchup || null,
+      away_team: s.away_team || null,
+      home_team: s.home_team || null,
+      kickoff_utc: s.kickoff_utc || null,
+      venue: s.venue ? { name: s.venue.name, city: s.venue.city, state: s.venue.state } : null,
+      roof: s.roof ? { state: s.roof.state, label: s.roof.label, weather_applies: Boolean(s.roof.weather_applies) } : null,
+      available: Boolean(s.available && w),
+      forecast: w ? {
+        kind: 'forecast',
+        temp_f: round(w.temp_f),
+        condition: wmoDescription(w.weather_code),
+        weather_code: w.weather_code ?? null,
+        wind_mph: round(w.wind_mph),
+        gust_mph: round(w.gust_mph),
+        precip_probability_pct: round(w.precip_probability_pct),
+        kickoff_hour_local: w.kickoff_hour_local || null,
+        window_local: w.window_local || null,
+        hours_resolved: w.hours_resolved ?? null,
+        hours_requested: w.hours_requested ?? null
+      } : null,
+      nws: (Array.isArray(s.nws) ? s.nws : []).map(a => ({ event: a.event, severity: a.severity, headline: a.headline, url: a.url, expires: a.ends || a.expires || null })),
+      unresolved: Array.isArray(s.unresolved) ? s.unresolved.map(u => ({ field: u.field, reason: u.reason })) : [],
+      error: s.error || null
+    };
+  }).filter(g => /^\d+$/.test(g.event_id));
+  return {
+    ok: Boolean(snapshot),
+    semantics: 'KICKOFF_WINDOW_FORECAST',
+    fetched_at: snapshot?.fetched_at || null,
+    age_seconds: age === null ? null : Math.round(age / 1000),
+    stale: age === null ? true : age > WX_STALE_MS,
+    horizon_hours: Math.round(HORIZON_MS / 3600000),
+    monitored: games.length,
+    window: 'temperature at the kickoff hour; wind, gusts and precipitation chance are the worst hour from one hour before to three hours after kickoff',
+    roof_policy: { INDOOR: 'fixed roof: weather neutralized', ROOF_STATUS_UNKNOWN: 'retractable roof, operating state not published', UNRESOLVED: 'venue not resolved (neutral site or no venue row): no forecast' },
+    source: { name: 'Open-Meteo forecast', licence: 'CC-BY-4.0', attribution: 'Weather data by Open-Meteo.com, licensed CC BY 4.0', alerts: 'National Weather Service active alerts' },
+    games
+  };
 }

@@ -7,8 +7,8 @@
  *   movement and not model edge.
  * - High Total = current cross-book total > 48.5 when a core market exists.
  * - Prime Time = schedule timing (TNF/SNF/MNF), independent of market status.
- * - Weather never invents a forecast. Roof/exposure is venue context only until
- *   a licensed live-weather feed is wired.
+ * - Weather is not this layer's: the game context strip (nfl-game-context-v1.js)
+ *   shows the nfl-intel kickoff-window forecast and the per-game roof state.
  */
 (() => {
   'use strict';
@@ -19,17 +19,6 @@
   const queued=new Set();
   let active=0,timer=null,filter='all';
   const MAX_CONCURRENCY=4;
-
-  const ROOF_BY_HOME={
-    'arizona cardinals':'RETRACTABLE','atlanta falcons':'RETRACTABLE','baltimore ravens':'OUTDOOR','buffalo bills':'OUTDOOR',
-    'carolina panthers':'OUTDOOR','chicago bears':'OUTDOOR','cincinnati bengals':'OUTDOOR','cleveland browns':'OUTDOOR',
-    'dallas cowboys':'RETRACTABLE','denver broncos':'OUTDOOR','detroit lions':'DOME','green bay packers':'OUTDOOR',
-    'houston texans':'RETRACTABLE','indianapolis colts':'RETRACTABLE','jacksonville jaguars':'OUTDOOR','kansas city chiefs':'OUTDOOR',
-    'las vegas raiders':'DOME','los angeles chargers':'CANOPY','los angeles rams':'CANOPY','miami dolphins':'CANOPY',
-    'minnesota vikings':'DOME','new england patriots':'OUTDOOR','new orleans saints':'DOME','new york giants':'OUTDOOR',
-    'new york jets':'OUTDOOR','philadelphia eagles':'OUTDOOR','pittsburgh steelers':'OUTDOOR','san francisco 49ers':'OUTDOOR',
-    'seattle seahawks':'OUTDOOR','tampa bay buccaneers':'OUTDOOR','tennessee titans':'OUTDOOR','washington commanders':'OUTDOOR'
-  };
 
   const esc=v=>String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
   const num=v=>{const n=Number(v);return Number.isFinite(n)?n:null};
@@ -47,16 +36,6 @@
     if(featured){const rows=[...root.querySelectorAll('.pbe25-feature-team')];return{away:rows[0]?.querySelector('span')?.textContent?.trim()||'',home:rows[1]?.querySelector('span')?.textContent?.trim()||''}}
     const rows=[...root.querySelectorAll('.pbe25-team-name')];return{away:rows[0]?.textContent?.trim()||'',home:rows[1]?.textContent?.trim()||''};
   }
-  function roof(home){return ROOF_BY_HOME[normalize(home)]||'UNKNOWN'}
-  function environmentText(home){
-    const r=roof(home);
-    if(r==='DOME')return'DOME · WEATHER NEUTRALIZED';
-    if(r==='RETRACTABLE')return'RETRACTABLE ROOF · STATUS TBD';
-    if(r==='CANOPY')return'COVERED OPEN AIR · WEATHER EXPOSURE';
-    if(r==='OUTDOOR')return'OUTDOOR · LIVE WEATHER UNAVAILABLE';
-    return'ENVIRONMENT STATUS UNAVAILABLE';
-  }
-
   function cardMeta(card){
     const teams=teamNames(card,false),id=providerId(card);
     const day=card.closest('.pbe25-day')?.querySelector('.pbe25-date strong')?.textContent?.trim()||'';
@@ -104,19 +83,13 @@
   }
   function marketIntel(data,home,featured=false){
     const readiness=data?.readiness||{},f=readiness.families||{},score=Number(readiness.score_pct||0);
-    const env=data?.environment?.roof?(
-      data.environment.roof==='DOME'?'DOME · WEATHER NEUTRALIZED':
-      data.environment.roof==='RETRACTABLE'?'RETRACTABLE ROOF · STATUS TBD':
-      data.environment.roof==='CANOPY'?'COVERED OPEN AIR · WEATHER EXPOSURE':
-      data.environment.roof==='OUTDOOR'?'OUTDOOR · LIVE WEATHER UNAVAILABLE':environmentText(home)
-    ):environmentText(home);
     return`<section class="pbe25-game-intel ${featured?'featured':''}">
       <div class="pbe25-readiness"><div class="pbe25-readiness-head"><span>EDGE READINESS <small>QUOTED-MARKET AVAILABILITY</small></span><b>${score}%</b></div><div class="pbe25-readiness-track"><i style="width:${Math.max(0,Math.min(100,score))}%"></i></div><div class="pbe25-ready-families">${family('PASS',f.passing)}${family('REC',f.receiving)}${family('RUSH',f.rushing)}${family('TD',f.touchdown)}</div></div>
-      <div class="pbe25-intel-chips">${variance(data)}${totalChip(data)}<span class="pbe25-intel-chip environment"><b>ENVIRONMENT</b>${esc(env)}</span></div>
+      <div class="pbe25-intel-chips">${variance(data)}${totalChip(data)}</div>
     </section>`;
   }
-  function waitingIntel(home){return`<section class="pbe25-game-intel loading"><div class="pbe25-intel-loading"><i></i><span>Reading current market availability</span></div><span class="pbe25-intel-chip environment"><b>ENVIRONMENT</b>${esc(environmentText(home))}</span></section>`}
-  function scheduleOnlyIntel(home){return`<section class="pbe25-game-intel schedule-only"><div class="pbe25-readiness"><div class="pbe25-readiness-head"><span>EDGE READINESS <small>QUOTED-MARKET AVAILABILITY</small></span><b>0%</b></div><div class="pbe25-readiness-track"><i style="width:0%"></i></div><div class="pbe25-ready-families"><span class="pbe25-ready-pill pending"><b>PROP MARKETS</b>PENDING</span></div></div><div class="pbe25-intel-chips"><span class="pbe25-intel-chip environment"><b>ENVIRONMENT</b>${esc(environmentText(home))}</span></div></section>`}
+  function waitingIntel(home){return`<section class="pbe25-game-intel loading"><div class="pbe25-intel-loading"><i></i><span>Reading current market availability</span></div></section>`}
+  function scheduleOnlyIntel(home){return`<section class="pbe25-game-intel schedule-only"><div class="pbe25-readiness"><div class="pbe25-readiness-head"><span>EDGE READINESS <small>QUOTED-MARKET AVAILABILITY</small></span><b>0%</b></div><div class="pbe25-readiness-track"><i style="width:0%"></i></div><div class="pbe25-ready-families"><span class="pbe25-ready-pill pending"><b>PROP MARKETS</b>PENDING</span></div></div></section>`}
 
   function setDataFlags(root,data){
     root.dataset.pbeIntelReady=String(Number(data?.readiness?.score_pct||0));

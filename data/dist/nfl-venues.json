@@ -209,26 +209,26 @@
   "LAC": {
    "team_name": "Los Angeles Chargers",
    "espn_team_id": "24",
-   "venue": "Dignity Health Sports Park",
-   "city": "Carson",
+   "venue": "SoFi Stadium",
+   "city": "Inglewood",
    "state": "CA",
-   "lat": 33.83141,
-   "lon": -118.28202,
+   "lat": 33.96168,
+   "lon": -118.35313,
    "tz": "America/Los_Angeles",
    "indoor": false,
-   "grass": true
+   "grass": false
   },
   "LAR": {
    "team_name": "Los Angeles Rams",
    "espn_team_id": "14",
-   "venue": "Los Angeles Memorial Coliseum",
-   "city": "Los Angeles",
+   "venue": "SoFi Stadium",
+   "city": "Inglewood",
    "state": "CA",
-   "lat": 34.05223,
-   "lon": -118.24368,
+   "lat": 33.96168,
+   "lon": -118.35313,
    "tz": "America/Los_Angeles",
    "indoor": false,
-   "grass": true
+   "grass": false
   },
   "MIA": {
    "team_name": "Miami Dolphins",

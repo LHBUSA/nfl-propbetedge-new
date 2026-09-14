@@ -72,6 +72,11 @@ jobs:
       - name: Research contract suites
         run: node --test research/*.test.mjs
 
+      # nfl-schedule broadcast + venue authority, nfl-intel game weather and the
+      # game context strip: identity joins, verified links, roof states, ET time.
+      - name: NFL game context contract
+        run: node --test tests/nfl-schedule-broadcast.test.mjs tests/nfl-game-context.test.mjs
+
       - name: Validate Vercel config JSON
         run: node -e "JSON.parse(require('fs').readFileSync('vercel.json','utf8')); console.log('vercel.json OK')"
 

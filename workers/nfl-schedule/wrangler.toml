@@ -1,0 +1,33 @@
+# nfl-schedule — canonical 2026 schedule + broadcast authority.
+#
+# Source of record: this directory (captured from deployed version
+# 1a88cfca-1f81-41b8-9f91-61dcf78d55ce on 2026-09-13; see CAPTURE.md).
+# Reached in production only through nfl-gateway's NFL_SCHEDULE service
+# binding (/api/schedule*).
+#
+# Deploy order: frontend first (games-v2.js accepts broadcast as an object),
+# then this Worker. Rollback: version 1a88cfca above.
+name = "nfl-schedule"
+main = "index.js"
+compatibility_date = "2026-08-28"
+# game-facts.js reuses api/_breaking/weather.js roofState; that module imports
+# node:fs / node:path for its Vercel path, which the Worker never calls.
+compatibility_flags = ["nodejs_compat"]
+account_id = "fd3a233edadd0a60916413c1199f71ee"
+
+# The broadcast snapshot lives in the shared NFL KV namespace (the same one
+# nfl-gateway and nfl-current bind) under one key: schedule:broadcast:v1.
+# Only the cron below writes it; the fetch path only reads it.
+[[kv_namespaces]]
+binding = "NFL_KV"
+id = "71eaad8fad534c419846db4efb321f8f"
+
+# Broadcast refresh. The planner in refresh.js decides per tick whether to
+# read: daily full-season sweep (18 requests over three ticks), hourly current
+# + next week (2), and every 15 minutes on game days (1). Idle ticks read
+# nothing. Page traffic never triggers a source read.
+[triggers]
+crons = ["*/15 * * * *"]
+
+[observability]
+enabled = true

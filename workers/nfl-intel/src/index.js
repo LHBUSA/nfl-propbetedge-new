@@ -3,6 +3,7 @@
  *   GET  /api/changes?window_hours=48   sourced changes + game availability
  *   GET  /api/injuries                  all 32 teams + every current reported injury
  *   GET  /api/best-line?days=8&event=   price shopping over the market snapshot
+ *   GET  /api/game-weather              kickoff-window forecast per game, by ESPN event id
  *   GET  /api/intel/health              lane health from the durable run ledger
  *   POST /api/intel/run?lane=…          manual lane run (Bearer INTEL_ADMIN_TOKEN)
  *
@@ -30,10 +31,10 @@ import { summarizeEvent, bookLeaderboard } from './bestline-core.js';
 import { ingestInjuries, KV_KEYS } from './injuries.js';
 import { buildInjuryBoard } from './injury-board.js';
 import { captureMarket, recentRows } from './market.js';
-import { refreshWeather, WX_KEY, WX_MAX_AGE_MS } from './weather.js';
+import { refreshWeather, gameWeatherView, WX_KEY, WX_MAX_AGE_MS } from './weather.js';
 import { nflverseCode, nflverseGameId } from '../../nfl-picks-engine-shared/current-slate.mjs';
 
-const VERSION = 'nfl-intel/1.2.0';
+const VERSION = 'nfl-intel/1.3.0';
 const INJURY_STALE_MS = 30 * 60000;
 const CORS = {
   'access-control-allow-origin': '*',
@@ -268,6 +269,13 @@ async function bestLine(env, url) {
   }, 200, 60);
 }
 
+/* ---- GET /api/game-weather ----------------------------------------------- */
+async function gameWeather(env) {
+  const snap = await env.INTEL_KV.get(WX_KEY, 'json');
+  if (!snap) return json({ ok: false, semantics: 'UNAVAILABLE', error: 'first_snapshot_pending', runtime: VERSION }, 503);
+  return json({ ...gameWeatherView(snap), runtime: VERSION, generated_at: new Date().toISOString() }, 200, 300);
+}
+
 async function health(env) {
   const lanes = ['injuries', 'market', 'weather'];
   const rows = await Promise.all(lanes.map(l => env.INTEL_KV.get(`run:intel:${l}`, 'json')));
@@ -298,6 +306,7 @@ export default {
       if (path === '/api/injuries') return await injuries(env);
       if (path === '/api/changes') return await changes(env, url);
       if (path === '/api/best-line') return await bestLine(env, url);
+      if (path === '/api/game-weather') return await gameWeather(env);
       if (path === '/api/intel/health' || path === '/health') return await health(env);
       return json({ error: 'not_found', path, service: 'nfl-intel' }, 404);
     } catch (e) {

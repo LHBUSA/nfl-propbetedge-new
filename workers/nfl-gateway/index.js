@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════
 // nfl-gateway — API Gateway for NFL Platform
-// Routes: /api/season /api/standings /api/current-stats /api/changes /api/best-line /api/replay/*
+// Routes: /api/season /api/standings /api/current-stats /api/changes /api/best-line /api/game-weather /api/replay/*
 //         /api/scores /api/stats /api/picks
 //         /api/odds /api/injuries /api/schedule
 //         /api/news /api/historical
@@ -67,6 +67,7 @@ export default {
       if (path.startsWith('/api/injuries'))      return await env.NFL_INTEL.fetch(req);
       if (path.startsWith('/api/changes'))       return await env.NFL_INTEL.fetch(req);
       if (path.startsWith('/api/best-line'))     return await env.NFL_INTEL.fetch(req);
+      if (path.startsWith('/api/game-weather'))  return await env.NFL_INTEL.fetch(req);
       if (path.startsWith('/api/replay/'))       return await env.NFL_REPLAY.fetch(req);
 
       return json({ error: 'Unknown route', path }, cors, 404);
