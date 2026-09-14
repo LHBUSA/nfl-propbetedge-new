@@ -76,7 +76,10 @@ function decisionCounts(rows, season) {
 async function governance(secret) {
   const [weights, observations, current, runtime, decisionRows] = await Promise.all([
     sb('nfl_model_weights', 'promoted=eq.true&select=version,weights,notes,created_at,promoted_at,backtest_clv_beat_pct,backtest_brier,backtest_units&order=version.desc&limit=1', secret),
-    sb('nfl_learning_observations', 'integrity_status=eq.eligible&select=season,week,publication_scope&order=finalized_at.desc&limit=5000', secret),
+    /* Exactly the tuner's gate query (workers/nfl-weight-tuner gateStatus): eligible,
+       finalized learning observations. graded_sample and distinct_weeks are these
+       rows and nothing else. */
+    sb('nfl_learning_observations', 'integrity_status=eq.eligible&is_final=is.true&select=season,week,publication_scope,finalized_at&order=finalized_at.desc&limit=5000', secret),
     currentSeason().catch(() => null),
     engineRuntime(GAME_LANES),
     sb('nfl_game_picks', 'integrity_status=eq.eligible&select=season,status,publication_scope,created_at&order=created_at.desc&limit=5000', secret)
@@ -105,6 +108,9 @@ async function governance(secret) {
     graded_sample_official: official,
     distinct_weeks: weeks.size,
     distinct_weeks_required: 4,
+    /* When the newest finalized learning observation was written. A timestamp
+       only: no selection, line, price or result leaves the server here. */
+    latest_finalized_at: obs.length ? obs[0].finalized_at ?? null : null,
     auto_tuner: gateOpen ? 'ELIGIBLE' : 'GATED',
     issuance_mode: trained ? 'OFFICIAL' : 'TRACKING_BOOTSTRAP',
     engine_state: composeEngineState({ health: runtime.health, trained, hasPicks: false, gatedState: UNTRAINED_STATE }),

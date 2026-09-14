@@ -111,6 +111,9 @@
      Picks only; the Dashboard links to it once. Nothing is deleted. */
 
   function upsertPicks(){
+    /* PBE Picks only: Track Record V3 shares the .pbe2-wrap shell, and the
+       manifesto must not land between its record and its validation gate. */
+    if(window.App?.current!=='pbepicks'){document.querySelectorAll('.pbetr-wrap .pbe-engine-story').forEach(el=>el.remove());return false}
     const page=document.querySelector('.pbe2-wrap');
     if(!page)return false;
     let story=page.querySelector('.pbe-engine-story');

@@ -306,23 +306,27 @@
     const head = `<div class="pbecc-head"><div><span class="pbecc-eyebrow">PBE PICKS · TRACK RECORD</span><h2>The engine, as it stands</h2></div></div>`;
     if (!d) return `<section class="pbecc-panel pbecc-picks">${head}<div class="pbecc-empty ${s.error ? 'is-error' : ''}"><b>${s.error ? 'ENGINE STATE UNAVAILABLE' : 'Reading engine state'}</b><span>${s.error ? `${esc(s.error)}. A failed read is never shown as "no picks".` : 'Publication gate, sample and verified record.'}</span></div></section>`;
     const official = d.decisions?.official || {};
+    const tracking = d.decisions?.tracking || {};
     const gated = String(d.publication || '').toUpperCase() === 'GATED';
+    const health = String(d.engine_health || 'UNKNOWN').toUpperCase();
+    const running = health === 'HEALTHY';
+    /* Counts come straight from view=state; an absent count is '—', never 0. */
+    const count = v => (v === null || v === undefined || !Number.isFinite(Number(v)) ? '—' : String(Number(v)));
     const bar = (have, need) => { const pct = Math.max(0, Math.min(100, (num(have) / num(need)) * 100 || 0)); return `<span class="pbecc-bar"><i style="width:${pct.toFixed(1)}%"></i></span>`; };
+    const kpis = gated
+      ? [['Validation finalized', tracking.graded, 'is-val'], ['Validation open', tracking.open, 'is-val'], ['Official published', official.total, 'is-off'], ['Official graded', official.graded, 'is-off']]
+      : [['Official published', official.total, 'is-off'], ['Official open', official.open, 'is-off'], ['Official graded', official.graded, 'is-off'], ['Validation finalized', tracking.graded, 'is-val']];
     return `<section class="pbecc-panel pbecc-picks">${head}
-      <div class="pbecc-engine ${gated ? 'is-gated' : 'is-live'}"><b>${esc(d.engine_state || (gated ? 'ENGINE GATED' : 'ENGINE LIVE'))}</b><span>${esc(d.engine_health ? `Runtime ${d.engine_health}` : '')}${d.champion_version != null ? ` · Champion v${esc(d.champion_version)}` : ''}</span></div>
-      <dl class="pbecc-kpis">
-        <div><dt>Official picks this season</dt><dd>${esc(official.total ?? 0)}</dd></div>
-        <div><dt>Open</dt><dd>${esc(official.open ?? 0)}</dd></div>
-        <div><dt>Official graded</dt><dd>${esc(official.graded ?? 0)}</dd></div>
-      </dl>
+      <div class="pbecc-engine ${!running ? 'is-degraded' : gated ? 'is-gated' : 'is-live'}"><b><i class="pbecc-run ${running ? 'on' : ''}" aria-hidden="true"></i>${esc(running ? (gated ? 'ENGINE RUNNING · VALIDATION MODE' : 'ENGINE RUNNING · OFFICIAL PUBLICATION') : `ENGINE ${health}`)}</b><span>${d.champion_version != null ? `Champion v${esc(d.champion_version)} · ` : ''}${gated ? 'official publication intentionally gated' : 'publishing official picks'}</span></div>
+      <dl class="pbecc-kpis pbecc-kpis-4">${kpis.map(([label, value, cls]) => `<div class="${cls}"><dt>${esc(label)}</dt><dd>${esc(count(value))}</dd></div>`).join('')}</dl>
       <div class="pbecc-gate">
-        <div><span>Graded validation sample</span><b>${esc(d.graded_sample ?? 0)} / ${esc(d.graded_sample_required ?? 100)}</b>${bar(d.graded_sample, d.graded_sample_required || 100)}</div>
-        <div><span>Weeks observed</span><b>${esc(d.distinct_weeks ?? 0)} / ${esc(d.distinct_weeks_required ?? 4)}</b>${bar(d.distinct_weeks, d.distinct_weeks_required || 4)}</div>
+        <div><span>Finalized validation sample</span><b>${esc(count(d.graded_sample))} / ${esc(d.graded_sample_required ?? 100)}</b>${bar(d.graded_sample, d.graded_sample_required || 100)}</div>
+        <div><span>Observation window</span><b>${esc(count(d.distinct_weeks))} / ${esc(d.distinct_weeks_required ?? 4)} weeks</b>${bar(d.distinct_weeks, d.distinct_weeks_required || 4)}</div>
       </div>
       <p class="pbecc-note">${gated
-        ? 'Official publication stays gated until the validation sample and observation window are both met. Until then the engine’s real pre-game decisions reach NFL Pro as PBE Validation Signals on Today’s PBE Card; none is called official and none enters the Official Track Record.'
+        ? 'The engine is issuing real pre-game validation decisions and grading them from final results. Official publication is intentionally gated: it opens only after both thresholds clear and a trained champion is promoted, and validation decisions never become official picks.'
         : 'Only the production champion publishes. Every official pick is locked at issuance and graded from final results.'}</p>
-      <div class="pbecc-actions"><button type="button" data-route="pbepicks">PBE Picks →</button><button type="button" data-route="trackrecord">Verified track record →</button></div>
+      <div class="pbecc-actions"><button type="button" data-route="pbepicks">PBE Picks →</button><button type="button" data-route="trackrecord">Track record →</button></div>
     </section>`;
   }
 

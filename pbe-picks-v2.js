@@ -2,7 +2,11 @@
  *
  * Product hierarchy:
  *   PBE Picks    -> the decision first. Pro-only proprietary economics.
- *   Track Record -> public accountability, official publication only.
+ *   Track Record -> V3: two records, never merged. The Validation Record
+ *                   (tracking decisions of the champion under validation, NFL
+ *                   Pro detail) and the Official Verified Track Record
+ *                   (publication_scope = official only). Accounting lives in
+ *                   pbe-track-record-core-v1.js.
  *
  * Truth rules:
  * - PBE Card v3 (pbe-card-v3.js) owns the decisions: NFL Pro sees current
@@ -32,6 +36,14 @@
     chartMode: 'equity',
     expanded: null,
     loadId: 0,
+    /* Track Record V3 */
+    trackTab: null,
+    trackBundle: null,
+    v3Chart: 'equity',
+    valFilter: { season: 'all', week: 'all', market: 'all', model: 'all', confidence: 'all', result: 'all' },
+    valFiltersOpen: false,
+    valExpanded: null,
+    valShowAll: false,
   };
 
   const esc = value => String(value ?? '')
@@ -307,14 +319,10 @@
     return `${style}<div class="pbe2-filterbar">${select('market','Market',['spread','moneyline','total'],state.trackFilter.market,marketLabel)}${select('model','Model',models,state.trackFilter.model,value => `v${value}`)}${select('confidence','Confidence',confidence,state.trackFilter.confidence)}${select('week','Week',weeks,state.trackFilter.week,value => `Week ${value}`)}${select('weather','Weather',['standard','dome','wind','cold'],state.trackFilter.weather,value => ({standard:'Standard',dome:'Dome',wind:'Wind 15+',cold:'Cold 25-'}[value]))}${select('division','Divisional',['yes','no'],state.trackFilter.division,value => value === 'yes' ? 'Divisional' : 'Non-divisional')}${select('timing','Issued',['lt24','24to72','gt72'],state.trackFilter.timing,value => ({lt24:'<24h to kick','24to72':'24–72h','gt72':'72h+'}[value]))}${select('result','Result',['win','loss','push'],state.trackFilter.result,value => value.toUpperCase())}<div class="pbe2-filter-count">${filtered.length} of ${allRows.length} official decisions</div></div>`;
   }
 
-  function zeroTrack(data) {
-    return `${topline('trackrecord', data)}<section class="pbe2-stage"><div class="pbe2-gridwash"></div><div class="pbe2-track-zero"><div><div class="pbe2-kicker">Verified Live Track Record</div><h1>Start at zero.<br>Publish everything.</h1><div class="record">0<span>–0</span></div><p>No official customer-facing pick has reached the verified ledger yet. Bootstrap tracking decisions are intentionally excluded. When the first official pick is issued, its timestamp and immutable economics receive a chained SHA-256 receipt before any result exists.</p></div><aside class="pbe2-zero-card"><span>Verification layer</span><strong>Receipt ledger armed</strong><small>Each future issuance is hashed from the frozen decision payload and linked to the prior receipt. This is internal tamper evidence — not an independent third-party notarization.</small></aside></div></section>`;
-  }
-
-  function trackHero(rows, data) {
+  function trackHero(rows, data, { topline: withTopline = true } = {}) {
     const s = summary(rows);
     const roiClass = s.roi === null ? 'neutral' : s.roi > 0 ? '' : s.roi < 0 ? 'negative' : 'neutral';
-    return `${topline('trackrecord', data)}<section class="pbe2-stage"><div class="pbe2-gridwash"></div><div class="pbe2-track-hero"><div><div class="pbe2-track-main-label">Verified live performance · actual issue prices</div><div class="pbe2-track-roi ${roiClass}">${s.roi === null ? '—' : `${s.roi > 0 ? '+' : ''}${s.roi.toFixed(1)}%`}</div><div class="pbe2-track-sub">ROI is flat 1u using the immutable issue price — not closing odds, not a best-number reconstruction. Losses remain in the ledger.</div></div><div class="pbe2-track-kpis"><div class="pbe2-kpi"><span>W-L-P</span><strong>${s.wins}-${s.losses}-${s.pushes}</strong></div><div class="pbe2-kpi ${s.profit > 0 ? 'good' : s.profit < 0 ? 'bad' : ''}"><span>Flat 1u profit</span><strong>${s.settledRows.length ? `${s.profit > 0 ? '+' : ''}${s.profit.toFixed(2)}u` : '—'}</strong></div><div class="pbe2-kpi"><span>CLV beat</span><strong>${s.clvBeat === null ? '—' : `${s.clvBeat.toFixed(1)}%`}</strong></div><div class="pbe2-kpi ${s.maxDrawdown < 0 ? 'bad' : ''}"><span>Max drawdown</span><strong>${s.curve.length ? `${s.maxDrawdown.toFixed(2)}u` : '—'}</strong></div></div></div></section>`;
+    return `${withTopline ? topline('trackrecord', data) : ''}<section class="pbe2-stage"><div class="pbe2-gridwash"></div><div class="pbe2-track-hero"><div><div class="pbe2-track-main-label">Verified live performance · actual issue prices</div><div class="pbe2-track-roi ${roiClass}">${s.roi === null ? '—' : `${s.roi > 0 ? '+' : ''}${s.roi.toFixed(1)}%`}</div><div class="pbe2-track-sub">ROI is flat 1u using the immutable issue price — not closing odds, not a best-number reconstruction. Losses remain in the ledger.</div></div><div class="pbe2-track-kpis"><div class="pbe2-kpi"><span>W-L-P</span><strong>${s.wins}-${s.losses}-${s.pushes}</strong></div><div class="pbe2-kpi ${s.profit > 0 ? 'good' : s.profit < 0 ? 'bad' : ''}"><span>Flat 1u profit</span><strong>${s.settledRows.length ? `${s.profit > 0 ? '+' : ''}${s.profit.toFixed(2)}u` : '—'}</strong></div><div class="pbe2-kpi"><span>CLV beat</span><strong>${s.clvBeat === null ? '—' : `${s.clvBeat.toFixed(1)}%`}</strong></div><div class="pbe2-kpi ${s.maxDrawdown < 0 ? 'bad' : ''}"><span>Max drawdown</span><strong>${s.curve.length ? `${s.maxDrawdown.toFixed(2)}u` : '—'}</strong></div></div></div></section>`;
   }
 
   function rollingRoi(curve, windowSize = 10) {
@@ -406,36 +414,312 @@
     return `<section class="pbe2-history"><div class="pbe2-history-head"><div><span>Immutable decision ledger</span><strong>Official pick history</strong></div><small style="font-size:11px;color:rgba(255,255,255,.25)">Click a row for issue → close + receipt detail</small></div>${filterBar(allRows, rows)}<div class="pbe2-table-wrap"><table><thead><tr><th>Date</th><th>Selection</th><th>Market</th><th>Model</th><th>Odds</th><th>CLV path</th><th>Flat 1u</th><th>Receipt</th><th>Result</th></tr></thead><tbody>${tableRows || '<tr><td colspan="9" style="text-align:center;padding:36px;color:rgba(255,255,255,.3)">No official decisions match these filters.</td></tr>'}</tbody></table></div><div class="pbe2-history-foot">SHA-256 receipts are internal tamper-evident attestations of the issuance payload. They are not represented as independent third-party verification.</div></section>`;
   }
 
-  function trackLive(data) {
-    const allRows = Array.isArray(data?.picks) ? data.picks : [];
-    if (!allRows.length) return zeroTrack(data);
-    const rows = filteredRows(allRows);
-    return `${trackHero(rows, data)}<div class="pbe2-performance-grid">${performanceChart(rows)}${outcomeTape(rows)}</div><div class="pbe2-performance-grid">${marketPanel(rows)}${benchmark(data, rows)}</div>${history(allRows, rows)}`;
+  /* ---------------------------------------------------------------------
+   * Track Record V3 — two records, never merged.
+   *
+   *   VALIDATION RECORD  /api/pbe-picks?view=validation-history (NFL Pro):
+   *                      real frozen pre-game decisions of the champion under
+   *                      validation, publication_scope = tracking only. Free
+   *                      readers see progress counts from view=state only.
+   *   OFFICIAL RECORD    /api/pbe-picks?view=trackrecord: publication_scope =
+   *                      official only; the immutable public ledger.
+   *
+   * Every number comes from pbe-track-record-core-v1.js over persisted rows.
+   * A metric that cannot be reconciled renders '—'. A failed read renders a
+   * degraded state, never a zero record.
+   * ------------------------------------------------------------------- */
+  const CORE = () => window.PBETrackRecordCore;
+  const fmtUnits = v => (v === null || v === undefined ? '—' : `${v > 0 ? '+' : ''}${v.toFixed(2)}u`);
+  const fmtPct = (v, digits = 1) => (v === null || v === undefined ? '—' : `${v > 0 ? '+' : ''}${v.toFixed(digits)}%`);
+  const fmtRate = v => (v === null || v === undefined ? '—' : `${v.toFixed(1)}%`);
+  const toneOf = v => (v === null || v === undefined ? '' : v > 0 ? 'good' : v < 0 ? 'bad' : '');
+
+  function trackMode(data) {
+    const health = healthOf(data);
+    if (health !== 'HEALTHY') return { key: 'degraded', label: `ENGINE ${health === 'UNKNOWN' ? 'STATE UNKNOWN' : health}` };
+    if (data?.champion_trained === true) return { key: 'production', label: `PRODUCTION CHAMPION · V${data?.champion_version ?? '—'}` };
+    return { key: 'validation', label: `VALIDATION MODE · CHAMPION V${data?.champion_version ?? '—'}` };
+  }
+
+  function recordTabs(active, counts) {
+    const tab = (key, label, count) => `<button type="button" role="tab" aria-selected="${active === key}" class="${active === key ? 'active' : ''}" data-pbetr-tab="${key}"><span>${label}</span><b>${count}</b></button>`;
+    return `<div class="pbetr-tabs" role="tablist" aria-label="Track Record views">${tab('validation', 'Validation Record', counts.validation)}${tab('official', 'Official Record', counts.official)}</div>`;
+  }
+
+  function trackHeader(bundle, active) {
+    const gov = bundle.gov;
+    const mode = trackMode(gov);
+    const tr = gov?.decisions?.tracking || {};
+    const off = gov?.decisions?.official || {};
+    const copy = mode.key === 'validation'
+      ? 'Real pre-game decisions · graded from final results · not yet official PBE Picks'
+      : mode.key === 'production'
+        ? 'Official PBE Picks · frozen at issuance · graded from final results · losses never removed'
+        : 'The run ledger is not reporting healthy. Records below are shown as persisted; nothing is inferred.';
+    return `<header class="pbetr-head">
+      <div class="pbe2-topline"><div class="pbe2-eyebrow"><i class="pbe2-live-dot ${mode.key === 'degraded' ? 'degraded' : mode.key === 'validation' ? 'gated' : ''}"></i>Two records · never merged</div>${switcher('trackrecord')}</div>
+      <div class="pbetr-title"><h1>PBE TRACK RECORD</h1><div class="pbetr-mode" data-mode="${esc(mode.key)}"><i></i>${esc(mode.label)}</div></div>
+      <p class="pbetr-copy">${esc(copy)}</p>
+      ${recordTabs(active, { validation: num(tr.graded) ?? '—', official: num(off.graded) ?? 0 })}
+    </header>`;
+  }
+
+  /* MODEL VALIDATION — the production gate, from view=state. */
+  function gatePanel(gov) {
+    const grades = num(gov?.graded_sample), gradeReq = num(gov?.graded_sample_required) ?? 100;
+    const weeks = num(gov?.distinct_weeks), weekReq = num(gov?.distinct_weeks_required) ?? 4;
+    const lanes = gov?.engine_runtime?.lanes || {};
+    const orch = lanes['nfl-game-picks-orchestrator'] || null;
+    const grader = lanes['nfl-game-grader'] || null;
+    const next = orch?.detail?.next_game
+      ? `${String(orch.detail.next_game.matchup).replace(/\bLA\b/, 'LAR')} · ${dateTime(orch.detail.next_game.kickoff_ts)}`
+      : gov?.current?.next_game ? `${gov.current.next_game.name} · ${dateTime(gov.current.next_game.kickoff)}` : '—';
+    const meter = (label, have, need, unit) => {
+      const pct = have === null || !need ? 0 : clamp(have / need * 100, 0, 100);
+      return `<div class="pbetr-meter"><div class="pbetr-meter-top"><span>${esc(label)}</span><strong>${have === null ? '—' : esc(have)}<small> / ${esc(need)}${unit ? ` ${esc(unit)}` : ''}</small></strong></div><div class="pbetr-meter-bar" role="progressbar" aria-valuemin="0" aria-valuemax="${esc(need)}" aria-valuenow="${have ?? 0}"><i style="width:${pct.toFixed(1)}%"></i></div></div>`;
+    };
+    const facts = [
+      ['Current champion', gov?.champion_version != null ? `v${gov.champion_version}${gov.champion_trained === true ? ' · trained' : ' · in validation'}` : '—'],
+      ['Engine runtime', laneStateLabel(healthOf(gov))],
+      ['Last grader run', grader?.last_tick_at ? ago(grader.last_tick_at) : '—'],
+      ['Last engine evaluation', orch?.last_work_at ? ago(orch.last_work_at) : '—'],
+      ['Latest finalized decision', gov?.latest_finalized_at ? dateTime(gov.latest_finalized_at) : '—'],
+      ['Next eligible game', next],
+    ];
+    return `<section class="pbetr-gate" aria-label="Model validation gate">
+      <div class="pbetr-gate-head"><span>Model validation</span><b data-open="${gov?.auto_tuner === 'ELIGIBLE'}">${gov?.auto_tuner === 'ELIGIBLE' ? 'GATES CLEARED' : 'IN PROGRESS'}</b></div>
+      <div class="pbetr-meters">${meter('Finalized decisions', grades, gradeReq)}${meter('Observation window', weeks, weekReq, 'weeks')}</div>
+      <p class="pbetr-gate-note">Both gates must clear before official publication can begin. Clearing them does not promote a model on its own — a trained champion must still pass promotion, and validation decisions never become official picks.</p>
+      <dl class="pbetr-facts">${facts.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>
+    </section>`;
+  }
+
+  function heroMetrics(s, gov) {
+    const cells = [
+      ['W-L-P', s.settled ? `${s.wins}-${s.losses}-${s.pushes}` : '—', ''],
+      ['Win rate', fmtRate(s.winRate), ''],
+      ['Flat 1u profit', fmtUnits(s.profit), toneOf(s.profit)],
+      ['ROI', fmtPct(s.roi), toneOf(s.roi)],
+      ['Avg issued odds', s.avgOdds === null ? '—' : american(s.avgOdds), ''],
+      ['CLV beat rate', fmtRate(s.clvBeatRate), ''],
+      ['Avg CLV', s.avgClvProb === null ? '—' : `${s.avgClvProb > 0 ? '+' : ''}${(s.avgClvProb * 100).toFixed(2)} pp`, toneOf(s.avgClvProb)],
+      ['Brier score', s.brier === null ? '—' : s.brier.toFixed(4), ''],
+      ['Max drawdown', s.maxDrawdown === null ? '—' : `${s.maxDrawdown.toFixed(2)}u`, s.maxDrawdown < 0 ? 'bad' : ''],
+      ['Weeks observed', num(gov?.distinct_weeks) ?? s.weeks, ''],
+    ];
+    return `<div class="pbetr-kpis">${cells.map(([k, v, tone]) => `<div class="pbetr-kpi ${tone}"><span>${esc(k)}</span><strong>${esc(v)}</strong></div>`).join('')}</div>`;
+  }
+
+  function validationHero(rows, gov, meta = null) {
+    const s = CORE().summarize(rows);
+    const open = num(gov?.decisions?.tracking?.open);
+    /* Withdrawn and replaced decisions are not in the graded rows; their counts
+       come from the persisted validation-history summary or render '—'. */
+    const withdrawn = num(meta?.withdrawn);
+    const replaced = num(meta?.replaced_before_lock);
+    return `<section class="pbe2-stage gated pbetr-hero"><div class="pbe2-gridwash"></div>
+      <div class="pbetr-hero-main">
+        <div class="pbetr-hero-label">Validation record · champion v${esc(gov?.champion_version ?? '—')}</div>
+        <div class="pbetr-sample"><strong>${s.settled}</strong><span>finalized decisions</span></div>
+        <div class="pbetr-sample-sub">${s.settled} graded · ${open === null ? '—' : open} pending · ${withdrawn === null ? '—' : withdrawn} withdrawn · ${replaced === null ? '—' : replaced} replaced before lock</div>
+        <div class="pbetr-hero-roi ${toneOf(s.roi)}">${fmtPct(s.roi)}<small>ROI</small></div>
+        <p class="pbetr-fine">Small sample: ${s.settled} decisions is not statistically meaningful on its own. ROI = flat 1u profit ÷ settled decisions (win + loss + push). Stake-weighted persisted units: ${fmtUnits(s.stakeUnits)}.</p>
+      </div>
+      ${heroMetrics(s, gov)}
+    </section>`;
+  }
+
+  function lockedValidation(gov) {
+    const tr = gov?.decisions?.tracking || {};
+    return `<section class="pbe2-stage gated pbetr-hero pbetr-locked"><div class="pbe2-gridwash"></div>
+      <div class="pbetr-hero-main">
+        <div class="pbetr-hero-label">Validation record · champion v${esc(gov?.champion_version ?? '—')}</div>
+        <div class="pbetr-sample"><strong>${esc(num(tr.graded) ?? '—')}</strong><span>finalized decisions</span></div>
+        <div class="pbetr-sample-sub">${esc(num(tr.open) ?? '—')} pending · graded from final results</div>
+        <p class="pbetr-fine">The validation performance — W-L-P, ROI, CLV, calibration — and the signal ledger are NFL Pro. Selections, lines, prices and model probabilities are never shown here to free readers.</p>
+        <button type="button" class="pbe2-btn" data-pbe2-upgrade>Unlock the Validation Record</button>
+      </div>
+      <div class="pbetr-kpis pbetr-kpis-locked">${['W-L-P', 'ROI', 'Flat 1u profit', 'CLV beat rate', 'Brier score', 'Max drawdown'].map(k => `<div class="pbetr-kpi"><span>${esc(k)}</span><strong aria-label="NFL Pro">NFL PRO</strong></div>`).join('')}</div>
+    </section>`;
+  }
+
+  function chartPanel(rows, id) {
+    const C = CORE();
+    const s = C.summarize(rows);
+    const mode = state.v3Chart || 'equity';
+    let values = [];
+    if (mode === 'equity') values = s.curve.map(p => ({ row: p.row, value: p.equity }));
+    if (mode === 'drawdown') values = s.curve.map(p => ({ row: p.row, value: p.drawdown }));
+    if (mode === 'rolling') values = C.rolling(s.curve, 10).map(p => ({ row: p.row, value: p.value }));
+    const unit = mode === 'rolling' ? '%' : 'u';
+    const title = mode === 'equity' ? 'Cumulative flat 1u' : mode === 'drawdown' ? 'Drawdown' : 'Rolling 10-decision ROI';
+    const buttons = [['equity', 'Equity'], ['drawdown', 'Drawdown'], ['rolling', 'Rolling ROI']].map(([k, l]) => `<button type="button" class="pbe2-filter ${mode === k ? 'active' : ''}" data-pbetr-chart="${k}">${l}</button>`).join('');
+    const chart = chartPoints(values);
+    const bodyHtml = !chart
+      ? '<div class="pbetr-empty-chart">Two settled decisions are needed to draw the curve.</div>'
+      : (() => {
+        const d = chart.points.map((p, i) => `${i ? 'L' : 'M'} ${p.x.toFixed(2)} ${p.y.toFixed(2)}`).join(' ');
+        const final = values[values.length - 1].value;
+        return `<div class="pbe2-equity"><svg viewBox="0 0 100 100" preserveAspectRatio="none" role="img" aria-label="${esc(title)}"><line x1="0" x2="100" y1="${chart.zeroY.toFixed(2)}" y2="${chart.zeroY.toFixed(2)}" class="zero"></line><path d="${d}" class="line ${mode === 'drawdown' || final < 0 ? 'negative' : ''}"></path></svg><div class="pbe2-equity-labels"><span>${esc(date(values[0].row.kickoff))}</span><span>${final > 0 ? '+' : ''}${final.toFixed(2)}${unit}</span><span>${esc(date(values[values.length - 1].row.kickoff))}</span></div></div>`;
+      })();
+    return `<section class="pbe2-panel" id="${esc(id)}"><div class="pbe2-panel-head"><div><span>Performance</span><strong>${esc(title)}</strong></div><div class="pbe2-filters">${buttons}</div></div>${bodyHtml}<div class="pbe2-tape-note">Every point uses the price persisted at issuance; decisions are ordered by kickoff.</div></section>`;
+  }
+
+  function breakdownTable(title, eyebrow, groups, labelOf) {
+    if (!groups.length) return '';
+    const rowsHtml = groups.map(g => {
+      const s = g.summary;
+      return `<tr><th scope="row">${esc(labelOf(g.key))}</th><td>${s.wins}-${s.losses}-${s.pushes}</td><td class="${toneOf(s.profit)}">${fmtUnits(s.profit)}</td><td class="${toneOf(s.roi)}">${fmtPct(s.roi)}</td><td>${s.settled}</td></tr>`;
+    }).join('');
+    return `<section class="pbe2-panel pbetr-breakdown"><div class="pbe2-panel-head"><div><span>${esc(eyebrow)}</span><strong>${esc(title)}</strong></div></div><div class="pbetr-table-wrap"><table class="pbetr-mini"><thead><tr><th scope="col"></th><th scope="col">W-L-P</th><th scope="col">Units</th><th scope="col">ROI</th><th scope="col">Sample</th></tr></thead><tbody>${rowsHtml}</tbody></table></div></section>`;
+  }
+
+  function calibrationPanel(rows) {
+    const cal = CORE().calibration(rows);
+    if (cal.n < 1 || !cal.bins.length) return '';
+    const pct = v => `${v.toFixed(0)}%`;
+    return `<section class="pbe2-panel pbetr-breakdown"><div class="pbe2-panel-head"><div><span>Calibration</span><strong>Model probability vs result</strong></div></div><div class="pbetr-table-wrap"><table class="pbetr-mini"><thead><tr><th scope="col">Model prob.</th><th scope="col">Predicted</th><th scope="col">Won</th><th scope="col">Sample</th></tr></thead><tbody>${cal.bins.map(b => `<tr><th scope="row">${pct(b.from * 100)}–${pct(b.to * 100)}</th><td>${b.predicted.toFixed(1)}%</td><td>${b.realised.toFixed(1)}%</td><td>${b.n}</td></tr>`).join('')}</tbody></table></div><div class="pbe2-tape-note">Brier ${cal.brier === null ? '—' : cal.brier.toFixed(4)} over ${cal.n} settled win/loss decisions. Bins this small are descriptive only — no significance is claimed.</div></section>`;
+  }
+
+  function validationFilterBar(allRows, rows) {
+    const C = CORE();
+    const avail = C.availableFilters(allRows);
+    const f = state.valFilter;
+    const labels = { season: 'Season', week: 'Week', market: 'Market', model: 'Model', confidence: 'Confidence', result: 'Result' };
+    const fmt = { week: v => `Week ${v}`, market: marketLabel, model: v => `v${v}`, result: v => String(v).toUpperCase() };
+    const active = C.FILTER_KEYS.filter(k => f[k] && f[k] !== 'all').length;
+    const selects = C.FILTER_KEYS.filter(k => avail[k].length).map(k => `<label><span>${labels[k]}</span><select data-pbetr-filter="${k}"><option value="all">All</option>${avail[k].map(v => `<option value="${esc(v)}" ${String(f[k]) === String(v) ? 'selected' : ''}>${esc((fmt[k] || (x => x))(v))}</option>`).join('')}</select></label>`).join('');
+    return `<details class="pbetr-filters" ${state.valFiltersOpen ? 'open' : ''}><summary><span>Filters${active ? ` · ${active} active` : ''}</span><b>${rows.length} of ${allRows.length} decisions</b></summary><div class="pbetr-filter-grid">${selects}${active ? '<button type="button" class="pbe2-filter" data-pbetr-clear>Clear</button>' : ''}</div></details>`;
+  }
+
+  function ledgerDetail(row) {
+    const cells = [
+      ['Issued', dateTime(row.issuedAt)],
+      ['Issued line · odds', `${line(row.line)} · ${american(row.price)}`],
+      ['Model probability', probability(row.modelProb)],
+      ['Model edge', edge(row.edge)],
+      ['Stake · persisted units', `${row.stakeUnits === null ? '—' : `${row.stakeUnits.toFixed(2)}u`} · ${fmtUnits(row.stakeDelta)}`],
+      ['CLV', row.clvBeat === null ? '—' : `${row.clvBeat ? 'Beat close' : 'Missed close'}${row.clvProb === null ? '' : ` · ${row.clvProb > 0 ? '+' : ''}${(row.clvProb * 100).toFixed(2)} pp`}${row.clvPoints === null ? '' : ` · ${row.clvPoints > 0 ? '+' : ''}${row.clvPoints} pts`}`],
+      ['Brier', row.brier === null ? '—' : row.brier.toFixed(4)],
+      ['Decision', `${row.status || '—'}${row.lifecycle ? ` · ${row.lifecycle}` : ''} · model v${row.modelVersion ?? '—'}`],
+      ['Receipt', row.receipt ? `seq ${row.receipt.seq ?? '—'} · ${row.receipt.verified === true ? 'verified' : row.receipt.verified === false ? 'NOT verified' : 'unverified'}` : '—'],
+    ];
+    return `<dl class="pbetr-detail">${cells.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>`;
+  }
+
+  function validationLedger(allRows, rows) {
+    const limit = state.valShowAll ? rows.length : 12;
+    const sorted = rows.slice().sort((a, b) => Date.parse(b.kickoff || 0) - Date.parse(a.kickoff || 0));
+    const body = sorted.slice(0, limit).map(row => {
+      const open = state.valExpanded === row.id;
+      return `<tbody class="pbetr-ledger-row ${open ? 'open' : ''}"><tr data-pbetr-expand="${esc(row.id)}" tabindex="0" aria-expanded="${open}">
+        <td class="k"><span class="pbetr-signal">Validation signal</span><strong>${esc(row.away && row.home ? `${row.away} @ ${row.home}` : row.gameId)}</strong><small>${esc(dateTime(row.kickoff))} · W${esc(row.week ?? '—')}</small></td>
+        <td data-l="Selection"><strong>${esc(row.selection)}</strong><small>${esc(marketLabel(row.market))}</small></td>
+        <td data-l="Line · odds">${line(row.line)} · ${american(row.price)}</td>
+        <td data-l="Model">${probability(row.modelProb)}<small>edge ${edge(row.edge)}</small></td>
+        <td data-l="Conf.">${esc(row.confidence || '—')}</td>
+        <td data-l="Result"><span class="pbe2-result ${esc(row.result)}">${esc(row.result.toUpperCase())}</span></td>
+        <td data-l="Flat 1u" class="${toneOf(row.flat)}">${fmtUnits(row.flat)}</td>
+        <td data-l="CLV">${row.clvBeat === null ? '—' : row.clvBeat ? 'Beat' : 'Missed'}</td>
+      </tr>${open ? `<tr class="pbetr-detail-row"><td colspan="8">${ledgerDetail(row)}</td></tr>` : ''}</tbody>`;
+    }).join('');
+    const more = rows.length > 12 ? `<button type="button" class="pbe2-filter pbetr-more" data-pbetr-more>${state.valShowAll ? 'Show fewer' : `Show all ${rows.length}`}</button>` : '';
+    return `<section class="pbe2-history pbetr-ledger"><div class="pbe2-history-head"><div><span>NFL Pro · validation-history</span><strong>Validation signal ledger</strong></div><small>Frozen pre-game terms · graded from the final · not official PBE Picks</small></div>
+      ${validationFilterBar(allRows, rows)}
+      <div class="pbetr-table-wrap"><table class="pbetr-ledger-table"><thead><tr><th scope="col">Decision</th><th scope="col">Selection</th><th scope="col">Line · odds</th><th scope="col">Model</th><th scope="col">Conf.</th><th scope="col">Result</th><th scope="col">Flat 1u</th><th scope="col">CLV</th></tr></thead>${body || '<tbody><tr><td colspan="8" class="pbetr-none">No validation decisions match these filters.</td></tr></tbody>'}</table></div>${more}
+      <div class="pbe2-history-foot">Each row is a PBE VALIDATION SIGNAL: a real decision frozen before kickoff with its own SHA-256 issuance receipt. None is an official pick and none enters the Official Track Record.</div></section>`;
+  }
+
+  function validationView(bundle) {
+    const C = CORE();
+    const gov = bundle.gov;
+    const v = bundle.validation;
+    if (v.status === 'locked') return `${lockedValidation(gov)}${gatePanel(gov)}`;
+    if (v.status === 'unavailable') return `${gatePanel(gov)}<section class="pbe2-error pbetr-degraded"><span>VALIDATION RECORD</span><h2>Validation history unavailable</h2><p>The validation ledger could not be read. Nothing is shown in its place — a failed read is never a zero record.</p><button type="button" class="pbe2-btn" data-pbe2-retry-track>Retry</button></section>`;
+    const allRows = C.selectScope((v.body?.picks || []).map(C.fromValidation), 'tracking');
+    if (!allRows.length) return `${gatePanel(gov)}<section class="pbe2-panel pbetr-none-panel"><strong>No validation decision has been finalized yet.</strong><span>Decisions appear here once their game is final and graded.</span></section>`;
+    const rows = C.applyFilters(allRows, state.valFilter);
+    const confidence = C.coverage(rows, 'confidence') >= 0.9 ? breakdownTable('By confidence', 'Persisted bucket', C.byConfidence(rows), k => `Bucket ${k}`) : '';
+    return `${validationHero(allRows, gov, v.body?.summary)}${gatePanel(gov)}
+      <div class="pbetr-section-head"><span>Performance intelligence</span><small>${rows.length === allRows.length ? 'All validation decisions' : `Filtered: ${rows.length} of ${allRows.length}`}</small></div>
+      <div class="pbe2-performance-grid">${chartPanel(rows, 'pbetr-equity')}${breakdownTable('By market', 'Where it performs', C.byMarket(rows), marketLabel)}</div>
+      <div class="pbe2-performance-grid">${breakdownTable('By week', 'Week by week', C.byWeek(rows), k => { const [s, w] = String(k).split('-'); return `${s} · Week ${Number(w)}`; })}${confidence || calibrationPanel(rows)}</div>
+      ${confidence ? `<div class="pbe2-performance-grid pbetr-single">${calibrationPanel(rows)}</div>` : ''}
+      ${validationLedger(allRows, rows)}`;
+  }
+
+  function officialZero(bundle) {
+    const gov = bundle.gov;
+    return `<section class="pbe2-stage pbetr-official-zero"><div class="pbe2-gridwash"></div><div>
+      <div class="pbe2-kicker">Official Verified Track Record</div>
+      <h2>OFFICIAL PUBLICATION HAS NOT STARTED</h2>
+      <p>Champion v${esc(gov?.champion_version ?? '—')} remains in model validation. The official record is <b>0-0</b> and stays official-only: actual issue price, frozen line, original model version, chained receipt and factual final grade. Losses can never disappear; no backtest or validation decision can enter it.</p>
+    </div><button type="button" class="pbe2-btn" data-pbetr-tab="validation">View the Validation Record →</button></section>`;
+  }
+
+  function officialView(bundle) {
+    const o = bundle.official;
+    if (o.status === 'unavailable') return `<section class="pbe2-error pbetr-degraded"><span>VERIFIED RECORD</span><h2>Official Track Record source unavailable</h2><p>The page will not substitute backtests, validation decisions or marketing claims for the official live record.</p><button type="button" class="pbe2-btn" data-pbe2-retry-track>Retry</button></section>`;
+    const C = CORE();
+    const officialRaw = (o.body?.picks || []).filter(row => C.selectScope([C.fromOfficial(row, o.body?.publication_scope)], 'official').length);
+    if (!officialRaw.length && !(num(o.body?.total_count) > 0)) {
+      /* The useful record sits right under the truthful zero state. */
+      const teaser = bundle.validation.status === 'ok'
+        ? validationHero(C.selectScope((bundle.validation.body?.picks || []).map(C.fromValidation), 'tracking'), bundle.gov, bundle.validation.body?.summary)
+        : bundle.validation.status === 'locked' ? lockedValidation(bundle.gov) : '';
+      return `${officialZero(bundle)}${teaser}${gatePanel(bundle.gov)}`;
+    }
+    const data = { ...o.body, picks: officialRaw };
+    const rows = filteredRows(officialRaw);
+    return `${trackHero(rows, data, { topline: false })}<div class="pbe2-performance-grid">${performanceChart(rows)}${outcomeTape(rows)}</div><div class="pbe2-performance-grid">${marketPanel(rows)}${benchmark(data, rows)}</div>${history(officialRaw, rows)}`;
+  }
+
+  function trackPage(bundle) {
+    const C = CORE();
+    const officialCount = (bundle.official.body?.picks || []).filter(row => C.selectScope([C.fromOfficial(row, bundle.official.body?.publication_scope)], 'official').length).length;
+    const active = state.trackTab || (officialCount ? 'official' : 'validation');
+    const body = active === 'official' ? officialView(bundle) : validationView(bundle);
+    return `${trackHeader(bundle, active)}<div class="pbetr-body" data-view="${active}">${body}</div>`;
+  }
+
+  async function readValidation() {
+    if (!isPro()) return { status: 'locked', body: null };
+    try {
+      return { status: 'ok', body: await json(`${API}?view=validation-history`) };
+    } catch (error) {
+      if (error?.status === 401 || error?.status === 403) return { status: 'locked', body: null };
+      return { status: 'unavailable', body: null, error: error?.message || 'unavailable' };
+    }
   }
 
   async function renderTrack() {
     const vc = document.getElementById('view-container'); if (!vc) return;
     const run = ++state.loadId;
-    vc.innerHTML = '<section class="pbe2-wrap"><div class="pbe2-loading"><div class="pbe2-loading-mark"></div><strong>Loading Verified Track Record</strong><span>Official publication scope only</span></div></section>';
-    try {
-      const data = await json(`${API}?view=trackrecord`);
-      if (run !== state.loadId || window.App?.current !== 'trackrecord') return;
-      state.track = data;
-      vc.innerHTML = `<section class="pbe2-wrap">${trackLive(data)}</section>`;
+    vc.innerHTML = '<section class="pbe2-wrap"><div class="pbe2-loading"><div class="pbe2-loading-mark"></div><strong>Loading PBE Track Record</strong><span>Validation and official records, separately</span></div></section>';
+    const [gov, official, validation] = await Promise.all([
+      json(`${API}?view=state`).then(body => ({ ok: true, body }), error => ({ ok: false, error })),
+      json(`${API}?view=trackrecord`).then(body => ({ status: 'ok', body }), () => ({ status: 'unavailable', body: null })),
+      readValidation(),
+    ]);
+    if (run !== state.loadId || window.App?.current !== 'trackrecord') return;
+    if (!gov.ok || !CORE()) {
+      vc.innerHTML = '<section class="pbe2-wrap"><section class="pbe2-error pbetr-degraded"><span>PBE TRACK RECORD</span><h2>Track Record source unavailable</h2><p>The engine state could not be read, so no record is shown. A failed read is never presented as zero picks.</p><button type="button" class="pbe2-btn" data-pbe2-retry-track>Retry</button></section></section>';
       wire();
-    } catch (_) {
-      if (run !== state.loadId || window.App?.current !== 'trackrecord') return;
-      vc.innerHTML = '<section class="pbe2-wrap"><section class="pbe2-error"><span>VERIFIED RECORD</span><h2>Track Record source unavailable</h2><p>The page will not substitute backtests, bootstrap tracking decisions or marketing claims for the official live record.</p><button type="button" class="pbe2-btn" data-pbe2-retry-track>Retry</button></section></section>';
-      wire();
+      return;
     }
+    state.trackBundle = { gov: gov.body, official, validation, pro: isPro() };
+    state.track = official.body;
+    paintTrack();
   }
 
-  function rerenderTrackLocal() {
-    if (!state.track || window.App?.current !== 'trackrecord') return;
+  function paintTrack() {
+    if (!state.trackBundle || window.App?.current !== 'trackrecord') return;
     const vc = document.getElementById('view-container'); if (!vc) return;
-    vc.innerHTML = `<section class="pbe2-wrap">${trackLive(state.track)}</section>`;
+    vc.innerHTML = `<section class="pbe2-wrap pbetr-wrap">${trackPage(state.trackBundle)}</section>`;
     wire();
   }
+
+  function rerenderTrackLocal() { paintTrack(); }
 
   function wire() {
     document.querySelectorAll('[data-pbe2-route]').forEach(button => button.addEventListener('click', () => {
@@ -454,6 +738,17 @@
       if (event.target.closest('[data-pbe2-copy]')) return;
       const id = row.dataset.pbe2Expand; state.expanded = state.expanded === id ? null : id; rerenderTrackLocal();
     }));
+    document.querySelectorAll('[data-pbetr-tab]').forEach(button => button.addEventListener('click', () => { state.trackTab = button.dataset.pbetrTab; paintTrack(); window.scrollTo?.({ top: 0 }); }));
+    document.querySelectorAll('[data-pbetr-chart]').forEach(button => button.addEventListener('click', () => { state.v3Chart = button.dataset.pbetrChart || 'equity'; paintTrack(); }));
+    document.querySelectorAll('[data-pbetr-filter]').forEach(selectEl => selectEl.addEventListener('change', () => { state.valFilter[selectEl.dataset.pbetrFilter] = selectEl.value; state.valFiltersOpen = true; state.valExpanded = null; paintTrack(); }));
+    document.querySelectorAll('[data-pbetr-clear]').forEach(button => button.addEventListener('click', () => { Object.keys(state.valFilter).forEach(k => { state.valFilter[k] = 'all'; }); state.valFiltersOpen = true; paintTrack(); }));
+    document.querySelectorAll('.pbetr-filters').forEach(el => el.addEventListener('toggle', () => { state.valFiltersOpen = el.open; }));
+    document.querySelectorAll('[data-pbetr-more]').forEach(button => button.addEventListener('click', () => { state.valShowAll = !state.valShowAll; paintTrack(); }));
+    document.querySelectorAll('[data-pbetr-expand]').forEach(row => {
+      const toggle = () => { const id = row.dataset.pbetrExpand; state.valExpanded = state.valExpanded === id ? null : id; paintTrack(); };
+      row.addEventListener('click', toggle);
+      row.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); toggle(); } });
+    });
     document.querySelectorAll('[data-pbe2-copy]').forEach(button => button.addEventListener('click', async event => {
       event.stopPropagation();
       const hash = button.dataset.pbe2Copy; if (!hash) return;
@@ -502,10 +797,16 @@
     [120, 420, 1100].forEach(delay => setTimeout(() => { installViews(); installNav(); }, delay));
   }
 
-  window.PBEPicksV2 = { version: 2, renderPicks, renderTrackRecord: renderTrack, state, installNav, engineProgress, degradedBanner };
+  window.PBEPicksV2 = { version: 3, renderPicks, renderTrackRecord: renderTrack, state, installNav, engineProgress, degradedBanner };
   init();
   document.addEventListener('DOMContentLoaded', init, { once: true });
   window.addEventListener('pbe:upgrades-ready', init);
   window.addEventListener('pbe:route-changed', event => { installNav(); syncNav(event.detail?.route || window.App?.current || ''); });
+  /* Entitlement can resolve after the first paint: re-read the Pro-only
+     validation ledger (or lock it again) when it changes. */
+  window.addEventListener('pbe:pro-state', () => {
+    if (window.App?.current !== 'trackrecord' || !state.trackBundle) return;
+    if (state.trackBundle.pro !== isPro()) renderTrack();
+  });
   /* pbe-card-v3 re-reads on a Pro state change and emits pbe:card-ready. */
 })();

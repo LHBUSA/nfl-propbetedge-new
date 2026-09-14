@@ -104,11 +104,23 @@ function inIds(query) {
   const m = /pick_id=in\.\(([^)]*)\)/.exec(decodeURIComponent(query));
   return m ? m[1].split(',').map(s => s.replace(/"/g, '')) : [];
 }
+/* Learning observations as persisted, and the PostgREST filters the gate query
+ * may apply to them. The mock applies exactly the filters the query names, so a
+ * query that drops one of them is caught by the rows it lets through. */
+export const OBSERVATIONS = [
+  { season: 2026, week: 1, publication_scope: 'tracking', integrity_status: 'eligible', is_final: true, finalized_at: '2026-09-11T04:00:00Z' },
+];
+export function filterObservations(rows, query) {
+  const dq = decodeURIComponent(query);
+  return rows.filter(r => (!/integrity_status=eq\.eligible/.test(dq) || r.integrity_status === 'eligible')
+    && (!/is_final=is\.true/.test(dq) || r.is_final === true))
+    .slice().sort((a, b) => (/order=finalized_at\.desc/.test(dq) ? Date.parse(b.finalized_at || 0) - Date.parse(a.finalized_at || 0) : 0));
+}
 const reply = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
 
 /* Mutable switches the suites flip: engine down, trained champion, extra
  * decision rows (with receipts) injected for a single test. */
-export const mock = { engineDown: false, trained: false, requested: [], extraRows: [] };
+export const mock = { engineDown: false, trained: false, requested: [], extraRows: [], observations: null };
 const allRows = () => [...ROWS, ...mock.extraRows];
 const allReceipts = () => [...RECEIPTS, ...mock.extraRows.map(r => receiptFor(r))];
 
@@ -140,7 +152,7 @@ export function installMockFetch() {
         return reply(dq.includes('pro@') ? [{ customer_email: email, status: 'active', current_period_end: new Date(Date.now() + 20 * 86400000).toISOString(), stripe_price_id: 'price_1UEWAXF3CaVzg4ORGlsgboLq', stripe_subscription_id: 'sub_1Fixture', stripe_customer_id: 'cus_Fixture' }] : []);
       }
       if (table === 'nfl_model_weights') return reply([{ version: mock.trained ? 2 : 1, weights: { meta: { trained: mock.trained } }, notes: 'fixture' }]);
-      if (table === 'nfl_learning_observations') return reply([{ season: 2026, week: 1, publication_scope: 'tracking' }]);
+      if (table === 'nfl_learning_observations') return reply(filterObservations(mock.observations || OBSERVATIONS, q));
       if (table === 'nfl_game_picks') {
         const rows = allRows();
         if (q.includes('select=season,status,publication_scope,created_at')) return reply(rows.map(({ season, status, publication_scope, created_at }) => ({ season, status, publication_scope, created_at })));

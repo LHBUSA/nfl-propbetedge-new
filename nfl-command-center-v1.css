@@ -154,3 +154,14 @@ details.pbecc-group[open]>summary{margin-bottom:var(--s-2,8px)}
 .pbecc-strip button.is-here{color:var(--pbe-paper);border-bottom-color:var(--pbe-gold)}
 .pbecc-strip button.is-here i{color:var(--pbe-gold)}
 @media (max-width:768px){.pbecc-strip ol{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.pbecc-strip ol::-webkit-scrollbar{display:none}.pbecc-strip button{white-space:nowrap;min-height:40px}}
+
+/* PBE Picks panel: validation-aware hierarchy (validation vs official, running state) */
+.pbecc-kpis.pbecc-kpis-4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.pbecc-kpis-4 div.is-val dt{color:var(--pbe-gold-bright)}
+.pbecc-kpis-4 div.is-off{opacity:.78}
+.pbecc-engine b{display:flex;align-items:center;gap:7px}
+.pbecc-run{width:7px;height:7px;border-radius:50%;background:var(--pbe-faint);flex:none}
+.pbecc-run.on{background:var(--pbe-pos);box-shadow:0 0 0 3px rgba(85,214,140,.16)}
+.pbecc-engine.is-degraded{border-color:var(--pbe-neg,#f16b78)}
+.pbecc-engine.is-degraded b{color:var(--pbe-neg,#f16b78)}
+@media (max-width:760px){.pbecc-kpis.pbecc-kpis-4{grid-template-columns:repeat(2,minmax(0,1fr))}}

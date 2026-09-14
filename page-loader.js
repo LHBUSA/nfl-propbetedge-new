@@ -1,7 +1,7 @@
 /* PropBetEdge NFL - ordered page/product upgrade loader v45 recovery */
 (() => {
   'use strict';
-  const VERSION='20260914access2';
+  const VERSION='20260914track3';
   const upgrades=[
     /* Establish the final homepage authority first. v6 replaces the v5 DOM with
        .pbehome6; v7 historically registered itself after that without repainting
@@ -148,6 +148,8 @@
     {css:'./prop-board-v5.css',js:'./prop-board-v5.js'},
 
     /* PBE Picks + Verified Track Record v2 is the sole UI authority. */
+    /* Track Record V3 accounting (pure, no DOM) loads before its renderer. */
+    {js:'./pbe-track-record-core-v1.js'},
     {css:'./pbe-picks-v2.css',js:'./pbe-picks-v2.js'},
 
     /* Gated validation telemetry is aggregate/public-safe. */

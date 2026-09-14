@@ -63,7 +63,7 @@ jobs:
       # prevention, superseded/withdrawn filtering, receipt verification and
       # the official-mode transition, against the real read handler.
       - name: PBE Card publication contract
-        run: node --test tests/pbe-card-v3.test.mjs tests/pbe-picks-runtime.test.mjs
+        run: node --test tests/pbe-card-v3.test.mjs tests/pbe-picks-runtime.test.mjs tests/pbe-track-record-v3.test.mjs
 
       # research/ holds the contract suites -- odds provider spend, the
       # home-market fallback, and the Prop Board batch merge. No workflow ran
