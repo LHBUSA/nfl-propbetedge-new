@@ -44,7 +44,7 @@ Facts are not copyrightable. The exposure is mainly **contractual/terms-of-use**
 ### D. Identifiers used as keys
 ESPN athlete and event ids join Player DNA, Career Ledger, market joins, weather and broadcast snapshots. Identifiers are factual; the dependency is structural rather than a rights issue in itself.
 
-### E. Specific concern to remove regardless of outcome
+### E. Specific concern to remove regardless of outcome — **RESOLVED 2026-09-15** (removed in main `1e4b178`, nfl-current `3e0d835e`, rollback `1aedaef5`; `/api/current/diag` now returns 404)
 `workers/nfl-current/src/index.js` `/api/current/diag` sends requests with a **spoofed browser user-agent and referer** to an ESPN surface that returns 403 to Cloudflare egress (a historical diagnosis of that block). Header spoofing against a provider's block reads as circumvention. As deployed, the route references an undefined `SITE` constant, so it throws before sending those requests; the code is still present. Recommend removing the probe in a future approved change (not done here: nfl-current changes are frozen).
 
 ## Exposure ranking (suggested, for counsel)
@@ -64,12 +64,12 @@ ESPN athlete and event ids join Player DNA, Career Ledger, market joins, weather
 | R-D. Self-host licensed or owned imagery; stop hotlinking ESPN headshots and logos (logos need NFL/club permission anyway) | removes rank 2 and 5 | image rights needed |
 | R-E. Grade picks from an approved results source | removes rank 3 | grader change + reconciliation |
 | R-F. Document risk acceptance with counsel for specific low-exposure uses | keeps current state, informed | legal review |
-| R-G. Remove the diag header-spoofing probe | removes §E | trivial, needs nfl-current unfreeze approval |
+| R-G. Remove the diag header-spoofing probe | removes §E | **done** (1e4b178) |
 
 ## Owner / counsel decisions needed
 1. Is the current ESPN use acceptable, and which items require remediation first?
 2. Should the Career Ledger's ESPN-derived history remain served while this is reviewed? It is unchanged and frozen, pending decision.
-3. Approve removal of the diag probe (§E)?
+3. ~~Approve removal of the diag probe (§E)?~~ Approved and done (1e4b178). Remediation order and steps: [ESPN_REMEDIATION_PLAN.md](ESPN_REMEDIATION_PLAN.md).
 4. Budget and timeline appetite for a licensed data provider.
 
 This entry does not change the Career Ledger participation decision, which is tracked in
