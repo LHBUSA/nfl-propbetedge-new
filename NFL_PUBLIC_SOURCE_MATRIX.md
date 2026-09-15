@@ -9,16 +9,21 @@ no CAPTCHA or auth bypass.
 
 Everything below was **probed live on 2026-09-05**, not assumed.
 
+> **Corrected 2026-09-15:** licence cells below were originally repository-level assumptions. Dataset-level rights are in
+> [docs/career-ledger/SOURCE_RIGHTS_AND_RECONCILIATION_AUDIT.md](docs/career-ledger/SOURCE_RIGHTS_AND_RECONCILIATION_AUDIT.md);
+> that audit also flags the existing ESPN dependency for owner/counsel review under the Disney Terms of Use.
+
 | SOURCE | DATA | LIVE / HIST | STRUCTURED | UPDATE RATE | IDENTIFIERS | LICENCE / TERMS | PROD SAFE? | NOTES |
 |---|---|---|---|---|---|---|---|---|
 | **ESPN** `cdn.espn.com/core/nfl/playbyplay` | drives, plays, field state, scores | **LIVE** | JSON | poll; wallclock per play | ESPN game id, ESPN team id | Public endpoint, no key. No published redistribution licence — treat as *display of factual game state*. | ⚠️ already in use in prod | What we ship today. 20-odd structured play fields, **no athlete participants** |
 | **ESPN** `cdn.espn.com/core/nfl/game` | + `gameInfo`, `leaders`, `pickcenter`, `boxscore.players` | **LIVE** | JSON | poll | ESPN athlete id + **guid** | as above | ⚠️ | **Richer than the endpoint we call.** Per-player game stats in 10 groups, officials, attendance, venue `grass`/`indoor` |
 | **ESPN** `site.api.espn.com/.../teams/{id}` | team + home venue: city, state, zip, country, `grass`, `indoor`, venue id + guid | HISTORICAL (static) | JSON | rare | ESPN team id, ESPN venue id | as above | ✅ | **32/32 venues resolved.** This is our venue spine |
-| **nflverse** `play_by_play_{yr}` | 372 columns of play detail | **HISTORICAL** | parquet | ~daily in season | **GSIS** game/player id | **CC-BY-4.0** — commercial use permitted with attribution | ✅ | The single biggest win. See below |
-| **nflverse** `pbp_participation_{yr}` | all 22 players on field, formation, personnel, box count, pass rushers, route, coverage | HISTORICAL | parquet | ~daily | GSIS | CC-BY-4.0 | ✅ | Coverage varies **sharply** by season — see the gate table |
+| **nflverse** `play_by_play_{yr}` | 372 columns of play detail | **HISTORICAL** | parquet | ~daily in season | **GSIS** game/player id | nflverse CC-BY-4.0 over **NFL-origin** data (nflfastR reads NFL's game-detail feed); NFL terms restrict systematic retrieval and commercial use — the nflverse licence cannot grant NFL's rights | ⚠️ REVIEW REQUIRED (2026-09-15 audit) | The single biggest win. See below |
+| **nflverse** `pbp_participation_{yr}` | all 22 players on field, formation, personnel, box count, pass rushers, route, coverage | HISTORICAL | parquet | ~daily | GSIS (2023+); **NFL numeric `nfl_id` 2016–2022** | **CC-BY-SA 4.0** (ShareAlike), not CC-BY: "NFL NextGenStats via nflverse" (≤2022) / "FTN Data via nflverse" (2023+) | ⚠️ REVIEW REQUIRED | Coverage varies **sharply** by season — see the gate table |
 | **nflverse** `nextgen_stats/ngs_*` | time to throw, intended air yards, aggressiveness, **CPOE**, xCOMP, air yards to sticks | HISTORICAL | parquet | weekly | **`player_gsis_id`** | CC-BY-4.0 | ✅ | Lawful NGS **aggregates** without touching nfl.com |
-| **nflverse** `ftn_charting_{yr}` | play action, screen, RPO, motion, out of pocket, **n_blitzers**, **n_pass_rushers**, throwaway, drop, QB-fault sack | HISTORICAL | parquet | weekly | nflverse play id | CC-BY-4.0 | ✅ | Manual charting. 2022+ only |
-| **nflverse** `players`, `rosters`, `depth_charts`, `injuries`, `snap_counts` | identity crosswalk, weekly status | HISTORICAL | parquet | weekly | GSIS + ESPN + PFR + Sleeper + others | CC-BY-4.0 | ✅ | The ID spine |
+| **nflverse** `ftn_charting_{yr}` | play action, screen, RPO, motion, out of pocket, **n_blitzers**, **n_pass_rushers**, throwaway, drop, QB-fault sack | HISTORICAL | parquet | weekly | nflverse play id | **CC-BY-SA 4.0**, attribution "FTN Data via nflverse" | ⚠️ ShareAlike obligations | Manual charting. 2022+ only |
+| **nflverse** `players`, `rosters`, `depth_charts`, `injuries` | identity crosswalk, weekly status | HISTORICAL | parquet | weekly | GSIS + ESPN + PFR + Sleeper + others | nflverse CC-BY-4.0 repo licence; fields come from NFL, PFR, PFF, OTC, ESPN, whose terms still apply | ⚠️ identifiers-only internal joins | The ID spine |
+| **nflverse** `snap_counts` | game-level snap counts | HISTORICAL | parquet | weekly | PFR | **Pro Football Reference data**; Sports Reference ToU §5 bars competing databases and ML use; the nflverse repo licence does not cover it | ❌ **DO NOT USE** | See docs/career-ledger/SOURCE_RIGHTS_AND_RECONCILIATION_AUDIT.md |
 | **Open-Meteo Archive** `archive-api.open-meteo.com` | hourly temp, apparent, humidity, rain, snow, wind, gust, weather code | HISTORICAL | JSON | static history | lat/lon + timestamp | Free, **no key**; CC-BY-4.0 for the data | ✅ | Our weather reconstruction |
 | **Open-Meteo Geocoding** | place → lat/lon | static | JSON | — | — | as above | ✅ | Place-based only — **stadium names do not resolve**, cities do |
 | **nfl.com** `api.nfl.com/v1/...` | shield API | — | — | — | — | **HTTP 401** | ❌ | Requires credentials. Out of bounds |
