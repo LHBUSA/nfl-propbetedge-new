@@ -36,6 +36,8 @@ The **production Career Ledger already depends on ESPN**, as do other production
 
 The Disney terms that block ESPN Core for new ingestion read the same for these. The existing matrix treats ESPN as "display of factual game state ⚠️". **Owner/counsel should review the existing ESPN dependency explicitly.** This audit changes nothing in production.
 
+Tracked as its own risk item: [docs/risk/ESPN_PRODUCTION_DEPENDENCY.md](../risk/ESPN_PRODUCTION_DEPENDENCY.md). Participation / ShareAlike follow-up: [PARTICIPATION_DERIVATION_AND_SHAREALIKE.md](PARTICIPATION_DERIVATION_AND_SHAREALIKE.md).
+
 `NFL_PUBLIC_SOURCE_MATRIX.md` also marks `snap_counts` CC-BY-4.0 ✅ and participation CC-BY-4.0. Both were corrected there by pointer to this document.
 
 ---
