@@ -295,7 +295,16 @@
      Only the first visit to an unpainted game shows a skeleton. */
   const CADENCE={state:{on:2000,off:15000},live:{on:3000,off:15000},detail:{on:12000,off:30000},board:{on:12000,off:30000}};
   const FRESH_OK=30,FRESH_BAD=120;
-  const lanes={state:{gen:0,timer:null,busy:false,ctrl:null},live:{gen:0,timer:null,busy:false,ctrl:null},detail:{gen:0,timer:null,busy:false,ctrl:null},board:{gen:0,timer:null,busy:false,ctrl:null}};
+  /* epoch: a run belongs to the lane only while its epoch is current. When the
+     GAME changes (focus, a board-driven switch) the previous game's runs are
+     retired, so the new game's sync starts at once instead of finding the lane
+     still busy and waiting a full cadence — up to 30s for a game that is not
+     live — and a retired run can neither release the lane nor arm a second
+     timer when its aborted request settles. Same-game stops (route mount,
+     hidden tab) keep stopLanes' behaviour: an in-flight run for this game
+     still owns its lane, which is what collapses repeated mounts into one
+     request per lane. */
+  const lanes={state:{gen:0,epoch:0,timer:null,busy:false,ctrl:null},live:{gen:0,epoch:0,timer:null,busy:false,ctrl:null},detail:{gen:0,epoch:0,timer:null,busy:false,ctrl:null},board:{gen:0,epoch:0,timer:null,busy:false,ctrl:null}};
 
   const mounted=()=>!!document.querySelector('.pbecast6');
   const anyLive=()=>games().some(g=>String(g?.status?.semantics||'').toUpperCase()==='LIVE');
@@ -555,58 +564,59 @@
   async function syncState(){
     const l=lanes.state;
     if(l.busy||!state.activeId){scheduleLane('state',syncState);return}
-    l.busy=true;
+    l.busy=true;const epoch=l.epoch;
     try{
       const d=await laneJson('state',`${LIVE_API}?event=${encodeURIComponent(state.activeId)}&layer=state`);
       if(d&&applyFast(d))patchLive();
     }catch(error){
       if(error?.name!=='AbortError'){state.error=error instanceof Error?error.message:String(error);patchFreshness()}
-    }finally{l.busy=false;scheduleLane('state',syncState)}
+    }finally{if(epoch===l.epoch){l.busy=false;scheduleLane('state',syncState)}}
   }
 
   async function syncLive(){
     const l=lanes.live;
     if(l.busy||!state.activeId){scheduleLane('live',syncLive);return}
-    l.busy=true;state.syncing=true;patchFreshness();
+    l.busy=true;const epoch=l.epoch;state.syncing=true;patchFreshness();
     try{
       const d=await laneJson('live',`${LIVE_API}?event=${encodeURIComponent(state.activeId)}&layer=live`);
       if(d){applyLive(d);patchLive()}
     }catch(error){
       if(error?.name!=='AbortError'){state.error=error instanceof Error?error.message:String(error);patchFreshness()}
-    }finally{l.busy=false;state.syncing=false;patchFreshness();scheduleLane('live',syncLive)}
+    }finally{if(epoch===l.epoch){l.busy=false;state.syncing=false;patchFreshness();scheduleLane('live',syncLive)}}
   }
 
   async function syncDetail(){
     const l=lanes.detail;
     if(l.busy||!state.activeId){scheduleLane('detail',syncDetail);return}
-    l.busy=true;
+    l.busy=true;const epoch=l.epoch;
     try{
       const d=await laneJson('detail',`${LIVE_API}?event=${encodeURIComponent(state.activeId)}`);
       if(d){applyLive(d,{sound:false});await loadMarket(false);patchAll()}
     }catch(error){
       if(error?.name!=='AbortError')state.error=error instanceof Error?error.message:String(error);
-    }finally{l.busy=false;scheduleLane('detail',syncDetail)}
+    }finally{if(epoch===l.epoch){l.busy=false;scheduleLane('detail',syncDetail)}}
   }
 
   async function syncBoard(){
     const l=lanes.board;
     if(l.busy){scheduleLane('board',syncBoard);return}
-    l.busy=true;
+    l.busy=true;const epoch=l.epoch;
     try{
       const board=await laneJson('board',`${LIVE_API}?date=${encodeURIComponent(state.date||sportsDay())}`);
       if(board){
         state.scoreboard=board;
         const next=chooseActive();
-        if(next&&next!==state.activeId){state.activeId=next;persist();resetGame();syncState();syncLive();syncDetail()}
+        if(next&&next!==state.activeId){state.activeId=next;persist();resetGame();dropLanes(['state','live','detail']);syncState();syncLive();syncDetail()}
         else{state.activeId=next||state.activeId;persist()}
         patchRail();
       }
     }catch(error){
       if(error?.name!=='AbortError')state.error=error instanceof Error?error.message:String(error);
-    }finally{l.busy=false;scheduleLane('board',syncBoard)}
+    }finally{if(epoch===l.epoch){l.busy=false;scheduleLane('board',syncBoard)}}
   }
 
   function stopLanes(){Object.values(lanes).forEach(l=>{clearTimeout(l.timer);l.timer=null;try{l.ctrl?.abort()}catch(_){}})}
+  function dropLanes(names){names.forEach(n=>{const l=lanes[n];clearTimeout(l.timer);l.timer=null;try{l.ctrl?.abort()}catch(_){}l.epoch++;l.busy=false})}
 
   /* Manual refresh and first mount both want everything now, in parallel. */
   async function refresh(manual=false){
@@ -633,7 +643,7 @@
      game's score must not sit under the new game's name while it loads. */
   async function focus(id){
     if(String(id)===String(state.activeId))return;
-    stopLanes();                       // drop the previous game's in-flight work
+    dropLanes(Object.keys(lanes));     // retire the previous game's in-flight work
     state.activeId=String(id);
     resetGame();persist();patchAll();
     /* Restart every lane, the board included — it is what keeps the rail and
