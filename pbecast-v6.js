@@ -20,6 +20,8 @@
   const state={
     date:'',scoreboard:null,activeId:null,detail:null,market:null,marketEvent:null,error:null,
     loading:false,poll:null,lastPlayId:null,lastMarketAt:0,sound:false,audioCtx:null,statFilter:'all',installed:false,
+    /* FULL GAME LOG open/closed, in memory, per game id; absent = collapsed */
+    feedOpen:new Map(),
     /* live-sync bookkeeping: see the synchronisation block below */
     syncing:false,lastSyncAt:0,playAnchor:null,rejected:0,
     /* the two lanes keep separate views of the game; promoteGame() merges */
@@ -206,7 +208,24 @@
 
   function playMeta(p){return [p?.period?`Q${p.period}`:null,clean(p?.clock),clean(p?.end?.down_distance_text)||clean(p?.start?.down_distance_text)].filter(Boolean)}
   function playRow(p){const meta=playMeta(p);const score=p?.away_score!=null&&p?.home_score!=null?`${p.away_score}–${p.home_score}`:'';return `<article class="cast6-play ${p?.scoring_play?'scoring':''} ${turnover(p)?'turnover':''}"><div class="cast6-play-meta">${meta.map((m,i)=>`<span class="${i===2?'down':''}">${esc(m)}</span>`).join('')}</div><div class="cast6-play-copy"><b>${esc(clean(p?.type)||'PLAY')}</b><p>${esc(clean(p?.text)||'Play detail unavailable')}</p></div>${score?`<strong>${esc(score)}</strong>`:''}</article>`}
-  function liveFeedHtml(){const rows=[...arr(state.detail?.plays)].reverse();return `<section class="cast6-module cast6-feed"><header><div><span>FULL GAME LOG</span><h2>Live Play-by-Play</h2></div><small>${rows.length} published plays · latest first</small></header><div class="cast6-feed-scroll">${rows.length?rows.map(playRow).join(''):`<div class="cast6-empty"><b>Play-by-play unavailable</b><span>No published plays are available for this game.</span></div>`}</div></section>`}
+  /* The full game log is collapsed until asked for. The open state is part of
+     the render, keyed by game, so no polling rewrite can close it; the plays
+     are always rendered (hidden when collapsed), so the count and the history
+     keep up with the feed and opening it needs no request. */
+  function feedIsOpen(){return state.feedOpen.get(String(state.activeId||''))===true}
+  function feedToggleLabel(open){return open?'Hide plays':'Show plays'}
+  function liveFeedHtml(){const rows=[...arr(state.detail?.plays)].reverse();const open=feedIsOpen();return `<section class="cast6-module cast6-feed${open?' is-open':''}"><header data-feed-head><div><span>FULL GAME LOG</span><h2>Live Play-by-Play</h2></div><div class="cast6-feed-meta"><small data-feed-count>${rows.length} published plays${rows.length?' · latest first':''}</small><button type="button" class="cast6-feed-toggle" data-feed-toggle data-focus-key="feed-toggle" aria-expanded="${open}" aria-controls="cast6-feed-plays"><span>${feedToggleLabel(open)}</span><i aria-hidden="true">↓</i></button></div></header><div class="cast6-feed-scroll" id="cast6-feed-plays"${open?'':' hidden'}>${rows.length?rows.map(playRow).join(''):`<div class="cast6-empty"><b>Play-by-play unavailable</b><span>No published plays are available for this game.</span></div>`}</div></section>`}
+  /* Immediate, no request, no timer: flip the remembered state and the three
+     attributes that express it. The next workspace patch renders the same. */
+  function toggleFeed(){
+    const id=String(state.activeId||'');if(!id)return;
+    const open=!feedIsOpen();state.feedOpen.set(id,open);
+    const mod=document.querySelector('.pbecast6 .cast6-feed');if(!mod)return;
+    mod.classList.toggle('is-open',open);
+    const list=mod.querySelector('#cast6-feed-plays');if(list)list.hidden=!open;
+    const btn=mod.querySelector('[data-feed-toggle]');
+    if(btn){btn.setAttribute('aria-expanded',String(open));const label=btn.querySelector('span');if(label)label.textContent=feedToggleLabel(open)}
+  }
 
   function driveModuleHtml(){const d=state.detail?.current_drive,plays=arr(d?.plays);return `<section class="cast6-module cast6-possession"><header><div><span>CURRENT POSSESSION</span><h2>Drive-by-Drive</h2></div><small>${esc(clean(d?.description))}</small></header><div class="cast6-drive-scroll">${d?`${d?.team?`<div class="cast6-possession-head">${d.team.logo?`<img src="${esc(d.team.logo)}" width="38" height="38" alt="" decoding="async">`:''}<div><b>${esc(d.team.abbreviation||d.team.display_name||'POSSESSION')}</b><span>${esc(clean(d.result)||'Drive in progress')}</span></div></div>`:''}${plays.length?plays.map(playRow).join(''):`<div class="cast6-empty compact"><span>Waiting for the first published snap of this drive.</span></div>`}`:`<div class="cast6-empty"><b>No active possession</b><span>The panel collapses its empty telemetry instead of inventing values.</span></div>`}</div></section>`}
 
@@ -225,7 +244,9 @@
     if(!root){vc.innerHTML=`<section class="pbecast6" data-stale="false"><div data-cast6-toolbar></div><div data-cast6-rail></div><div data-cast6-hero></div><div data-cast6-action></div><div data-cast6-telemetry></div><div data-cast6-workspace></div></section>`;root=vc.querySelector('.pbecast6');wireRoot(root)}
     return root;
   }
-  function patch(root,selector,html){const host=root?.querySelector(selector);if(!host)return;const sig=String(html);if(host.dataset.sig===sig)return;const scroll=host.scrollTop;host.innerHTML=html;host.dataset.sig=sig;if(scroll)host.scrollTop=scroll}
+  /* A rewrite must not take keyboard focus away: a focused control carrying
+     data-focus-key is focused again in the new markup. */
+  function patch(root,selector,html){const host=root?.querySelector(selector);if(!host)return;const sig=String(html);if(host.dataset.sig===sig)return;const scroll=host.scrollTop;const active=typeof document!=='undefined'?document.activeElement:null;const key=active&&host.contains?.(active)?active.getAttribute?.('data-focus-key'):null;host.innerHTML=html;host.dataset.sig=sig;if(scroll)host.scrollTop=scroll;if(key)host.querySelector?.(`[data-focus-key="${key}"]`)?.focus?.({preventScroll:true})}
   function patchToolbar(){const root=document.querySelector('.pbecast6');if(root)patch(root,'[data-cast6-toolbar]',toolbarHtml())}
   /* Targeted patches for the fast lane: the sections a live frame can actually
      change, and nothing else. patch() already no-ops on an identical
@@ -262,6 +283,9 @@
 
   function wireRoot(root){
     root.addEventListener('click',event=>{
+      /* the whole log header toggles; the button inside it is the keyboard and
+         screen-reader control (Enter/Space arrive here as a click) */
+      if(event.target.closest('[data-feed-head]')){toggleFeed();return}
       const game=event.target.closest('[data-game]');if(game){focus(game.dataset.game);return}
       if(event.target.closest('[data-sound]')){toggleSound();return}
       if(event.target.closest('[data-refresh]')){refresh(true);return}
@@ -724,6 +748,6 @@
     return true;
   }
 
-  window.PBEcastV6={state,load,refresh,focus,toggleSound,takeFocus,stopLegacyTransports,telemetry,envHtml,patchFreshness,lanes,winSeries,situationFacts,possessionTeam,fieldPositionText,heroHtml,promoteGame};
+  window.PBEcastV6={state,load,refresh,focus,toggleSound,takeFocus,stopLegacyTransports,telemetry,envHtml,patchFreshness,lanes,winSeries,situationFacts,possessionTeam,fieldPositionText,heroHtml,promoteGame,toggleFeed,liveFeedHtml};
   if(!install())document.addEventListener('DOMContentLoaded',install,{once:true});
 })();

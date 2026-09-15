@@ -44,6 +44,10 @@ const arg=k=>process.argv.find(a=>a.startsWith(`--${k}=`))?.slice(k.length+3);
 const GAMES=(arg('games')||'').split(',').filter(Boolean).map(x=>{const [id,rest]=x.split(':');const [label,date]=String(rest||'').split('@');return{id,label:label||id,date:date||null}});
 const WIDTHS=(arg('widths')||'1440,390').split(',').map(Number);
 const WINDOW_S=Number(arg('window')||15);
+/* --feed: FULL GAME LOG collapse checks on the first game (a second game in
+   --games is used for the switch check). Run one width per invocation to stay
+   inside the ceiling. */
+const FEED=process.argv.includes('--feed');
 const CEILING_S=Number(process.env.PBE_GATE_CEILING_S||120);
 const OUT=process.env.PBE_GATE_OUT||join(REPO,'.gate','pbecast-pulse');
 const LABEL=process.env.PBE_GATE_LABEL||(LIVE?'deployed':'tree');
@@ -116,8 +120,10 @@ ws.onmessage=async ev=>{
   }
   if(m.method==='Network.requestWillBeSent'){
     const r=m.params.request;if(/^data:|^blob:/.test(r.url))return;
-    const frames=[];for(let s=m.params.initiator?.stack;s;s=s.parent)for(const f of s.callFrames||[])frames.push(f.url);
-    requests.push({t:Date.now(),url:r.url,fromPulse:frames.some(u=>/pbecast-pulse/.test(u))});
+    const frames=[];for(let s=m.params.initiator?.stack;s;s=s.parent)for(const f of s.callFrames||[])frames.push(f);
+    /* with async stack depth enabled, a request scheduled from a click handler
+       still carries toggleFeed in its initiator chain */
+    requests.push({t:Date.now(),url:r.url,fromPulse:frames.some(f=>/pbecast-pulse/.test(f.url)),fromToggle:frames.some(f=>f.functionName==='toggleFeed')});
   }
   if(m.method==='Runtime.exceptionThrown'){const d=m.params.exceptionDetails;exceptions.push({text:String(d?.exception?.description||d?.text||'').slice(0,240),url:d?.url||''})}
 };
@@ -159,7 +165,7 @@ const MEASURE=`(()=>{
     if((ox==='auto'||ox==='scroll')&&el.scrollWidth>el.clientWidth+1)hscroll++;
   }
   const de=document.documentElement,pulse=root.querySelector('.pbepulse'),s=PBEcastV6.state;
-  return{nested,clipped,capped,hscroll,page:{scrollWidth:de.scrollWidth,clientWidth:de.clientWidth,scrollHeight:de.scrollHeight},
+  return{nested,clipped,capped,hscroll,feed:(()=>{const b=root.querySelector('[data-feed-toggle]');return b?{expanded:b.getAttribute('aria-expanded'),game:String(s.activeId),rows:root.querySelectorAll('#cast6-feed-plays .cast6-play').length}:null})(),page:{scrollWidth:de.scrollWidth,clientWidth:de.clientWidth,scrollHeight:de.scrollHeight},
     pulse:pulse?{kind:pulse.classList.contains('is-final')?'final':'live',text:pulse.innerText.replace(/\\s+/g,' ').slice(0,420),head:(pulse.querySelector('header')||{}).innerText||'',foot:(pulse.querySelector('.pbepulse-foot')||{}).innerText||'',all:pulse.innerText,swings:pulse.querySelectorAll('[data-pulse-play]').length,top:Math.round(pulse.getBoundingClientRect().top+scrollY),height:Math.round(pulse.getBoundingClientRect().height)}:null,
     facts:[...root.querySelectorAll('.cast6-facts>div,.cast6-telemetry-grid>div')].map(d=>{const k=d.querySelector('span'),v=d.querySelector('b');return[k?k.innerText.trim():'',v?v.innerText.trim():'']}),
     heroTop:Math.round((root.querySelector('[data-cast6-hero]')||root).getBoundingClientRect().top+scrollY),
@@ -181,10 +187,98 @@ async function shot(file){
   if(r?.data)writeFileSync(join(OUT,file),Buffer.from(r.data,'base64'));
 }
 
+/* ---- FULL GAME LOG ---------------------------------------------------------- */
+const FEED_STATE=`(()=>{const mod=document.querySelector('.pbecast6 .cast6-feed');if(!mod)return null;
+  const b=mod.querySelector('[data-feed-toggle]'),l=b&&document.getElementById(b.getAttribute('aria-controls'));
+  const d=PBEcastV6.state.detail||{},cs=l?getComputedStyle(l):null,a=document.activeElement;
+  return{expanded:b?b.getAttribute('aria-expanded'):null,controls:!!l,isButton:!!b&&b.tagName==='BUTTON',listShown:!!(l&&l.offsetParent!==null),hiddenAttr:!!(l&&l.hidden),
+    rows:l?l.querySelectorAll('.cast6-play').length:0,plays:(d.plays||[]).length,count:((mod.querySelector('[data-feed-count]')||{}).textContent||'').trim(),
+    label:b?b.textContent.replace(/\\s+/g,' ').trim():'',focusKey:a&&a.getAttribute?a.getAttribute('data-focus-key'):null,outline:b?getComputedStyle(b).outlineStyle:'',
+    listOverflowY:cs?cs.overflowY:'',listMaxH:cs?cs.maxHeight:'',docH:document.documentElement.scrollHeight,top:Math.round(mod.getBoundingClientRect().top+scrollY),game:String(PBEcastV6.state.activeId)}})()`;
+function laneCounts(win){const lanes={};for(const r of win){let k;try{const u=new URL(r.url);k=u.pathname==='/api/nfl-live'?`nfl-live:${u.searchParams.get('layer')||(u.searchParams.get('event')?'detail':'board')}`:(u.host.endsWith('propbetedge.ai')?u.host.split('.')[0]+u.pathname:'media')}catch{k='other'}lanes[k]=(lanes[k]||0)+1}return lanes}
+async function pressKey(k){
+  const def=k==='Enter'?{key:'Enter',code:'Enter',windowsVirtualKeyCode:13,text:'\r'}:{key:' ',code:'Space',windowsVirtualKeyCode:32,text:' '};
+  await send('Input.dispatchKeyEvent',{type:'keyDown',...def});
+  await send('Input.dispatchKeyEvent',{type:'keyUp',key:def.key,code:def.code,windowsVirtualKeyCode:def.windowsVirtualKeyCode});
+}
+async function feedChecks(scope,width,g){
+  const file=`${LABEL}-${g.label}-${width}`;
+  phase=`${scope} log default`;
+  /* v6 paints the detail package after its market read, so the DOM can lag
+     state by one await; wait (bounded) for the painted log to match state */
+  const painted=await waitFor('the painted log to match state',`(()=>{const d=PBEcastV6.state.detail||{},n=(d.plays||[]).length,l=document.getElementById('cast6-feed-plays');return n>0&&l&&l.querySelectorAll('.cast6-play').length===n?n:null})()`,15000);
+  if(!painted.ok)check(scope,'log: painted play history matches state',false,painted.error);
+  const f0=await evalIn(FEED_STATE);
+  if(!f0||f0.__error){check(scope,'FULL GAME LOG module present',false,f0?.__error||'missing');return}
+  check(scope,'log: collapsed by default, header + count + real button with aria-controls',f0.expanded==='false'&&f0.isButton&&f0.controls&&f0.hiddenAttr&&!f0.listShown&&/^Show plays/.test(f0.label)&&f0.count.startsWith(`${f0.plays} published plays`),{expanded:f0.expanded,label:f0.label,count:f0.count});
+  check(scope,'log: already-loaded history is in the DOM while collapsed',f0.rows===f0.plays,{rows:f0.rows,plays:f0.plays});
+  await evalIn(`scrollTo(0,${Math.max(0,f0.top-80)})`);await sleep(300);await shot(`${file}-log-collapsed.png`);
+
+  phase=`${scope} log expand`;
+  const r0=requests.length;
+  await evalIn(`document.querySelector('.pbecast6 [data-feed-toggle]').click()`);
+  const f1=await evalIn(FEED_STATE);
+  check(scope,'log: button expands immediately; list grows the document; no internal scroll or cap',f1.expanded==='true'&&f1.listShown&&!f1.hiddenAttr&&/^Hide plays/.test(f1.label)&&f1.rows===f1.plays&&!['auto','scroll','hidden','clip'].includes(f1.listOverflowY)&&f1.listMaxH==='none'&&f1.docH>f0.docH,{expanded:f1.expanded,label:f1.label,overflowY:f1.listOverflowY,maxHeight:f1.listMaxH,docHeight:`${f0.docH} -> ${f1.docH}`});
+  await evalIn(`scrollTo(0,${Math.max(0,f1.top-80)})`);await sleep(300);await shot(`${file}-log-expanded.png`);
+
+  phase=`${scope} log header click`;
+  await evalIn(`document.querySelector('.pbecast6 .cast6-feed>header h2').click()`);
+  const f2=await evalIn(FEED_STATE);
+  check(scope,'log: clicking the header collapses it',f2.expanded==='false'&&!f2.listShown,f2.expanded);
+
+  phase=`${scope} log keyboard`;
+  await evalIn(`document.querySelector('.pbecast6 [data-feed-toggle]').focus({focusVisible:true})`);
+  await pressKey('Enter');
+  const f3=await evalIn(FEED_STATE);
+  check(scope,'log: Enter on the focused button expands; focus stays; visible focus ring',f3.expanded==='true'&&f3.listShown&&f3.focusKey==='feed-toggle'&&f3.outline==='solid',{expanded:f3.expanded,focus:f3.focusKey,outline:f3.outline});
+  await pressKey(' ');
+  const f4=await evalIn(FEED_STATE);
+  check(scope,'log: Space toggles it back',f4.expanded==='false',f4.expanded);
+  await pressKey('Enter');
+
+  /* A real polling re-render: invalidate the workspace signature and wait for
+     v6's own lanes to rewrite it. The gate triggers no fetch here. */
+  phase=`${scope} log survives polling`;
+  await evalIn(`document.querySelector('.pbecast6 [data-cast6-workspace]').dataset.sig='__gate_stale__'`);
+  const rer=await waitFor('a polling cycle to re-render the workspace',`document.querySelector('.pbecast6 [data-cast6-workspace]').dataset.sig!=='__gate_stale__'||null`,25000);
+  const f5=await evalIn(FEED_STATE);
+  check(scope,'log: expanded state and keyboard focus survive a polling re-render',rer.ok&&f5.expanded==='true'&&f5.listShown&&f5.focusKey==='feed-toggle'&&f5.rows===f5.plays,rer.ok?{expanded:f5.expanded,focus:f5.focusKey}:rer.error);
+
+  phase=`${scope} log request proof`;
+  const a0=Date.now();await sleep(WINDOW_S*1000);const a1=Date.now();
+  const toggles=Math.max(2,Math.floor(WINDOW_S*1000/400));
+  const b0=Date.now();
+  for(let i=0;i<toggles;i++){await evalIn(`document.querySelector('.pbecast6 [data-feed-toggle]').click()`);await sleep(400)}
+  const b1=Date.now();
+  const idle=laneCounts(requests.filter(r=>r.t>=a0&&r.t<a1)),toggling=laneCounts(requests.filter(r=>r.t>=b0&&r.t<b1));
+  const fromToggle=requests.slice(r0).filter(r=>r.fromToggle);
+  const keys=new Set([...Object.keys(idle),...Object.keys(toggling)].filter(k=>k.startsWith('nfl-live')));
+  const drift=[...keys].map(k=>[k,(toggling[k]||0)-(idle[k]||0)]);
+  check(scope,`log: ${toggles+4} toggles initiated 0 requests (initiator stacks incl. async)`,!fromToggle.length,fromToggle.map(r=>r.url).slice(0,3));
+  check(scope,`log: ${WINDOW_S}s toggling vs ${WINDOW_S}s idle, same lanes within one cadence tick`,drift.every(([,d])=>Math.abs(d)<=1)&&!Object.keys(toggling).some(k=>!(k in idle)&&toggling[k]>1),{idle,toggling});
+  const f6=await evalIn(FEED_STATE);
+  if(f6.expanded==='false')await evalIn(`document.querySelector('.pbecast6 [data-feed-toggle]').click()`);
+
+  const other=GAMES.find(x=>x.id!==g.id);
+  if(other){
+    phase=`${scope} log game switch`;
+    await evalIn(`(()=>{${other.date?`PBEcastV6.state.date=${JSON.stringify(other.date)};`:''}PBEcastV6.focus(${JSON.stringify(other.id)});return true})()`);
+    const sw=await waitFor(`${other.id} painted`,`(()=>{const d=PBEcastV6.state.detail;return d&&d.game&&String(d.game.id)===${JSON.stringify(other.id)}&&Array.isArray(d.win_probability)&&document.querySelector('.pbecast6 .cast6-feed')?true:null})()`,20000);
+    const f7=sw.ok?await evalIn(FEED_STATE):null;
+    check(scope,'log: another game starts collapsed',sw.ok&&f7.expanded==='false'&&f7.game===other.id,sw.ok?f7.expanded:sw.error);
+    await evalIn(`(()=>{PBEcastV6.focus(${JSON.stringify(g.id)});return true})()`);
+    const back=await waitFor(`${g.id} painted again`,`(()=>{const d=PBEcastV6.state.detail;return d&&d.game&&String(d.game.id)===${JSON.stringify(g.id)}&&Array.isArray(d.win_probability)&&document.querySelector('.pbecast6 .cast6-feed')?true:null})()`,20000);
+    const f8=back.ok?await evalIn(FEED_STATE):null;
+    check(scope,'log: returning to the game keeps its expanded choice (in memory)',back.ok&&f8.expanded==='true',back.ok?f8.expanded:back.error);
+  }
+  report.feed=report.feed||[];report.feed.push({width,game:g.id,default:f0,expanded:f1,idle,toggling,toggles});
+}
+
 const report={target:TARGET,deployed:LIVE,localApi:LOCAL_API,windowSeconds:WINDOW_S,ceilingSeconds:CEILING_S,runs:[]};
 try{
   phase='cdp-setup';
   await send('Runtime.enable');await send('Page.enable');await send('Network.enable');
+  if(FEED){await send('Debugger.enable');await send('Debugger.setAsyncCallStackDepth',{maxDepth:32})}
   await send('Fetch.enable',{patterns:[{urlPattern:`${ORIGIN}/*`,requestStage:'Request'}]});
   await send('Page.addScriptToEvaluateOnNewDocument',{source:PROBE});
 
@@ -259,14 +353,16 @@ try{
       const fc=await evalIn(FAIL_CLOSED);
       if(fc&&!fc.__error)check(scope,'fail closed in page: empty / missing / malformed / other game / scheduled render nothing',Object.values(fc).every(v=>v===''),fc);
 
+      if(FEED&&gi===0)await feedChecks(scope,width,g);
+
       phase=`${scope} expanded`;
-      await evalIn(`(()=>{const t=document.querySelector('.pbekm [data-km-tab="drives"]');if(t)t.click();const d=document.querySelector('.pbekm [data-km-drive]');if(d)d.click();return true})()`);
+      await evalIn(`(()=>{const t=document.querySelector('.pbekm [data-km-tab="drives"]');if(t)t.click();const d=document.querySelector('.pbekm [data-km-drive]');if(d)d.click();const b=document.querySelector('.pbecast6 [data-feed-toggle]');if(b&&b.getAttribute('aria-expanded')==='false')b.click();return true})()`);
       const x=await evalIn(MEASURE,8000);
       const nested=[...(m.nested||[]),...(x?.nested||[])];
-      check(scope,'no nested vertical scroller (collapsed + drive expanded)',!nested.length,nested.slice(0,4));
+      check(scope,'no nested vertical scroller (collapsed + drive and full game log expanded)',!nested.length,nested.slice(0,4));
       check(scope,'no vertical clipping',!(m.clipped?.length||x?.clipped?.length),[...(m.clipped||[]),...(x?.clipped||[])].slice(0,4));
       check(scope,'no max-height cap on a tall PBEcast node',!(x?.capped?.length),(x?.capped||[]).slice(0,4));
-      check(scope,'no horizontal page overflow',x&&x.page.scrollWidth<=x.page.clientWidth,x?.page);
+      check(scope,'no horizontal page overflow',x&&x.page.scrollWidth<=x.page.clientWidth,{...(x?.page||{}),feed:x?.feed});
       await evalIn(`(()=>{const t=document.querySelector('.pbekm [data-km-tab="scoring"]');if(t)t.click();return true})()`);
 
       phase=`${scope} screenshots`;

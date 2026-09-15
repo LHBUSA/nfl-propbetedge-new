@@ -86,3 +86,20 @@
   .cast6-score-center>span{grid-column:2;grid-row:2;align-self:start;text-align:center}
   .cast6-score-center>small{grid-column:1/-1;grid-row:3;display:block;margin-top:8px;text-align:center;font-size:11.5px;line-height:1.45;overflow-wrap:anywhere}
 }
+
+/* ---- FULL GAME LOG: collapsed until asked for ------------------------------
+   The header stays; the list is display:none when collapsed and grows the
+   page when open. No max-height, no internal scroll, no height animation —
+   only the chevron turns. */
+.cast6-feed>header{cursor:pointer}
+.cast6-feed:not(.is-open)>header{border-bottom-color:transparent}
+.cast6-feed-meta{display:flex;align-items:center;justify-content:flex-end;gap:12px;flex-wrap:wrap}
+.cast6-feed-toggle{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 12px;border:1px solid rgba(216,183,91,.28);border-radius:9px;background:rgba(216,183,91,.05);color:#e8c865;cursor:pointer;font:800 12px/1 'JetBrains Mono',monospace;letter-spacing:.02em;white-space:nowrap;transition:border-color .15s ease,color .15s ease}
+.cast6-feed-toggle:hover{border-color:rgba(216,183,91,.55);color:#fff}
+.cast6-feed-toggle:focus-visible{outline:2px solid var(--pbe-gold,#d4af37);outline-offset:2px}
+.cast6-feed-toggle i{display:inline-block;font-style:normal;transition:transform .15s ease}
+.cast6-feed.is-open .cast6-feed-toggle i{transform:rotate(180deg)}
+.cast6-feed-scroll[hidden]{display:none!important}
+@media(max-width:760px){.cast6-feed>header{flex-direction:row;align-items:center;flex-wrap:wrap}.cast6-feed-meta{width:100%;justify-content:space-between}.cast6-feed-toggle{min-height:44px}}
+@media(prefers-reduced-motion:reduce){.cast6-feed-toggle,.cast6-feed-toggle i{transition:none}}
+.cast6-feed-meta>small{color:var(--pbe-dim);font:700 11px/1.35 'JetBrains Mono',monospace;text-transform:uppercase}
