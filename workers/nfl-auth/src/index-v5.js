@@ -56,16 +56,16 @@ export async function issueLinkIfEntitled(env,app,signing,email,purpose,{sleep=m
     for(const delay of PURCHASE_RECHECK_DELAYS_MS){await sleep(delay);access=await checkAccess(env,email);if(access.allowed||access.reason==='entitlement_unavailable')break}
   }
   if(!access.allowed){
-    console.log('[nfl-auth] request decision=denied reason=%s purpose=%s email=%s magic_token=none resend=none',access.reason,purpose,tag);
+    console.log(`[nfl-auth] request decision=denied reason=${access.reason} purpose=${purpose} email=${tag} magic_token=none resend=none`);
     return{sent:false,reason:access.reason};
   }
   const now=Math.floor(Date.now()/1000),token=await sign({email,type:'magic',purpose,iat:now,exp:now+MAGIC_TTL,jti:crypto.randomUUID()},signing.primary);
   const link=`${app}/api/auth-verify?token=${encodeURIComponent(token)}`;
   const r=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:`Bearer ${env.RESEND_API_KEY}`,'Content-Type':'application/json'},body:JSON.stringify({from:FROM_EMAIL,to:[email],subject:purpose==='purchase'?'PropBetEdge NFL Pro — your access is ready':'PropBetEdge NFL — secure sign-in',html:mailHtml(link,purpose),text:mailText(link,purpose)})});
   const detail=await r.text().catch(()=>'');
-  if(!r.ok){console.error('[nfl-auth] request decision=allowed role=%s email=%s resend_status=%s resend_error=%s',access.role,tag,r.status,safeProviderMessage(detail));return{sent:false,reason:'resend_failed',role:access.role}}
+  if(!r.ok){console.error(`[nfl-auth] request decision=allowed role=${access.role} email=${tag} resend_status=${r.status} resend_error=${safeProviderMessage(detail)}`);return{sent:false,reason:'resend_failed',role:access.role}}
   let id='';try{id=String(JSON.parse(detail)?.id||'')}catch{}
-  console.log('[nfl-auth] request decision=allowed role=%s purpose=%s email=%s resend_status=%s resend_id=%s',access.role,purpose,tag,r.status,id);
+  console.log(`[nfl-auth] request decision=allowed role=${access.role} purpose=${purpose} email=${tag} resend_status=${r.status} resend_id=${id}`);
   return{sent:true,role:access.role,resend_id:id};
 }
 
@@ -74,7 +74,7 @@ async function checkAccess(env,email){
     const a=await resolveNflAccess(email,{ownerEmails:parseOwnerEmails(env.NFL_OWNER_EMAILS),supabaseUrl:env.SUPABASE_URL,serviceKey:env.SUPABASE_SERVICE_ROLE_KEY});
     return{allowed:a.allowed,role:a.role,reason:a.allowed?a.role:(a.verdict?.reason||'not_entitled')};
   }catch(e){
-    console.error('[nfl-auth] entitlement stage=unavailable error=%s',e?.message||e);
+    console.error(`[nfl-auth] entitlement stage=unavailable error=${e?.message||e}`);
     return{allowed:false,role:null,reason:'entitlement_unavailable'};
   }
 }
@@ -104,14 +104,14 @@ async function exchangeLink(req,env,origin,app){
     const access=await checkAccess(env,email);
     const tag=await emailTag(email);
     if(!access.allowed){
-      console.log('[nfl-auth] exchange decision=denied reason=%s email=%s session=none',access.reason,tag);
+      console.log(`[nfl-auth] exchange decision=denied reason=${access.reason} email=${tag} session=none`);
       return access.reason==='entitlement_unavailable'
         ?out({error:'entitlement_unavailable'},503,origin,app)
         :out({error:'not_authorized'},403,origin,app);
     }
     const now=Math.floor(Date.now()/1000);
     const session=await sign({email,type:'session',iat:now,exp:now+SESSION_TTL,jti:crypto.randomUUID()},signing.primary);
-    console.log('[nfl-auth] exchange decision=allowed role=%s email=%s session=issued',access.role,tag);
+    console.log(`[nfl-auth] exchange decision=allowed role=${access.role} email=${tag} session=issued`);
     return out({ok:true,email,session_token:session,expires_in:SESSION_TTL,auth_issuer:'propbetedge'},200,origin,app);
   }catch(e){
     const reason=e?.message||'invalid_magic';
