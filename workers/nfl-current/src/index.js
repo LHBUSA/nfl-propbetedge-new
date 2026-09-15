@@ -625,22 +625,6 @@ export default {
         return json({ status: 'ok', service: 'nfl-current', last_tick: tick, routes: ['/api/season', '/api/current-games', '/api/standings', '/api/current-stats', '/api/current-player', '/api/scores', '/api/stats'], generated_at: new Date().toISOString() });
       }
 
-      if (path.endsWith('/current/diag')) {
-        const tries = [
-          ['bare', `${SITE}/scoreboard?limit=100`, {}],
-          ['browser-ua', `${SITE}/scoreboard?limit=100`, { 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0 Safari/537.36', accept: 'application/json' }],
-          ['referer', `${SITE}/scoreboard?limit=100`, { 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0 Safari/537.36', accept: 'application/json', referer: 'https://www.espn.com/' }],
-          ['cdn', 'https://cdn.espn.com/core/nfl/scoreboard?xhr=1&limit=100', { accept: 'application/json' }],
-          ['core', 'https://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2026/types/2/weeks/1/events?limit=5', { accept: 'application/json' }],
-          ['vercel', 'https://nfl.propbetedge.ai/api/nfl-live', { accept: 'application/json' }]
-        ];
-        const out = [];
-        for (const [name, u, h] of tries) {
-          try { const r = await fetch(u, { headers: h }); out.push({ name, status: r.status, len: (await r.text()).length }); }
-          catch (e) { out.push({ name, error: String(e?.message || e) }); }
-        }
-        return json({ diag: out });
-      }
       const cached = k => env.NFL_KV.get(k, { type: 'json' });
 
       if (path.startsWith('/api/season')) {
