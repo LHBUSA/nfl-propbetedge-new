@@ -150,7 +150,10 @@
   function gamesHtml(d) {
     const events = arr(d?.events);
     if (!events.length) return '<div class="pbebl-unavailable"><b>No games in the snapshot window</b><span>The market snapshot carries no NFL games in the next eight days.</span></div>';
+    /* d.current_week is the provider week the engine attributes to; which week
+       is CURRENT for a reader comes from the season contract's primary slate. */
     const currentWeek = Number.isFinite(num(d?.current_week)) ? num(d.current_week) : null;
+    const contract = window.PBESeason?.data || null;
     const groups = new Map();
     for (const e of events) {
       const week = Number.isFinite(num(e?.week)) ? num(e.week) : null;
@@ -165,9 +168,11 @@
     });
     const cards = ordered.map(group => {
       const label = group.week === null ? 'SNAPSHOT' : `WEEK ${group.week}`;
-      const context = group.week === null || currentWeek === null ? ''
-        : group.week === currentWeek ? 'CURRENT SLATE'
-          : group.week > currentWeek ? 'LOOKAHEAD' : 'PREVIOUS WEEK';
+      const context = window.PBESlateCore?.weekContext
+        ? window.PBESlateCore.weekContext(group.week, contract, currentWeek)
+        : group.week === null || currentWeek === null ? ''
+          : group.week === currentWeek ? 'CURRENT SLATE'
+            : group.week > currentWeek ? 'LOOKAHEAD' : 'PREVIOUS WEEK';
       return `<section class="pbebl-week" data-week="${group.week ?? 'unknown'}"><div class="pbebl-week-head"><b>${esc(label)}</b>${context ? `<span>${esc(context)}</span>` : ''}</div>${group.events.map(gameCard).join('')}</section>`;
     }).join('');
     return `<div class="pbebl-layout"><div class="pbebl-games">${cards}</div>${leaderboard(d)}</div>`;
@@ -561,6 +566,8 @@
     state.search = e.target.value;
     paintResults();
   });
+  /* The week context follows the season contract when it lands or moves. */
+  window.addEventListener('pbe:season-ready', () => { if (mounted()) paint(); });
   window.addEventListener('pbe:pro-state', () => {
     /* model output never outlives the entitlement that fetched it */
     if (proState().pro !== true) state.models.clear();

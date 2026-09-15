@@ -116,5 +116,47 @@
     return list.find(g => sem(g) === 'LIVE') || list.find(g => sem(g) === 'SCHEDULE') || list.filter(g => sem(g) === 'FINAL').pop() || list[0] || null;
   }
 
-  return { TYPE, gameKey, forKey, pick, groups, heading, featured };
+  /* A week key as words, preferring the contract's own label for it. */
+  const POST_NAMES = { 1: 'WILD CARD', 2: 'DIVISIONAL ROUND', 3: 'CONFERENCE CHAMPIONSHIPS', 4: 'PRO BOWL', 5: 'SUPER BOWL' };
+  function keyLabel(k, contract) {
+    for (const s of [contract?.primary_slate, contract?.previous_slate, contract?.latest_completed_slate]) if (s?.key === k && s.label) return s.label;
+    const [, type, week] = String(k || '').split(':');
+    if (week == null) return 'SCOREBOARD';
+    return type === 'POST' ? (POST_NAMES[week] || `POSTSEASON WEEK ${week}`) : type === 'PRE' ? `PRESEASON WEEK ${week}` : `WEEK ${week}`;
+  }
+
+  /* The top score rail's pill. The rail may keep showing the provider's board,
+     but it only calls that board the CURRENT SLATE when it is the contract's
+     primary slate. Finals of an earlier week are RECENT SCORES of that week.
+     Without a contract it claims nothing. */
+  function railLabel(contract, games) {
+    const list = arr(games);
+    const live = list.filter(g => sem(g) === 'LIVE').length;
+    if (live) return `${live} GAME${live === 1 ? '' : 'S'} LIVE · ${list.length} ON SLATE`;
+    if (!list.length) return 'SCOREBOARD';
+    const keys = [...new Set(list.map(gameKey).filter(Boolean))];
+    const ps = contract?.primary_slate;
+    if (!ps?.key || keys.length !== 1) return `${list.length} GAMES · SCOREBOARD`;
+    if (keys[0] === ps.key) return `${list.length} GAMES · CURRENT SLATE`;
+    if (list.every(g => sem(g) === 'FINAL')) return `RECENT SCORES · ${keyLabel(keys[0], contract)}`;
+    return `${list.length} GAMES · ${keyLabel(keys[0], contract)}`;
+  }
+
+  /* Presentation context for a week of market events (Best Line). Relative to
+     the actionable primary slate, never the provider's week label, which the
+     engine keeps for attribution. Falls back to that label only when the
+     contract carries no primary slate. */
+  function weekContext(week, contract, fallbackWeek) {
+    const w = Number.isFinite(Number(week)) && week !== null ? Number(week) : null;
+    const ps = contract?.primary_slate;
+    const primary = ps && Number.isFinite(Number(ps.week)) ? Number(ps.week)
+      : Number.isFinite(Number(contract?.primary_slate_week)) && contract?.primary_slate_week !== null ? Number(contract.primary_slate_week)
+        : Number.isFinite(Number(fallbackWeek)) && fallbackWeek !== null ? Number(fallbackWeek) : null;
+    if (w === null || primary === null) return '';
+    if (w === primary) return ps?.state === 'FINAL' ? 'FINAL SLATE' : 'CURRENT SLATE';
+    if (w > primary) return 'LOOKAHEAD';
+    return w === contract?.latest_completed_week ? 'PREVIOUS WEEK · FINAL' : 'PREVIOUS WEEK';
+  }
+
+  return { TYPE, gameKey, forKey, pick, groups, heading, featured, keyLabel, railLabel, weekContext };
 });

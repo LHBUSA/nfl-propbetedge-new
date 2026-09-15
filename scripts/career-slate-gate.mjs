@@ -190,6 +190,17 @@ if (home && !home.__error) {
   }
 }
 
+/* ---- Best Line week context follows the primary slate ------------------------ */
+await evalIn(`App.nav('bestline')`);
+const bl = await waitFor(`(()=>{const ws=[...document.querySelectorAll('.pbebl-week')];if(!ws.length||!window.PBESeason||!PBESeason.data)return null;const d=PBESeason.data;
+  return {primary:d.primary_slate_week,provider:d.current_week,latest:d.latest_completed_week,
+    weeks:ws.map(w=>({week:w.dataset.week,label:(w.querySelector('.pbebl-week-head span')||{}).textContent||''}))}})()`, 40000);
+if (bl) {
+  const cur = bl.weeks.find(w => Number(w.week) === bl.primary);
+  check('Best Line: the primary slate week reads CURRENT SLATE (never LOOKAHEAD)', !cur || /CURRENT SLATE|FINAL SLATE/.test(cur.label), bl);
+  check('Best Line: only weeks after the primary slate are LOOKAHEAD', bl.weeks.every(w => !/LOOKAHEAD/.test(w.label) || Number(w.week) > bl.primary), bl.weeks);
+} else check('Best Line: week groups rendered', false, 'no .pbebl-week');
+
 if (!process.argv.includes('--dashboard-only')) {
 /* ---- Player DNA ------------------------------------------------------------------- */
 const CASES = [

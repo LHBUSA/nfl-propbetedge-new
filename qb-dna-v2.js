@@ -332,6 +332,8 @@
   };
 
   function heroNext() {
+    /* retired / not on a 2026 roster: no next matchup, no market chip */
+    if (state.dna && PD.isRetired(state.dna.player)) return '';
     const c = state.ctx;
     if (!c) {
       /* Say what is true rather than go blank: the scheduled next game from the
@@ -374,7 +376,7 @@
           <div class="q2-hero-eyebrow">QB DNA</div>
           ${PD.familySwitch('qbdna')}
         </div>
-        ${t ? `<div class="q2-hero-club">${crest(t, 30)}<span>${esc(t.name || t.abbreviation)}</span></div>` : ''}
+        ${t ? `<div class="q2-hero-club">${crest(t, 30)}<span>${esc(PD.teamLabel(p, t))}</span></div>` : ''}
       </div>
       <div class="q2-hero-body">
         <button type="button" class="q2-hero-face" data-picker="playerId"
@@ -383,7 +385,7 @@
         <div class="q2-hero-copy">
           <h1 class="q2-hero-name">${esc(p.name)}</h1>
           <div class="q2-hero-meta">${esc(p.position || 'QB')}
-            <i></i>${esc((t && (t.name || t.abbreviation)) || p.current_team || '')}</div>
+            <i></i>${esc(PD.teamLabel(p, t))}</div>
           <!-- The headshot stays clickable, but the affordance cannot live in a
                hover state: a reader has to SEE that the quarterback is a choice. -->
           <button type="button" class="q2-change" data-picker="playerId">
@@ -1199,7 +1201,7 @@
         const team = (state.dna.player.team && state.dna.player.team.abbreviation)
           || state.dna.player.current_team || null;
         /* never a finished game, never another team's game */
-        state.slatePick = PD.pickSlateGame(state.slate, team);
+        state.slatePick = PD.pickSlateGame(state.slate, team, state.dna.player);
         state.eventId = state.slatePick.next ? state.slatePick.next.espn_event_id : null;
       }
       if (!state.eventId) { state.ctx = null; state.ctxCmp = null; render(); return; }

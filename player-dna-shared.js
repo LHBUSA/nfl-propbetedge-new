@@ -587,7 +587,17 @@
     };
   }
   /* Kept under its old name so every product inherits the fix. */
-  function pickSlateGame(slate, team) { return resolveTeamGames(team, slate); }
+  /* A player the 2026 roster audit does not have on a team (the same
+     active_2026 the Career Ledger's player.active reads) has no next game: his
+     last team's schedule is not his. Career and historical framing only. */
+  function isRetired(player) { return !!player && player.active_2026 === false; }
+  const RETIRED = Object.freeze({ nextGame: null, marketGame: null, lastFinished: null, marketAvailable: false, scheduleKnown: true, retired: true, next: null, onSlate: false });
+  function pickSlateGame(slate, team, player) { return isRetired(player) ? { ...RETIRED } : resolveTeamGames(team, slate); }
+  /* Hero team line: "Last team · …" for a player not on a 2026 roster. */
+  function teamLabel(player, team) {
+    const name = (team && (team.name || team.abbreviation)) || (player && player.current_team) || '';
+    return isRetired(player) && name ? `Last team · ${name}` : name;
+  }
 
   /* The game-context query for the resolved next game. The kickoff's ET date
      lets the API read that day's board when the undated one is a week behind. */
@@ -626,6 +636,7 @@
 
   /* Market state beside the next game. A missing market affects only this. */
   function marketStateHtml(ctx, pick) {
+    if (pick && pick.retired) return '';
     const available = ctx ? !!(ctx.markets && ctx.markets.available) : !!(pick && pick.marketAvailable);
     return available
       ? '<div class="q2-hero-next-mkt is-on">Market open</div>'
@@ -636,7 +647,7 @@
      still shown from the schedule itself; the no-game state needs the schedule
      authority to say so. */
   function heroNextFallback(pick, team) {
-    if (!pick) return '';
+    if (!pick || pick.retired) return '';
     const g = pick.nextGame;
     if (g) {
       const last = lastLine(pick.lastFinished);
@@ -669,6 +680,6 @@
     n1, pctSigned, samp, den, priceLabel, longDate, kickoffLabel,
     SPECIFIC_CONDITIONS, similarCondition, limitedHistoryHtml, rareTodayWindow, NO_PATTERN,
     pickSlateGame, noNextGameHtml, isFinished,
-    resolveTeamGames, contextQuery, scheduleReady, heroNextFallback, marketStateHtml
+    resolveTeamGames, contextQuery, scheduleReady, heroNextFallback, marketStateHtml, isRetired, teamLabel
   };
 })();

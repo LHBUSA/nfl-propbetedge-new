@@ -2,9 +2,11 @@
  *
  * Walks every production route and asserts the two things that matter after a
  * season rolls over: the live surfaces describe the current season, and the
- * archive surfaces still describe the season they are an archive of. It also
- * checks the factual proof cases, so a wrong record fails the build rather
- * than a screenshot.
+ * archive surfaces still describe the season they are an archive of. Its
+ * factual checks are semantic invariants recomputed from the authoritative
+ * game ledger (week transition, latest final, next game, per-team schedule,
+ * standings, current-season totals, score rail wording), so they hold in any
+ * week and fail on a real regression rather than on the passage of time.
  *
  * node scripts/season-audit-gate.mjs [--width=1440] [--shots]
  */
@@ -12,6 +14,7 @@ import {spawn} from 'node:child_process';
 import {mkdtempSync,rmSync,readFileSync,existsSync,statSync,writeFileSync,mkdirSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join,extname} from 'node:path';
+import {weekStateInvariants,gameStateInvariants,teamScheduleInvariants,standingsInvariants,currentPlayerInvariants} from './lib/nfl-state-invariants.mjs';
 
 const REPO=process.cwd();
 const TARGET=process.env.PBE_GATE_TARGET||'https://nfl.propbetedge.ai';
@@ -103,50 +106,55 @@ for(const r of ROUTES){
   console.log(`${r.padEnd(15)} root=${String(s.root).slice(0,30).padEnd(30)} chars=${String(s.chars).padStart(6)} 2026=${s.has2026?'Y':'n'} 2025=${s.has2025?'Y':'n'} ovf=${s.overflow}${flag.length?'  << '+flag.join(','):''}`);
 }
 
-/* ---- factual gates ---------------------------------------------------- */
-console.log('\n--- factual gates ---');
-const facts=await evalIn(`(async()=>{
+/* ---- factual gates ----------------------------------------------------
+   Semantic invariants, not the facts of one day. Every published answer is
+   recomputed from the authoritative game ledger and must agree; see
+   scripts/lib/nfl-state-invariants.mjs (self-tested in
+   tests/nfl-state-invariants.test.mjs against corrupted state). */
+console.log('\n--- factual gates (invariants) ---');
+const GW='https://nfl-api.propbetedge.ai';
+const gw=async p=>{const r=await fetch(GW+p,{headers:{accept:'application/json'}});if(!r.ok)throw new Error(`${p} ${r.status}`);return r.json()};
+const SEASON=await gw('/api/season');
+const [SCORES,STANDINGS,CSTATS,STATS]=await Promise.all([gw(`/api/scores?season=${SEASON.season}`),gw(`/api/standings?season=${SEASON.season}`),gw(`/api/current-stats?season=${SEASON.season}`),gw(`/api/stats?season=${SEASON.season}&category=passing`).catch(e=>({error:e.message}))]);
+const NOW=Date.now();
+const regFinals=(SCORES.games||[]).filter(g=>g.season===SEASON.season&&g.game_type==='REG'&&g.semantics==='FINAL').length;
+const topPasser=CSTATS.categories?.passing?.leaders?.[0]||null;
+const topPlayer=topPasser?await gw(`/api/current-player?espn_id=${topPasser.id}&team=${topPasser.team}`):null;
+const page=await evalIn(`(()=>{
   const A=window.PBESeason&&PBESeason.data;
-  const g='https://nfl-api.propbetedge.ai';
-  const st=await fetch(g+'/api/standings?season='+(A&&A.season)).then(r=>r.json()).catch(()=>null);
-  const sx=await fetch(g+'/api/current-stats?season='+(A&&A.season)).then(r=>r.json()).catch(()=>null);
-  const find=(ab)=>{for(const d of (st&&st.divisions)||[])for(const t of d.teams)if(t.abbreviation===ab)return t;return null};
-  return {season:A&&A.season, type:A&&A.season_type, week:A&&A.current_week, started:A&&A.season_started,
-    latest:A&&A.latest_final&&(A.latest_final.away.abbreviation+' '+A.latest_final.away.score+'-'+A.latest_final.home.score+' '+A.latest_final.home.abbreviation+' '+A.latest_final.semantics),
-    next:A&&A.next_game&&A.next_game.name, sea:find('SEA')&&find('SEA').record, ne:find('NE')&&find('NE').record,
-    completed:st&&st.completed_games, statsAvail:sx&&sx.available, statsGames:sx&&sx.completed_games,
-    topPass:sx&&sx.categories&&sx.categories.passing.leaders[0]&&(sx.categories.passing.leaders[0].player+' '+sx.categories.passing.leaders[0].yards+'yd'),
-    storedEvent:localStorage.getItem('pbe_nfl_event'),
-    /* the scores feed Games & Schedule reads must carry the final, not a
-       scheduled row with null scores */
-    scoresFinal:await fetch(g+'/api/scores').then(r=>r.json()).then(d=>{const x=(d.games||[]).find(z=>/NE/.test(z.away_team)&&/SEA/.test(z.home_team));return x?(x.status+' '+x.away_score+'-'+x.home_score):null}).catch(()=>null),
-    /* the Games page's own "next kickoff" must be the season contract's next
-       game: both answer the same question and they must not disagree */
-    gamesNext:(function(){const gs=(window.PBEGamesV2&&PBEGamesV2.state&&PBEGamesV2.state.games)||[];const now=Date.now();
-      const up=gs.filter(x=>{const t=Date.parse(x.start);return Number.isFinite(t)&&t>=now}).sort((a,b)=>Date.parse(a.start)-Date.parse(b.start))[0];
-      return up?(String(up.away)+'@'+String(up.home)):null})(),
+  const gs=(window.PBEGamesV2&&PBEGamesV2.state&&PBEGamesV2.state.games)||[];const now=Date.now();
+  const up=gs.filter(x=>{const t=Date.parse(x.start);return Number.isFinite(t)&&t>=now}).sort((a,b)=>Date.parse(a.start)-Date.parse(b.start))[0];
+  const board=(window.PBESportsShell&&PBESportsShell.state&&PBESportsShell.state.scoreboard&&PBESportsShell.state.scoreboard.games)||null;
+  return {primaryKey:A&&A.primary_slate&&A.primary_slate.key, storedEvent:localStorage.getItem('pbe_nfl_event'),
+    gamesNext:up?(String(up.away)+'@'+String(up.home)):null,
     contractNext:A&&A.next_game&&(A.next_game.away.abbreviation+'@'+A.next_game.home.abbreviation),
-    statsCurrentTop:await fetch(g+'/api/stats?season='+(A&&A.season)).then(r=>r.json()).then(d=>d.leaders&&d.leaders[0]?(d.leaders[0].player+' '+d.leaders[0].yards):null).catch(()=>null)};
+    pill:(document.getElementById('pbes-live-pill')||{}).textContent||null,
+    railExpected:window.PBESlateCore&&typeof PBESlateCore.railLabel==='function'&&board?PBESlateCore.railLabel(A,board):'rail label authority missing',
+    railKeys:board&&window.PBESlateCore?[...new Set(board.map(PBESlateCore.gameKey))]:null};
 })()`,45000);
+const invariantRows=[
+  ...weekStateInvariants(SEASON,SCORES,NOW),
+  ...gameStateInvariants(SEASON,SCORES,NOW),
+  ...teamScheduleInvariants(SEASON,SCORES,NOW),
+  ...standingsInvariants(SEASON,SCORES,STANDINGS),
+  ...(topPlayer?currentPlayerInvariants(topPlayer).map(r=>({...r,name:`top passer ${topPasser.player}: ${r.name}`})):[])
+];
 const checks=[
-  ['season is 2026',facts.season===2026],
-  ['season_type is REG',facts.type==='REG'],
-  ['season_started true',facts.started===true],
-  ['current_week is 1',facts.week===1],
-  ['latest final is NE 10-13 SEA FINAL',/NE 10-13 SEA FINAL/.test(String(facts.latest))],
-  ['standings SEA 1-0',facts.sea==='1-0'],
-  ['standings NE 0-1',facts.ne==='0-1'],
-  ['standings rest on 1 completed game',facts.completed===1],
-  ['current stats available',facts.statsAvail===true],
-  ['current stats from 1 game',facts.statsGames===1],
-  ['top passer is a week-1 line (<400 yds)',/(\d+)yd/.test(String(facts.topPass))&&Number(String(facts.topPass).match(/(\d+)yd/)[1])<400],
-  ['default event repointed off the dead id',facts.storedEvent&&facts.storedEvent!=='8c94552d022acec4a0458d70c19d3da9'],
-  ['/api/scores carries NE @ SEA as final 10-13',facts.scoresFinal==='final 10-13'],
-  ['/api/stats current season is not a 2025 table',!/4306/.test(String(facts.statsCurrentTop))],
-  ['Games next kickoff agrees with the season contract',(()=>{const t=x=>String(x||'').toUpperCase().replace(/\bLA\b/g,'LAR');return !!facts.gamesNext&&t(facts.gamesNext)===t(facts.contractNext)})()]
+  ['season is a real season number',Number.isInteger(SEASON.season)&&SEASON.season>=2020],
+  ['season_type is PRE/REG/POST/OFF',['PRE','REG','POST','OFF'].includes(SEASON.season_type)],
+  ['page reads the same season contract',page&&page.primaryKey===(SEASON.primary_slate&&SEASON.primary_slate.key)],
+  ...invariantRows.map(r=>[r.name,r.ok,r.detail]),
+  ['current stats rest on exactly the completed regular-season games',CSTATS.completed_games===regFinals,{stats:CSTATS.completed_games,finals:regFinals}],
+  ['current stats available exactly when a regular-season game is final',CSTATS.available===(regFinals>0)],
+  ['no leader has more games than the completed games',Object.values(CSTATS.categories||{}).every(c=>(c.leaders||[]).every(l=>l.games<=regFinals))],
+  ['/api/stats for the current season is the current-season table',!STATS.error&&(STATS.season===SEASON.season)&&(!topPasser||(STATS.leaders&&STATS.leaders[0]&&String(STATS.leaders[0].id)===String(topPasser.id)))],
+  ['default event repointed off the dead id',page&&page.storedEvent&&page.storedEvent!=='8c94552d022acec4a0458d70c19d3da9'],
+  ['Games next kickoff agrees with the season contract',(()=>{const t=x=>String(x||'').toUpperCase().replace(/\bLA\b/g,'LAR');return !!page&&!!page.gamesNext&&t(page.gamesNext)===t(page.contractNext)})()],
+  ['top rail pill says what the rail shows (CURRENT SLATE only for the primary slate)',page&&page.pill&&page.railExpected!==null&&page.pill===page.railExpected&&!(/CURRENT SLATE/.test(page.pill)&&!(page.railKeys||[]).every(k=>k===page.primaryKey)),{pill:page&&page.pill,expected:page&&page.railExpected,keys:page&&page.railKeys}]
 ];
 let failed=0;
-for(const [n,ok] of checks){if(!ok)failed++;console.log(`  ${ok?'PASS':'FAIL'}  ${n}`)}
+for(const [n,ok,detail] of checks){if(!ok)failed++;console.log(`  ${ok?'PASS':'FAIL'}  ${n}${!ok&&detail!=null?'  — '+JSON.stringify(detail).slice(0,300):''}`)}
+const facts={season:SEASON.season,type:SEASON.season_type,current_week:SEASON.current_week,primary:SEASON.primary_slate&&SEASON.primary_slate.key,latest:SEASON.latest_final&&SEASON.latest_final.id,next:SEASON.next_game&&SEASON.next_game.name,regFinals,page};
 console.log('  facts:',JSON.stringify(facts));
 
 /* live surfaces must not be describing 2025; archives must still be 2025 */

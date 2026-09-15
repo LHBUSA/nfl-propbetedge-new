@@ -279,3 +279,33 @@ test('DASHBOARD season over: the final slate leads and says FINAL', () => {
   assert.deepEqual(plain(groups.map(x => [x.label, x.folded])), [['SUPER BOWL · FINAL', false]]);
   assert.equal(core.heading(slate, [g]).title, 'Super Bowl is final');
 });
+
+test('TOP RAIL: Week 1 finals are RECENT SCORES · WEEK 1 once Week 2 is primary; CURRENT SLATE only for the primary week', () => {
+  const now = T('2026-09-15T11:00:00Z');
+  const contract = deriveSlate(games(g => (g.week === 1 ? 'FINAL' : 'SCHEDULE')), REG(1), now);
+  const week1 = FIX.games.filter(g => g.week === 1).map(g => boardGame(g, 'FINAL'));
+  assert.equal(core.railLabel(contract, week1), 'RECENT SCORES · WEEK 1');
+  assert.doesNotMatch(core.railLabel(contract, week1), /CURRENT SLATE/);
+  const week2 = FIX.games.filter(g => g.week === 2).map(g => boardGame(g, 'SCHEDULE'));
+  assert.equal(core.railLabel(contract, week2), '16 GAMES · CURRENT SLATE');
+  assert.equal(core.railLabel(null, week1), '16 GAMES · SCOREBOARD', 'no contract, no claim');
+  const live = FIX.games.filter(g => g.week === 2).map(g => boardGame(g, g.id === '401872932' ? 'LIVE' : 'SCHEDULE'));
+  assert.equal(core.railLabel(contract, live), '1 GAME LIVE · 16 ON SLATE');
+  /* Sunday of Week 1, board = the primary week */
+  const sunday = deriveSlate(games(before('2026-09-13T19:00:00Z')), REG(1), T('2026-09-13T19:40:00Z'));
+  assert.equal(core.railLabel(sunday, FIX.games.filter(g => g.week === 1).map(g => boardGame(g, before('2026-09-13T19:00:00Z')(g)))), '16 GAMES · CURRENT SLATE');
+});
+
+test('BEST LINE: week context follows primary_slate_week, not provider current_week', () => {
+  const now = T('2026-09-15T11:00:00Z');
+  const contract = deriveSlate(games(g => (g.week === 1 ? 'FINAL' : 'SCHEDULE')), REG(1), now);
+  assert.equal(contract.provider_week, 1);
+  assert.equal(core.weekContext(2, contract, 1), 'CURRENT SLATE', 'Week 2 is not LOOKAHEAD once Week 1 is final');
+  assert.equal(core.weekContext(3, contract, 1), 'LOOKAHEAD');
+  assert.equal(core.weekContext(1, contract, 1), 'PREVIOUS WEEK · FINAL');
+  assert.equal(core.weekContext(2, null, 1), 'LOOKAHEAD', 'without a contract the provider label is the only fallback');
+  const sunday = deriveSlate(games(before('2026-09-13T19:00:00Z')), REG(1), T('2026-09-13T19:40:00Z'));
+  assert.equal(core.weekContext(1, sunday, 1), 'CURRENT SLATE');
+  assert.equal(core.weekContext(2, sunday, 1), 'LOOKAHEAD');
+  assert.equal(core.weekContext(null, contract, 1), '');
+});

@@ -212,16 +212,30 @@
     });
   }
 
+  /* The pill says what the rail is showing. It is the CURRENT SLATE only when
+     the season contract's primary slate is this board; Week 1 finals on the
+     Tuesday after are RECENT SCORES · WEEK 1 (PBESlateCore.railLabel). */
+  function paintPill(){
+    const games=allGames(),live=liveGames();
+    const pill=document.getElementById('pbes-live-pill');
+    if(!pill)return;
+    pill.className=`pbes-live-pill ${live.length?'is-live':''}`;
+    pill.textContent=window.PBESlateCore?.railLabel
+      ?window.PBESlateCore.railLabel(window.PBESeason?.data||null,games)
+      :live.length?`${live.length} GAME${live.length===1?'':'S'} LIVE · ${games.length} ON SLATE`:`${games.length} GAMES · SCOREBOARD`;
+  }
+  window.addEventListener('pbe:season-ready',paintPill);
+  window.addEventListener('pbe:upgrades-ready',paintPill);
+
   function renderScores(){
     const games=allGames(),live=liveGames();
     const label=document.getElementById('pbes-score-label');
     const host=document.getElementById('pbes-scores');
-    const pill=document.getElementById('pbes-live-pill');
     const cast=document.querySelector('.pbes-nav-btn.cast');
     const castBadge=document.getElementById('pbes-cast-badge');
     if(!host)return;
     if(label){label.textContent=live.length?'LIVE':'NFL';label.classList.toggle('live',live.length>0)}
-    if(pill){pill.className=`pbes-live-pill ${live.length?'is-live':''}`;pill.textContent=live.length?`${live.length} GAME${live.length===1?'':'S'} LIVE · ${games.length} ON SLATE`:`${games.length} GAMES · CURRENT SLATE`}
+    paintPill();
     if(cast)cast.classList.toggle('is-live',live.length>0);
     if(castBadge)castBadge.textContent=live.length?`${live.length} LIVE`:'CAST';
     if(!games.length){host.innerHTML='<div class="pbes-news-empty">No NFL games returned for the current sports day.</div>';return}

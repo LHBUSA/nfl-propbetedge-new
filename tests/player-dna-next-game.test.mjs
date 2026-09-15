@@ -162,7 +162,9 @@ test('kickoff label carries weekday, date and ET time for every product', () => 
 test('all four products route through the shared resolver (no per-product schedule logic)', () => {
   for (const f of ['qb-dna-v2.js', 'wr-dna-v1.js', 'rb-dna-v1.js', 'te-dna-v1.js']) {
     const src = readFileSync(new URL(`../${f}`, import.meta.url), 'utf8');
-    assert.match(src, /PD\.pickSlateGame\(state\.slate, team\)/, f);
+    assert.match(src, /PD\.pickSlateGame\(state\.slate, team, state\.dna\.player\)/, f);
+    assert.match(src, /if \(state\.dna && PD\.isRetired\(state\.dna\.player\)\) return '';/, f);
+    assert.match(src, /PD\.teamLabel\(p, t\)/, f);
     assert.match(src, /await PD\.scheduleReady\(\)/, f);
     assert.match(src, /PD\.contextQuery\(state\.slatePick\)/, f);
     assert.match(src, /PD\.heroNextFallback\(state\.slatePick, tm\)/, f);
@@ -210,4 +212,25 @@ test('game-context?event_id=DET@BUF&date=20260917 resolves from the dated board;
     assert.ok(r.body.unresolved.some(u => u.field === 'current_markets'), 'market absence is recorded as a market fact');
     assert.ok(seen.some(u => u.includes('scoreboard?dates=20260917')));
   } finally { globalThis.fetch = realFetch; }
+});
+
+test('retired player (Tom Brady, active_2026 false): no next matchup, no market chip, Last team', () => {
+  /* TB has a real Week 2 game; it is not Brady's. */
+  const PD = loadShared({ team_schedule: teamSchedule(tuesday(), NOW) });
+  const brady = { name: 'Tom Brady', current_team: 'TB', active_2026: false, team: { abbreviation: 'TB', name: 'Tampa Bay Buccaneers' } };
+  const pick = PD.pickSlateGame(tuesdaySlate(), 'TB', brady);
+  assert.equal(pick.retired, true);
+  assert.equal(pick.nextGame, null);
+  assert.equal(pick.next, null);
+  assert.equal(pick.marketAvailable, false);
+  assert.equal(PD.heroNextFallback(pick, 'TB'), '', 'no NEXT block, and no "no scheduled game" either');
+  assert.equal(PD.marketStateHtml({ markets: { available: true } }, pick), '', 'no market chip even if a context was loaded');
+  assert.equal(PD.isRetired(brady), true);
+  assert.equal(PD.teamLabel(brady, brady.team), 'Last team · Tampa Bay Buccaneers');
+  /* an active player on the same team still resolves the game */
+  const active = { current_team: 'TB', active_2026: true, team: { abbreviation: 'TB', name: 'Tampa Bay Buccaneers' } };
+  assert.equal(PD.pickSlateGame(tuesdaySlate(), 'TB', active).nextGame.name, 'CLE @ TB');
+  assert.equal(PD.teamLabel(active, active.team), 'Tampa Bay Buccaneers');
+  /* a player with no roster verdict is not treated as retired */
+  assert.equal(PD.isRetired({ current_team: 'TB' }), false);
 });

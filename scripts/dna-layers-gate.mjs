@@ -2,8 +2,12 @@
  *
  * Asserts, on all four DNA products, that:
  *   - both layers render and are visually separate
- *   - a player from the completed NE @ SEA game shows real 2026 observations
- *   - a player whose team has not kicked off shows NO SAMPLE, never zeroes
+ *   - each product's current-season leader (chosen at run time) shows real 2026
+ *     observations, and the card's totals equal the sum of its completed games
+ *   - an active player with a missing sample (chosen at run time) shows NO
+ *     SAMPLE, never zeroes
+ *   - every active hero's NEXT agrees with the schedule authority; a retired
+ *     player gets no NEXT, no market chip and "Last team"
  *   - the historical baseline is labelled as prior-season, never as 2026
  *   - a rookie/no-history player is not given manufactured DNA
  *
@@ -13,6 +17,7 @@ import {spawn} from 'node:child_process';
 import {mkdtempSync,rmSync,readFileSync,existsSync,statSync,writeFileSync,mkdirSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join,extname} from 'node:path';
+import {currentPlayerInvariants} from './lib/nfl-state-invariants.mjs';
 
 const REPO=process.cwd();
 const TARGET=process.env.PBE_GATE_TARGET||'https://nfl.propbetedge.ai';
@@ -77,7 +82,9 @@ const READ=`(()=>{const b=document.querySelector('[data-pbe-current-layer]');
  const nx=document.querySelector('.q2-hero-next');
  const mod2={qbdna:'PBEQBDna',wrdna:'PBEWRDna',rbdna:'PBERBDna',tedna:'PBETEDna'}[App.current];
  const g2=window[mod2]&&window[mod2].state&&window[mod2].state.ctx&&window[mod2].state.ctx.game;
- return {present:true, player:p&&p.name, espn_id:p&&p.espn_id, team:p&&p.current_team,
+ const meta=document.querySelector('.q2-hero-meta');
+ return {present:true, player:p&&p.name, espn_id:p&&p.espn_id, team:p&&((p.team&&p.team.abbreviation)||p.current_team), active2026:p&&p.active_2026,
+   nextPresent:!!nx, marketChip:!!document.querySelector('.q2-hero-next-mkt'), heroMeta:meta?meta.textContent.replace(/\\s+/g,' ').trim():'',
    nextText:nx?nx.textContent.replace(/\\s+/g,' ').trim():'', nextStatus:g2?String(g2.status||''):null,
    current:t(cur), baseline:t(base),
    currentIsNone:!!(cur&&cur.classList.contains('is-none')),
@@ -97,6 +104,7 @@ async function check(route,playerId,label,expect){
     const mod={qbdna:'PBEQBDna',wrdna:'PBEWRDna',rbdna:'PBERBDna',tedna:'PBETEDna'}[route];
     await evalIn(`(async()=>{const m=window.${mod};m.state.playerId=${JSON.stringify(playerId)};m.state.dna=null;m.state.cmp=null;m.state.lab=null;m.state.ctx=null;m.state.ctxCmp=null;m.state.eventId=null;await m.load();return true})()`);
     await sleep(3500);
+    for(let i=0;i<20;i++){const ok=await evalIn(`(()=>{const e=document.querySelector('.q2-hero-next');return !e||!!e.querySelector('.q2-hero-next-mkt')||e.classList.contains('is-none')})()`);if(ok===true)break;await sleep(500)}
     await evalIn(`window.PBECurrentLayer&&PBECurrentLayer.sync(true)`);
     await sleep(2500);
   }
@@ -109,45 +117,84 @@ async function check(route,playerId,label,expect){
   return r;
 }
 
-/* Players from the completed NE @ SEA game, one per product. */
-const PLAYED=[
-  ['qbdna','00-0039851','Drake Maye (NE)'],
-  ['qbdna','00-0035704','Drew Lock (SEA)'],
-  ['wrdna','00-0038543','Jaxon Smith-Njigba (SEA)'],
-  ['rbdna','00-0036875','Rhamondre Stevenson (NE)'],
-  ['tedna','00-0039793','AJ Barner (SEA)']
-];
+/* Players are chosen by what they ARE, from authoritative data at run time,
+   never pinned to one day's game. The old fixtures (players from the Sept 10
+   NE @ SEA game, Josh Allen as "not played") became false the next Sunday. */
+const GW='https://nfl-api.propbetedge.ai';
+const getJ=async u=>{const r=await fetch(u,{headers:{accept:'application/json'}});if(!r.ok)throw new Error(`${u} ${r.status}`);return r.json()};
+const SEASON=await getJ(`${GW}/api/season`);
+const CSTATS=await getJ(`${GW}/api/current-stats?season=${SEASON.season}`);
+const PRODUCT={qbdna:['qb','passing'],rbdna:['rb','rushing'],wrdna:['wr','receiving'],tedna:['te','receiving']};
+const LISTS={};
+for(const [route,[pos]] of Object.entries(PRODUCT))LISTS[route]=(await getJ(`${ORIGIN}/api/${pos}-dna?list=1`)).players||[];
+const byEspn=route=>new Map(LISTS[route].map(p=>[String(p.espn_id),p]));
+
+/* PLAYED: the top current-season producer in each product's category. */
+const PLAYED=[];
+for(const [route,[,cat]] of Object.entries(PRODUCT)){
+  const m=byEspn(route);
+  const lead=(CSTATS.categories?.[cat]?.leaders||[]).find(l=>m.has(String(l.id)));
+  if(lead)PLAYED.push([route,m.get(String(lead.id)).gsis_id,`${lead.player} (${lead.team}) · ${cat} leader`,lead]);
+}
+/* UNOBSERVED: an active QB whose current-player verdict is a missing sample. */
+let UNOBS=null;
+for(const p of LISTS.qbdna.filter(x=>x.active_2026&&x.team_2026).slice(0,80)){
+  const r=await getJ(`${GW}/api/current-player?espn_id=${p.espn_id}&team=${p.team_2026}`).catch(()=>null);
+  if(r&&r.ok!==false&&r.available===false){UNOBS={p,api:r};break}
+}
+/* ROOKIE: an active player with no prior NFL sample. */
+const ROOKIE_ROW=Object.entries(LISTS).flatMap(([route,list])=>list.filter(p=>p.active_2026&&p.history_available===false).map(p=>[route,p]))[0]||null;
+/* RETIRED: a player the 2026 roster audit does not carry (Tom Brady when listed). */
+const RETIRED_ROW=LISTS.qbdna.find(p=>String(p.espn_id)==='2330'&&p.active_2026===false)||LISTS.qbdna.find(p=>p.active_2026===false&&p.games>30)||null;
+console.log('selected:',JSON.stringify({played:PLAYED.map(x=>x[2]),unobserved:UNOBS&&`${UNOBS.p.name} (${UNOBS.api.reason})`,rookie:ROOKIE_ROW&&ROOKIE_ROW[1].name,retired:RETIRED_ROW&&RETIRED_ROW.name}));
+
 for(const [r,pid,l] of PLAYED) await check(r,pid,l,'played');
+const NOTPLAYED=UNOBS?await check('qbdna',UNOBS.p.gsis_id,`${UNOBS.p.name} (${UNOBS.p.team_2026}) unobserved`,'not_played'):{};
+const ROOKIE=ROOKIE_ROW?await check(ROOKIE_ROW[0],ROOKIE_ROW[1].gsis_id,`${ROOKIE_ROW[1].name} rookie`,'rookie'):{};
+const RETIRED=RETIRED_ROW?await check('qbdna',RETIRED_ROW.gsis_id,`${RETIRED_ROW.name} retired`,'retired'):{};
 
-/* The critical rule: a team that has not kicked off must show no sample. */
-const NOTPLAYED=await check('qbdna','00-0034857','Josh Allen (BUF)','not_played');
-
-/* A rookie with no prior NFL sample: the baseline must say so rather than
-   manufacture DNA, while the current layer stays free to accumulate. */
-const ROOKIE=await check('qbdna','00-0041123','Behren Morton (NE) rookie','rookie');
+/* current-season totals equal completed-game truth, straight from the API the card renders */
+const apiRows=[];
+for(const [,,l,lead] of PLAYED){const api=await getJ(`${GW}/api/current-player?espn_id=${lead.id}&team=${lead.team}`);apiRows.push({label:l,lead,api,inv:currentPlayerInvariants(api)})}
 
 console.log('\n--- gates ---');
 const played=rows.filter(r=>r.expect==='played');
+const active=rows.filter(r=>r.present&&r.expect!=='retired');
+const nextAgrees=r=>{
+  const t=SEASON.team_schedule&&SEASON.team_schedule[r.team];
+  if(!SEASON.team_schedule)return false;
+  if(!t||!t.next)return /no scheduled game/i.test(r.nextText)||r.nextText==='';
+  const [aw,hm]=t.next.name.split(' @ ');
+  const day=new Date(t.next.kickoff_utc).toLocaleDateString('en-US',{timeZone:'America/New_York',month:'short',day:'numeric'}).toUpperCase();
+  return r.nextText.includes(aw)&&r.nextText.includes(hm)&&r.nextText.includes(day)&&!/no (upcoming|scheduled) game/i.test(r.nextText)&&/Market (open|unavailable)/.test(r.nextText);
+};
 const checks=[
+  ['a played player was found for every product',PLAYED.length===4,PLAYED.map(x=>x[0])],
+  ['an unobserved active player was found (missing-sample case exists)',!!UNOBS],
   ['layer present on every DNA product',['qbdna','wrdna','rbdna','tedna'].every(rt=>rows.some(r=>r.route===rt&&r.present))],
-  ['played players show 2026 CURRENT',played.every(r=>/2026 CURRENT/.test(r.current)&&!r.currentIsNone)],
-  ['played players show real production',played.every(r=>/\d/.test(r.current)&&/yds|rec|car/.test(r.current))],
-  ['not-played shows NO SAMPLE',/2026 CURRENT SAMPLE/.test(NOTPLAYED.current)&&NOTPLAYED.currentIsNone],
-  ['not-played says no completed game',/No completed 2026 regular-season game yet/i.test(NOTPLAYED.current)],
-  ['not-played prints no zero figures',!/\b0 ?(yds|rec|car|tgt|att|TD|INT)\b/i.test(NOTPLAYED.current)&&!/\\b0%/.test(NOTPLAYED.current)],
+  ['played players show 2026 CURRENT',played.length>0&&played.every(r=>/2026 CURRENT/.test(r.current)&&!r.currentIsNone)],
+  ['played players show real production',played.length>0&&played.every(r=>/\d/.test(r.current)&&/yds|rec|car/.test(r.current))],
+  ...apiRows.flatMap(x=>x.inv.map(i=>[`${x.label}: ${i.name}`,i.ok,i.detail])),
+  ['played cards print the API totals (card = completed-game truth)',apiRows.length>0&&apiRows.every(x=>{const row=played.find(r=>String(r.espn_id)===String(x.lead.id));const s=x.api.stats||{};const cat=Object.keys(s)[0];return row&&cat&&row.current.includes(String(s[cat].yards))}),apiRows.map(x=>({label:x.label,stats:x.api.stats&&Object.fromEntries(Object.entries(x.api.stats).map(([k,v])=>[k,v.yards]))}))],
+  ...(UNOBS?currentPlayerInvariants(UNOBS.api).map(i=>[`unobserved ${UNOBS.p.name}: ${i.name}`,i.ok,i.detail]):[]),
+  ['missing sample renders as NO SAMPLE, never a figure',!!UNOBS&&/2026 CURRENT SAMPLE/.test(NOTPLAYED.current)&&NOTPLAYED.currentIsNone],
+  ['missing sample says why (no completed game / no recorded participation)',!!UNOBS&&/No completed 2026 regular-season game yet|No recorded participation/i.test(NOTPLAYED.current)],
+  ['missing sample prints no zero figures',!!UNOBS&&!/\b0 ?(yds|rec|car|tgt|att|TD|INT)\b/i.test(NOTPLAYED.current)&&!/\b0%/.test(NOTPLAYED.current)],
   ['baseline labelled historical everywhere',rows.filter(r=>r.present).every(r=>/HISTORICAL BASELINE/.test(r.baseline))],
   ['baseline card is not tagged 2026 CURRENT',rows.filter(r=>r.present).every(r=>!/^\s*2026 CURRENT/.test(String(r.baseline)))],
   ['baseline states prior-season basis',rows.filter(r=>r.present&&!r.baselineIsNone).every(r=>/Prior-season and career facts/i.test(r.baseline))],
   ['layers are separate cards',rows.filter(r=>r.present).every(r=>r.current&&r.baseline&&r.current!==r.baseline)],
   ['no horizontal overflow',rows.every(r=>(r.overflow||0)<=0)],
-  ['rookie baseline says sample unavailable',ROOKIE.baselineIsNone&&/Historical sample unavailable/i.test(ROOKIE.baseline)],
-  ['rookie baseline manufactures nothing',!/STRONG SAMPLE|Sample \d+\s*games/i.test(ROOKIE.baseline)],
+  ['rookie baseline says sample unavailable',!ROOKIE_ROW||(ROOKIE.baselineIsNone&&/Historical sample unavailable/i.test(ROOKIE.baseline))],
+  ['rookie baseline manufactures nothing',!ROOKIE_ROW||!/STRONG SAMPLE|Sample \d+\s*games/i.test(ROOKIE.baseline)],
   ['a finished game is never shown as Next',rows.every(r=>!/FINAL|POST/i.test(String(r.nextStatus||'')))],
-  ['played-team players say no upcoming game',played.filter(r=>/\((SEA|NE)\)/.test(r.label)).every(r=>/no upcoming game on this slate/i.test(r.nextText))],
-  ['no uncaught exceptions',rows.every(r=>!r.exceptions.length)]
+  ['hero NEXT agrees with the schedule authority for every active player',active.length>0&&active.every(nextAgrees),active.filter(r=>!nextAgrees(r)).map(r=>({label:r.label,team:r.team,next:r.nextText}))],
+  ['retired player: no NEXT matchup and no market chip',!!RETIRED_ROW&&RETIRED.present&&!RETIRED.nextPresent&&!RETIRED.marketChip,RETIRED_ROW&&{next:RETIRED.nextText,chip:RETIRED.marketChip}],
+  ['retired player: Last team, not current team',!!RETIRED_ROW&&/Last team/.test(RETIRED.heroMeta||''),RETIRED.heroMeta],
+  ['no uncaught exceptions',rows.every(r=>!r.exceptions.length),rows.filter(r=>r.exceptions.length).map(r=>[r.label,r.exceptions[0]])]
 ];
 let failed=0;
-for(const [n,ok] of checks){if(!ok)failed++;console.log(`  ${ok?'PASS':'FAIL'}  ${n}`)}
+for(const [n,ok,detail] of checks){if(!ok)failed++;console.log(`  ${ok?'PASS':'FAIL'}  ${n}${!ok&&detail!=null?'  — '+JSON.stringify(detail).slice(0,300):''}`)}
 
 if(SHOTS){
   for(const r of ['qbdna','wrdna','rbdna','tedna']){
