@@ -1,0 +1,13 @@
+{
+  "name": "pbe-football-history",
+  "private": true,
+  "type": "module",
+  "description": "Football history graph: design, policy libraries, schema and the technical-validation slice. Not deployed; excluded from the Vercel build.",
+  "scripts": {
+    "test": "node --test tests/core.test.mjs",
+    "slice:seed": "python pipeline/fetch_wikidata_seed.py",
+    "slice:build": "python pipeline/build_slice_2023.py",
+    "slice:load": "node pipeline/load_and_validate.mjs --fresh"
+  },
+  "devDependencies": { "@electric-sql/pglite": "^0.2.17" }
+}

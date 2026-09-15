@@ -23,3 +23,7 @@ firstview/
 image-gate/
 nav-gate/
 scripts/tmp/
+
+# Football history graph working output (slice CSV, seed, local PGlite database).
+history/.out/
+history/node_modules/

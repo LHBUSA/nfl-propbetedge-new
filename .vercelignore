@@ -1,3 +1,6 @@
 # Stadium masters stay in the repo as sources but are not deployed. The product
 # ships stadiums/*-bg.webp, *-bgsm.webp and *-thumb.webp, generated from these.
 stadiums/*.jpg
+
+# Football history graph: design, schema and policy code. Source only, never served.
+history/
