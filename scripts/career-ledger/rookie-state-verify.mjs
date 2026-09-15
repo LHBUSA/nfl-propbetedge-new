@@ -20,6 +20,8 @@ const arg = (n, d) => { const i = process.argv.indexOf(`--${n}`); return i > 0 ?
 const TARGET = arg('target', 'https://nfl.propbetedge.ai');
 const SAMPLE = Number(arg('sample', 80));
 const EXPECT = arg('expect', null);
+/* --bust <token>: add a query token so edge-cached pre-deploy responses are not re-read after a release. */
+const BUST = arg('bust', null);
 const ledger = JSON.parse(readFileSync(new URL('../../data/dist/career-ledger.json', import.meta.url), 'utf8'));
 const players = Object.entries(ledger.players);
 const candidates = players.filter(([, p]) => isRookieCandidate(p)).map(([id]) => id);
@@ -29,7 +31,7 @@ const sample = others.filter((_, i) => i % Math.max(1, Math.floor(others.length 
 async function get(id) {
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      const r = await fetch(`${TARGET}/api/player-career?espn_id=${id}`, { headers: { accept: 'application/json' } });
+      const r = await fetch(`${TARGET}/api/player-career?espn_id=${id}${BUST ? `&v=${encodeURIComponent(BUST)}` : ''}`, { headers: { accept: 'application/json' } });
       if (r.ok) return await r.json();
     } catch (_) {}
     await new Promise(res => setTimeout(res, 800 * (attempt + 1)));
