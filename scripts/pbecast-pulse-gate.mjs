@@ -123,7 +123,7 @@ ws.onmessage=async ev=>{
     const frames=[];for(let s=m.params.initiator?.stack;s;s=s.parent)for(const f of s.callFrames||[])frames.push(f);
     /* with async stack depth enabled, a request scheduled from a click handler
        still carries toggleFeed in its initiator chain */
-    requests.push({t:Date.now(),url:r.url,fromPulse:frames.some(f=>/pbecast-pulse/.test(f.url)),fromToggle:frames.some(f=>f.functionName==='toggleFeed')});
+    requests.push({t:Date.now(),url:r.url,frames:frames.slice(0,8).map(f=>`${f.functionName||'(anon)'}@${String(f.url).split('/').pop()}:${f.lineNumber}`),fromPulse:frames.some(f=>/pbecast-pulse/.test(f.url)),fromToggle:frames.some(f=>f.functionName==='toggleFeed')});
   }
   if(m.method==='Runtime.exceptionThrown'){const d=m.params.exceptionDetails;exceptions.push({text:String(d?.exception?.description||d?.text||'').slice(0,240),url:d?.url||''})}
 };
@@ -252,10 +252,14 @@ async function feedChecks(scope,width,g){
   const b1=Date.now();
   const idle=laneCounts(requests.filter(r=>r.t>=a0&&r.t<a1)),toggling=laneCounts(requests.filter(r=>r.t>=b0&&r.t<b1));
   const fromToggle=requests.slice(r0).filter(r=>r.fromToggle);
-  const keys=new Set([...Object.keys(idle),...Object.keys(toggling)].filter(k=>k.startsWith('nfl-live')));
-  const drift=[...keys].map(k=>[k,(toggling[k]||0)-(idle[k]||0)]);
   check(scope,`log: ${toggles+4} toggles initiated 0 requests (initiator stacks incl. async)`,!fromToggle.length,fromToggle.map(r=>r.url).slice(0,3));
-  check(scope,`log: ${WINDOW_S}s toggling vs ${WINDOW_S}s idle, same lanes within one cadence tick`,drift.every(([,d])=>Math.abs(d)<=1)&&!Object.keys(toggling).some(k=>!(k in idle)&&toggling[k]>1),{idle,toggling});
+  /* Every PBEcast request while toggling must trace to a lane timer
+     (syncState/syncLive/syncDetail/syncBoard) and none to the toggle. Lane
+     counts per window are reported, not compared: with 15-30s cadences a tick
+     falling either side of a window edge moves a count by one or two. */
+  const castReqs=requests.filter(r=>r.t>=b0&&r.t<b1&&/\/api\/nfl-live\?(event|date)=/.test(r.url)&&r.frames.some(f=>/pbecast-v6/.test(f)));
+  const offLane=castReqs.filter(r=>!r.frames.some(f=>/^sync(State|Live|Detail|Board)@/.test(f))||r.fromToggle);
+  check(scope,`log: while toggling for ${WINDOW_S}s every PBEcast request came from its lane timer (${castReqs.length} requests)`,castReqs.length>0&&!offLane.length,{offLane:offLane.map(r=>({url:r.url,frames:r.frames.slice(0,4)})),idle,toggling});
   const f6=await evalIn(FEED_STATE);
   if(f6.expanded==='false')await evalIn(`document.querySelector('.pbecast6 [data-feed-toggle]').click()`);
 
@@ -271,7 +275,8 @@ async function feedChecks(scope,width,g){
     const f8=back.ok?await evalIn(FEED_STATE):null;
     check(scope,'log: returning to the game keeps its expanded choice (in memory)',back.ok&&f8.expanded==='true',back.ok?f8.expanded:back.error);
   }
-  report.feed=report.feed||[];report.feed.push({width,game:g.id,default:f0,expanded:f1,idle,toggling,toggles});
+  const trace=(a,b)=>requests.filter(r=>r.t>=a&&r.t<b&&/nfl-live/.test(r.url)).map(r=>({dt:r.t-a,url:r.url.replace(/^https?:\/\/[^/]+/,''),frames:r.frames}));
+  report.feed=report.feed||[];report.feed.push({width,game:g.id,default:f0,expanded:f1,idle,toggling,toggles,idleTrace:trace(a0,a1),togglingTrace:trace(b0,b1)});
 }
 
 const report={target:TARGET,deployed:LIVE,localApi:LOCAL_API,windowSeconds:WINDOW_S,ceilingSeconds:CEILING_S,runs:[]};
