@@ -232,7 +232,7 @@
     if (set) { const [k, v] = set.dataset.wcSet.split(':'); ui[k] = v; ui.limit = 0; paint(); return; }
     if (e.target.closest('[data-wc-more]')) { ui.limit = (ui.limit || pageSize()) + pageSize(); paint(); return; }
     const cast = e.target.closest('[data-wc-cast]');
-    if (cast) { try { sessionStorage.setItem('pbe.pbecast.focus', JSON.stringify({ game_id: cast.dataset.wcCast })); } catch (_) {} window.App?.nav?.('pbecast'); return; }
+    if (cast) { window.PBEGameHandoff?.open?.(cast.dataset.wcCast, { source: 'what-changed' }) || window.App?.nav?.('pbecast'); return; }
     const prop = e.target.closest('[data-wc-prop]');
     /* The unified player drawer carries this player's current market, model
        entitlement, news and archive with their own provenance — the prop

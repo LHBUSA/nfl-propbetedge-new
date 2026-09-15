@@ -253,7 +253,7 @@
       const liveClass=sem==='LIVE'?'live':sem==='FINAL'?'final':'';
       const aScore=scoreValue(a,sem), hScore=scoreValue(h,sem);
       const hasScore=aScore!==''&&hScore!=='';
-      return `<button type="button" class="pbes-score ${liveClass}" data-cast-game="${esc(g.id)}" aria-label="${esc(a.display_name||a.abbreviation||'Away')} at ${esc(h.display_name||h.abbreviation||'Home')}">
+      return `<button type="button" class="pbes-score ${liveClass}" data-cast-game="${esc(g.id)}" data-cast-kickoff="${esc(g.date||'')}" aria-label="${esc(a.display_name||a.abbreviation||'Away')} at ${esc(h.display_name||h.abbreviation||'Home')}">
         <span class="pbes-score-matchup">
           ${teamLogo(a)}<span class="pbes-score-team">${esc(a.abbreviation||a.display_name||'AWY')}</span>${hasScore?`<b class="pbes-score-num">${esc(aScore)}</b>`:''}
           <span class="pbes-score-at">@</span>
@@ -263,10 +263,13 @@
       </button>`;
     }).join('');
     attachLogoFallbacks(host);
+    /* The same one-shot explicit selection as every other surface: the request
+       is written, then the route mounts and consumes it. No timer, no race
+       with PBEcast's own first choice. */
     host.querySelectorAll('[data-cast-game]').forEach(btn=>btn.addEventListener('click',()=>{
       const id=btn.dataset.castGame;
-      go('pbecast');
-      setTimeout(()=>window.PBEcastV6?.focus?.(id),180);
+      state.route='pbecast';syncActive();
+      if(!window.PBEGameHandoff?.open?.(id,{kickoff:btn.dataset.castKickoff||null,source:'rail'}))go('pbecast');
     }));
     restartAutoAdvance();
   }

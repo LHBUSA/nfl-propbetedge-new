@@ -756,8 +756,7 @@
     }
     if (kind === 'matchup') { setEventParam(g.odds_event_id); return window.App?.nav?.('matchups'); }
     if (kind === 'pbecast') {
-      try { sessionStorage.setItem('pbe.pbecast.focus', JSON.stringify({ game_id: g.id })); } catch (_) {}
-      return window.App?.nav?.('pbecast');
+      return window.PBEGameHandoff?.open?.(g.id, { kickoff: g.date || g.kickoff || null, source: 'propchain' }) || window.App?.nav?.('pbecast');
     }
   }
 

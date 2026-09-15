@@ -104,9 +104,17 @@
     ['pbecast','Game Center','Live context']
   ];
 
-  function toolGrid(providerId){
-    return TOOLS.map(([route,label,note],index)=>`<button type="button" class="pbe25-tool ${index===0?'primary':''} ${route==='pbecast'?'live-tool':''}" data-pbe-game-provider="${esc(providerId)}" data-pbe-game-route="${esc(route)}"><span>${esc(label)}</span><small>${esc(note)}</small></button>`).join('');
+  /* cast: the card's own PBEcast handoff (ESPN event id + kickoff) from
+     games-v2. With it, Game Center opens that game through PBEGameHandoff;
+     without an event id it keeps the provider route. */
+  function toolGrid(providerId,cast=null){
+    return TOOLS.map(([route,label,note],index)=>{
+      const cls=`pbe25-tool ${index===0?'primary':''} ${route==='pbecast'?'live-tool':''}`;
+      if(route==='pbecast'&&cast?.castEvent)return `<button type="button" class="${cls}" data-cast-event="${esc(cast.castEvent)}"${cast.castKickoff?` data-cast-kickoff="${esc(cast.castKickoff)}"`:''}><span>${esc(label)}</span><small>${esc(note)}</small></button>`;
+      return `<button type="button" class="${cls}" data-pbe-game-provider="${esc(providerId)}" data-pbe-game-route="${esc(route)}"><span>${esc(label)}</span><small>${esc(note)}</small></button>`;
+    }).join('');
   }
+  const castOf=actions=>{const b=actions.querySelector('[data-cast-event]');return b?{castEvent:b.dataset.castEvent,castKickoff:b.dataset.castKickoff||''}:null};
 
   function chooseAndGo(providerId,route){
     if(!providerId||!route)return;
@@ -127,7 +135,7 @@
         return;
       }
       actions.classList.add('pbe25-intel-grid');
-      actions.innerHTML=toolGrid(provider);
+      actions.innerHTML=toolGrid(provider,castOf(actions));
       actions.dataset.pbeCommand='4';
     });
 
@@ -136,7 +144,7 @@
       const provider=actions.querySelector('[data-provider]')?.dataset.provider||'';
       if(!provider)return;
       actions.classList.add('pbe25-intel-grid','featured');
-      actions.innerHTML=toolGrid(provider);
+      actions.innerHTML=toolGrid(provider,castOf(actions));
       actions.dataset.pbeCommand='4';
     });
 

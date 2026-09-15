@@ -6,6 +6,20 @@
  * game by PBEGameContext.fromSchedule, and its environment row rendered by
  * PBEGameContext.environmentHtml from the one memoized /api/game-weather read.
  * No weather is requested or polled here.
+ *
+ * GAME IDENTITY. The selected game and the board are separate truths.
+ *   selected game  one ESPN event id. An EXPLICIT selection (a click anywhere
+ *                  that goes through PBEGameHandoff, or a click on this rail)
+ *                  is authoritative: no board, date, persisted game or
+ *                  provider week replaces it. It is read directly by id.
+ *   board          context for the rail: the season contract's slate that
+ *                  holds the selected game (primary, else previous), else the
+ *                  selected game's own kickoff date; with nothing selected, the
+ *                  primary slate. It may repaint the rail; it never changes an
+ *                  explicit selection.
+ *   default mode   only when nothing was selected: LIVE -> the next scheduled
+ *                  game -> the most recent final. The persisted ACTIVE_KEY is a
+ *                  preference inside that order, never above a fresh click.
  */
 (() => {
   'use strict';
@@ -18,7 +32,7 @@
   const BAD=/^(?:null|undefined|n\/a|na|—|-|\?)$/i;
 
   const state={
-    date:'',scoreboard:null,activeId:null,detail:null,market:null,marketEvent:null,error:null,
+    date:'',scoreboard:null,activeId:null,explicit:false,activeKickoff:null,preferredId:null,unavailable:null,boardUrl:null,detail:null,market:null,marketEvent:null,error:null,
     loading:false,poll:null,lastPlayId:null,lastMarketAt:0,sound:false,audioCtx:null,statFilter:'all',installed:false,
     /* FULL GAME LOG open/closed, in memory, per game id; absent = collapsed */
     feedOpen:new Map(),
@@ -35,6 +49,8 @@
   const num=v=>v===null||v===undefined||v===''?null:(Number.isFinite(Number(v))?Number(v):null);
 
   function sportsDay(){const d=new Date(Date.now()-3*3600000);return d.toLocaleDateString('en-CA',{timeZone:'America/New_York'}).replaceAll('-','')}
+  /* ET calendar date of an instant, YYYYMMDD; the provider's dated boards are ET days. */
+  function etYmd(v){const t=v instanceof Date?v.getTime():Date.parse(v||'');return Number.isFinite(t)?new Date(t).toLocaleDateString('en-CA',{timeZone:'America/New_York'}).replaceAll('-',''):''}
   async function getJson(url,signal){const r=await fetch(url,{cache:'no-store',headers:{accept:'application/json'},signal});const text=await r.text();if(!r.ok)throw new Error(`${r.status} ${text.slice(0,140)}`);try{return JSON.parse(text)}catch{throw new Error('non_json_response')}}
   function games(){return arr(state.scoreboard?.games)}
   function semantics(d=state.detail){return String(d?.source?.semantics||d?.game?.status?.semantics||'UNAVAILABLE').toUpperCase()}
@@ -53,8 +69,21 @@
   function teamRecord(team){return arr(team?.records).find(r=>clean(r?.summary))?.summary||''}
   function teamLogo(team,size=62){return team?.logo?`<img src="${esc(team.logo)}" width="${size}" height="${size}" alt="${esc(team?.display_name||team?.abbreviation||'NFL')} logo" decoding="async">`:`<b>${esc(team?.abbreviation||'NFL')}</b>`}
 
-  function restore(){try{state.sound=localStorage.getItem(SOUND_KEY)==='1';state.activeId=localStorage.getItem(ACTIVE_KEY)||null}catch(_){}}
-  function persist(){try{localStorage.setItem(SOUND_KEY,state.sound?'1':'0');if(state.activeId)localStorage.setItem(ACTIVE_KEY,String(state.activeId))}catch(_){}}
+  /* ACTIVE_KEY is a preference only: it is read into preferredId, never into
+     activeId. The explicit selection of this tab session lives in
+     SELECTED_KEY, so a reload or a trip to another route comes back to the
+     game the reader chose. */
+  const SELECTED_KEY='pbe.pbecast.selected';
+  function restore(){
+    try{state.sound=localStorage.getItem(SOUND_KEY)==='1';state.preferredId=localStorage.getItem(ACTIVE_KEY)||null}catch(_){}
+    if(state.activeId&&state.explicit)return;
+    try{const sel=JSON.parse(sessionStorage.getItem(SELECTED_KEY)||'null');
+      if(sel&&/^\d+$/.test(String(sel.game_id||''))&&String(sel.game_id)!==String(state.activeId)){dropLanes(Object.keys(lanes));state.activeId=String(sel.game_id);state.activeKickoff=sel.kickoff||null;state.explicit=true;state.unavailable=null;resetGame()}
+      else if(sel&&String(sel.game_id)===String(state.activeId))state.explicit=true;
+    }catch(_){}
+  }
+  function persist(){try{localStorage.setItem(SOUND_KEY,state.sound?'1':'0');if(state.activeId&&state.explicit)localStorage.setItem(ACTIVE_KEY,String(state.activeId))}catch(_){}
+    try{if(state.activeId&&state.explicit)sessionStorage.setItem(SELECTED_KEY,JSON.stringify({game_id:String(state.activeId),kickoff:state.activeKickoff||null}))}catch(_){}}
 
   function ensureAudio(){
     const C=window.AudioContext||window.webkitAudioContext;if(!C)return null;
@@ -80,7 +109,44 @@
   function turnover(play){return /intercept|fumble|turnover|downs/i.test(`${play?.type||''} ${play?.text||''}`)}
   function cueFor(play){if(play?.scoring_play)return'score';if(turnover(play))return'turnover';return'play'}
 
-  function chooseActive(){const rows=games();if(state.activeId&&rows.some(g=>String(g.id)===String(state.activeId)))return String(state.activeId);const pick=rows.find(g=>g?.status?.semantics==='LIVE')||rows.find(g=>g?.status?.semantics==='SCHEDULE')||rows[0];return pick?String(pick.id):null}
+  /* DEFAULT MODE ONLY. Never called while a selection is explicit. Order:
+     LIVE (the preferred game first) -> the game already on screen if it has
+     not finished -> the preferred game if scheduled -> the contract's next game
+     -> the earliest scheduled game -> a final already on screen -> the most
+     recent final -> the contract's next game even when the board lacks it. */
+  function chooseActive(){
+    if(state.explicit&&state.activeId)return String(state.activeId);
+    const rows=games(),by=id=>id?rows.find(g=>String(g.id)===String(id)):null;
+    const sem=g=>String(g?.status?.semantics||'').toUpperCase(),kick=g=>Date.parse(g?.date||'')||0;
+    const cur=by(state.activeId),pref=by(state.preferredId);
+    const live=rows.filter(g=>sem(g)==='LIVE').sort((a,b)=>kick(a)-kick(b));
+    if(live.length){if(pref&&sem(pref)==='LIVE')return String(pref.id);if(cur&&sem(cur)==='LIVE')return String(cur.id);return String(live[0].id)}
+    if(cur&&sem(cur)==='SCHEDULE')return String(cur.id);
+    if(pref&&sem(pref)==='SCHEDULE')return String(pref.id);
+    const ng=window.PBESeason?.nextGame?.()||null;const ngRow=by(ng?.id);
+    if(ngRow&&sem(ngRow)!=='FINAL')return String(ngRow.id);
+    const sched=rows.filter(g=>sem(g)==='SCHEDULE').sort((a,b)=>kick(a)-kick(b))[0];if(sched)return String(sched.id);
+    if(cur)return String(cur.id);
+    const fin=rows.filter(g=>sem(g)==='FINAL').sort((a,b)=>kick(b)-kick(a))[0];if(fin)return String(fin.id);
+    if(ng?.id)return String(ng.id);
+    return rows[0]?String(rows[0].id):null;
+  }
+  /* The rail shows the board; an explicit game that is not on it is still shown, first. */
+  function railGames(){const rows=games();const g=state.detail?.game;if(state.activeId&&g&&String(g.id)===String(state.activeId)&&!rows.some(r=>String(r.id)===String(state.activeId)))return [g,...rows];return rows}
+  /* Board context. The contract's slates are read by their dates and kept to
+     their week key; a selected game outside both is read by its ET kickoff date. */
+  function boardContext(){
+    const S=window.PBESeason?.data||null;
+    const slates=[S?.primary_slate,S?.previous_slate].filter(x=>x?.key&&/^\d{8}-\d{8}$/.test(String(x.dates||'')));
+    const slateCtx=x=>({url:`${LIVE_API}?range=${encodeURIComponent(x.dates)}&view=slate`,key:x.key,kind:'slate'});
+    const kick=state.activeId?(state.activeKickoff||state.detail?.game?.date||null):null;
+    if(state.explicit&&state.activeId){
+      const day=etYmd(kick);
+      if(day){const hit=slates.find(x=>{const [a,b]=x.dates.split('-');return day>=a&&day<=b});return hit?slateCtx(hit):{url:`${LIVE_API}?date=${day}`,key:null,kind:'date'}}
+      if(slates.length)return slateCtx(slates[0]);
+    }else if(slates.length)return slateCtx(slates[0]);
+    return {url:`${LIVE_API}?date=${encodeURIComponent(state.date||sportsDay())}`,key:null,kind:'day'};
+  }
 
   function dedupeActors(play){
     const map=new Map();
@@ -180,7 +246,7 @@
   function heroHtml(){
     const d=state.detail,g=d?.game||{},a=g?.teams?.away||{},h=g?.teams?.home||{},sem=semantics(d),facts=situationFacts(d);
     const fresh=freshnessBadge();
-    return `<section class="cast6-hero"><div class="cast6-hero-head"><div><span class="cast6-live ${fresh.cls}">${sem==='LIVE'?'<i></i>':''}${esc(fresh.label)}</span><b>${esc(sourceLabel(d))}</b></div><small data-cast6-stamp></small></div><div class="cast6-score"><div class="cast6-team">${teamLogo(a)}<span><b>${esc(a.abbreviation||'AWY')}</b><small>${esc(a.display_name||'Away')}${teamRecord(a)?` · ${esc(teamRecord(a))}`:''}</small></span></div><div class="cast6-score-center">${sem==='SCHEDULE'&&kickoffParts(g?.date)?`<strong class="is-kickoff">${esc(kickoffParts(g.date).time)}<small>ET</small></strong><span><em class="cast6-kick-k">Kickoff · </em>${esc(kickoffParts(g.date).day)}</span>`:`<strong>${esc(score(a,sem))}<i>:</i>${esc(score(h,sem))}</strong><span>${esc(statusLabel(g))}</span>`}<small>${esc([g?.venue?.name,[g?.venue?.city,g?.venue?.state].filter(Boolean).join(', ')].filter(Boolean).join(' · '))}${sem==='SCHEDULE'&&g?.id?(window.PBEBroadcast?.slot?.({event:g.id,away:a.display_name,home:h.display_name,lead:g?.venue?.name?' · ':''})||''):''}</small></div><div class="cast6-team home"><span><b>${esc(h.abbreviation||'HME')}</b><small>${esc(h.display_name||'Home')}${teamRecord(h)?` · ${esc(teamRecord(h))}`:''}</small></span>${teamLogo(h)}</div></div>${envHtml()}${facts.length?`<div class="cast6-facts">${facts.map(([k,v])=>`<div><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}</div>`:''}</section>`;
+    return `<section class="cast6-hero" data-cast6-game="${esc(g?.id||'')}"><div class="cast6-hero-head"><div><span class="cast6-live ${fresh.cls}">${sem==='LIVE'?'<i></i>':''}${esc(fresh.label)}</span><b>${esc(sourceLabel(d))}</b></div><small data-cast6-stamp></small></div><div class="cast6-score"><div class="cast6-team">${teamLogo(a)}<span><b>${esc(a.abbreviation||'AWY')}</b><small>${esc(a.display_name||'Away')}${teamRecord(a)?` · ${esc(teamRecord(a))}`:''}</small></span></div><div class="cast6-score-center">${sem==='SCHEDULE'&&kickoffParts(g?.date)?`<strong class="is-kickoff">${esc(kickoffParts(g.date).time)}<small>ET</small></strong><span><em class="cast6-kick-k">Kickoff · </em>${esc(kickoffParts(g.date).day)}</span>`:`<strong>${esc(score(a,sem))}<i>:</i>${esc(score(h,sem))}</strong><span>${esc(statusLabel(g))}</span>`}<small>${esc([g?.venue?.name,[g?.venue?.city,g?.venue?.state].filter(Boolean).join(', ')].filter(Boolean).join(' · '))}${sem==='SCHEDULE'&&g?.id?(window.PBEBroadcast?.slot?.({event:g.id,away:a.display_name,home:h.display_name,lead:g?.venue?.name?' · ':''})||''):''}</small></div><div class="cast6-team home"><span><b>${esc(h.abbreviation||'HME')}</b><small>${esc(h.display_name||'Home')}${teamRecord(h)?` · ${esc(teamRecord(h))}`:''}</small></span>${teamLogo(h)}</div></div>${envHtml()}${facts.length?`<div class="cast6-facts">${facts.map(([k,v])=>`<div><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}</div>`:''}</section>`;
   }
 
   function currentActionHtml(){
@@ -234,7 +300,7 @@
      grows — so the longest module goes last instead of beside a short one. */
   function workspaceHtml(){return `<div class="cast6-workspace"><div>${driveModuleHtml()}${playerOutputHtml()}</div><div>${liveFeedHtml()}</div></div>`}
 
-  function railHtml(){return `<div class="cast6-rail">${games().map(g=>{const a=g?.teams?.away||{},h=g?.teams?.home||{},active=String(g.id)===String(state.activeId);return `<button data-game="${esc(g.id)}" class="${active?'active':''} ${g?.status?.semantics==='SCHEDULE'?'is-scheduled':''}"><span>${esc(g?.status?.semantics==='SCHEDULE'?'SCHEDULED':g?.status?.semantics||'NFL')} · ${esc(g?.status?.semantics==='SCHEDULE'&&kickoffParts(g?.date)?`${kickoffParts(g.date).day} · ${kickoffParts(g.date).time} ET`:statusLabel(g))}</span><div><b>${esc(a.abbreviation||'AWY')}</b><strong>${esc(score(a,g?.status?.semantics))}</strong><i>at</i><b>${esc(h.abbreviation||'HME')}</b><strong>${esc(score(h,g?.status?.semantics))}</strong></div><small>${esc(g?.venue?.name||fmtDate(g?.date)||'NFL game')}</small></button>`}).join('')}</div>`}
+  function railHtml(){return `<div class="cast6-rail">${railGames().map(g=>{const a=g?.teams?.away||{},h=g?.teams?.home||{},active=String(g.id)===String(state.activeId);return `<button data-game="${esc(g.id)}" class="${active?'active':''} ${g?.status?.semantics==='SCHEDULE'?'is-scheduled':''}"><span>${esc(g?.status?.semantics==='SCHEDULE'?'SCHEDULED':g?.status?.semantics||'NFL')} · ${esc(g?.status?.semantics==='SCHEDULE'&&kickoffParts(g?.date)?`${kickoffParts(g.date).day} · ${kickoffParts(g.date).time} ET`:statusLabel(g))}</span><div><b>${esc(a.abbreviation||'AWY')}</b><strong>${esc(score(a,g?.status?.semantics))}</strong><i>at</i><b>${esc(h.abbreviation||'HME')}</b><strong>${esc(score(h,g?.status?.semantics))}</strong></div><small>${esc(g?.venue?.name||fmtDate(g?.date)||'NFL game')}</small></button>`}).join('')}</div>`}
 
   function toolbarHtml(){return `<div class="cast6-top"><div class="cast6-brand"><span>⚡</span><div><h1>PBE<em>cast</em> NFL</h1><p>Live football command center</p></div></div><div class="cast6-actions"><button data-sound class="${state.sound?'on':''}">${state.sound?'🔊 Audio Alerts On':'🔇 Audio Alerts Off'}</button><button data-refresh>↻ Refresh</button></div></div>`}
 
@@ -278,7 +344,7 @@
     patch(root,'[data-cast6-hero]',heroHtml());
     patchStamp();
   }
-  function patchAll(){const root=ensureRoot();if(!root)return;root.dataset.stale=state.error?'true':'false';patch(root,'[data-cast6-toolbar]',toolbarHtml());patch(root,'[data-cast6-rail]',railHtml());if(state.detail){patch(root,'[data-cast6-hero]',heroHtml());patch(root,'[data-cast6-action]',currentActionHtml());patch(root,'[data-cast6-telemetry]',coverageHtml());patch(root,'[data-cast6-workspace]',workspaceHtml())}else{patch(root,'[data-cast6-hero]',`<div class="cast6-empty"><b>Loading game package</b><span>Connecting to live drives, player output and play-by-play.</span></div>`);patch(root,'[data-cast6-action]','');patch(root,'[data-cast6-telemetry]','');patch(root,'[data-cast6-workspace]','')}patchStamp()}
+  function patchAll(){const root=ensureRoot();if(!root)return;root.dataset.stale=state.error?'true':'false';patch(root,'[data-cast6-toolbar]',toolbarHtml());patch(root,'[data-cast6-rail]',railHtml());if(state.detail){patch(root,'[data-cast6-hero]',heroHtml());patch(root,'[data-cast6-action]',currentActionHtml());patch(root,'[data-cast6-telemetry]',coverageHtml());patch(root,'[data-cast6-workspace]',workspaceHtml())}else{patch(root,'[data-cast6-hero]',state.unavailable&&String(state.unavailable.id)===String(state.activeId)?`<div class="cast6-empty is-unavailable" data-cast6-unavailable="${esc(state.activeId)}"><b>This game is unavailable right now</b><span>PBEcast could not read game ${esc(state.activeId)} from the source. It stays selected and is retried; no other game is shown in its place.</span></div>`:`<div class="cast6-empty"><b>Loading game package</b><span>Connecting to live drives, player output and play-by-play.</span></div>`);patch(root,'[data-cast6-action]','');patch(root,'[data-cast6-telemetry]','');patch(root,'[data-cast6-workspace]','')}patchStamp()}
   function patchStats(){const root=document.querySelector('.pbecast6');if(!root)return;const host=root.querySelector('[data-cast6-workspace]');if(host)patch(root,'[data-cast6-workspace]',workspaceHtml())}
 
   function wireRoot(root){
@@ -585,12 +651,29 @@
   /* Fast state. Deliberately the smallest request PBEcast makes (~2KB) and the
      only one on the 2s cadence, so score, clock and possession never queue
      behind a box score. */
+  /* The fast lane reads the scoreboard. A LIVE game or a game today reads the
+     same board as before (no date); any other game reads its own ET kickoff
+     date, so a scheduled game next Sunday or last week's final is found instead
+     of failing against today's board. A game we know nothing about yet waits
+     for the detail lane, which reads by id alone. */
+  function stateUrl(){
+    const id=state.activeId;if(!id)return null;
+    const row=games().find(g=>String(g.id)===String(id));
+    const kick=state.activeKickoff||row?.date||state.detail?.game?.date||null;
+    const live=[row?.status?.semantics,state.fastGame?.status?.semantics,state.detail?.game?.status?.semantics].some(v=>String(v||'').toUpperCase()==='LIVE');
+    const base=`${LIVE_API}?event=${encodeURIComponent(id)}&layer=state`;
+    if(live)return base;
+    if(!kick)return row?base:null;
+    const day=etYmd(kick),today=etYmd(new Date());
+    return day&&day!==today?`${base}&date=${day}`:base;
+  }
   async function syncState(){
     const l=lanes.state;
-    if(l.busy||!state.activeId){scheduleLane('state',syncState);return}
+    const url=stateUrl();
+    if(l.busy||!url){scheduleLane('state',syncState);return}
     l.busy=true;const epoch=l.epoch;
     try{
-      const d=await laneJson('state',`${LIVE_API}?event=${encodeURIComponent(state.activeId)}&layer=state`);
+      const d=await laneJson('state',url);
       if(d&&applyFast(d))patchLive();
     }catch(error){
       if(error?.name!=='AbortError'){state.error=error instanceof Error?error.message:String(error);patchFreshness()}
@@ -615,9 +698,21 @@
     l.busy=true;const epoch=l.epoch;
     try{
       const d=await laneJson('detail',`${LIVE_API}?event=${encodeURIComponent(state.activeId)}`);
-      if(d){applyLive(d,{sound:false});await loadMarket(false);patchAll()}
+      if(d){
+        applyLive(d,{sound:false});
+        if(String(d?.game?.id||'')===String(state.activeId)){
+          state.unavailable=null;
+          /* first time this game's kickoff is known: the board may belong to another week */
+          if(!state.activeKickoff&&d.game.date){state.activeKickoff=d.game.date;persist();if(boardContext().url!==state.boardUrl){dropLanes(['board']);syncBoard()}}
+        }
+        await loadMarket(false);patchAll();
+      }
     }catch(error){
-      if(error?.name!=='AbortError')state.error=error instanceof Error?error.message:String(error);
+      if(error?.name!=='AbortError'){
+        state.error=error instanceof Error?error.message:String(error);
+        /* an honest unavailable state for the SELECTED game; never a substitute */
+        if(!state.detail&&state.activeId){state.unavailable={id:String(state.activeId),reason:state.error};patchAll()}
+      }
     }finally{if(epoch===l.epoch){l.busy=false;scheduleLane('detail',syncDetail)}}
   }
 
@@ -626,12 +721,23 @@
     if(l.busy){scheduleLane('board',syncBoard);return}
     l.busy=true;const epoch=l.epoch;
     try{
-      const board=await laneJson('board',`${LIVE_API}?date=${encodeURIComponent(state.date||sportsDay())}`);
+      const ctx=boardContext();state.boardUrl=ctx.url;
+      const board=await laneJson('board',ctx.url);
       if(board){
-        state.scoreboard=board;
-        const next=chooseActive();
-        if(next&&next!==state.activeId){state.activeId=next;persist();resetGame();dropLanes(['state','live','detail']);syncState();syncLive();syncDetail()}
-        else{state.activeId=next||state.activeId;persist()}
+        let rows=arr(board.games);
+        if(ctx.key&&window.PBESlateCore?.forKey){const wk=window.PBESlateCore.forKey(rows,ctx.key);if(wk.length)rows=wk}
+        state.scoreboard={...board,games:rows,context:{kind:ctx.kind,key:ctx.key}};
+        if(state.explicit&&state.activeId){
+          /* the board never changes an explicit selection; it may only tell us its kickoff */
+          const row=rows.find(g=>String(g.id)===String(state.activeId));
+          if(row?.date&&!state.activeKickoff){state.activeKickoff=row.date;persist()}
+        }else{
+          const next=chooseActive();
+          if(next&&next!==String(state.activeId)){
+            state.activeId=next;state.activeKickoff=rows.find(g=>String(g.id)===next)?.date||null;
+            resetGame();dropLanes(['state','live','detail']);syncState();syncLive();syncDetail();
+          }
+        }
         patchRail();
       }
     }catch(error){
@@ -649,7 +755,7 @@
       state.activeId?syncState():Promise.resolve(),
       state.activeId?syncLive():Promise.resolve(),
       state.activeId?syncDetail():Promise.resolve()]);
-    if(!state.activeId&&state.scoreboard){state.activeId=chooseActive();persist();if(state.activeId)await Promise.all([syncState(),syncLive(),syncDetail()])}
+    if(!state.activeId){const id=chooseActive()||window.PBESeason?.nextGame?.()?.id||null;if(id){state.activeId=String(id);state.activeKickoff=games().find(g=>String(g.id)===String(id))?.date||window.PBESeason?.nextGame?.()?.kickoff||null;await Promise.all([syncState(),syncLive(),syncDetail()])}}
     patchAll();
     return manual;
   }
@@ -665,10 +771,17 @@
 
   /* Switching games is a deliberate act, not background polling: the previous
      game's score must not sit under the new game's name while it loads. */
-  async function focus(id){
-    if(String(id)===String(state.activeId))return;
+  async function select(id,{explicit=true,kickoff=null,play_id=null}={}){
+    const next=String(id??'').trim();if(!/^\d+$/.test(next))return;
+    const same=next===String(state.activeId);
+    if(explicit)state.explicit=true;
+    if(kickoff)state.activeKickoff=kickoff;
+    if(play_id)state.focusPlayId=String(play_id);
+    if(same){persist();return}
     dropLanes(Object.keys(lanes));     // retire the previous game's in-flight work
-    state.activeId=String(id);
+    state.activeId=next;
+    state.activeKickoff=kickoff||games().find(g=>String(g.id)===next)?.date||null;
+    state.unavailable=null;
     resetGame();persist();patchAll();
     /* Restart every lane, the board included — it is what keeps the rail and
        the active-game choice in step, and dropping it here used to leave it
@@ -677,6 +790,8 @@
     syncBoard();
     patchAll();
   }
+  /* A click on this page's own rail is an explicit selection too. */
+  function focus(id){return select(id,{explicit:true})}
   /* GAME BREAK -> PBEcast. The breaking rail leaves a one-shot focus request
      in session storage before navigating here; it is consumed exactly once so
      a later visit to PBEcast is not dragged back to an old touchdown. The play
@@ -685,13 +800,17 @@
      otherwise pick. */
   const FOCUS_KEY='pbe.pbecast.focus';
   function takeFocus(){
+    let f=null;
     try{
-      const raw=sessionStorage.getItem(FOCUS_KEY);if(!raw)return null;
-      sessionStorage.removeItem(FOCUS_KEY);
-      const f=JSON.parse(raw);if(!f||!f.game_id)return null;
-      state.activeId=String(f.game_id);state.focusPlayId=f.play_id?String(f.play_id):null;persist();
-      return state.activeId;
-    }catch(_){return null}
+      f=window.PBEGameHandoff?.take?.()||null;
+      if(!f){const raw=sessionStorage.getItem(FOCUS_KEY);if(raw){sessionStorage.removeItem(FOCUS_KEY);f=JSON.parse(raw)}}
+    }catch(_){f=null}
+    if(!f||!/^\d+$/.test(String(f.game_id||'')))return null;
+    const id=String(f.game_id);
+    if(id!==String(state.activeId)){dropLanes(Object.keys(lanes));state.activeId=id;state.activeKickoff=f.kickoff||null;state.unavailable=null;resetGame()}
+    else if(f.kickoff)state.activeKickoff=f.kickoff;
+    state.explicit=true;state.focusPlayId=f.play_id?String(f.play_id):null;persist();
+    return id;
   }
   /* Mounting the route. state.detail survives a trip to another route, so
      returning to PBEcast repaints the last known game immediately and the
@@ -710,6 +829,7 @@
      next tick. Sync once, immediately, on the way back in. */
   /* When the schedule or the forecast lands, only the hero is re-diffed: no
      lane, timer, selection, play or audio state is touched. */
+  window.addEventListener('pbe:season-ready',()=>{if(mounted()&&state.boardUrl&&boardContext().url!==state.boardUrl){dropLanes(['board']);syncBoard()}});
   ['pbe:game-weather','pbe:broadcast-ready'].forEach(name=>window.addEventListener(name,()=>{if(mounted())patchFreshness()}));
 
   document.addEventListener('visibilitychange',()=>{
@@ -748,6 +868,6 @@
     return true;
   }
 
-  window.PBEcastV6={state,load,refresh,focus,toggleSound,takeFocus,stopLegacyTransports,telemetry,envHtml,patchFreshness,lanes,winSeries,situationFacts,possessionTeam,fieldPositionText,heroHtml,promoteGame,toggleFeed,liveFeedHtml};
+  window.PBEcastV6={state,load,refresh,focus,select,chooseActive,boardContext,stateUrl,toggleSound,takeFocus,stopLegacyTransports,telemetry,envHtml,patchFreshness,lanes,winSeries,situationFacts,possessionTeam,fieldPositionText,heroHtml,promoteGame,toggleFeed,liveFeedHtml};
   if(!install())document.addEventListener('DOMContentLoaded',install,{once:true});
 })();

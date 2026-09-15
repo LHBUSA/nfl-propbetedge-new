@@ -203,7 +203,7 @@
         ${live && situation(g) ? `<span class="pbecc-sit">${situation(g)}</span>` : ''}
         ${!live && !fin ? `<span class="pbecc-line">${line ? esc(line) : '<em>No line in snapshot</em>'}</span>` : ''}
         ${inj.total && !fin ? `<button type="button" class="pbecc-inj" data-route="changes" data-changes-game="${esc(g.id)}">${inj.out ? `${inj.out} OUT` : ''}${inj.out && inj.q ? ' · ' : ''}${inj.q ? `${inj.q} Q` : ''}</button>` : ''}
-        <button type="button" class="pbecc-cast" data-cast="${esc(g.id)}">${live ? 'Live PBEcast' : fin ? 'Replay' : 'Preview'} →</button>
+        <button type="button" class="pbecc-cast" data-cast="${esc(g.id)}" data-cast-kickoff="${esc(g.date || '')}">${live ? 'Live PBEcast' : fin ? 'Replay' : 'Preview'} →</button>
       </footer>
       ${window.PBECard?.gameBadge?.({ away: a.abbreviation, home: h.abbreviation, espnId: g.id }) || ''}
     </article>`;
@@ -410,8 +410,7 @@
     const cast = event.target.closest('[data-cast]');
     if (cast) {
       event.preventDefault();
-      try { sessionStorage.setItem('pbe.pbecast.focus', JSON.stringify({ game_id: cast.dataset.cast })); } catch (_) {}
-      window.App?.nav?.('pbecast');
+      window.PBEGameHandoff?.open?.(cast.dataset.cast, { kickoff: cast.dataset.castKickoff || null, source: 'dashboard-slate' }) || window.App?.nav?.('pbecast');
       return;
     }
     const route = event.target.closest('[data-route]');

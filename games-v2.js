@@ -170,6 +170,18 @@
   function providerAction(provider,label,go,klass=''){
     return `<button class="pbe25-btn ${klass}" data-provider="${esc(provider.id)}" data-go="${esc(go)}">${esc(label)}</button>`;
   }
+  /* PBEcast for THIS game: the ESPN event id travels through the one handoff
+     (PBEGameHandoff), so a card never opens whatever PBEcast would pick.
+     PBEEventSelector.choose is deliberately NOT called here: it re-navigates to
+     the route that was active a tick later, which bounced the reader back to
+     Games, and PBEcast never reads the market provider. Cards with no market
+     posted get the same button: a pregame preview needs no market. */
+  function castAction(g,provider,label,klass=''){
+    if(!g?.espnEventId)return provider?providerAction(provider,label,'pbecast',klass):'';
+    const kick=date(g.start);
+    return `<button class="pbe25-btn ${klass}" type="button" data-cast-event="${esc(g.espnEventId)}"${kick?` data-cast-kickoff="${esc(kick.toISOString())}"`:''}>${esc(label)}</button>`;
+  }
+  function castLabel(g){const k=gameState(g).kind;return k==='LIVE'?'Game Center':k==='FINAL'?'Replay':'Preview'}
   function teamAction(t,label){
     const abbr=t?.abbr||'';
     return abbr?`<button class="pbe25-btn blue" data-team="${esc(abbr)}">${esc(label)}</button>`:'';
@@ -191,7 +203,7 @@
     const g=upcoming()[0];
     if(!g)return'';
     const at=team(g.away),ht=team(g.home),provider=providerMatch(g),selected=provider?.id&&provider.id===selectedProviderId();
-    return `<aside class="pbe25-feature">
+    return `<aside class="pbe25-feature"${g.espnEventId?` data-espn-event="${esc(g.espnEventId)}"`:''}>
       <div>
         <div class="pbe25-feature-head">
           <div><div class="pbe25-feature-label">Next kickoff · Week ${esc(g.week??'—')}</div><div class="pbe25-feature-date">${esc(shortDate(g.start))} · ${esc(timeLabel(g.start))}</div></div>
@@ -205,7 +217,7 @@
         ${contextHtml(g,at,ht,true)}
       </div>
       <div class="pbe25-feature-actions">
-        ${provider?`${providerAction(provider,selected?'Open Active Props':'Open Props','propboard','primary')}${providerAction(provider,'Game Center','pbecast','blue')}`:`${teamAction(at,'Away Research')}${teamAction(ht,'Home Research')}`}
+        ${provider?`${providerAction(provider,selected?'Open Active Props':'Open Props','propboard','primary')}${castAction(g,provider,'Game Center','blue')}`:`${castAction(g,null,castLabel(g),'blue')}${teamAction(at,'Away Research')}${teamAction(ht,'Home Research')}`}
       </div>
     </aside>`;
   }
@@ -214,7 +226,7 @@
     const at=team(g.away),ht=team(g.home),gs=gameState(g),provider=providerMatch(g),selected=provider?.id&&provider.id===selectedProviderId();
     const scoreReady=Number.isFinite(gs.a)&&Number.isFinite(gs.h)&&(gs.kind==='LIVE'||gs.kind==='FINAL');
     const stateClass=gs.kind==='LIVE'?'is-live':'';
-    return `<article class="pbe25-card ${selected?'active-event':''} ${stateClass}">
+    return `<article class="pbe25-card ${selected?'active-event':''} ${stateClass}"${g.espnEventId?` data-espn-event="${esc(g.espnEventId)}"`:''}>
       <div class="pbe25-time">
         <span class="pbe25-state-pill ${gs.kind==='LIVE'?'live':gs.kind==='FINAL'?'final':''}">${esc(gs.label)}</span>
         <strong>${esc(timeLabel(g.start))}</strong>
@@ -236,7 +248,7 @@
       </div>
       ${contextHtml(g,at,ht)}
       <div class="pbe25-actions">
-        ${provider?`${providerAction(provider,selected?'Active · Props':'Open Props','propboard','primary')}${providerAction(provider,'Game Center','pbecast','blue')}`:`${teamAction(at,'Away Research')}${teamAction(ht,'Home Research')}`}
+        ${provider?`${providerAction(provider,selected?'Active · Props':'Open Props','propboard','primary')}${castAction(g,provider,'Game Center','blue')}`:`${castAction(g,null,castLabel(g),'blue')}${teamAction(at,'Away Research')}${teamAction(ht,'Home Research')}`}
       </div>
     </article>`;
   }
@@ -292,6 +304,19 @@
     document.querySelectorAll('[data-provider]').forEach(btn=>btn.addEventListener('click',()=>navigateWithProvider(btn.dataset.provider,btn.dataset.go||'')));
     document.querySelectorAll('[data-team]').forEach(btn=>btn.addEventListener('click',()=>{const abbr=btn.dataset.team;if(abbr)window.PBETeamsV2?.openTeam(abbr);}));
   }
+  /* Delegated, because the Games command layer rewrites the action rows after
+     render and a listener bound to the original button would be lost. */
+  let castWired=false;
+  function wireCast(){
+    if(castWired)return;castWired=true;
+    document.addEventListener('click',e=>{
+      const btn=e.target.closest?.('.pbe25-card [data-cast-event],.pbe25-feature [data-cast-event]');
+      if(!btn)return;
+      e.preventDefault();e.stopPropagation();
+      window.PBEGameHandoff?.open?.(btn.dataset.castEvent,{kickoff:btn.dataset.castKickoff||null,source:'games'})||window.App?.nav?.('pbecast');
+    });
+  }
+  wireCast();
   function refreshList(){const host=document.getElementById('pbe25-list');if(host)host.innerHTML=list();wireCards();}
   /* When the forecast read lands, only the context strips are repainted, so
      the rest of each card (and every enhancement layered on it) stays put. */

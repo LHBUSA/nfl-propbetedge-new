@@ -215,7 +215,7 @@
       ${leaderStrip()}
       <div class="pbe7-hero-foot">
         <p class="pbe7-venue">${esc(venue || fmtDate(game?.date) || 'NFL game')}${tv}</p>
-        <div class="pbe7-actions"><button class="pbe7-primary" data-cast="${esc(game.id)}">${semantics === 'LIVE' ? '⚡ Open Live PBEcast' : 'Open PBEcast'}</button><button data-route="propboard">Prop Board</button><button data-route="games">Full Slate</button></div>
+        <div class="pbe7-actions"><button class="pbe7-primary" data-cast="${esc(game.id)}" data-cast-kickoff="${esc(game.date || '')}">${semantics === 'LIVE' ? '⚡ Open Live PBEcast' : 'Open PBEcast'}</button><button data-route="propboard">Prop Board</button><button data-route="games">Full Slate</button></div>
       </div>
     </section>`;
   }
@@ -283,12 +283,10 @@
 
   function wire(root) {
     root.querySelectorAll('[data-route]').forEach(el => el.addEventListener('click', () => window.App?.nav?.(el.dataset.route)));
-    /* PBEcast v4/v5 are out of the runtime, so focusing through them silently
-       opened whatever game PBEcast chose. v6 consumes a one-shot session
-       handoff on mount (the same one PBE Breaking uses). */
+    /* PBEcast opens the chosen game through the one handoff (PBEGameHandoff:
+       the one-shot explicit selection v6 consumes on mount). */
     root.querySelectorAll('.pbe7-hero [data-cast]').forEach(el => el.addEventListener('click', () => {
-      try { sessionStorage.setItem('pbe.pbecast.focus', JSON.stringify({ game_id: el.dataset.cast })); } catch (_) {}
-      window.App?.nav?.('pbecast');
+      window.PBEGameHandoff?.open?.(el.dataset.cast, { kickoff: el.dataset.castKickoff || null, source: 'dashboard-hero' }) || window.App?.nav?.('pbecast');
     }));
     root.querySelector('[data-pro]')?.addEventListener('click', () => window.PBEPro?.open?.('account'));
 

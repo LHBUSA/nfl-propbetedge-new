@@ -564,7 +564,7 @@
     const up = e.target.closest?.('[data-pbec-upgrade]');
     if (up) { e.preventDefault(); if (window.PBEPro?.open) window.PBEPro.open('upgrade'); else document.getElementById('pbe-pro-account')?.click(); return; }
     const cast = e.target.closest?.('[data-pbec-cast]');
-    if (cast) { e.preventDefault(); try { sessionStorage.setItem('pbe.pbecast.focus', JSON.stringify({ game_id: cast.dataset.pbecCast })); } catch (_) {} window.App?.nav?.('pbecast'); return; }
+    if (cast) { e.preventDefault(); window.PBEGameHandoff?.open?.(cast.dataset.pbecCast, { source: 'pbe-card' }) || window.App?.nav?.('pbecast'); return; }
     const retry = e.target.closest?.('[data-pbec-retry]');
     if (retry) { e.preventDefault(); ensure(true, { userRetry: true }); return; }
     const route = e.target.closest?.('.pbec [data-route], .pbec-dash [data-route], .pbec-mini[data-route], .pbec-badge[data-route]');

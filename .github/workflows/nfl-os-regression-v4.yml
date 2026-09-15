@@ -95,15 +95,19 @@ jobs:
               exit 1
             fi
           done
-          # Dashboard -> PBEcast opens the chosen game through v6's one-shot
-          # session handoff (dashboard v5, which called PBEcastV6.focus, is
-          # retired; v4/v5 PBEcast focus calls opened the wrong game).
-          grep -Fq "pbe.pbecast.focus" dashboard-v7.js
-          grep -Fq "pbe.pbecast.focus" nfl-command-center-v1.js
+          # Every surface opens a chosen game in PBEcast through PBEGameHandoff:
+          # the one-shot explicit selection ('pbe.pbecast.focus') v6 consumes on
+          # mount. The score rail's timer-based PBEcastV6.focus call is retired.
+          # (Behaviour is gated in the browser: scripts/pbecast-selection-gate.mjs.)
+          grep -Fq "const KEY = 'pbe.pbecast.focus'" pbe-game-handoff-v1.js
+          grep -Fq "./pbe-game-handoff-v1.js" page-loader.js
+          grep -Fq "PBEGameHandoff" dashboard-v7.js
+          grep -Fq "PBEGameHandoff" nfl-command-center-v1.js
           grep -Fq "const FOCUS_KEY='pbe.pbecast.focus'" pbecast-v6.js
           ! grep -Fq "./dashboard-v5.js" page-loader.js
           ! grep -Fq "./dashboard-v6.js" page-loader.js
-          grep -Fq 'PBEcastV6?.focus' sports-shell-v2.js
+          grep -Fq 'PBEGameHandoff' sports-shell-v2.js
+          ! grep -Fq 'PBEcastV6?.focus' sports-shell-v2.js
           grep -Fq "['pbepicks','PBE Picks'" sports-shell-v2.js
           grep -Fq "['trackrecord','Track Record'" sports-shell-v2.js
           grep -Fq "['propchain','PropChain'" sports-shell-v2.js

@@ -1,12 +1,15 @@
 /* PropBetEdge NFL - ordered page/product upgrade loader v45 recovery */
 (() => {
   'use strict';
-  const VERSION='20260914castwx2';
+  const VERSION='20260915castsel1';
   const upgrades=[
     /* Establish the final homepage authority first. v6 replaces the v5 DOM with
        .pbehome6; v7 historically registered itself after that without repainting
        until the next navigation. The loader explicitly invokes v7 after install. */
     {js:'./team-globals-v1.js'},
+    /* The one way into PBEcast for a chosen game (explicit selection handoff).
+       Loaded before every surface that links a game to PBEcast. */
+    {js:'./pbe-game-handoff-v1.js'},
     /* Broadcast / where-to-watch client (nfl-schedule authority) and the game
        context strip (kickoff ET, watch, venue, nfl-intel forecast). Loaded
        before every surface that shows a kickoff. Neither owns a route, a

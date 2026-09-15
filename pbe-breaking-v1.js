@@ -870,9 +870,9 @@
          replay can target it later. Not a dependency now — the current cast
          experience is enough, and a consumer that ignores the play id still
          lands on the right game. */
-      if (c.game_id) {
-        try { sessionStorage.setItem('pbe.pbecast.focus',
-          JSON.stringify({ game_id: c.game_id, play_id: c.play_id || null })); } catch {}
+      if (c.game_id && c.route === 'pbecast' && window.PBEGameHandoff) {
+        window.PBEGameHandoff.open(c.game_id, { play_id: c.play_id || null, source: 'breaking' });
+        return;
       }
       if (c.player_id) {
         try { sessionStorage.setItem('pbe.playerdna.focus',
