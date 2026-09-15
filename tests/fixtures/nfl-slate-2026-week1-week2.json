@@ -1,0 +1,733 @@
+{
+ "captured_at": "2026-09-15T11:18:01.415Z",
+ "source": "nfl-current /api/current-games (production, 2026-09-15)",
+ "provider_week": 1,
+ "games": [
+  {
+   "id": "401872656",
+   "name": "NE @ SEA",
+   "kickoff": "2026-09-10T00:20Z",
+   "week": 1,
+   "season": 2026,
+   "season_type": "REG",
+   "away": {
+    "id": "17",
+    "abbreviation": "NE",
+    "display_name": "New England Patriots",
+    "score": 10,
+    "winner": false
+   },
+   "home": {
+    "id": "26",
+    "abbreviation": "SEA",
+    "display_name": "Seattle Seahawks",
+    "score": 13,
+    "winner": true
+   }
+  },
+  {
+   "id": "401872657",
+   "name": "SF VS LAR",
+   "kickoff": "2026-09-11T00:35Z",
+   "week": 1,
+   "season": 2026,
+   "season_type": "REG",
+   "away": {
+    "id": "25",
+    "abbreviation": "SF",
+    "display_name": "San Francisco 49ers",
+    "score": 27,
+    "winner": true
+   },
+   "home": {
+    "id": "14",
+    "abbreviation": "LAR",
+    "display_name": "Los Angeles Rams",
+    "score": 7,
+    "winner": false
+   }
+  },
+  {
+   "id": "401872925",
+   "name": "TB @ CIN",
+   "kickoff": "2026-09-13T17:00Z",
+   "week": 1,
+   "season": 2026,
+   "season_type": "REG",
+   "away": {
+    "id": "27",
+    "abbreviation": "TB",
+    "display_name": "Tampa Bay Buccaneers",
+    "score": 27,
+    "winner": false
+   },
+   "home": {
+    "id": "4",
+    "abbreviation": "CIN",
+    "display_name": "Cincinnati Bengals",
+    "score": 33,
+    "winner": true
+   }
+  },
+  {
+   "id": "401872923",
+   "name": "NO @ DET",
+   "kickoff": "2026-09-13T17:00Z",
+   "week": 1,
+   "season": 2026,
+   "season_type": "REG",
+   "away": {
+    "id": "18",
+    "abbreviation": "NO",
+    "display_name": "New Orleans Saints",
+    "score": 30,
+    "winner": false
+   },
+   "home": {
+    "id": "8",
+    "abbreviation": "DET",
+    "display_name": "Detroit Lions",
+    "score": 31,
+    "winner": true
+   }
+  },
+  {
+   "id": "401872924",
+   "name": "NYJ @ TEN",
+   "kickoff": "2026-09-13T17:00Z",
+   "week": 1,
+   "season": 2026,
+   "season_type": "REG",
+   "away": {
+    "id": "20",
+    "abbreviation": "NYJ",
+    "display_name": "New York Jets",
+    "score": 23,
+    "winner": true
+   },
+   "home": {
+    "id": "10",
+    "abbreviation": "TEN",
+    "display_name": "Tennessee Titans",
+    "score": 10,
+    "winner": false
+   }
+  },
+  {
+   "id": "401872659",
+   "name": "BAL @ IND",
+   "kickoff": "2026-09-13T17:00Z",
+   "week": 1,
+   "season": 2026,
+   "season_type": "REG",
+   "away": {
+    "id": "33",
+    "abbreviation": "BAL",
+    "display_name": "Baltimore Ravens",
+    "score": 41,
+    "winner": true
+   },
+   "home": {
+    "id": "11",
+    "abbreviation": "IND",
+    "display_name": "Indianapolis Colts",
+    "score": 23,
+    "winner": false
+   }
+  },
+  {
+   "id": "401872658",
+   "name": "ATL @ PIT",
+   "kickoff": "2026-09-13T17:00Z",
+   "week": 1,
+   "season": 2026,
+   "season_type": "REG",
+   "away": {
+    "id": "1",
+    "abbreviation": "ATL",
+    "display_name": "Atlanta Falcons",
+    "score": 13,
+    "winner": false
+   },
+   "home": {
+    "id": "23",
+    "abbreviation": "PIT",
+    "display_name": "Pittsburgh Steelers",
+    "score": 20,
+    "winner": true
+   }
+  },
+  {
+   "id": "401872661",
+   "name": "CHI @ CAR",
+   "kickoff": "2026-09-13T17:00Z",
+   "week": 1,
+   "season": 2026,
+   "season_type": "REG",
+   "away": {
+    "id": "3",
+    "abbreviation": "CHI",
+    "display_name": "Chicago Bears",
+    "score": 59,
+    "winner": true
+   },
+   "home": {
+    "id": "29",
+    "abbreviation": "CAR",
+    "display_name": "Carolina Panthers",
+    "score": 37,
+    "winner": false
+   }
+  },
+  {
+   "id": "401872922",
+   "name": "CLE @ JAX",
+   "kickoff": "2026-09-13T17:00Z",
+   "week": 1,
+   "season": 2026,
+   "season_type": "REG",
+   "away": {
+    "id": "5",
+    "abbreviation": "CLE",
+    "display_name": "Cleveland Browns",
+    "score": 10,
+    "winner": false
+   },
+   "home": {
+    "id": "30",
+    "abbreviation": "JAX",
+    "display_name": "Jacksonville Jaguars",
+    "score": 34,
+    "winner": true
+   }
+  },
+  {
+   "id": "401872660",
+   "name": "BUF @ HOU",
+   "kickoff": "2026-09-13T17:00Z",
+   "week": 1,
+   "season": 2026,
+   "season_type": "REG",
+   "away": {
+    "id": "2",
+    "abbreviation": "BUF",
+    "display_name": "Buffalo Bills",
+    "score": 36,
+    "winner": true
+   },
+   "home": {
+    "id": "34",
+    "abbreviation": "HOU",
+    "display_name": "Houston Texans",
+    "score": 31,
+    "winner": false
+   }
+  },
+  {
+   "id": "401872928",
+   "name": "MIA @ LV",
+   "kickoff": "2026-09-13T20:25Z",
+   "week": 1,
+   "season": 2026,
+   "season_type": "REG",
+   "away": {
+    "id": "15",
+    "abbreviation": "MIA",
+    "display_name": "Miami Dolphins",
+    "score": 13,
+    "winner": false
+   },
+   "home": {
+    "id": "13",
+    "abbreviation": "LV",
+    "display_name": "Las Vegas Raiders",
+    "score": 27,
+    "winner": true
+   }
+  },
+  {
+   "id": "401872927",
+   "name": "GB @ MIN",
+   "kickoff": "2026-09-13T20:25Z",
+   "week": 1,
+   "season": 2026,
+   "season_type": "REG",
+   "away": {
+    "id": "9",
+    "abbreviation": "GB",
+    "display_name": "Green Bay Packers",
+    "score": 22,
+    "winner": false
+   },
+   "home": {
+    "id": "16",
+    "abbreviation": "MIN",
+    "display_name": "Minnesota Vikings",
+    "score": 39,
+    "winner": true
+   }
+  },
+  {
+   "id": "401872929",
+   "name": "WSH @ PHI",
+   "kickoff": "2026-09-13T20:25Z",
+   "week": 1,
+   "season": 2026,
+   "season_type": "REG",
+   "away": {
+    "id": "28",
+    "abbreviation": "WSH",
+    "display_name": "Washington Commanders",
+    "score": 22,
+    "winner": false
+   },
+   "home": {
+    "id": "21",
+    "abbreviation": "PHI",
+    "display_name": "Philadelphia Eagles",
+    "score": 24,
+    "winner": true
+   }
+  },
+  {
+   "id": "401872926",
+   "name": "ARI @ LAC",
+   "kickoff": "2026-09-13T20:25Z",
+   "week": 1,
+   "season": 2026,
+   "season_type": "REG",
+   "away": {
+    "id": "22",
+    "abbreviation": "ARI",
+    "display_name": "Arizona Cardinals",
+    "score": 26,
+    "winner": true
+   },
+   "home": {
+    "id": "24",
+    "abbreviation": "LAC",
+    "display_name": "Los Angeles Chargers",
+    "score": 14,
+    "winner": false
+   }
+  },
+  {
+   "id": "401872930",
+   "name": "DAL @ NYG",
+   "kickoff": "2026-09-14T00:20Z",
+   "week": 1,
+   "season": 2026,
+   "season_type": "REG",
+   "away": {
+    "id": "6",
+    "abbreviation": "DAL",
+    "display_name": "Dallas Cowboys",
+    "score": 20,
+    "winner": false
+   },
+   "home": {
+    "id": "19",
+    "abbreviation": "NYG",
+    "display_name": "New York Giants",
+    "score": 28,
+    "winner": true
+   }
+  },
+  {
+   "id": "401872931",
+   "name": "DEN @ KC",
+   "kickoff": "2026-09-15T00:15Z",
+   "week": 1,
+   "season": 2026,
+   "season_type": "REG",
+   "away": {
+    "id": "7",
+    "abbreviation": "DEN",
+    "display_name": "Denver Broncos",
+    "score": 10,
+    "winner": false
+   },
+   "home": {
+    "id": "12",
+    "abbreviation": "KC",
+    "display_name": "Kansas City Chiefs",
+    "score": 31,
+    "winner": true
+   }
+  },
+  {
+   "id": "401872932",
+   "name": "DET @ BUF",
+   "kickoff": "2026-09-18T00:15Z",
+   "week": 2,
+   "season": 2026,
+   "season_type": "REG",
+   "away": {
+    "id": "8",
+    "abbreviation": "DET",
+    "display_name": "Detroit Lions",
+    "score": 0,
+    "winner": false
+   },
+   "home": {
+    "id": "2",
+    "abbreviation": "BUF",
+    "display_name": "Buffalo Bills",
+    "score": 0,
+    "winner": false
+   }
+  },
+  {
+   "id": "401872933",
+   "name": "CAR @ ATL",
+   "kickoff": "2026-09-20T17:00Z",
+   "week": 2,
+   "season": 2026,
+   "season_type": "REG",
+   "away": {
+    "id": "29",
+    "abbreviation": "CAR",
+    "display_name": "Carolina Panthers",
+    "score": 0,
+    "winner": false
+   },
+   "home": {
+    "id": "1",
+    "abbreviation": "ATL",
+    "display_name": "Atlanta Falcons",
+    "score": 0,
+    "winner": false
+   }
+  },
+  {
+   "id": "401872937",
+   "name": "MIN @ CHI",
+   "kickoff": "2026-09-20T17:00Z",
+   "week": 2,
+   "season": 2026,
+   "season_type": "REG",
+   "away": {
+    "id": "16",
+    "abbreviation": "MIN",
+    "display_name": "Minnesota Vikings",
+    "score": 0,
+    "winner": false
+   },
+   "home": {
+    "id": "3",
+    "abbreviation": "CHI",
+    "display_name": "Chicago Bears",
+    "score": 0,
+    "winner": false
+   }
+  },
+  {
+   "id": "401872939",
+   "name": "PHI @ TEN",
+   "kickoff": "2026-09-20T17:00Z",
+   "week": 2,
+   "season": 2026,
+   "season_type": "REG",
+   "away": {
+    "id": "21",
+    "abbreviation": "PHI",
+    "display_name": "Philadelphia Eagles",
+    "score": 0,
+    "winner": false
+   },
+   "home": {
+    "id": "10",
+    "abbreviation": "TEN",
+    "display_name": "Tennessee Titans",
+    "score": 0,
+    "winner": false
+   }
+  },
+  {
+   "id": "401872946",
+   "name": "PIT @ NE",
+   "kickoff": "2026-09-20T17:00Z",
+   "week": 2,
+   "season": 2026,
+   "season_type": "REG",
+   "away": {
+    "id": "23",
+    "abbreviation": "PIT",
+    "display_name": "Pittsburgh Steelers",
+    "score": 0,
+    "winner": false
+   },
+   "home": {
+    "id": "17",
+    "abbreviation": "NE",
+    "display_name": "New England Patriots",
+    "score": 0,
+    "winner": false
+   }
+  },
+  {
+   "id": "401872936",
+   "name": "GB @ NYJ",
+   "kickoff": "2026-09-20T17:00Z",
+   "week": 2,
+   "season": 2026,
+   "season_type": "REG",
+   "away": {
+    "id": "9",
+    "abbreviation": "GB",
+    "display_name": "Green Bay Packers",
+    "score": 0,
+    "winner": false
+   },
+   "home": {
+    "id": "20",
+    "abbreviation": "NYJ",
+    "display_name": "New York Jets",
+    "score": 0,
+    "winner": false
+   }
+  },
+  {
+   "id": "401872935",
+   "name": "CLE @ TB",
+   "kickoff": "2026-09-20T17:00Z",
+   "week": 2,
+   "season": 2026,
+   "season_type": "REG",
+   "away": {
+    "id": "5",
+    "abbreviation": "CLE",
+    "display_name": "Cleveland Browns",
+    "score": 0,
+    "winner": false
+   },
+   "home": {
+    "id": "27",
+    "abbreviation": "TB",
+    "display_name": "Tampa Bay Buccaneers",
+    "score": 0,
+    "winner": false
+   }
+  },
+  {
+   "id": "401872938",
+   "name": "NO @ BAL",
+   "kickoff": "2026-09-20T17:00Z",
+   "week": 2,
+   "season": 2026,
+   "season_type": "REG",
+   "away": {
+    "id": "18",
+    "abbreviation": "NO",
+    "display_name": "New Orleans Saints",
+    "score": 0,
+    "winner": false
+   },
+   "home": {
+    "id": "33",
+    "abbreviation": "BAL",
+    "display_name": "Baltimore Ravens",
+    "score": 0,
+    "winner": false
+   }
+  },
+  {
+   "id": "401872934",
+   "name": "CIN @ HOU",
+   "kickoff": "2026-09-20T17:00Z",
+   "week": 2,
+   "season": 2026,
+   "season_type": "REG",
+   "away": {
+    "id": "4",
+    "abbreviation": "CIN",
+    "display_name": "Cincinnati Bengals",
+    "score": 0,
+    "winner": false
+   },
+   "home": {
+    "id": "34",
+    "abbreviation": "HOU",
+    "display_name": "Houston Texans",
+    "score": 0,
+    "winner": false
+   }
+  },
+  {
+   "id": "401872940",
+   "name": "JAX @ DEN",
+   "kickoff": "2026-09-20T20:05Z",
+   "week": 2,
+   "season": 2026,
+   "season_type": "REG",
+   "away": {
+    "id": "30",
+    "abbreviation": "JAX",
+    "display_name": "Jacksonville Jaguars",
+    "score": 0,
+    "winner": false
+   },
+   "home": {
+    "id": "7",
+    "abbreviation": "DEN",
+    "display_name": "Denver Broncos",
+    "score": 0,
+    "winner": false
+   }
+  },
+  {
+   "id": "401872941",
+   "name": "LV @ LAC",
+   "kickoff": "2026-09-20T20:05Z",
+   "week": 2,
+   "season": 2026,
+   "season_type": "REG",
+   "away": {
+    "id": "13",
+    "abbreviation": "LV",
+    "display_name": "Las Vegas Raiders",
+    "score": 0,
+    "winner": false
+   },
+   "home": {
+    "id": "24",
+    "abbreviation": "LAC",
+    "display_name": "Los Angeles Chargers",
+    "score": 0,
+    "winner": false
+   }
+  },
+  {
+   "id": "401872944",
+   "name": "WSH @ DAL",
+   "kickoff": "2026-09-20T20:25Z",
+   "week": 2,
+   "season": 2026,
+   "season_type": "REG",
+   "away": {
+    "id": "28",
+    "abbreviation": "WSH",
+    "display_name": "Washington Commanders",
+    "score": 0,
+    "winner": false
+   },
+   "home": {
+    "id": "6",
+    "abbreviation": "DAL",
+    "display_name": "Dallas Cowboys",
+    "score": 0,
+    "winner": false
+   }
+  },
+  {
+   "id": "401872943",
+   "name": "SEA @ ARI",
+   "kickoff": "2026-09-20T20:25Z",
+   "week": 2,
+   "season": 2026,
+   "season_type": "REG",
+   "away": {
+    "id": "26",
+    "abbreviation": "SEA",
+    "display_name": "Seattle Seahawks",
+    "score": 0,
+    "winner": false
+   },
+   "home": {
+    "id": "22",
+    "abbreviation": "ARI",
+    "display_name": "Arizona Cardinals",
+    "score": 0,
+    "winner": false
+   }
+  },
+  {
+   "id": "401872942",
+   "name": "MIA @ SF",
+   "kickoff": "2026-09-20T20:25Z",
+   "week": 2,
+   "season": 2026,
+   "season_type": "REG",
+   "away": {
+    "id": "15",
+    "abbreviation": "MIA",
+    "display_name": "Miami Dolphins",
+    "score": 0,
+    "winner": false
+   },
+   "home": {
+    "id": "25",
+    "abbreviation": "SF",
+    "display_name": "San Francisco 49ers",
+    "score": 0,
+    "winner": false
+   }
+  },
+  {
+   "id": "401872945",
+   "name": "IND @ KC",
+   "kickoff": "2026-09-21T00:20Z",
+   "week": 2,
+   "season": 2026,
+   "season_type": "REG",
+   "away": {
+    "id": "11",
+    "abbreviation": "IND",
+    "display_name": "Indianapolis Colts",
+    "score": 0,
+    "winner": false
+   },
+   "home": {
+    "id": "12",
+    "abbreviation": "KC",
+    "display_name": "Kansas City Chiefs",
+    "score": 0,
+    "winner": false
+   }
+  },
+  {
+   "id": "401872947",
+   "name": "NYG @ LAR",
+   "kickoff": "2026-09-22T00:15Z",
+   "week": 2,
+   "season": 2026,
+   "season_type": "REG",
+   "away": {
+    "id": "19",
+    "abbreviation": "NYG",
+    "display_name": "New York Giants",
+    "score": 0,
+    "winner": false
+   },
+   "home": {
+    "id": "14",
+    "abbreviation": "LAR",
+    "display_name": "Los Angeles Rams",
+    "score": 0,
+    "winner": false
+   }
+  },
+  {
+   "id": "401872948",
+   "name": "ATL @ GB",
+   "kickoff": "2026-09-25T00:15Z",
+   "week": 3,
+   "season": 2026,
+   "season_type": "REG",
+   "away": {
+    "id": "1",
+    "abbreviation": "ATL",
+    "display_name": "Atlanta Falcons",
+    "score": 0,
+    "winner": false
+   },
+   "home": {
+    "id": "9",
+    "abbreviation": "GB",
+    "display_name": "Green Bay Packers",
+    "score": 0,
+    "winner": false
+   }
+  }
+ ]
+}

@@ -134,10 +134,17 @@
     const fresh = d.freshness || {};
     const stale = fresh.state === 'STALE';
     const lf = d.latest_final, ng = d.next_game;
+    /* The strip names the week a reader can act on (primary_slate), not the
+       provider's week label, which stays on the finished week until the
+       provider's calendar rolls midweek. current_week is unchanged in the
+       contract for the consumers that grade against it. */
+    const ps = d.primary_slate || null;
+    const STATE = { LIVE: 'LIVE', UPCOMING: 'UPCOMING', IN_PROGRESS: 'IN PROGRESS', FINAL: 'FINAL' };
+    const weekText = ps ? `${ps.label} · ${STATE[ps.state] || ps.state}` : `WEEK ${d.current_week}`;
     const badge = live > 0 ? `<span class="pbe-season-badge live"><i></i>${live} GAME${live > 1 ? 'S' : ''} LIVE</span>`
-      : `<span class="pbe-season-badge on">${esc(d.season)} ${esc(d.season_type)} · WEEK ${esc(d.current_week)}</span>`;
+      : `<span class="pbe-season-badge on">${esc(d.season)} ${esc(d.season_type)} · ${esc(weekText)}</span>`;
     const parts = [];
-    if (live === 0) parts.push(`<span class="pbe-season-item"><b>${esc(d.season)} ${esc(d.season_type)}</b><span>Week ${esc(d.current_week)}</span></span>`);
+    if (live === 0) parts.push(`<span class="pbe-season-item"><b>${esc(d.season)} ${esc(d.season_type)}</b><span>${esc(ps ? `${ps.label.charAt(0)}${ps.label.slice(1).toLowerCase()} · ${(STATE[ps.state] || ps.state).toLowerCase()}` : `Week ${d.current_week}`)}</span></span>`);
     if (lf) parts.push(`<span class="pbe-season-item"><b>FINAL · ${esc(lf.away?.abbreviation)} ${esc(lf.away?.score)}–${esc(lf.home?.score)} ${esc(lf.home?.abbreviation)}</b><span>Last completed</span></span>`);
     if (ng) parts.push(`<span class="pbe-season-item"><b>${esc(ng.name)}</b><span>${esc(fmtKick(ng.kickoff))}</span></span>`);
     parts.push(`<span class="pbe-season-item"><b>${esc(d.completed_games_in_window)}</b><span>Completed</span></span>`);
@@ -164,7 +171,12 @@
     get ready() { return state.ready; },
     season: () => state.data?.season ?? null,
     seasonType: () => state.data?.season_type ?? null,
+    /* Provider week label; the picks engine and grading attribute to it. */
     week: () => state.data?.current_week ?? null,
+    /* The week the product leads with (presentation only). */
+    primarySlate: () => state.data?.primary_slate ?? null,
+    primarySlateWeek: () => state.data?.primary_slate_week ?? null,
+    previousSlate: () => state.data?.previous_slate ?? null,
     started: () => state.data?.season_started === true,
     latestFinal: () => state.data?.latest_final ?? null,
     nextGame: () => state.data?.next_game ?? null,

@@ -177,7 +177,8 @@
     if (!hero) return;
     const existing = vc.querySelector(`[${MARK}]`);
     if (existing) { if (existing.outerHTML !== html) existing.outerHTML = html; return; }
-    hero.insertAdjacentHTML('afterend', html);
+    /* The Career Ledger sits directly under the hero; the two layers follow it. */
+    (vc.querySelector('[data-pbe-career-ledger]') || hero).insertAdjacentHTML('afterend', html);
   }
 
   async function sync(force) {

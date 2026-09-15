@@ -266,12 +266,20 @@ export default async function handler(req,res){
        for that worker; no page surface calls them. */
     if(range){
       if(!/^\d{8}-\d{8}$/.test(range))return send(res,400,{ok:false,error:'invalid_range',expected:'YYYYMMDD-YYYYMMDD'});
+      /* view=slate is the dashboard reading one week by its dates (the primary
+         slate from the season contract, or the previous week's finals). It is
+         a page surface, so it gets the rail's edge caching instead of the
+         scheduler's no-store — and a distinct URL, so the nfl-current worker's
+         own range reads never share its cache entry. */
+      const slateView=S(req.query?.view).trim()==='slate';
+      if(slateView){const [a,b]=range.split('-');const span=(Date.UTC(+b.slice(0,4),+b.slice(4,6)-1,+b.slice(6))-Date.UTC(+a.slice(0,4),+a.slice(4,6)-1,+a.slice(6)))/864e5;if(!(span>=0&&span<=16))return send(res,400,{ok:false,error:'invalid_range',expected:'at most 16 days for view=slate'})}
       const raw=await upstream(`${SITE}/scoreboard?limit=100&dates=${encodeURIComponent(range)}`);
       const games=findEvents(raw).map(game);
+      const anyLive=games.some(g=>g.status.semantics==='LIVE');
       return send(res,200,{ok:true,mode:'range',range,count:games.length,
         season:N(raw?.season?.year),season_type:N(raw?.season?.type),week:N(raw?.week?.number),
         source:{provider:'espn_site_scoreboard',semantics:'SCOREBOARD',fetched_at:new Date().toISOString(),transport:'poll'},
-        games},'no-store');
+        games},slateView?(anyLive?'public, s-maxage=3':'public, s-maxage=30, stale-while-revalidate=60'):'no-store');
     }
     if(standingsSeason){
       if(!/^\d{4}$/.test(standingsSeason))return send(res,400,{ok:false,error:'invalid_season'});

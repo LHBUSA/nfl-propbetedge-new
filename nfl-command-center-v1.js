@@ -94,7 +94,10 @@
 
   /* ---- scoreboard (owned by dashboard-v7) --------------------------------- */
   function v7() { return window.PBEDashboardV7?.state || {}; }
-  function games() { return arr(v7().scoreboard?.games); }
+  /* The primary slate the dashboard resolved from the season contract; the
+     raw scoreboard only when no contract decision could be applied. */
+  function games() { const sl = v7().slate; return sl ? arr(sl.games) : arr(v7().scoreboard?.games); }
+  function recentGames() { const sl = v7().slate, rc = v7().recent; return sl?.previous?.key && rc?.key === sl.previous.key ? arr(rc.games) : []; }
   const sem = g => String(g?.status?.semantics || '').toUpperCase();
 
   /* Lifecycle phase, from facts on the scoreboard only. */
@@ -131,7 +134,7 @@
     ['games', 'Next week', []]
   ];
   function loopHtml() {
-    const p = phase();
+    const p = phase([...games(), ...recentGames()]);
     const [label, copy] = PHASE_COPY[p];
     return `<nav class="pbecc-loop" aria-label="The NFL week">
       <div class="pbecc-loop-phase"><span class="pbecc-eyebrow">${esc(label)}</span><p>${esc(copy)}</p></div>
@@ -181,9 +184,9 @@
     const s = sem(g), a = g?.teams?.away || {}, h = g?.teams?.home || {};
     const live = s === 'LIVE', fin = s === 'FINAL';
     const status = live ? (g?.status?.short_detail || `Q${g?.status?.period || ''} ${g?.status?.clock || ''}`)
-      /* the NEXT group's heading already carries the day, so its cards say
+      /* NEXT and per-day headings already carry the day, so their cards say
          only the time; later games keep the day */
-      : fin ? (g?.status?.short_detail || 'FINAL') : groupKey === 'next' ? `${etTime(g.date)} ET` : `${etDay(g.date)} · ${etTime(g.date)} ET`;
+      : fin ? (g?.status?.short_detail || 'FINAL') : groupKey === 'next' || groupKey === 'day' ? `${etTime(g.date)} ET` : `${etDay(g.date)} · ${etTime(g.date)} ET`;
     const rz = live && g?.situation?.red_zone === true;
     const ev = !live && !fin ? marketFor(g) : null;
     const line = lineFor(ev, g);
@@ -208,39 +211,36 @@
   function slateHtml() {
     const list = games();
     const src = v7().scoreboard?.source;
+    const sl = v7().slate || null;
     if (!list.length) {
       const err = v7().error;
       return `<section class="pbecc-slate"><div class="pbecc-head"><div><span class="pbecc-eyebrow">THE SLATE</span><h2>What's on</h2></div></div>
         <div class="pbecc-empty">${err ? `<b>Scoreboard unavailable</b><span>${esc(err)}. No games are substituted.</span>` : '<b>Loading the current slate</b><span>Reading the live scoreboard.</span>'}</div></section>`;
     }
-    const live = list.filter(g => sem(g) === 'LIVE');
-    const sched = list.filter(g => sem(g) === 'SCHEDULE').sort((x, y) => Date.parse(x.date) - Date.parse(y.date));
-    const fin = list.filter(g => sem(g) === 'FINAL').sort((x, y) => Date.parse(y.date) - Date.parse(x.date));
-    const firstKick = sched.length ? Date.parse(sched[0].date) : null;
-    const next = sched.filter(g => Date.parse(g.date) - firstKick < 3 * 3600000);
-    const later = sched.filter(g => !next.includes(g));
-    const groups = [];
-    if (live.length) groups.push(['LIVE NOW', live, 'live']);
-    if (next.length) groups.push([live.length ? 'NEXT KICKOFFS' : `NEXT KICKOFF · ${etDay(next[0].date)} ${etTime(next[0].date)} ET`, next, 'next']);
-    if (!live.length && fin.length && phase(list) === 'POST') groups.unshift(['FINAL', fin, 'final']);
-    else if (fin.length) groups.push(['FINAL', fin, 'final']);
-    if (later.length) groups.push(['LATER THIS WEEK', later, 'later']);
+    const core = window.PBESlateCore;
+    /* LIVE -> UPCOMING -> RECENT FINALS. The primary slate is the contract's
+       decision (nfl-current primary_slate); the previous week's finals fold
+       underneath it and are read only when opened. */
+    const groups = core
+      ? core.groups({ slate: sl?.slate, games: list, previous: sl?.previous, previousGames: recentGames(), previousCount: sl?.previous?.counts_in_window?.games })
+      : [];
+    const head = core ? core.heading(sl?.slate, list) : { eyebrow: `THE SLATE · ${list.length} GAMES`, title: 'This week' };
     const fetched = src?.fetched_at ? `SCOREBOARD · ${etTime(src.fetched_at)} ET` : 'SCOREBOARD';
     const marketNote = store.bestline.data?.captured_at
       ? `LINES · SNAPSHOT ${esc(store.bestline.data.captured_at_et || stamp(store.bestline.data.captured_at))}${store.bestline.data?.ingest?.status === 'LATEST_INGEST_UNAVAILABLE' ? ' · LATEST INGEST UNAVAILABLE' : ''}`
       : store.bestline.error ? 'LINES · UNAVAILABLE' : '';
-    return `<section class="pbecc-slate" aria-label="Current NFL slate">
-      <div class="pbecc-head"><div><span class="pbecc-eyebrow">THE SLATE · ${esc(list.length)} GAMES</span><h2>${live.length ? `${live.length} live now` : next.length ? 'Next up' : 'This week'}</h2></div>
+    return `<section class="pbecc-slate" aria-label="Current NFL slate" data-slate-key="${esc(sl?.key || '')}" data-slate-source="${esc(sl?.source || 'board')}">
+      <div class="pbecc-head"><div><span class="pbecc-eyebrow">${esc(head.eyebrow)}</span><h2>${esc(head.title)}</h2></div>
         <div class="pbecc-meta"><span>${esc(fetched)}</span>${marketNote ? `<span>${marketNote}</span>` : ''}<button type="button" data-route="games">Full slate →</button></div></div>
-      ${groups.map(([label, rows, key]) => {
-        /* What is happening now stays open; what is later, or already over
-           outside the post-game window, folds so the next kickoff is never
-           pushed below the fold by a finished Thursday game. */
-        const folded = key === 'later' || (key === 'final' && phase(list) !== 'POST');
-        const grid = `<div class="pbecc-grid">${rows.map(g => gameCard(g, key)).join('')}</div>`;
-        return folded
-          ? `<details class="pbecc-group is-${key}"${store.open?.[key] ? ' open' : ''} data-cc-fold="${key}"><summary><h3>${esc(label)} · ${esc(rows.length)}</h3></summary>${grid}</details>`
-          : `<div class="pbecc-group is-${key}"><h3>${esc(label)}</h3>${grid}</div>`;
+      ${groups.map(gr => {
+        const count = gr.count ?? gr.games.length;
+        const grid = gr.pending
+          ? `<div class="pbecc-empty"><b>Reading ${esc(gr.label.replace(/^RECENT FINALS · /, ''))} finals</b><span>Final scores load when this section is opened.</span></div>`
+          : `<div class="pbecc-grid">${gr.games.map(g => gameCard(g, gr.kind)).join('')}</div>`;
+        const open = store.open?.[gr.key];
+        return gr.folded
+          ? `<details class="pbecc-group is-${gr.kind}"${open ? ' open' : ''} data-cc-fold="${esc(gr.key)}"><summary><h3>${esc(gr.label)}${count ? ` · ${esc(count)}` : ''}</h3></summary>${grid}</details>`
+          : `<div class="pbecc-group is-${gr.kind}"><h3>${esc(gr.label)}</h3>${grid}</div>`;
       }).join('')}
     </section>`;
   }
@@ -428,6 +428,7 @@
   document.addEventListener('toggle', e => {
     const d = e.target; if (!d?.matches?.('.pbecc [data-cc-fold]')) return;
     store.open[d.dataset.ccFold] = d.open;
+    if (d.open && d.dataset.ccFold === 'previous') window.PBEDashboardV7?.loadRecent?.();
   }, true);
 
   /* The same loop, compact, on every surface that is a step in it — so a
@@ -455,5 +456,5 @@
   }
   window.addEventListener('pbe:route-changed', e => routeStrip(e?.detail?.route || window.App?.current));
 
-  window.PBECommandCenter = { mount, tick, paint, refresh, store, phase, marketFor, pickAffected };
+  window.PBECommandCenter = { mount, tick, paint, refresh, store, phase, marketFor, pickAffected, games };
 })();

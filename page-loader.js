@@ -32,6 +32,10 @@
     /* Today's PBE Card: the one client owner of the PBE Card server contract.
        Dashboard, PBE Picks, Matchup and PBEcast all render from its store. */
     {css:'./pbe-card-v3.css',js:'./pbe-card-v3.js'},
+    /* Which week the dashboard leads with: applies the season contract's
+       primary_slate to scoreboard games (LIVE -> UPCOMING -> RECENT FINALS).
+       Pure; read by the command center and dashboard v7. */
+    {js:'./nfl-slate-core-v1.js'},
     {css:'./nfl-command-center-v1.css',js:'./nfl-command-center-v1.js'},
     {css:'./what-changed-v1.css',js:'./what-changed-v1.js'},
     /* Player-props rules for Best Line (identity, best price, model state): pure,
@@ -195,7 +199,11 @@
     /* The two intelligence layers, shared by all four DNA products. Loaded
        after them because it attaches to whichever one is on screen and reads
        its state; it edits none of them. */
-    {css:'./player-current-layer-v1.css',js:'./player-current-layer-v1.js'}
+    {css:'./player-current-layer-v1.css',js:'./player-current-layer-v1.js'},
+    /* Career Ledger: the factual game-by-game record under the hero (CAREER |
+       SEASONS | GAME LOG), from /api/player-career. Attaches the same way;
+       feeds nothing analytical. */
+    {css:'./player-career-ledger-v1.css',js:'./player-career-ledger-v1.js'}
   ];
 
   /* ---- Terminal route authorities ----------------------------------------

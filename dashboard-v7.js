@@ -12,6 +12,13 @@
 
   const state = {
     scoreboard: previous.scoreboard || null,
+    /* The raw undated board and the primary slate resolved from the season
+       contract. `scoreboard` stays the payload the slate came from, so the
+       modules that join market events to scoreboard games (Best Line) see
+       the week the dashboard is showing. */
+    board: previous.board || null,
+    slate: previous.slate || null,
+    recent: previous.recent || null,
     detail: previous.detail || null,
     news: Array.isArray(previous.news) ? previous.news : [],
     featured: previous.featured || null,
@@ -87,6 +94,7 @@
   }
 
   function chooseFeatured(games) {
+    if (window.PBESlateCore) return window.PBESlateCore.featured(games);
     return games.find(g => g?.status?.semantics === 'LIVE')
       || games.find(g => g?.status?.semantics === 'SCHEDULE')
       || [...games].reverse().find(g => g?.status?.semantics === 'FINAL')
@@ -368,16 +376,66 @@
     if (document.querySelector('.pbehome7')) load({ poll: true });
   });
 
+  /* ---- primary slate ------------------------------------------------------
+     ESPN's undated board stays on the old week until ESPN's own calendar rolls
+     midweek, so after Monday Night Football it is sixteen finals while the next
+     week's games already exist. The season contract decides the primary slate
+     from game state; this applies it. When the board does not hold that week
+     (the midweek gap, or the 0-3am ET dated-board window) the week is read by
+     its dates and kept to exactly the contract's season/type/week. */
+  async function resolveSlate(board) {
+    const core = window.PBESlateCore;
+    const contract = window.PBESeason?.data || null;
+    const boardGames = arr(board?.games);
+    const fallback = { source: 'board', key: null, slate: null, previous: null, games: boardGames, payload: board };
+    if (!core || !contract?.primary_slate?.key) return fallback;
+    let picked = core.pick(contract, boardGames);
+    let payload = board, source = 'board';
+    if (!picked.complete && contract.primary_slate.dates) {
+      try {
+        const week = await getJson(`${LIVE_API}?range=${encodeURIComponent(contract.primary_slate.dates)}&view=slate`);
+        const fromRange = core.pick(contract, arr(week?.games));
+        if (fromRange.games.length >= picked.games.length && fromRange.games.length) { picked = fromRange; payload = week; source = 'range'; }
+      } catch (_) { /* keep whatever the board held of the week */ }
+    }
+    /* Nothing of the contract's week could be read: show the board as it was
+       rather than an empty slate, and say nothing about which week it is. */
+    if (!picked.games.length) return fallback;
+    const prev = contract.previous_slate || null;
+    const prevOnBoard = prev ? core.forKey(boardGames, prev.key) : [];
+    if (prev && prevOnBoard.length) state.recent = { key: prev.key, games: prevOnBoard, at: Date.now() };
+    return { source, key: picked.key, slate: picked.slate, previous: prev, games: picked.games, payload };
+  }
+
+  /* The previous week's finals, read only when a reader opens RECENT FINALS
+     (or already on the board). Finals do not change, so once is enough. */
+  let recentBusy = null;
+  function loadRecent() {
+    const prev = state.slate?.previous;
+    if (!prev?.key || !prev.dates) return Promise.resolve(null);
+    if (state.recent?.key === prev.key && arr(state.recent.games).length) return Promise.resolve(state.recent);
+    if (recentBusy) return recentBusy;
+    recentBusy = getJson(`${LIVE_API}?range=${encodeURIComponent(prev.dates)}&view=slate`)
+      .then(week => { state.recent = { key: prev.key, games: window.PBESlateCore.forKey(arr(week?.games), prev.key), at: Date.now() }; return state.recent; })
+      .catch(() => null)
+      .finally(() => { recentBusy = null; window.PBECommandCenter?.paint?.(); });
+    return recentBusy;
+  }
+
   async function round() {
     clearTimeout(state.poll);
     state.error = null;
     try {
-      const scoreboard = await getJson(`${LIVE_API}?date=${sportsDay()}`);
-      const featured = chooseFeatured(arr(scoreboard?.games));
+      const board = await getJson(`${LIVE_API}?date=${sportsDay()}`);
+      const slate = await resolveSlate(board);
+      const scoreboard = slate.payload;
+      const featured = chooseFeatured(slate.games);
       const [detailResult, newsResult] = await Promise.allSettled([
         featured?.id ? getJson(`${LIVE_API}?event=${encodeURIComponent(featured.id)}`) : Promise.resolve(null),
         getJson(NEWS_API),
       ]);
+      state.board = board;
+      state.slate = slate;
       state.scoreboard = scoreboard;
       state.featured = featured;
       if (detailResult.status === 'fulfilled') state.detail = detailResult.value;
@@ -407,6 +465,16 @@
     if (document.querySelector('.pbehome7')) render();
   });
 
-  window.PBEDashboardV7 = { load, state };
+  /* The contract can land after the first round, or move to another week
+     while the page is open (MNF goes final). Re-read only when the primary
+     slate actually changed, never on every contract refresh. */
+  window.addEventListener('pbe:season-ready', e => {
+    const key = e?.detail?.season?.primary_slate?.key || null;
+    if (!key || !document.querySelector('.pbehome7')) return;
+    if (state.slate?.key === key) return;
+    load({ poll: true });
+  });
+
+  window.PBEDashboardV7 = { load, state, loadRecent };
   if (!install()) document.addEventListener('DOMContentLoaded', () => install(), { once: true });
 })();

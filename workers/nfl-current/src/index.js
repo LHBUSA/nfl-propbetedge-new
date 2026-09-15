@@ -11,6 +11,11 @@
  *   GET /api/current-stats?season=2026    current-season leaders, accumulated
  *   GET /api/current/health
  *
+ * `current_week` is the provider's week label and stays exactly that: the
+ * picks engine attributes and grades against it. Which week a reader should
+ * see first is a separate, presentation-only answer — `primary_slate_week` and
+ * `primary_slate` — decided from game state in ./slate.js.
+ *
  * Two rules the whole file is built around:
  *
  *   FAIL CLOSED. If a season's real data cannot be sourced, the payload says
@@ -21,6 +26,8 @@
  *   FINAL MEANS FINAL. A game contributes to standings and statistics only
  *   when the provider says the game is over. Nothing is inferred from a clock.
  */
+
+import { deriveSlate } from './slate.js';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -147,6 +154,9 @@ async function buildSeasonAndGames() {
      whatever happens next. A finished game is never the default. */
   const nextGame = live[0] || upcoming[0] || null;
 
+  /* Additive, presentation-only. current_week above is untouched. */
+  const slateState = deriveSlate(games, { season, season_type: seasonType, week }, now);
+
   const payload = {
     ok: true,
     season,
@@ -159,6 +169,7 @@ async function buildSeasonAndGames() {
     latest_final: latestFinal,
     next_game: nextGame,
     default_event_hint: nextGame ? { id: nextGame.id, name: nextGame.name, kickoff: nextGame.kickoff, semantics: nextGame.semantics } : null,
+    ...slateState,
     window: rangeAround(),
     last_updated: new Date().toISOString(),
     source: { provider: 'espn_site_scoreboard', via: 'nfl.propbetedge.ai/api/nfl-live?range', transport: 'poll' }
@@ -168,6 +179,10 @@ async function buildSeasonAndGames() {
     season,
     season_type: seasonType,
     current_week: week,
+    provider_week: slateState.provider_week,
+    primary_slate_week: slateState.primary_slate_week,
+    latest_completed_week: slateState.latest_completed_week,
+    primary_slate: slateState.primary_slate,
     window: payload.window,
     counts: { games: games.length, final: finals.length, live: live.length, scheduled: games.filter(g => g.semantics === 'SCHEDULE').length },
     games: games.slice().sort((a, b) => Date.parse(a.kickoff) - Date.parse(b.kickoff)),
@@ -523,7 +538,7 @@ async function refreshAll(env, reason) {
     await env.NFL_KV.put(KEY.season(s.season || 'current'), JSON.stringify(s), { expirationTtl: 86400 });
     await env.NFL_KV.put(KEY.season('current'), JSON.stringify(s), { expirationTtl: 86400 });
     await env.NFL_KV.put(KEY.games, JSON.stringify(slate), { expirationTtl: 86400 });
-    out.ok.season = { season: s.season, week: s.current_week, live: s.live_games, finals: s.completed_games_in_window };
+    out.ok.season = { season: s.season, week: s.current_week, primary_slate_week: s.primary_slate_week, live: s.live_games, finals: s.completed_games_in_window };
   } catch (e) { out.errors.season = String(e?.message || e); }
 
   if (season) {
