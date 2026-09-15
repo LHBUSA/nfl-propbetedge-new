@@ -113,7 +113,8 @@ async function realClick(selectorExpr, label) {
   for (let attempt = 0; attempt < 6; attempt++) {
     const scroll = attempt % 2 ? 'const r0=el.getBoundingClientRect();window.scrollBy(0,r0.top-innerHeight/3);' : "el.scrollIntoView({block:'center'});";
     again = await evalIn(`(()=>{const el=${selectorExpr};if(!el)return null;${scroll}const r=el.getBoundingClientRect();const x=r.left+r.width/2,y=r.top+r.height/2;const top=document.elementFromPoint(x,y);return {x,y,hit:!!top&&(top===el||el.contains(top))}})()`);
-    if (again?.hit) break;
+    /* press only once the element has stopped moving (cards reflow as weather and market rows land) */
+    if (again?.hit) { await sleep(400); const still = await evalIn(`(()=>{const el=${selectorExpr};const r=el.getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2}})()`); if (still && Math.abs(still.x - again.x) < 1 && Math.abs(still.y - again.y) < 1) break; again = null; }
     await sleep(700);
   }
   if (!again?.hit) { const cov = await evalIn(`(()=>{const el=${selectorExpr};const r=el.getBoundingClientRect();const top=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);const host=top&&top.closest('section,aside,header,nav,[class]');return top?{top:top.outerHTML.slice(0,160),host:host?host.className.toString().slice(0,80):null,rect:[r.left,r.top,r.width,r.height].map(Math.round),vh:innerHeight,elParent:el.parentElement.className.toString().slice(0,60)}:null})()`); if (SHOTS) { const r = await send('Page.captureScreenshot', { format: 'png' }); writeFileSync(join(OUT, `${TAG}-click-miss-${label.replace(/\W+/g, '-')}.png`), Buffer.from(r.data, 'base64')); } return { ok: false, why: `${label}: covered at its centre ${JSON.stringify(cov)}` }; }
