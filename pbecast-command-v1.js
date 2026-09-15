@@ -16,8 +16,10 @@
  *                    FINAL game this is PBE Replay v0: the live-source game log,
  *                    navigable by drive. Post-game enrichment (participants,
  *                    EPA, air yards) is labelled pending, not faked.
- *   BEFORE KICKOFF   for a scheduled game: its injury designations, weather
- *                    and consensus line, from the command center's sources
+ *   PREGAME PREVIEW  for a scheduled game: pbecast-preview-v1.js (market,
+ *                    PBE decision, availability, what changed) directly under
+ *                    the hero; the full PBE decision follows it and the Sunday
+ *                    board moves below the game
  *   GAME PULSE       mounted from pbecast-pulse-v1.js between the selected-game
  *                    surface and Key Moments; a tapped swing opens its play here
  *
@@ -256,29 +258,6 @@
     return `<span class="pbekm-pending">POST-GAME ENRICHMENT · ${esc(why)}. Nothing is shown until it is published.</span>`;
   }
 
-  /* ---- before kickoff (scheduled game) -------------------------------------- */
-  function beforeKickoffHtml() {
-    const d = v6().detail; const g = d?.game;
-    if (!g || sem(g) !== 'SCHEDULE') return '';
-    const cc = window.PBECommandCenter;
-    const changes = cc?.store?.changes?.data;
-    const rows = arr(changes?.availability?.[String(g.id)]);
-    const wx = arr(changes?.changes).filter(c => c.kind === 'GAME_STATUS' && String(c.game?.id) === String(g.id));
-    const game = games().find(x => String(x.id) === String(g.id)) || { teams: g.teams, date: g.date };
-    const ev = cc?.marketFor?.(game);
-    const sp = ev ? Object.values(ev.markets?.spread || {}).filter(Boolean) : [];
-    const tot = ev?.markets?.total?.OVER;
-    const fav = sp.find(s => Number(s?.consensus?.line) < 0);
-    const favAbbr = fav ? (String(fav.side).toLowerCase() === String(ev.away).toLowerCase() ? game?.teams?.away?.abbreviation : game?.teams?.home?.abbreviation) : null;
-    return `<section class="pbekm is-preview" aria-label="Before kickoff">
-      <header><div><span class="pbecb-eye">BEFORE KICKOFF</span><h2>What this game rests on</h2></div><div class="pbekm-tabs"><button type="button" data-route="changes">What Changed →</button><button type="button" data-route="bestline">Best Line →</button></div></header>
-      <div class="pbekm-pre">
-        <div><span class="pbecb-eye">MARKET CONSENSUS · SNAPSHOT</span>${ev ? `<b>${fav ? `${esc(favAbbr)} ${esc(fav.consensus.line)}` : 'Pick’em'}${tot?.consensus?.line != null ? ` · O/U ${esc(tot.consensus.line)}` : ''}</b><small>${esc(ev.books)} books · captured ${esc(cc?.store?.bestline?.data?.captured_at_et || '')}</small>` : `<b>—</b><small>${cc?.store?.bestline?.data ? 'No market for this game in the snapshot.' : 'Market snapshot not loaded.'}</small>`}</div>
-        <div><span class="pbecb-eye">AVAILABILITY · ESPN INJURY REPORT</span>${changes ? (rows.length ? `<ul>${rows.slice(0, 10).map(r => `<li><em class="s-${esc(r.status.toLowerCase())}">${esc(r.status)}</em> ${esc(r.player.name)} <small>${esc([r.player.position, r.team.abbreviation].filter(Boolean).join(' · '))}${Date.now() - Date.parse(r.updated_at || '') > 14 * 86400000 ? ` · last updated ${esc(etDay(r.updated_at))}` : ''}</small></li>`).join('')}</ul>${rows.length > 10 ? `<small>+${rows.length - 10} more on What Changed</small>` : ''}` : '<small>No restrictive designations on the report.</small>') : '<small>Injury report not loaded.</small>'}${wx.length ? `<p class="pbekm-alert">${esc(wx[0].headline)}</p>` : ''}</div>
-      </div>
-    </section>`;
-  }
-
   /* ---- mount ---------------------------------------------------------------- */
   function hostFor(root, name, afterSel) {
     let el = root.querySelector(`[data-pbecc-cast="${name}"]`);
@@ -296,28 +275,32 @@
     const activeId = String(v6().activeId || '');
     if (local.lastActive !== activeId) { local.openDrive = null; local.focusPlay = null; local.lastActive = activeId; }
     root.classList.add('has-board');
-    write(hostFor(root, 'board', '[data-cast6-rail]'), boardHtml());
-    /* Before kickoff the current-play and drive panels are empty by
-       definition, so the pre-game context goes directly under the hero. */
-    const pre = sem(v6().detail?.game) === 'SCHEDULE';
-    const moments = hostFor(root, 'moments', '[data-cast6-action]');
-    const anchor = root.querySelector(pre ? '[data-cast6-hero]' : '[data-cast6-action]');
+    const g = v6().detail?.game;
+    /* The lifecycle is the selected game's own semantics: before kickoff the
+       page is a pregame preview, so the game leads and the league board follows
+       it; live and final keep the board above the game. */
+    const pre = Boolean(g) && String(g.id) === activeId && sem(g) === 'SCHEDULE';
+    const hero = root.querySelector('[data-cast6-hero]');
+    const place = (el, after) => { if (after && el.previousElementSibling !== after) after.after(el); };
+    const board = hostFor(root, 'board', '[data-cast6-rail]');
+    place(board, pre ? root.querySelector('[data-cast6-workspace]') : root.querySelector('[data-cast6-rail]'));
+    write(board, boardHtml());
+    /* PREGAME: hero -> preview -> the full PBE decision. LIVE/FINAL: hero ->
+       PBE decision (the locked call and its live progress read together). */
+    const preview = hostFor(root, 'preview', '[data-cast6-hero]');
+    place(preview, hero);
+    write(preview, pre ? (window.PBEcastPreview?.html?.(window.PBEcastPreview.fromPage(v6())) || '') : '');
+    const pick = hostFor(root, 'pick', '[data-cast6-hero]');
+    place(pick, pre ? preview : hero);
+    write(pick, g ? (window.PBECard?.gameModule?.({ away: g.teams?.away?.abbreviation, home: g.teams?.home?.abbreviation, espnId: g.id, surface: 'pbecast' }) || '') : '');
     /* what is happening -> how much did it matter -> show me the play:
        selected game, then Game Pulse, then Key Moments / PBE Replay. */
+    const moments = hostFor(root, 'moments', '[data-cast6-action]');
     const pulse = hostFor(root, 'pulse', '[data-cast6-action]');
-    if (anchor && pulse.previousElementSibling !== anchor) anchor.after(pulse);
-    if (moments.previousElementSibling !== pulse) pulse.after(moments);
+    place(pulse, pre ? pick : root.querySelector('[data-cast6-action]'));
+    place(moments, pulse);
     window.PBEcastPulse?.mount?.(pulse, v6());
-    write(moments, keyMomentsHtml() || beforeKickoffHtml());
-    /* The original PBE decision on the focused game, straight from the PBE
-       Card store (one server contract; nothing decided here). It sits
-       directly under the hero so the locked call and its live progress are
-       read together. */
-    const g = v6().detail?.game;
-    const pick = hostFor(root, 'pick', '[data-cast6-hero]');
-    const hero = root.querySelector('[data-cast6-hero]');
-    if (hero && pick.previousElementSibling !== hero) hero.after(pick);
-    write(pick, g ? (window.PBECard?.gameModule?.({ away: g.teams?.away?.abbreviation, home: g.teams?.home?.abbreviation, espnId: g.id, surface: 'pbecast' }) || '') : '');
+    write(moments, keyMomentsHtml());
   }
 
   /* A Game Pulse swing names a published play id. Open it where Key Moments
@@ -358,9 +341,10 @@
     ['[data-cast6-rail]', '[data-cast6-hero]', '[data-cast6-telemetry]', '[data-cast6-workspace]'].forEach(sel => { const n = root.querySelector(sel); if (n) nodeObserver.observe(n, { childList: true }); });
     if (!local.seeded) { observeFrame(); local.seeded = true; }
     render();
-    /* PBEcast needs the command center's sources for BEFORE KICKOFF. They
-       are shared, TTL-guarded reads — no new cadence. */
-    ['changes', 'bestline'].forEach(k => window.PBECommandCenter?.refresh?.(k)?.then?.(render));
+    /* The pregame preview reads the command center's sources (market
+       snapshot, injury report + changes, engine state). Shared, TTL-guarded
+       reads — no new cadence. */
+    ['changes', 'bestline', 'picks'].forEach(k => window.PBECommandCenter?.refresh?.(k)?.then?.(render));
   }
   const vcObserver = new MutationObserver(watch);
   function install() {

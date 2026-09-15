@@ -74,16 +74,6 @@
 .pbekm-enr{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding-top:6px;border-top:1px dashed rgba(122,169,255,.25)}
 .pbekm-enr b{font:700 12px/1.2 var(--pbe-font-ui);color:var(--pbe-paper-2);margin-right:4px}
 .pbekm-enr span{font:700 var(--fs-micro,10px)/1 var(--pbe-font-data);letter-spacing:.06em;color:var(--pbe-model);border:1px solid rgba(122,169,255,.4);border-radius:var(--r-xs,3px);padding:4px 6px}
-.pbekm-pre{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:12px}
-.pbekm-pre>div{background:var(--pbe-ink-4);border:1px solid var(--pbe-line-faint);border-radius:var(--r-sm,6px);padding:10px 12px;min-width:0}
-.pbekm-pre b{display:block;margin-top:6px;font:600 var(--fs-data-lg,20px)/1.1 var(--pbe-font-data);font-variant-numeric:tabular-nums}
-.pbekm-pre small{display:block;margin-top:4px;font-size:12px;color:var(--pbe-faint)}
-.pbekm-pre ul{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:4px}
-.pbekm-pre li{font-size:13px;color:var(--pbe-paper-2)}
-.pbekm-pre li small{display:inline;margin:0 0 0 4px}
-.pbekm-pre li em{display:inline-block;min-width:92px;font:800 var(--fs-micro,10px)/1 var(--pbe-font-data);font-style:normal;letter-spacing:.1em;padding:3px 5px;border:1px solid var(--pbe-line-strong);border-radius:var(--r-xs,3px);margin-right:6px;text-align:center}
-.pbekm-pre li em.s-out,.pbekm-pre li em.s-doubtful,.pbekm-pre li em.s-suspended{color:var(--pbe-crimson-bright);border-color:var(--pbe-crimson-bright)}
-.pbekm-pre li em.s-questionable{color:var(--pbe-gold-bright);border-color:var(--pbe-gold)}
 .pbekm-alert{margin:8px 0 0;font:700 12px/1.4 var(--pbe-font-ui);color:var(--pbe-crimson-bright)}
 @media (max-width:768px){
   .pbecb,.pbekm{padding:12px}
@@ -95,7 +85,6 @@
   .pbekm-list .pbekm-meta,.pbekm-plays .pbekm-meta{grid-column:1/-1}
   .pbekm-drives>li>button{grid-template-columns:22px 40px minmax(0,1fr) auto;min-height:44px}
   .pbekm-dsc,.pbekm-yl{display:none}
-  .pbekm-pre{grid-template-columns:1fr}
   .pbekm-plays{margin-left:0}
 }
 @media (max-width:380px){.pbecb-grid{grid-template-columns:1fr}}

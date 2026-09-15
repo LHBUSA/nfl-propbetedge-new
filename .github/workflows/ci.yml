@@ -80,7 +80,7 @@ jobs:
       # Week transition (primary_slate vs provider current_week) and the Career
       # Ledger (coverage labels, live totals, final transition, no double count).
       - name: Week transition and Career Ledger contracts
-        run: node --test tests/nfl-slate.test.mjs tests/player-career-ledger.test.mjs tests/player-dna-next-game.test.mjs tests/nfl-state-invariants.test.mjs
+        run: node --test tests/nfl-slate.test.mjs tests/player-career-ledger.test.mjs tests/player-dna-next-game.test.mjs tests/nfl-state-invariants.test.mjs tests/pbecast-preview.test.mjs
 
       - name: Validate Vercel config JSON
         run: node -e "JSON.parse(require('fs').readFileSync('vercel.json','utf8')); console.log('vercel.json OK')"

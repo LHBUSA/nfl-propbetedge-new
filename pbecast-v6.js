@@ -20,6 +20,17 @@
  *   default mode   only when nothing was selected: LIVE -> the next scheduled
  *                  game -> the most recent final. The persisted ACTIVE_KEY is a
  *                  preference inside that order, never above a fresh click.
+ *
+ * LIFECYCLE. One game id, one route, three presentations, chosen only by the
+ * selected game's own semantics (root data-phase):
+ *   SCHEDULE  PREGAME PREVIEW: hero with countdown, then the preview row
+ *             (pbecast-preview-v1.js). The live-only panels (current play,
+ *             drive, telemetry, drive log, box score, play-by-play) are empty by
+ *             definition before kickoff and are not rendered.
+ *   LIVE      the live command center, unchanged.
+ *   FINAL     FINAL · REPLAY: Key Moments / PBE Replay and the game package.
+ * When the lanes report the same game LIVE, the next patch renders the live
+ * panels; nothing about the selection changes.
  */
 (() => {
   'use strict';
@@ -213,6 +224,8 @@
      feed telling us. */
   function freshnessBadge(){
     const sem=semantics(state.detail);
+    if(sem==='SCHEDULE')return {label:'PREGAME PREVIEW',cls:'is-pregame'};
+    if(sem==='FINAL')return {label:'FINAL · REPLAY',cls:'is-final'};
     if(sem!=='LIVE')return {label:`${sem} · PBECAST`,cls:''};
     const age=num(state.detail?.source?.play_age_seconds);
     if(age==null||!clockMovedSincePlay())return {label:'LIVE · PBECAST',cls:'on'};
@@ -246,10 +259,13 @@
   function heroHtml(){
     const d=state.detail,g=d?.game||{},a=g?.teams?.away||{},h=g?.teams?.home||{},sem=semantics(d),facts=situationFacts(d);
     const fresh=freshnessBadge();
-    return `<section class="cast6-hero" data-cast6-game="${esc(g?.id||'')}"><div class="cast6-hero-head"><div><span class="cast6-live ${fresh.cls}">${sem==='LIVE'?'<i></i>':''}${esc(fresh.label)}</span><b>${esc(sourceLabel(d))}</b></div><small data-cast6-stamp></small></div><div class="cast6-score"><div class="cast6-team">${teamLogo(a)}<span><b>${esc(a.abbreviation||'AWY')}</b><small>${esc(a.display_name||'Away')}${teamRecord(a)?` · ${esc(teamRecord(a))}`:''}</small></span></div><div class="cast6-score-center">${sem==='SCHEDULE'&&kickoffParts(g?.date)?`<strong class="is-kickoff">${esc(kickoffParts(g.date).time)}<small>ET</small></strong><span><em class="cast6-kick-k">Kickoff · </em>${esc(kickoffParts(g.date).day)}</span>`:`<strong>${esc(score(a,sem))}<i>:</i>${esc(score(h,sem))}</strong><span>${esc(statusLabel(g))}</span>`}<small>${esc([g?.venue?.name,[g?.venue?.city,g?.venue?.state].filter(Boolean).join(', ')].filter(Boolean).join(' · '))}${sem==='SCHEDULE'&&g?.id?(window.PBEBroadcast?.slot?.({event:g.id,away:a.display_name,home:h.display_name,lead:g?.venue?.name?' · ':''})||''):''}</small></div><div class="cast6-team home"><span><b>${esc(h.abbreviation||'HME')}</b><small>${esc(h.display_name||'Home')}${teamRecord(h)?` · ${esc(teamRecord(h))}`:''}</small></span>${teamLogo(h)}</div></div>${envHtml()}${facts.length?`<div class="cast6-facts">${facts.map(([k,v])=>`<div><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}</div>`:''}</section>`;
+    const until=sem==='SCHEDULE'?window.PBEcastPreview?.countdown?.(g?.date):null;
+    return `<section class="cast6-hero" data-cast6-game="${esc(g?.id||'')}"><div class="cast6-hero-head"><div><span class="cast6-live ${fresh.cls}">${sem==='LIVE'?'<i></i>':''}${esc(fresh.label)}</span>${until?`<em class="cast6-countdown${until.started?' is-due':''}">${esc(until.text)}</em>`:''}<b>${esc(sourceLabel(d))}</b></div><small data-cast6-stamp></small></div><div class="cast6-score"><div class="cast6-team">${teamLogo(a)}<span><b>${esc(a.abbreviation||'AWY')}</b><small>${esc(a.display_name||'Away')}${teamRecord(a)?` · ${esc(teamRecord(a))}`:''}</small></span></div><div class="cast6-score-center">${sem==='SCHEDULE'&&kickoffParts(g?.date)?`<strong class="is-kickoff">${esc(kickoffParts(g.date).time)}<small>ET</small></strong><span><em class="cast6-kick-k">Kickoff · </em>${esc(kickoffParts(g.date).day)}</span>`:`<strong>${esc(score(a,sem))}<i>:</i>${esc(score(h,sem))}</strong><span>${esc(statusLabel(g))}</span>`}<small>${esc([g?.venue?.name,[g?.venue?.city,g?.venue?.state].filter(Boolean).join(', ')].filter(Boolean).join(' · '))}${sem==='SCHEDULE'&&g?.id?(window.PBEBroadcast?.slot?.({event:g.id,away:a.display_name,home:h.display_name,lead:g?.venue?.name?' · ':''})||''):''}</small></div><div class="cast6-team home"><span><b>${esc(h.abbreviation||'HME')}</b><small>${esc(h.display_name||'Home')}${teamRecord(h)?` · ${esc(teamRecord(h))}`:''}</small></span>${teamLogo(h)}</div></div>${envHtml()}${facts.length?`<div class="cast6-facts">${facts.map(([k,v])=>`<div><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}</div>`:''}</section>`;
   }
 
+  const pregame=()=>semantics(state.detail)==='SCHEDULE';
   function currentActionHtml(){
+    if(pregame())return '';
     const d=state.detail,p=d?.current_play||d?.game?.situation?.last_play||null,actors=dedupeActors(p),drive=d?.current_drive;
     const playBody=p?`<div class="cast6-play-kicker"><span>${semantics(d)==='LIVE'?'● LIVE SNAPSHOT':'GAME FEED'}</span>${p?.period?`<b>Q${esc(p.period)} ${esc(p.clock||'')}</b>`:''}</div><h2>${esc(clean(p?.type)||'CURRENT PLAY')}</h2><p>${esc(clean(p?.text)||'Waiting for the next published play.')}</p>${actors.length?`<div class="cast6-actors">${actors.map(actorHtml).join('')}</div>`:''}`:`<div class="cast6-empty compact"><b>Waiting for the next published play</b><span>The source has not published a current play.</span></div>`;
     const driveBody=drive?`<div class="cast6-drive-team">${drive?.team?.logo?`<img src="${esc(drive.team.logo)}" width="42" height="42" alt="" decoding="async">`:''}<b>${esc(drive?.team?.abbreviation||drive?.team?.display_name||'POSSESSION')}</b></div><strong>${esc(clean(drive?.result)||'Drive in progress')}</strong><p>${esc(clean(drive?.description)||'Current possession')}</p><div class="cast6-drive-kpis">${num(drive?.offensive_plays)!==null?`<span><b>${drive.offensive_plays}</b><small>PLAYS</small></span>`:''}${num(drive?.yards)!==null?`<span><b>${drive.yards}</b><small>YARDS</small></span>`:''}${clean(drive?.time_elapsed)?`<span><b>${esc(drive.time_elapsed)}</b><small>TIME</small></span>`:''}</div>`:`<div class="cast6-empty compact"><b>No active drive</b><span>The source is not reporting an active possession.</span></div>`;
@@ -257,6 +273,7 @@
   }
 
   function coverageHtml(){
+    if(pregame())return '';
     const d=state.detail;const facts=situationFacts(d);const cards=[...facts];
     cards.push(['PUBLISHED PLAYS',String(d?.play_count??arr(d?.plays).length)]);cards.push(['PUBLISHED DRIVES',String(d?.drive_count??arr(d?.drives).length)]);
     const chips=[['PLAY-BY-PLAY',arr(d?.plays).length?`${arr(d.plays).length} PLAYS`:'INACTIVE',Boolean(arr(d?.plays).length)],['PLAYER STATS',arr(d?.player_stats).length?`${countPlayers(d)} PLAYERS`:'INACTIVE',Boolean(arr(d?.player_stats).length)],['WIN PROB',arr(d?.win_probability).length?`${arr(d.win_probability).length} POINTS`:'INACTIVE',Boolean(arr(d?.win_probability).length)],['PROP MARKET',state.market?'LINKED':'NOT LINKED',Boolean(state.market)]];
@@ -298,7 +315,7 @@
   /* One column, in reading order: the possession in progress, the box score,
      then the full game log. Nothing here scrolls inside itself — the page
      grows — so the longest module goes last instead of beside a short one. */
-  function workspaceHtml(){return `<div class="cast6-workspace"><div>${driveModuleHtml()}${playerOutputHtml()}</div><div>${liveFeedHtml()}</div></div>`}
+  function workspaceHtml(){if(pregame())return '';return `<div class="cast6-workspace"><div>${driveModuleHtml()}${playerOutputHtml()}</div><div>${liveFeedHtml()}</div></div>`}
 
   function railHtml(){return `<div class="cast6-rail">${railGames().map(g=>{const a=g?.teams?.away||{},h=g?.teams?.home||{},active=String(g.id)===String(state.activeId);return `<button data-game="${esc(g.id)}" class="${active?'active':''} ${g?.status?.semantics==='SCHEDULE'?'is-scheduled':''}"><span>${esc(g?.status?.semantics==='SCHEDULE'?'SCHEDULED':g?.status?.semantics||'NFL')} · ${esc(g?.status?.semantics==='SCHEDULE'&&kickoffParts(g?.date)?`${kickoffParts(g.date).day} · ${kickoffParts(g.date).time} ET`:statusLabel(g))}</span><div><b>${esc(a.abbreviation||'AWY')}</b><strong>${esc(score(a,g?.status?.semantics))}</strong><i>at</i><b>${esc(h.abbreviation||'HME')}</b><strong>${esc(score(h,g?.status?.semantics))}</strong></div><small>${esc(g?.venue?.name||fmtDate(g?.date)||'NFL game')}</small></button>`}).join('')}</div>`}
 
@@ -320,9 +337,11 @@
   function patchLive(){
     const root=document.querySelector('.pbecast6');if(!root||!state.detail)return;
     root.dataset.stale=state.error?'true':'false';
+    root.dataset.phase=semantics(state.detail);
     patch(root,'[data-cast6-hero]',heroHtml());
     patch(root,'[data-cast6-action]',currentActionHtml());
     patch(root,'[data-cast6-workspace]',workspaceHtml());
+    if(root.dataset.phaseTelemetry!==root.dataset.phase){root.dataset.phaseTelemetry=root.dataset.phase;patch(root,'[data-cast6-telemetry]',coverageHtml())}
     patchStamp();
   }
   function patchRail(){const root=document.querySelector('.pbecast6');if(root)patch(root,'[data-cast6-rail]',railHtml())}
@@ -344,7 +363,7 @@
     patch(root,'[data-cast6-hero]',heroHtml());
     patchStamp();
   }
-  function patchAll(){const root=ensureRoot();if(!root)return;root.dataset.stale=state.error?'true':'false';patch(root,'[data-cast6-toolbar]',toolbarHtml());patch(root,'[data-cast6-rail]',railHtml());if(state.detail){patch(root,'[data-cast6-hero]',heroHtml());patch(root,'[data-cast6-action]',currentActionHtml());patch(root,'[data-cast6-telemetry]',coverageHtml());patch(root,'[data-cast6-workspace]',workspaceHtml())}else{patch(root,'[data-cast6-hero]',state.unavailable&&String(state.unavailable.id)===String(state.activeId)?`<div class="cast6-empty is-unavailable" data-cast6-unavailable="${esc(state.activeId)}"><b>This game is unavailable right now</b><span>PBEcast could not read game ${esc(state.activeId)} from the source. It stays selected and is retried; no other game is shown in its place.</span></div>`:`<div class="cast6-empty"><b>Loading game package</b><span>Connecting to live drives, player output and play-by-play.</span></div>`);patch(root,'[data-cast6-action]','');patch(root,'[data-cast6-telemetry]','');patch(root,'[data-cast6-workspace]','')}patchStamp()}
+  function patchAll(){const root=ensureRoot();if(!root)return;root.dataset.stale=state.error?'true':'false';root.dataset.phase=state.detail?semantics(state.detail):'LOADING';patch(root,'[data-cast6-toolbar]',toolbarHtml());patch(root,'[data-cast6-rail]',railHtml());if(state.detail){patch(root,'[data-cast6-hero]',heroHtml());patch(root,'[data-cast6-action]',currentActionHtml());patch(root,'[data-cast6-telemetry]',coverageHtml());patch(root,'[data-cast6-workspace]',workspaceHtml())}else{patch(root,'[data-cast6-hero]',state.unavailable&&String(state.unavailable.id)===String(state.activeId)?`<div class="cast6-empty is-unavailable" data-cast6-unavailable="${esc(state.activeId)}"><b>This game is unavailable right now</b><span>PBEcast could not read game ${esc(state.activeId)} from the source. It stays selected and is retried; no other game is shown in its place.</span></div>`:`<div class="cast6-empty"><b>Loading game package</b><span>Connecting to live drives, player output and play-by-play.</span></div>`);patch(root,'[data-cast6-action]','');patch(root,'[data-cast6-telemetry]','');patch(root,'[data-cast6-workspace]','')}patchStamp()}
   function patchStats(){const root=document.querySelector('.pbecast6');if(!root)return;const host=root.querySelector('[data-cast6-workspace]');if(host)patch(root,'[data-cast6-workspace]',workspaceHtml())}
 
   function wireRoot(root){
@@ -703,7 +722,9 @@
         if(String(d?.game?.id||'')===String(state.activeId)){
           state.unavailable=null;
           /* first time this game's kickoff is known: the board may belong to another week */
-          if(!state.activeKickoff&&d.game.date){state.activeKickoff=d.game.date;persist();if(boardContext().url!==state.boardUrl){dropLanes(['board']);syncBoard()}}
+          if(!state.activeKickoff&&d.game.date){state.activeKickoff=d.game.date;persist();if(boardContext().url!==state.boardUrl){dropLanes(['board']);syncBoard()}
+            /* the fast lane was waiting for this date; the hero's venue and records come from it */
+            if(!state.fastGame&&!lanes.state.busy)syncState()}
         }
         await loadMarket(false);patchAll();
       }
@@ -730,7 +751,7 @@
         if(state.explicit&&state.activeId){
           /* the board never changes an explicit selection; it may only tell us its kickoff */
           const row=rows.find(g=>String(g.id)===String(state.activeId));
-          if(row?.date&&!state.activeKickoff){state.activeKickoff=row.date;persist()}
+          if(row?.date&&!state.activeKickoff){state.activeKickoff=row.date;persist();if(!state.fastGame&&!lanes.state.busy)syncState()}
         }else{
           const next=chooseActive();
           if(next&&next!==String(state.activeId)){

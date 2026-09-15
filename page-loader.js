@@ -1,7 +1,7 @@
 /* PropBetEdge NFL - ordered page/product upgrade loader v45 recovery */
 (() => {
   'use strict';
-  const VERSION='20260915castsel1';
+  const VERSION='20260915castpre1';
   const upgrades=[
     /* Establish the final homepage authority first. v6 replaces the v5 DOM with
        .pbehome6; v7 historically registered itself after that without repainting
@@ -135,6 +135,9 @@
     /* Game Pulse: derived from v6's win_probability, mounted by the command
        layer. No transport, no timer, no route registration. */
     {css:'./pbecast-pulse-v1.css',js:'./pbecast-pulse-v1.js'},
+    /* Pregame preview (market, PBE decision, availability, what changed) for a
+       scheduled game; mounted by the command layer, so it loads first. */
+    {css:'./pbecast-preview-v1.css',js:'./pbecast-preview-v1.js'},
     {css:'./pbecast-command-v1.css',js:'./pbecast-command-v1.js'},
     {css:'./stadium-selector-v1.css',js:'./stadium-selector-v1.js'},
     {css:'./production-polish-v2.css',js:'./production-polish-v2.js'},
