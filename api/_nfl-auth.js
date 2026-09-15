@@ -15,9 +15,10 @@
  */
 
 import { createHmac, timingSafeEqual } from 'node:crypto';
-import { selectNflEntitlement, ilikeLiteral, normalizeEmail } from './_nfl-entitlement.js';
+import { normalizeEmail } from './_nfl-entitlement.js';
+import { lookupNflEntitlement, parseOwnerEmails, supabaseAdminHeaders, ENTITLEMENT_TIMEOUT_MS, DEFAULT_NFL_SUPABASE_URL } from './_nfl-entitlement-ledger.js';
 
-const DEFAULT_SUPABASE_URL = 'https://tkmlnhmylqnttmnsnief.supabase.co';
+export { supabaseAdminHeaders, ENTITLEMENT_TIMEOUT_MS };
 
 export const SESSION_COOKIE = 'pbe_nfl_session_v2';
 export const LEGACY_SESSION_COOKIE = 'pbe_nfl_session';
@@ -114,52 +115,21 @@ export function verifyWorkerJwtWithSecrets(token, secrets, expectedType = 'sessi
   throw new Error(reason);
 }
 
-/* Supabase's modern sb_secret_* keys are API keys, not JWTs. They must be sent
- * on `apikey` only. Legacy service_role JWTs still use both apikey and Bearer.
- * This lets the NFL backend migrate keys without breaking PostgREST. */
-export function supabaseAdminHeaders(secret) {
-  const key = String(secret || '').trim();
-  const headers = { apikey: key, accept: 'application/json' };
-  if (key.startsWith('eyJ')) headers.authorization = `Bearer ${key}`;
-  return headers;
-}
-
-/* A slow ledger must never hold the session answer (or a premium route) open:
-   past this it is `unavailable`, not granted and not "no subscription". */
-export const ENTITLEMENT_TIMEOUT_MS = 4000;
-
-const ROW_FIELDS = 'customer_email,status,current_period_end,cancel_at_period_end,stripe_price_id,stripe_subscription_id,stripe_customer_id,stripe_checkout_session_id,created_at';
-
 /* Every nfl_subscriptions row for the email, judged by the pure predicate in
-   _nfl-entitlement.js. Throws when the ledger cannot answer. */
-async function entitlementByEmail(email, secret) {
-  const base = String(process.env.SUPABASE_URL || DEFAULT_SUPABASE_URL).replace(/\/$/, '');
-  const q = `customer_email=ilike.${encodeURIComponent(ilikeLiteral(email))}&select=${ROW_FIELDS}&order=created_at.desc&limit=25`;
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), ENTITLEMENT_TIMEOUT_MS);
-  let response;
-  try {
-    response = await fetch(`${base}/rest/v1/nfl_subscriptions?${q}`, {
-      headers: supabaseAdminHeaders(secret),
-      cache: 'no-store',
-      signal: controller.signal,
-    });
-  } catch (error) {
-    throw new Error(error?.name === 'AbortError' ? 'entitlement_timeout' : 'entitlement_network');
-  } finally {
-    clearTimeout(timer);
-  }
-  if (!response.ok) throw new Error(`entitlement_${response.status}`);
-  const rows = await response.json().catch(() => { throw new Error('entitlement_unreadable'); });
-  if (!Array.isArray(rows)) throw new Error('entitlement_unreadable');
-  return selectNflEntitlement(rows, email);
+   _nfl-entitlement.js through the lookup the auth Worker shares
+   (_nfl-entitlement-ledger.js). Throws when the ledger cannot answer. */
+function entitlementByEmail(email, secret) {
+  return lookupNflEntitlement(email, {
+    supabaseUrl: process.env.SUPABASE_URL || DEFAULT_NFL_SUPABASE_URL,
+    serviceKey: secret,
+  });
 }
 
 /* The owner is named only in server env. It is honoured only for an email the
    session signature proves (a Resend magic link exchanged by the auth Worker);
    nothing a browser sends can name it. */
 export function ownerEmails() {
-  return String(process.env.NFL_OWNER_EMAILS || '').split(',').map(normalizeEmail).filter(Boolean);
+  return parseOwnerEmails(process.env.NFL_OWNER_EMAILS);
 }
 
 export function isOwnerEmail(email) {

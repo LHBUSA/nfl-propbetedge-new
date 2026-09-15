@@ -236,7 +236,7 @@
       });
       const body = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(body?.error || `Sign-in email failed (${r.status}).`);
-      message(`Check ${email}. Your secure sign-in link is on the way.`, 'success');
+      message(body?.message || 'If this email has NFL Pro access, a secure link will arrive shortly.', 'success');
     } catch (error) {
       message(error?.message || 'Could not send your sign-in link.', 'error');
     } finally {

@@ -1,38 +1,86 @@
+/* NFL magic links are issued ONLY to an email that may open NFL Pro right now
+   (a current NFL entitlement or a configured owner), and exchanged for a
+   session ONLY after the same check passes again. Identity is not entitlement:
+   an MLB/NBA/NHL/UFC subscription, a known customer or an existing session
+   grants nothing here. The check is the one Vercel uses
+   (api/_nfl-entitlement-ledger.js -> api/_nfl-entitlement.js). */
+import { resolveNflAccess, parseOwnerEmails } from '../../../api/_nfl-entitlement-ledger.js';
+import { normalizeEmail } from '../../../api/_nfl-entitlement.js';
+
 const SERVICE='propbetedge-nfl-auth';
-const VERSION='v6.2';
+const VERSION='v7.0';
+/* One answer for every accepted request, entitled or not, so the response
+   never reveals whether an email owns NFL Pro. The decision and any email run
+   after the response (ctx.waitUntil), so timing reveals nothing either. */
+export const GENERIC_REQUEST_MESSAGE='If this email has NFL Pro access, a secure link will arrive shortly.';
+/* A purchase return can reach us a moment before the Stripe webhook writes
+   the ledger row; purchase requests re-check briefly before giving up. */
+const PURCHASE_RECHECK_DELAYS_MS=[2000,4000,8000];
 const APP_ORIGIN_DEFAULT='https://nfl.propbetedge.ai';
 const FROM_EMAIL='PropBetEdge Picks <picks@propbetedge.ai>';
 const MAGIC_TTL=15*60;
 const SESSION_TTL=30*24*60*60;
 
-export default{async fetch(req,env){
+export default{async fetch(req,env,ctx){
   const url=new URL(req.url),origin=req.headers.get('Origin')||'',app=String(env.APP_ORIGIN||APP_ORIGIN_DEFAULT).replace(/\/$/,'');
   if(req.method==='OPTIONS')return new Response(null,{status:204,headers:cors(origin,app)});
   if(url.pathname==='/health'){
     const signing=signingSecrets(env);
-    return out({ok:Boolean(env.RESEND_API_KEY&&signing.primary),service:SERVICE,version:VERSION,auth_issuer:'propbetedge',session:'vercel_first_party_cookie',session_authority:'vercel:/api/auth-session',exchange:'signed_magic_to_session',entitlement_store:'vercel:/api/auth-session',email_transport:'resend',sender:FROM_EMAIL,fallback:false,requirements:{RESEND_API_KEY:Boolean(env.RESEND_API_KEY),SESSION_SIGNING_SECRET:Boolean(signing.primary),SUPABASE_SERVICE_ROLE_KEY:Boolean(env.SUPABASE_SERVICE_ROLE_KEY)},signing:{mode:signing.mode,dedicated_configured:signing.dedicatedConfigured,legacy_verify_fallback:Boolean(signing.fallback)}},200,origin,app);
+    return out({ok:Boolean(env.RESEND_API_KEY&&signing.primary),service:SERVICE,version:VERSION,auth_issuer:'propbetedge',session:'vercel_first_party_cookie',session_authority:'vercel:/api/auth-session',exchange:'signed_magic_to_session',entitlement_store:'supabase:nfl_subscriptions',entitlement_gate:{request:true,exchange:true,owner_configured:parseOwnerEmails(env.NFL_OWNER_EMAILS).length>0},email_transport:'resend',sender:FROM_EMAIL,fallback:false,requirements:{RESEND_API_KEY:Boolean(env.RESEND_API_KEY),SESSION_SIGNING_SECRET:Boolean(signing.primary),SUPABASE_SERVICE_ROLE_KEY:Boolean(env.SUPABASE_SERVICE_ROLE_KEY)},signing:{mode:signing.mode,dedicated_configured:signing.dedicatedConfigured,legacy_verify_fallback:Boolean(signing.fallback)}},200,origin,app);
   }
-  if((url.pathname==='/v1/auth/request'||url.pathname==='/v1/auth/email')&&req.method==='POST')return requestLink(req,env,origin,app);
+  if((url.pathname==='/v1/auth/request'||url.pathname==='/v1/auth/email')&&req.method==='POST')return requestLink(req,env,origin,app,ctx);
   if(url.pathname==='/v1/auth/exchange'&&req.method==='POST')return exchangeLink(req,env,origin,app);
   if(url.pathname==='/v1/auth/selftest'&&req.method==='GET')return selfTest(env,origin,app);
   return out({error:'not_found',service:SERVICE,version:VERSION},404,origin,app);
 }};
 
-async function requestLink(req,env,origin,app){
+async function requestLink(req,env,origin,app,ctx){
   if(origin&&origin!==app)return out({error:'origin_not_allowed'},403,origin,app);
   const signing=signingSecrets(env);
-  if(!env.RESEND_API_KEY||!signing.primary)return out({error:'service_unavailable'},503,origin,app);
+  if(!env.RESEND_API_KEY||!signing.primary||!String(env.SUPABASE_SERVICE_ROLE_KEY||'').trim())return out({error:'service_unavailable'},503,origin,app);
   let body;try{body=await req.json()}catch{return out({error:'invalid_json'},400,origin,app)}
-  const email=normEmail(body?.email);if(!email)return out({error:'Enter a valid email address.'},400,origin,app);
+  const email=normalizeEmail(body?.email);if(!email)return out({error:'Enter a valid email address.'},400,origin,app);
   const purpose=body?.purpose==='purchase'?'purchase':'signin';
-  try{
-    const now=Math.floor(Date.now()/1000),token=await sign({email,type:'magic',purpose,iat:now,exp:now+MAGIC_TTL,jti:crypto.randomUUID()},signing.primary);
-    const link=`${app}/api/auth-verify?token=${encodeURIComponent(token)}`;
-    const r=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:`Bearer ${env.RESEND_API_KEY}`,'Content-Type':'application/json'},body:JSON.stringify({from:FROM_EMAIL,to:[email],subject:purpose==='purchase'?'PropBetEdge NFL Pro — your access is ready':'PropBetEdge NFL — secure sign-in',html:mailHtml(link,purpose),text:mailText(link,purpose)})});
-    if(!r.ok){const detail=await r.text().catch(()=>'');console.error('[nfl-auth] resend',r.status,detail.slice(0,360));return out({error:'Could not send the sign-in email.',stage:'resend',provider_status:r.status,provider_message:safeProviderMessage(detail)},502,origin,app)}
-    return out({ok:true,provider:'resend',auth_issuer:'propbetedge',purpose,message:purpose==='purchase'?'NFL Pro access email sent.':'Check your inbox. Your secure PropBetEdge NFL sign-in link is on the way.'},200,origin,app);
-  }catch(e){console.error('[nfl-auth] request',e?.message||e);return out({error:'Could not send the sign-in email.',stage:'worker'},502,origin,app)}
+  const work=issueLinkIfEntitled(env,app,signing,email,purpose).catch(e=>console.error('[nfl-auth] request stage=worker_exception',e?.message||e));
+  if(ctx?.waitUntil)ctx.waitUntil(work);else await work;
+  return out({ok:true,provider:'resend',auth_issuer:'propbetedge',purpose,message:GENERIC_REQUEST_MESSAGE},200,origin,app);
 }
+
+/* The gate. Nothing is signed and nothing is sent unless resolveNflAccess
+   allows this exact email at this moment. A ledger that cannot answer is a
+   denial. Returns the decision for tests; the HTTP answer never carries it. */
+export async function issueLinkIfEntitled(env,app,signing,email,purpose,{sleep=ms=>new Promise(r=>setTimeout(r,ms))}={}){
+  const tag=await emailTag(email);
+  let access=await checkAccess(env,email);
+  if(!access.allowed&&purpose==='purchase'&&access.reason!=='entitlement_unavailable'){
+    for(const delay of PURCHASE_RECHECK_DELAYS_MS){await sleep(delay);access=await checkAccess(env,email);if(access.allowed||access.reason==='entitlement_unavailable')break}
+  }
+  if(!access.allowed){
+    console.log('[nfl-auth] request decision=denied reason=%s purpose=%s email=%s magic_token=none resend=none',access.reason,purpose,tag);
+    return{sent:false,reason:access.reason};
+  }
+  const now=Math.floor(Date.now()/1000),token=await sign({email,type:'magic',purpose,iat:now,exp:now+MAGIC_TTL,jti:crypto.randomUUID()},signing.primary);
+  const link=`${app}/api/auth-verify?token=${encodeURIComponent(token)}`;
+  const r=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:`Bearer ${env.RESEND_API_KEY}`,'Content-Type':'application/json'},body:JSON.stringify({from:FROM_EMAIL,to:[email],subject:purpose==='purchase'?'PropBetEdge NFL Pro — your access is ready':'PropBetEdge NFL — secure sign-in',html:mailHtml(link,purpose),text:mailText(link,purpose)})});
+  const detail=await r.text().catch(()=>'');
+  if(!r.ok){console.error('[nfl-auth] request decision=allowed role=%s email=%s resend_status=%s resend_error=%s',access.role,tag,r.status,safeProviderMessage(detail));return{sent:false,reason:'resend_failed',role:access.role}}
+  let id='';try{id=String(JSON.parse(detail)?.id||'')}catch{}
+  console.log('[nfl-auth] request decision=allowed role=%s purpose=%s email=%s resend_status=%s resend_id=%s',access.role,purpose,tag,r.status,id);
+  return{sent:true,role:access.role,resend_id:id};
+}
+
+async function checkAccess(env,email){
+  try{
+    const a=await resolveNflAccess(email,{ownerEmails:parseOwnerEmails(env.NFL_OWNER_EMAILS),supabaseUrl:env.SUPABASE_URL,serviceKey:env.SUPABASE_SERVICE_ROLE_KEY});
+    return{allowed:a.allowed,role:a.role,reason:a.allowed?a.role:(a.verdict?.reason||'not_entitled')};
+  }catch(e){
+    console.error('[nfl-auth] entitlement stage=unavailable error=%s',e?.message||e);
+    return{allowed:false,role:null,reason:'entitlement_unavailable'};
+  }
+}
+
+/* Correlates log lines without writing an address into logs. */
+async function emailTag(email){const d=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(`pbe-nfl-auth-log:${email}`));return b64url(new Uint8Array(d)).slice(0,12)}
 
 async function exchangeLink(req,env,origin,app){
   if(origin&&origin!==app)return out({error:'origin_not_allowed'},403,origin,app);
@@ -50,8 +98,20 @@ async function exchangeLink(req,env,origin,app){
        same link is refused. No ledger, no session. */
     const consumed=await consumeMagicLink(env,p);
     if(consumed!=='ok')return out({error:consumed},consumed==='link_ledger_unavailable'?503:401,origin,app);
+    /* Second check, after the link is spent: a subscription canceled or
+       expired since the email was sent, or a link issued before the request
+       gate existed, gets no session. The denied link stays consumed. */
+    const access=await checkAccess(env,email);
+    const tag=await emailTag(email);
+    if(!access.allowed){
+      console.log('[nfl-auth] exchange decision=denied reason=%s email=%s session=none',access.reason,tag);
+      return access.reason==='entitlement_unavailable'
+        ?out({error:'entitlement_unavailable'},503,origin,app)
+        :out({error:'not_authorized'},403,origin,app);
+    }
     const now=Math.floor(Date.now()/1000);
     const session=await sign({email,type:'session',iat:now,exp:now+SESSION_TTL,jti:crypto.randomUUID()},signing.primary);
+    console.log('[nfl-auth] exchange decision=allowed role=%s email=%s session=issued',access.role,tag);
     return out({ok:true,email,session_token:session,expires_in:SESSION_TTL,auth_issuer:'propbetedge'},200,origin,app);
   }catch(e){
     const reason=e?.message||'invalid_magic';

@@ -44,7 +44,8 @@ async function exchange(env, token) {
   const r = await worker.fetch(new Request(`${APP.replace('nfl.', 'auth.')}/v1/auth/exchange`, { method: 'POST', headers: { origin: APP, 'content-type': 'application/json' }, body: JSON.stringify({ token }) }), env);
   return { status: r.status, body: await r.json() };
 }
-const envWith = (ns = ledgerNamespace()) => ({ NFL_SESSION_SIGNING_SECRET: SECRET, APP_ORIGIN: APP, MAGIC_LINKS: ns });
+/* The exchange re-checks NFL access; the owner passes without a ledger read. */
+const envWith = (ns = ledgerNamespace()) => ({ NFL_SESSION_SIGNING_SECRET: SECRET, APP_ORIGIN: APP, MAGIC_LINKS: ns, NFL_OWNER_EMAILS: 'owner@propbetedge.test' });
 
 test('a magic link exchanges once for a session; the same link again is refused', async () => {
   const env = envWith();

@@ -78,7 +78,8 @@ const magicLedger = (() => {
     },
   };
 })();
-const AUTH_ENV = { NFL_SESSION_SIGNING_SECRET: process.env.NFL_SESSION_SIGNING_SECRET, APP_ORIGIN: PROD, MAGIC_LINKS: authWorker.MagicLinkLedger ? magicLedger : undefined };
+/* The exchange re-checks NFL access against the same in-memory ledger and owner. */
+const AUTH_ENV = { NFL_SESSION_SIGNING_SECRET: process.env.NFL_SESSION_SIGNING_SECRET, SUPABASE_URL: process.env.SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY, NFL_OWNER_EMAILS: process.env.NFL_OWNER_EMAILS, APP_ORIGIN: PROD, MAGIC_LINKS: authWorker.MagicLinkLedger ? magicLedger : undefined };
 
 const b64u = v => Buffer.from(v).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 function sign(payload, secret = process.env.NFL_SESSION_SIGNING_SECRET) {

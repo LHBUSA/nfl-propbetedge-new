@@ -247,7 +247,8 @@
   }
 
   function message(text,type='') {
-    const el = document.getElementById('pbe-pro-message');
+    /* The checkout funnel (paywall-funnel-v2.js) renders its own message slot. */
+    const el = document.getElementById('pbe-pro-message') || document.getElementById('pbe-funnel-message');
     if (!el) return;
     const className = `pbe-pro-message ${type}`.trim();
     if (el.className !== className) el.className = className;
@@ -345,6 +346,9 @@
       const access = ACCESS_STATES.has(payload?.access) ? payload.access : (valid ? 'unavailable' : 'anonymous');
       state.session = valid ? { issuer: 'propbetedge', valid: true } : null;
       state.user = valid && payload?.user?.email ? { email: String(payload.user.email).toLowerCase() } : null;
+      /* A verified email with no NFL entitlement is paywalled, never a signed-in
+       * NFL customer: the server clears that session; the page shows the plans. */
+      if (access === 'no_entitlement') { state.session = null; state.user = null; }
       /* Pro only when the server says granted AND pro, for a verified session. */
       state.pro = Boolean(valid && payload?.pro === true && access === 'granted');
       state.access = access === 'granted' && !state.pro ? 'unavailable' : access;
@@ -544,6 +548,12 @@
       if (state.user) { applyState(); return; }
       open('auth-incomplete');
       message(state.error || 'We could not confirm the new session. Request another secure sign-in link.','error');
+      return;
+    }
+
+    if (auth === 'not_authorized') {
+      open('upgrade');
+      message('No active NFL Pro access is linked to that email. Choose a plan to unlock NFL Pro.','error');
       return;
     }
 

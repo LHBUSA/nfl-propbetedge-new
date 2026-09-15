@@ -2,7 +2,22 @@
  * getNflSession() never throws, so a backend failure can no longer be
  * disguised as "not logged in". Every response carries an explicit `stage`. */
 
-import { getNflSession } from './_nfl-auth.js';
+import { getNflSession, purgeCookies } from './_nfl-auth.js';
+
+/* A verified email without a current NFL entitlement is NOT an NFL customer.
+ * The browser gets the paywall: no identity, no signed-in state, and the
+ * NFL-only session cookie is cleared (host-only and .propbetedge.ai variants of
+ * pbe_nfl_session*; the network-wide pbe_session cookie is untouched). The
+ * denial reason stays so the paywall can say expired / canceled / payment
+ * failed. Premium routes refuse this verdict on their own (getNflSession). */
+export function paywalledAnswer(session) {
+  return {
+    valid: false, pro: false, access: 'no_entitlement', paywalled: true, role: null,
+    entitlement: session.entitlement ? { reason: session.entitlement.reason || null } : null,
+    user: null, subscription: null, authority: session.authority, stage: session.stage,
+    cookies: session.cookies, degraded: false, session_cleared: true,
+  };
+}
 
 export default async function handler(req, res) {
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -28,6 +43,11 @@ export default async function handler(req, res) {
       session.cookies?.legacy ?? 0,
       session.reason ? ` reason=${session.reason}` : (session.error ? ` error=${session.error}` : '')
     );
+
+    if (session.access === 'no_entitlement') {
+      res.setHeader('Set-Cookie', purgeCookies({ includeCurrent: true }));
+      return res.status(200).json(paywalledAnswer(session));
+    }
 
     return res.status(200).json(session);
   } catch (error) {
