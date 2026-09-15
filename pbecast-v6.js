@@ -93,11 +93,37 @@
   }
   function actorHtml(p){const roles=[...(p.roles||[])];return `<article class="cast6-actor">${p?.headshot?`<img src="${esc(p.headshot)}" width="42" height="42" alt="${esc(p.name)}" decoding="async">`:`<div class="cast6-avatar">${esc(p.name.split(/\s+/).map(x=>x[0]||'').slice(0,2).join('').toUpperCase())}</div>`}<div><b>${esc(p.name)}</b><span>${esc([p?.position,...roles].filter(Boolean).join(' · ')||'NFL PLAYER')}</span></div></article>`}
 
+  /* ---- Field-position semantics -------------------------------------------
+     ESPN's situation.possessionText is the SPOT OF THE BALL ("DEN 39", "50"),
+     not the team with the ball, and yardLine is a 0-100 coordinate (61 for the
+     ball on DEN 39 with DEN in possession). Rendering them as POSSESSION and
+     BALL showed "POSSESSION DEN 39 · BALL 61". So:
+       possession      situation.possession_id matched to the away/home team
+                       id, shown as that team's abbreviation, or nothing
+       field position  ESPN's own published text, shown only when it verifies
+                       as "<one of this game's two teams> <1-49>" or "50";
+                       never derived from yard_line, never 100 - yard_line
+       yard_line       internal geometry for the field strip only */
+  function possessionTeam(g){
+    const id=g?.situation?.possession_id;if(id==null||id==='')return null;
+    const a=g?.teams?.away||{},h=g?.teams?.home||{};
+    if(a.id!=null&&String(a.id)===String(id))return clean(a.abbreviation)||null;
+    if(h.id!=null&&String(h.id)===String(id))return clean(h.abbreviation)||null;
+    return null;
+  }
+  function fieldPositionText(g){
+    const raw=String(g?.situation?.possession_text??'').trim().toUpperCase();
+    if(raw==='50')return '50';
+    const m=/^([A-Z]{2,4}) (\d{1,2})$/.exec(raw);if(!m)return null;
+    const n=Number(m[2]);if(n<1||n>49)return null;
+    const teams=[g?.teams?.away?.abbreviation,g?.teams?.home?.abbreviation].map(x=>String(x||'').toUpperCase()).filter(Boolean);
+    return teams.includes(m[1])?`${m[1]} ${n}`:null;
+  }
   function situationFacts(d){
     const g=d?.game||{},s=g?.situation||{},p=d?.current_play||s?.last_play||{};const facts=[];
-    const possession=clean(s?.possession_text)||clean(p?.end?.possession_text)||clean(p?.start?.possession_text);if(possession)facts.push(['POSSESSION',possession]);
+    const possession=possessionTeam(g);if(possession)facts.push(['POSSESSION',possession]);
     const down=clean(s?.down_distance_text)||clean(p?.end?.down_distance_text)||clean(p?.start?.down_distance_text);if(down)facts.push(['DOWN & DISTANCE',down]);
-    const yard=num(s?.yard_line??p?.end?.yard_line??p?.start?.yard_line);if(yard!==null)facts.push(['BALL',String(yard)]);
+    const spot=fieldPositionText(g);if(spot)facts.push(['FIELD POSITION',spot]);
     if(typeof s?.red_zone==='boolean')facts.push(['RED ZONE',s.red_zone?'YES':'NO']);
     const at=num(s?.away_timeouts),ht=num(s?.home_timeouts);if(at!==null||ht!==null)facts.push(['TIMEOUTS',`${at!==null?at:'–'} / ${ht!==null?ht:'–'}`]);
     return facts;
@@ -108,7 +134,7 @@
     const yte=num(p?.end?.yards_to_endzone??p?.start?.yards_to_endzone);const yard=num(s?.yard_line??p?.end?.yard_line??p?.start?.yard_line);
     let pos=yte!==null?100-yte:yard;if(pos===null)return'';pos=Math.max(2,Math.min(98,pos));
     const distance=num(p?.end?.distance??p?.start?.distance??s?.distance);const fd=distance!==null?Math.max(2,Math.min(98,pos+distance)):null;
-    return `<div class="cast6-field"><div class="cast6-field-top"><span>${esc(clean(s?.possession_text)||'FIELD POSITION')}</span>${clean(s?.down_distance_text)?`<b>${esc(s.down_distance_text)}</b>`:''}</div><div class="cast6-field-surface"><i class="cast6-drive-fill" style="width:${pos}%"></i><i class="cast6-redzone"></i>${fd!==null?`<i class="cast6-first" style="left:${fd}%"></i>`:''}<i class="cast6-ball" style="left:${pos}%"></i></div></div>`;
+    return `<div class="cast6-field"><div class="cast6-field-top"><span>${esc(fieldPositionText(d?.game)||'FIELD POSITION')}</span>${clean(s?.down_distance_text)?`<b>${esc(s.down_distance_text)}</b>`:''}</div><div class="cast6-field-surface"><i class="cast6-drive-fill" style="width:${pos}%"></i><i class="cast6-redzone"></i>${fd!==null?`<i class="cast6-first" style="left:${fd}%"></i>`:''}<i class="cast6-ball" style="left:${pos}%"></i></div></div>`;
   }
 
   /* Freshness is reported, never hidden. But play age on its own cannot tell a
@@ -184,7 +210,10 @@
 
   function driveModuleHtml(){const d=state.detail?.current_drive,plays=arr(d?.plays);return `<section class="cast6-module cast6-possession"><header><div><span>CURRENT POSSESSION</span><h2>Drive-by-Drive</h2></div><small>${esc(clean(d?.description))}</small></header><div class="cast6-drive-scroll">${d?`${d?.team?`<div class="cast6-possession-head">${d.team.logo?`<img src="${esc(d.team.logo)}" width="38" height="38" alt="" decoding="async">`:''}<div><b>${esc(d.team.abbreviation||d.team.display_name||'POSSESSION')}</b><span>${esc(clean(d.result)||'Drive in progress')}</span></div></div>`:''}${plays.length?plays.map(playRow).join(''):`<div class="cast6-empty compact"><span>Waiting for the first published snap of this drive.</span></div>`}`:`<div class="cast6-empty"><b>No active possession</b><span>The panel collapses its empty telemetry instead of inventing values.</span></div>`}</div></section>`}
 
-  function workspaceHtml(){return `<div class="cast6-workspace"><div>${driveModuleHtml()}${liveFeedHtml()}</div><div>${playerOutputHtml()}</div></div>`}
+  /* One column, in reading order: the possession in progress, the box score,
+     then the full game log. Nothing here scrolls inside itself — the page
+     grows — so the longest module goes last instead of beside a short one. */
+  function workspaceHtml(){return `<div class="cast6-workspace"><div>${driveModuleHtml()}${playerOutputHtml()}</div><div>${liveFeedHtml()}</div></div>`}
 
   function railHtml(){return `<div class="cast6-rail">${games().map(g=>{const a=g?.teams?.away||{},h=g?.teams?.home||{},active=String(g.id)===String(state.activeId);return `<button data-game="${esc(g.id)}" class="${active?'active':''} ${g?.status?.semantics==='SCHEDULE'?'is-scheduled':''}"><span>${esc(g?.status?.semantics==='SCHEDULE'?'SCHEDULED':g?.status?.semantics||'NFL')} · ${esc(g?.status?.semantics==='SCHEDULE'&&kickoffParts(g?.date)?`${kickoffParts(g.date).day} · ${kickoffParts(g.date).time} ET`:statusLabel(g))}</span><div><b>${esc(a.abbreviation||'AWY')}</b><strong>${esc(score(a,g?.status?.semantics))}</strong><i>at</i><b>${esc(h.abbreviation||'HME')}</b><strong>${esc(score(h,g?.status?.semantics))}</strong></div><small>${esc(g?.venue?.name||fmtDate(g?.date)||'NFL game')}</small></button>`}).join('')}</div>`}
 
@@ -308,8 +337,15 @@
   }
   /* The screen shows whichever lane is further into the game. */
   function promoteGame(){
-    const winner=aheadOf(state.fastGame,state.detailGame)?state.fastGame:(state.detailGame||state.fastGame);
+    let winner=aheadOf(state.fastGame,state.detailGame)?state.fastGame:(state.detailGame||state.fastGame);
     if(!winner)return;
+    /* The summary header carries possession but not the spot of the ball; the
+       scoreboard carries both. When the two lanes stand at the same moment
+       the summary game is painted, so the situation is the scoreboard's. A
+       summary strictly ahead keeps its own (thinner) situation rather than
+       showing a spot from an earlier moment. */
+    const fast=state.fastGame;
+    if(winner!==fast&&fast&&String(fast.id||'')===String(winner.id||'')&&!aheadOf(winner,fast)&&fast.situation)winner={...winner,situation:fast.situation};
     if(!state.detail)state.detail={};
     state.detail.game=winner;
     if(!state.detail.source&&state.fastSource)state.detail.source=state.fastSource;
@@ -438,7 +474,7 @@
       plays:mergePlays(d.last_five_plays,d.current_drive?.plays,d.plays),
       player_stats:d.player_stats||base.player_stats,
       leaders:d.leaders||base.leaders,
-      win_probability:d.win_probability||base.win_probability,
+      win_probability:winSeries(base.win_probability,d.win_probability),
       drives:d.drives||base.drives};
 
     /* Judged against the DETAIL lane's own past, not against the merged screen.
@@ -467,6 +503,18 @@
     }
     state.error=null;
     return forward;
+  }
+
+  /* Win probability is a history that only grows within a game. A detail
+     response held back in flight carries a shorter, older series; it must not
+     shrink the timeline Game Pulse already drew. A series that is not a
+     continuation of the held one (a correction) replaces it. */
+  function winSeries(held,next){
+    if(!Array.isArray(next))return held;
+    if(!Array.isArray(held)||next.length>=held.length)return next;
+    const tail=next[next.length-1];
+    const older=next.length>0&&tail&&held.some(r=>r&&String(r.play_id)===String(tail.play_id)&&r.home_win_percentage===tail.home_win_percentage);
+    return older?held:next;
   }
 
   /* The plays half of the detail lane has its own arrow of time. */
@@ -666,6 +714,6 @@
     return true;
   }
 
-  window.PBEcastV6={state,load,refresh,focus,toggleSound,takeFocus,stopLegacyTransports,telemetry,envHtml,patchFreshness,lanes};
+  window.PBEcastV6={state,load,refresh,focus,toggleSound,takeFocus,stopLegacyTransports,telemetry,envHtml,patchFreshness,lanes,winSeries,situationFacts,possessionTeam,fieldPositionText,heroHtml,promoteGame};
   if(!install())document.addEventListener('DOMContentLoaded',install,{once:true});
 })();

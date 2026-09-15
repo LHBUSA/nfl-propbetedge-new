@@ -174,6 +174,10 @@ function freshness(plays,currentPlay,now){
     play_age_seconds:Math.max(0,Math.round((now-newest)/100)/10)};
 }
 
+/* win_probability is the WHOLE published series. It used to be cut to the
+   last 80 observations, but a complete game publishes 154-226 (106 games
+   measured), so Game Pulse's full timeline and biggest swing need every one.
+   It rides the ~12s detail lane only; the state and live lanes never carry it. */
 function detail(pkg,eventId,provider='espn_site_summary'){
   const hc=A(pkg?.header?.competitions)[0]||{};
   const headerEvent={id:eventId,date:F(hc?.date),name:F(pkg?.header?.shortName,pkg?.header?.name),shortName:F(pkg?.header?.shortName),season:pkg?.header?.season||{},week:pkg?.header?.week,competitions:A(pkg?.header?.competitions)};
@@ -192,11 +196,11 @@ function detail(pkg,eventId,provider='espn_site_summary'){
   const playerStats=stats(pkg);
   const now=Date.now();
   const fresh=freshness(plays,currentPlay,now);
-  return {ok:true,source:{provider,semantics:g.status.semantics,fetched_at:new Date(now).toISOString(),transport:'poll',...fresh},game:g,current_drive:current,current_play:currentPlay,drives,plays,last_five_plays:plays.slice(-5).reverse(),leaders:leaders(pkg,playerStats),player_stats:playerStats,win_probability:A(pkg?.winprobability).slice(-80).map(x=>({play_id:F(x?.playId,x?.play?.id),home_win_percentage:N(x?.homeWinPercentage),tie_percentage:N(x?.tiePercentage)})),play_count:plays.length,drive_count:drives.length};
+  return {ok:true,source:{provider,semantics:g.status.semantics,fetched_at:new Date(now).toISOString(),transport:'poll',...fresh},game:g,current_drive:current,current_play:currentPlay,drives,plays,last_five_plays:plays.slice(-5).reverse(),leaders:leaders(pkg,playerStats),player_stats:playerStats,win_probability:A(pkg?.winprobability).map(x=>({play_id:F(x?.playId,x?.play?.id),home_win_percentage:N(x?.homeWinPercentage),tie_percentage:N(x?.tiePercentage)})),play_count:plays.length,drive_count:drives.length};
 }
 
 /* The fast lane. PBEcast polls live state every couple of seconds; it must not
-   drag a full box score and eighty win-probability points along for the ride.
+   drag a full box score and the win-probability series along for the ride.
    Same shape as the full payload, minus the slow-changing enrichment, so the
    client merges it without a second code path. */
 function liveLayer(full){

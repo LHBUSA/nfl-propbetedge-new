@@ -18,6 +18,8 @@
  *                    EPA, air yards) is labelled pending, not faked.
  *   BEFORE KICKOFF   for a scheduled game: its injury designations, weather
  *                    and consensus line, from the command center's sources
+ *   GAME PULSE       mounted from pbecast-pulse-v1.js between the selected-game
+ *                    surface and Key Moments; a tapped swing opens its play here
  *
  * WHAT IS NOT HERE, ON PURPOSE. No routes, no player dots, no ball flight.
  * Public NFL live data carries no player or ball coordinates; field position
@@ -40,7 +42,7 @@
   const etDay = v => { const d = new Date(v); return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-US', { ...ET, weekday: 'short', month: 'short', day: 'numeric' }); };
   const clock = t => new Date(t).toLocaleTimeString('en-US', { ...ET, hour: 'numeric', minute: '2-digit', second: '2-digit' });
 
-  const local = { frame: null, feed: [], moment: 'scoring', openDrive: null, seeded: false, boardOpen: null, enrich: new Map() };
+  const local = { frame: null, feed: [], moment: 'scoring', openDrive: null, focusPlay: null, seeded: false, boardOpen: null, enrich: new Map() };
 
   /* ---- post-game enrichment (nflverse, next day) ---------------------------
      Fetched once per FINAL game, never polled. Keyed by ESPN play id, so it
@@ -89,6 +91,8 @@
   const FEED_MAX = 24;
 
   /* ---- Sunday board -------------------------------------------------------- */
+  /* situation.possession_text is the spot of the ball; v6 verifies it */
+  const spotOf = g => window.PBEcastV6?.fieldPositionText?.(g) || '';
   function games() { return arr(v6().scoreboard?.games); }
   function tile(g) {
     const s = sem(g), a = g?.teams?.away || {}, h = g?.teams?.home || {}, sit = g?.situation || {};
@@ -100,7 +104,7 @@
     return `<button type="button" class="pbecb-tile is-${s.toLowerCase()}${active ? ' is-active' : ''}${live && sit.red_zone === true ? ' is-rz' : ''}" data-game="${esc(g.id)}" aria-pressed="${active}">
       <span class="pbecb-st">${live ? '<i class="pbecb-dot" aria-hidden="true"></i>' : ''}${esc(status)}${!live && !fin ? (window.PBEBroadcast?.slot?.({ event: g.id, mode: 'text', lead: ' · ' }) || '') : ''}${live && sit.red_zone === true ? '<em>RED ZONE</em>' : ''}</span>
       ${team(a, 'AWY')}${team(h, 'HME')}
-      ${live && (sit.down_distance_text || sit.possession_text) ? `<span class="pbecb-sit">${esc([sit.down_distance_text, sit.possession_text].filter(Boolean).join(' · '))}</span>` : ''}
+      ${live && (sit.down_distance_text || spotOf(g)) ? `<span class="pbecb-sit">${esc([sit.down_distance_text, spotOf(g)].filter(Boolean).join(' at '))}</span>` : ''}
     </button>`;
   }
   function boardHtml() {
@@ -142,7 +146,7 @@
           if (da > 0) out.push({ id, at, kind: 'SCORE', text: `${a} +${da}`, score });
           if (dh > 0) out.push({ id, at, kind: 'SCORE', text: `${h} +${dh}`, score });
         }
-        if (!p.rz && n.rz && n.s === 'LIVE') out.push({ id, at, kind: 'RED ZONE', text: `${g?.situation?.possession_text || 'Offense'} inside the 20`, score });
+        if (!p.rz && n.rz && n.s === 'LIVE') out.push({ id, at, kind: 'RED ZONE', text: `${window.PBEcastV6?.possessionTeam?.(g) || 'Offense'} inside the 20`, score });
       }
       if (p.s === 'LIVE' && n.s === 'FINAL') out.push({ id, at, kind: 'FINAL', text: `${a} @ ${h} is final`, score });
     }
@@ -188,7 +192,8 @@
   function playLine(p) {
     const meta = [p?.period ? `Q${p.period}` : null, p?.clock, p?.start?.down_distance_text].filter(Boolean).join(' · ');
     const score = p?.away_score != null && p?.home_score != null ? `${p.away_score}–${p.home_score}` : '';
-    return `<li><span class="pbekm-meta">${esc(meta)}</span><p><b>${esc(p?.type || 'Play')}</b> ${esc(p?.text || '')}</p>${score ? `<em>${esc(score)}</em>` : ''}${enrichChips(p)}</li>`;
+    const id = String(p?.id ?? '');
+    return `<li data-km-play="${esc(id)}"${id && id === local.focusPlay ? ' class="is-focus" tabindex="-1"' : ''}><span class="pbekm-meta">${esc(meta)}</span><p><b>${esc(p?.type || 'Play')}</b> ${esc(p?.text || '')}</p>${score ? `<em>${esc(score)}</em>` : ''}${enrichChips(p)}</li>`;
   }
   function driveChart(d) {
     const drives = arr(d?.drives);
@@ -289,7 +294,7 @@
   function render() {
     const root = document.querySelector('.pbecast6'); if (!root) return;
     const activeId = String(v6().activeId || '');
-    if (local.lastActive !== activeId) { local.openDrive = null; local.lastActive = activeId; }
+    if (local.lastActive !== activeId) { local.openDrive = null; local.focusPlay = null; local.lastActive = activeId; }
     root.classList.add('has-board');
     write(hostFor(root, 'board', '[data-cast6-rail]'), boardHtml());
     /* Before kickoff the current-play and drive panels are empty by
@@ -297,7 +302,12 @@
     const pre = sem(v6().detail?.game) === 'SCHEDULE';
     const moments = hostFor(root, 'moments', '[data-cast6-action]');
     const anchor = root.querySelector(pre ? '[data-cast6-hero]' : '[data-cast6-action]');
-    if (anchor && moments.previousElementSibling !== anchor) anchor.after(moments);
+    /* what is happening -> how much did it matter -> show me the play:
+       selected game, then Game Pulse, then Key Moments / PBE Replay. */
+    const pulse = hostFor(root, 'pulse', '[data-cast6-action]');
+    if (anchor && pulse.previousElementSibling !== anchor) anchor.after(pulse);
+    if (moments.previousElementSibling !== pulse) pulse.after(moments);
+    window.PBEcastPulse?.mount?.(pulse, v6());
     write(moments, keyMomentsHtml() || beforeKickoffHtml());
     /* The original PBE decision on the focused game, straight from the PBE
        Card store (one server contract; nothing decided here). It sits
@@ -308,6 +318,28 @@
     const hero = root.querySelector('[data-cast6-hero]');
     if (hero && pick.previousElementSibling !== hero) hero.after(pick);
     write(pick, g ? (window.PBECard?.gameModule?.({ away: g.teams?.away?.abbreviation, home: g.teams?.home?.abbreviation, espnId: g.id, surface: 'pbecast' }) || '') : '');
+  }
+
+  /* A Game Pulse swing names a published play id. Open it where Key Moments
+     already lists it (scoring, turnover, explosive), otherwise open the drive
+     that contains it in the drive chart, then bring that play into view. */
+  function focusPlay(id) {
+    const d = v6().detail; if (!d || !id) return;
+    const m = moments(d);
+    const has = rows => rows.some(p => String(p?.id) === String(id));
+    let tab = has(m.scoring) ? 'scoring' : has(m.turnovers) ? 'turnovers' : has(m.explosive) ? 'explosive' : 'drives';
+    if (tab === 'drives') {
+      const i = arr(d.drives).findIndex(dr => has(arr(dr?.plays)));
+      if (i < 0) return;
+      local.openDrive = i;
+    }
+    local.moment = tab; local.focusPlay = String(id);
+    render();
+    const el = document.querySelector(`.pbekm [data-km-play="${CSS.escape(String(id))}"]`);
+    if (!el) return;
+    const still = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+    el.scrollIntoView({ block: 'center', behavior: still ? 'auto' : 'smooth' });
+    el.focus?.({ preventScroll: true });
   }
 
   let watched = null;
@@ -321,7 +353,9 @@
     /* v6 only rewrites these nodes when their content changed, so this is an
        event per real update, not a poll. childList only: our own writes live
        in sibling nodes and cannot retrigger it. */
-    ['[data-cast6-rail]', '[data-cast6-hero]', '[data-cast6-workspace]'].forEach(sel => { const n = root.querySelector(sel); if (n) nodeObserver.observe(n, { childList: true }); });
+    /* telemetry is rewritten when the detail lane's win-probability count
+       changes, which is what Game Pulse needs to hear about */
+    ['[data-cast6-rail]', '[data-cast6-hero]', '[data-cast6-telemetry]', '[data-cast6-workspace]'].forEach(sel => { const n = root.querySelector(sel); if (n) nodeObserver.observe(n, { childList: true }); });
     if (!local.seeded) { observeFrame(); local.seeded = true; }
     render();
     /* PBEcast needs the command center's sources for BEFORE KICKOFF. They
@@ -340,6 +374,7 @@
     if (!e.target.closest?.('.pbecast6')) return;
     if (e.target.closest('[data-cb-toggle]')) { const live = games().some(g => sem(g) === 'LIVE'); local.boardOpen = !(local.boardOpen ?? live); render(); return; }
     const tab = e.target.closest('[data-km-tab]'); if (tab) { local.moment = tab.dataset.kmTab; render(); return; }
+    const swing = e.target.closest('[data-pulse-play]'); if (swing) { focusPlay(swing.dataset.pulsePlay); return; }
     const drive = e.target.closest('[data-km-drive]'); if (drive) { const i = Number(drive.dataset.kmDrive); local.openDrive = local.openDrive === i ? null : i; render(); return; }
     const route = e.target.closest('[data-pbecc-cast] [data-route]'); if (route) { window.App?.nav?.(route.dataset.route); }
     /* [data-game] is handled by v6's own root listener: focus(). */
@@ -347,6 +382,6 @@
   window.addEventListener('pbe:route-changed', () => setTimeout(watch, 0));
   window.addEventListener('pbe:card-ready', () => { if (document.querySelector('.pbecast6')) render(); });
 
-  window.PBEcastCommand = { render, state: local, moments, diff };
+  window.PBEcastCommand = { render, state: local, moments, diff, focusPlay };
   if (!install()) document.addEventListener('DOMContentLoaded', install, { once: true });
 })();

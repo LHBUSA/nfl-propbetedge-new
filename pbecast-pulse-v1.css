@@ -1,0 +1,93 @@
+/* PropBetEdge NFL — PBEcast Game Pulse. Tokens only.
+   Team poles are validated for the dark ink surface (dataviz validator:
+   lightness band, chroma, CVD ΔE 26.5, contrast >= 3:1 on #1d1914) and are
+   always paired with the team abbreviation, so identity never rests on colour. */
+.pbepulse{--pulse-away:#5a8de6;--pulse-home:#b38b22;background:var(--pbe-ink-2);border:1px solid var(--pbe-line);border-radius:var(--r-md,10px);padding:14px 16px 12px;color:var(--pbe-paper);font-family:var(--pbe-font-ui)}
+.pbepulse *{box-sizing:border-box}
+.pbepulse button{font:inherit;cursor:pointer;color:inherit}
+.pbepulse.is-final{border-top:2px solid var(--pbe-gold)}
+.pbepulse>header{display:flex;justify-content:space-between;align-items:flex-end;gap:6px 16px;flex-wrap:wrap;margin-bottom:12px}
+.pbepulse h2{margin:4px 0 0;font:800 var(--fs-h3,16px)/1.25 var(--pbe-font-ui)}
+.pbepulse-state{margin:0;font:600 12px/1.3 var(--pbe-font-data);color:var(--pbe-paper-2);font-variant-numeric:tabular-nums;text-align:right}
+
+/* current probability: the number first, the bar as its shape */
+.pbepulse-now{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:14px;margin-bottom:12px}
+.pbepulse-team{display:flex;align-items:center;gap:8px;min-width:0}
+.pbepulse-team img{width:28px;height:28px;object-fit:contain}
+.pbepulse-team b{font:800 13px/1 var(--pbe-font-data);letter-spacing:.06em;color:var(--pbe-paper-2)}
+.pbepulse-team strong{font:700 var(--fs-data-lg,26px)/1 var(--pbe-font-data);font-variant-numeric:tabular-nums;color:var(--pbe-paper)}
+.pbepulse-team.away b{box-shadow:inset 0 -2px 0 var(--pulse-away);padding-bottom:3px}
+.pbepulse-team.home b{box-shadow:inset 0 -2px 0 var(--pulse-home);padding-bottom:3px}
+.pbepulse-bar{display:flex;gap:2px;height:8px;border-radius:4px;overflow:hidden;background:var(--pbe-ink-4)}
+.pbepulse-bar i{display:block;height:100%;transition:width .4s ease}
+.pbepulse-bar i.away{background:var(--pulse-away);border-radius:4px 0 0 4px}
+.pbepulse-bar i.home{background:var(--pulse-home);border-radius:0 4px 4px 0;margin-left:auto}
+.pbepulse-tie{grid-column:1/-1;justify-self:center;font:600 var(--fs-micro,10px)/1 var(--pbe-font-data);letter-spacing:.1em;color:var(--pbe-faint)}
+
+/* timeline */
+.pbepulse-chart{margin:0}
+.pbepulse-plot{position:relative;height:clamp(120px,14vw,168px);margin:0 52px 0 0;border-left:1px solid var(--pbe-line-faint)}
+.pbepulse-plot svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.pbepulse-plot .mid{stroke:var(--pbe-line-strong);stroke-width:1;stroke-dasharray:4 4;vector-effect:non-scaling-stroke}
+.pbepulse-plot .q{stroke:var(--pbe-line-faint);stroke-width:1;vector-effect:non-scaling-stroke}
+.pbepulse-plot .area.home{fill:var(--pulse-home);fill-opacity:.2}
+.pbepulse-plot .area.away{fill:var(--pulse-away);fill-opacity:.2}
+.pbepulse-plot .line{fill:none;stroke:var(--pbe-paper-2);stroke-width:2;stroke-linejoin:round;stroke-linecap:round;vector-effect:non-scaling-stroke}
+.pbepulse-edge{position:absolute;right:-52px;width:38px;font:600 var(--fs-micro,10px)/1 var(--pbe-font-data);color:var(--pbe-faint);white-space:nowrap;transform:translateY(-50%)}
+.pbepulse-edge.top{top:6px}.pbepulse-edge.mid{top:50%}.pbepulse-edge.bottom{top:calc(100% - 6px)}
+.pbepulse-q{position:absolute;top:-2px;transform:translate(4px,0);font:600 var(--fs-micro,10px)/1 var(--pbe-font-data);letter-spacing:.08em;color:var(--pbe-faint);pointer-events:none}
+.pbepulse-mark{position:absolute;width:24px;height:24px;margin:-12px 0 0 -12px;padding:0;border:0;background:transparent;display:grid;place-items:center;z-index:2}
+.pbepulse-mark i{display:block;width:10px;height:10px;border-radius:50%;background:var(--pbe-paper);box-shadow:0 0 0 2px var(--pbe-ink-2)}
+.pbepulse-mark.is-top i{width:8px;height:8px;background:var(--pbe-dim)}
+.pbepulse-mark.is-biggest i{width:12px;height:12px;background:var(--pbe-gold)}
+.pbepulse-mark.is-last i{background:transparent;box-shadow:0 0 0 2px var(--pbe-ink-2),inset 0 0 0 2px var(--pbe-paper)}
+.pbepulse-mark.is-last.is-biggest i{background:var(--pbe-gold);box-shadow:0 0 0 2px var(--pbe-ink-2),0 0 0 4px var(--pbe-paper)}
+button.pbepulse-mark:hover i,button.pbepulse-mark:focus-visible i{transform:scale(1.25)}
+.pbepulse-hair{position:absolute;top:0;bottom:0;width:0;border-left:1px solid var(--pbe-line-strong);pointer-events:none;z-index:1}
+.pbepulse-hair>i{position:absolute;left:-5px;width:9px;height:9px;margin-top:-4.5px;border-radius:50%;background:var(--pbe-paper);box-shadow:0 0 0 2px var(--pbe-ink-2)}
+.pbepulse-tip{position:absolute;top:8px;left:10px;min-width:132px;padding:7px 9px;background:var(--pbe-ink-4);border:1px solid var(--pbe-line-strong);border-radius:var(--r-sm,6px);font:600 11px/1.35 var(--pbe-font-data);white-space:nowrap}
+.pbepulse-tip.flip{left:auto;right:10px}
+.pbepulse-tip div{display:flex;justify-content:space-between;gap:12px}
+.pbepulse-tip b{color:var(--pbe-dim);font-weight:600}
+.pbepulse-tip span{color:var(--pbe-paper);font-variant-numeric:tabular-nums}
+.pbepulse-tip small{display:block;margin-top:3px;color:var(--pbe-faint);font:500 11px/1.3 var(--pbe-font-ui)}
+.pbepulse-chart figcaption{margin-top:6px;font:500 11px/1.4 var(--pbe-font-ui);color:var(--pbe-faint)}
+
+/* swings: how much it mattered -> show me the play */
+.pbepulse-swings{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.pbepulse-swings.is-one{grid-template-columns:minmax(0,1fr)}
+.pbepulse-swing{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:2px 10px;text-align:left;background:var(--pbe-ink-4);border:1px solid var(--pbe-line-faint);border-radius:var(--r-sm,6px);padding:10px 12px;min-height:72px;min-width:0}
+.pbepulse-swing .pbecb-eye{grid-column:1/-1}
+.pbepulse-swing b{font:700 var(--fs-data-lg,22px)/1.1 var(--pbe-font-data);font-variant-numeric:tabular-nums;color:var(--pbe-paper);margin-top:4px}
+.pbepulse-swing b.side-away{box-shadow:inset 3px 0 0 var(--pulse-away);padding-left:8px}
+.pbepulse-swing b.side-home{box-shadow:inset 3px 0 0 var(--pulse-home);padding-left:8px}
+.pbepulse-swing small{grid-column:1;font:500 12px/1.35 var(--pbe-font-ui);color:var(--pbe-dim);overflow-wrap:anywhere}
+.pbepulse-swing em{grid-column:2;grid-row:2/span 2;align-self:center;font:700 var(--fs-micro,10px)/1 var(--pbe-font-data);font-style:normal;letter-spacing:.1em;color:var(--pbe-gold);white-space:nowrap}
+button.pbepulse-swing{transition:border-color .15s}
+button.pbepulse-swing:hover,button.pbepulse-swing:focus-visible{border-color:var(--pbe-gold)}
+.pbepulse-swing.is-none b{color:var(--pbe-faint)}
+.pbepulse-top{margin-top:12px}
+.pbepulse-top ol{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:4px}
+.pbepulse-top li>button,.pbepulse-top li>div{width:100%;display:grid;grid-template-columns:120px minmax(0,1fr) auto;align-items:center;gap:10px;text-align:left;background:transparent;border:0;border-bottom:1px solid var(--pbe-line-faint);padding:8px 2px;min-height:40px}
+.pbepulse-top li>button:hover b,.pbepulse-top li>button:focus-visible b{color:var(--pbe-gold-bright)}
+.pbepulse-top b{font:700 14px/1.2 var(--pbe-font-data);font-variant-numeric:tabular-nums;color:var(--pbe-paper)}
+.pbepulse-top b.side-away{box-shadow:inset 3px 0 0 var(--pulse-away);padding-left:8px}
+.pbepulse-top b.side-home{box-shadow:inset 3px 0 0 var(--pulse-home);padding-left:8px}
+.pbepulse-top span{font:500 12px/1.35 var(--pbe-font-ui);color:var(--pbe-paper-2)}
+.pbepulse-top em{font:700 var(--fs-micro,10px)/1 var(--pbe-font-data);font-style:normal;letter-spacing:.1em;color:var(--pbe-gold)}
+.pbepulse-foot{margin-top:10px;border-top:1px solid var(--pbe-line-faint);padding-top:8px;font:600 var(--fs-micro,10px)/1.5 var(--pbe-font-data);letter-spacing:.04em;color:var(--pbe-faint)}
+
+@media (max-width:768px){
+  .pbepulse{padding:12px}
+  .pbepulse-state{text-align:left;width:100%}
+  .pbepulse-now{gap:10px}
+  .pbepulse-team strong{font-size:20px}
+  .pbepulse-team img{display:none}
+  .pbepulse-plot{height:120px;margin-right:46px}
+  .pbepulse-edge{right:-46px;width:32px}
+  .pbepulse-swings{grid-template-columns:1fr}
+  .pbepulse-swing{min-height:64px}
+  .pbepulse-top li>button,.pbepulse-top li>div{grid-template-columns:96px minmax(0,1fr);min-height:44px}
+  .pbepulse-top em{display:none}
+}
+@media (prefers-reduced-motion:reduce){.pbepulse-bar i{transition:none}}

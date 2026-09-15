@@ -125,6 +125,9 @@
     /* Additive like v7: the Sunday board, around-the-league feed, key
        moments / replay v0 and before-kickoff context. No transport, no timer,
        no route registration. */
+    /* Game Pulse: derived from v6's win_probability, mounted by the command
+       layer. No transport, no timer, no route registration. */
+    {css:'./pbecast-pulse-v1.css',js:'./pbecast-pulse-v1.js'},
     {css:'./pbecast-command-v1.css',js:'./pbecast-command-v1.js'},
     {css:'./stadium-selector-v1.css',js:'./stadium-selector-v1.js'},
     {css:'./production-polish-v2.css',js:'./production-polish-v2.js'},
