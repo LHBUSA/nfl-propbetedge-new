@@ -282,6 +282,9 @@ def harvest_player(fx, espn_id, dna, nflverse):
         'dna_positions': sorted(dna.get('positions') or []),
         'current_team': (a.get('team') or {}).get('abbreviation'),
         'active': a.get('active'),
+        # ESPN's athlete `active` flag stays true for some retired players (Jared Cook);
+        # the Player DNA 2026 roster audit is the product's answer to "is he playing".
+        'active_2026': bool(dna.get('active_2026')),
         'debut_season': debut,
         'debut_sources': {'espn_debut_year': debut_espn, 'first_espn_stat_season': stat_years[0] if stat_years else None, 'nflverse_rookie_season': nv_rookie, 'note': debut_note},
         'history_through_season': last,

@@ -158,7 +158,7 @@
       <dl class="pbe-car-facts">
         <div><dt>Seasons played</dt><dd>${esc(seasons.size)}</dd></div>
         <div><dt>Career span</dt><dd>${esc(span)}</dd></div>
-        <div><dt>Current team</dt><dd>${esc(p.player?.current_team || '—')}</dd></div>
+        <div><dt>${p.player?.active ? 'Current team' : 'Last team'}</dt><dd>${esc((p.player?.active ? p.player?.current_team : arr(p.player?.teams).slice(-1)[0]) || '—')}</dd></div>
         <div><dt>Teams</dt><dd>${esc(arr(p.player?.teams).join(' · ') || '—')}</dd></div>
       </dl>`;
   }
@@ -201,7 +201,7 @@
     const tracked = p.label !== 'CAREER';
     return `<footer class="pbe-car-foot">
       ${tracked ? `<p class="pbe-car-why"><b>Tracked history, not a full career.</b> ${esc(arr(c.why_not_career).slice(0, 4).join(' · ') || 'Debut-to-today coverage is not proven.')}${arr(c.why_not_career).length > 4 ? ` · +${esc(arr(c.why_not_career).length - 4)} more` : ''}</p>`
-        : `<p>Every regular-season game from ${esc(c.debut_season)} through today is in the ledger, reconciled season by season against the provider.</p>`}
+        : `<p>Every regular-season game from ${esc(c.debut_season)} through ${p.player?.active ? 'today' : esc(p.career_span?.to ?? '')} is in the ledger, reconciled season by season against the provider.</p>`}
       <p>ESPN game logs, joined on the ESPN athlete id. Totals are sums of the games below; games started is not published by the source and shows —. Pro Bowl games are not counted.</p>
       ${notes.length ? `<details class="pbe-car-notes"><summary>Provider surfaces disagree on ${esc(notes.length)} figure${notes.length === 1 ? '' : 's'}</summary><ul>${notes.slice(0, 12).map(n => `<li>${esc(n.season)} ${esc(LONG[n.field] || n.field)}: game log ${esc(n.ledger)}, season row ${esc(n.provider)}</li>`).join('')}</ul></details>` : ''}
     </footer>`;

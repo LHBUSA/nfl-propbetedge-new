@@ -472,7 +472,11 @@
     const key = e?.detail?.season?.primary_slate?.key || null;
     if (!key || !document.querySelector('.pbehome7')) return;
     if (state.slate?.key === key) return;
-    load({ poll: true });
+    /* A round already in flight resolved its slate before this contract landed;
+       load() would hand back that same round. Re-check once it settles. */
+    (inflight || Promise.resolve()).then(() => {
+      if (state.slate?.key !== key && document.querySelector('.pbehome7')) load({ poll: true });
+    });
   });
 
   window.PBEDashboardV7 = { load, state, loadRecent };

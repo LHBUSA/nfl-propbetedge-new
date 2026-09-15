@@ -460,10 +460,11 @@
   };
   function kickoffLabel(iso) {
     const parts = new Intl.DateTimeFormat('en-US', {
-      timeZone: 'America/New_York', weekday: 'short', hour: 'numeric',
+      timeZone: 'America/New_York', weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric',
       minute: '2-digit', hour12: true }).formatToParts(new Date(iso));
     const g = t => (parts.find(x => x.type === t) || {}).value || '';
-    return `${g('weekday')} · ${g('hour')}:${g('minute')} ${g('dayPeriod')} ET`;
+    /* The date is part of the fact: next week's game is not just "Thu". */
+    return `${g('weekday').toUpperCase()} ${g('month').toUpperCase()} ${g('day')} · ${g('hour')}:${g('minute')} ${g('dayPeriod')} ET`;
   }
   /* ---- limited history in rare conditions ------------------------------
      NOT PART OF THE DEFAULT HISTORICAL DNA SURFACE. Almost every player has
@@ -523,47 +524,139 @@
   }
 
 
-  /* Which game on the slate is this player's NEXT game?
+  /* Which game is this player's NEXT NFL game?
 
-     Every DNA product used to take the first slate game involving the team,
-     falling back to the first game on the slate if the team had none. Both
-     halves were wrong once the season started: a team that has already played
-     this week matched its FINISHED game and showed it as "Next", and a team not
-     on the slate at all was handed some other team's game.
+     SCHEDULE TRUTH, NOT SCOREBOARD OR MARKET. The DNA slate is ESPN's undated
+     scoreboard, which holds only the provider's current week and stays on the
+     finished week until its calendar rolls midweek. Picking "next" from it said
+     "BUF has no upcoming game on this slate" on the Tuesday after Week 1 while
+     DET @ BUF was already scheduled for Thursday. Whether a market exists for a
+     game says nothing about whether the game exists either.
 
-     A game that is over is never next. If the team has nothing upcoming on
-     this slate, the answer is "none on this slate" — and we keep the finished
-     game so the page can say what the team last did instead of going blank. */
+     One shared resolver for QB / WR / RB / TE DNA:
+
+       nextGame         the team's LIVE or next scheduled game, from the season
+                        contract's team_schedule (nfl-current, the schedule
+                        authority, refreshed with the contract; no new fetch)
+       lastFinished     the team's most recent FINAL, same authority
+       marketGame       the market event paired with nextGame, when one exists
+       marketAvailable  whether it does; it never decides whether the game exists
+       scheduleKnown    false until the contract carries team_schedule; while
+                        false nothing is asserted about a missing game
+
+     A finished game is never next. "No scheduled game" is said only when the
+     schedule authority is known and holds no future game for the team. */
   const FINISHED = /FINAL|POST|COMPLETE/i;
   function isFinished(g) {
-    return FINISHED.test(String((g && (g.status || g.state || g.status_name)) || ''))
+    return FINISHED.test(String((g && (g.status || g.state || g.status_name || g.semantics)) || ''))
       || (g && g.completed === true);
   }
-  function pickSlateGame(slate, team) {
+  function seasonContract() {
+    return (window.PBESeason && window.PBESeason.data) || null;
+  }
+  function resolveTeamGames(team, slate, contract) {
+    const c = contract === undefined ? seasonContract() : contract;
+    const scheduleKnown = !!(c && c.team_schedule && typeof c.team_schedule === 'object');
+    const sched = scheduleKnown && team ? (c.team_schedule[team] || { next: null, last_final: null }) : null;
     const games = (slate && Array.isArray(slate.games)) ? slate.games : [];
     const mine = team ? games.filter(g => g.home_team === team || g.away_team === team) : [];
-    const upcoming = mine.filter(g => !isFinished(g))
-      .sort((a, b) => Date.parse(a.kickoff_utc || 0) - Date.parse(b.kickoff_utc || 0));
-    const done = mine.filter(isFinished)
-      .sort((a, b) => Date.parse(b.kickoff_utc || 0) - Date.parse(a.kickoff_utc || 0));
-    return { next: upcoming[0] || null, lastFinished: done[0] || null, onSlate: mine.length > 0 };
+    const byKick = (a, b) => Date.parse(a.kickoff_utc || 0) - Date.parse(b.kickoff_utc || 0);
+    const slateNext = mine.filter(g => !isFinished(g)).sort(byKick)[0] || null;
+    const slateLast = mine.filter(isFinished).sort((a, b) => byKick(b, a))[0] || null;
+
+    let nextGame = null;
+    if (scheduleKnown && sched) {
+      const n = sched.next;
+      /* Enrich from the slate row for the same event when it is there (team
+         crests, venue). Identity is the ESPN event id, nothing else. */
+      const row = n ? games.find(g => String(g.espn_event_id) === String(n.espn_event_id)) : null;
+      /* Team crests by abbreviation, the same resolution the API's teamBlock uses. */
+      const side = abbr => ({ abbreviation: abbr, media: { logo_url: `https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/${String(abbr).toLowerCase()}.png` } });
+      nextGame = n ? { home: side(n.home_team), away: side(n.away_team), ...(row || {}), ...n, label: `${n.away_team} @ ${n.home_team}`, source: 'schedule' } : null;
+    } else if (!scheduleKnown && slateNext) {
+      nextGame = { ...slateNext, source: 'scoreboard' };
+    }
+    const schedLast = sched && sched.last_final ? { ...sched.last_final, label: `${sched.last_final.away_team} @ ${sched.last_final.home_team}` } : null;
+    const lastFinished = scheduleKnown ? (schedLast || slateLast) : slateLast;
+    const paired = nextGame ? games.find(g => String(g.espn_event_id) === String(nextGame.espn_event_id) && g.market_event_id) : null;
+    const marketGame = paired ? { espn_event_id: paired.espn_event_id, market_event_id: paired.market_event_id } : null;
+    return {
+      nextGame, marketGame, lastFinished, marketAvailable: !!marketGame, scheduleKnown,
+      /* compatibility with the four products, which read .next */
+      next: nextGame, onSlate: mine.length > 0
+    };
+  }
+  /* Kept under its old name so every product inherits the fix. */
+  function pickSlateGame(slate, team) { return resolveTeamGames(team, slate); }
+
+  /* The game-context query for the resolved next game. The kickoff's ET date
+     lets the API read that day's board when the undated one is a week behind. */
+  function contextQuery(pick) {
+    const g = pick && pick.nextGame;
+    if (!g || !g.espn_event_id) return '';
+    const d = g.kickoff_utc ? new Date(g.kickoff_utc) : null;
+    const date = d && !Number.isNaN(d.getTime()) ? d.toLocaleDateString('en-CA', { timeZone: 'America/New_York' }).replace(/-/g, '') : '';
+    return `event_id=${encodeURIComponent(g.espn_event_id)}${date ? `&date=${date}` : ''}`;
+  }
+
+  /* Wait, bounded, for the season contract so the first resolution uses the
+     schedule authority. It starts no fetch and no timer of its own. */
+  function scheduleReady(ms) {
+    if (seasonContract() || !window.PBESeason || typeof window.PBESeason.onReady !== 'function') return Promise.resolve(seasonContract());
+    return new Promise(resolve => {
+      let done = false;
+      const t = setTimeout(() => { if (!done) { done = true; resolve(seasonContract()); } }, ms || 4000);
+      window.PBESeason.onReady(d => { if (!done) { done = true; clearTimeout(t); resolve(d); } });
+    });
+  }
+
+  function lastLine(last) {
+    if (!last) return '';
+    if (last.away_score != null && last.home_score != null) {
+      return `FINAL · ${esc(last.away_team)} ${esc(last.away_score)}–${esc(last.home_score)} ${esc(last.home_team)}`;
+    }
+    /* The scoreboard slate carries no scores; a score is shown only when the
+       season contract describes this exact game. Otherwise FINAL, no score. */
+    const lf = window.PBESeason && typeof window.PBESeason.latestFinal === 'function' ? window.PBESeason.latestFinal() : null;
+    const same = lf && String(lf.id) === String(last.espn_event_id);
+    return same
+      ? `FINAL · ${esc(lf.away.abbreviation)} ${esc(lf.away.score)}–${esc(lf.home.score)} ${esc(lf.home.abbreviation)}`
+      : `FINAL · ${esc(last.away_team)} @ ${esc(last.home_team)}`;
+  }
+
+  /* Market state beside the next game. A missing market affects only this. */
+  function marketStateHtml(ctx, pick) {
+    const available = ctx ? !!(ctx.markets && ctx.markets.available) : !!(pick && pick.marketAvailable);
+    return available
+      ? '<div class="q2-hero-next-mkt is-on">Market open</div>'
+      : '<div class="q2-hero-next-mkt">Market unavailable</div>';
+  }
+
+  /* The hero's Next block when no game context is loaded. A scheduled game is
+     still shown from the schedule itself; the no-game state needs the schedule
+     authority to say so. */
+  function heroNextFallback(pick, team) {
+    if (!pick) return '';
+    const g = pick.nextGame;
+    if (g) {
+      const last = lastLine(pick.lastFinished);
+      return `<div class="q2-hero-next" data-next-source="${esc(g.source || 'schedule')}" data-next-event="${esc(g.espn_event_id)}">
+        <div class="q2-hero-next-k">Next${g.semantics === 'LIVE' ? ' · LIVE' : ''}</div>
+        <div class="q2-hero-next-m">${matchupLine(g, 26)}</div>
+        <div class="q2-hero-next-w">${esc(kickoffLabel(g.kickoff_utc))}</div>
+        <div class="q2-hero-next-e is-none">conditions not resolved</div>
+        ${marketStateHtml(null, pick)}
+        ${last ? `<div class="q2-hero-next-v">Last: ${last}</div>` : ''}
+      </div>`;
+    }
+    if (!pick.scheduleKnown) return '';
+    return noNextGameHtml(pick, team);
   }
   function noNextGameHtml(pick, team) {
-    const last = pick && pick.lastFinished;
-    /* The slate carries no scores, so a score is only shown when the season
-       contract — which does — describes this exact game. Otherwise FINAL with
-       no score, never an invented one. */
-    let line = '';
-    if (last) {
-      const lf = window.PBESeason && typeof window.PBESeason.latestFinal === 'function' ? window.PBESeason.latestFinal() : null;
-      const same = lf && String(lf.id) === String(last.espn_event_id);
-      line = same
-        ? `FINAL · ${esc(lf.away.abbreviation)} ${esc(lf.away.score)}–${esc(lf.home.score)} ${esc(lf.home.abbreviation)}`
-        : `FINAL · ${esc(last.away_team)} @ ${esc(last.home_team)}`;
-    }
-    return `<div class="q2-hero-next is-none">
+    const line = lastLine(pick && pick.lastFinished);
+    return `<div class="q2-hero-next is-none" data-next-source="schedule">
       <div class="q2-hero-next-k">Next</div>
-      <div class="q2-hero-next-m">${esc(team || 'Team')} has no upcoming game on this slate</div>
+      <div class="q2-hero-next-m">${esc(team || 'Team')} has no scheduled game in the current schedule window</div>
       ${line ? `<div class="q2-hero-next-w">Last: ${line}</div>` : ''}
     </div>`;
   }
@@ -575,6 +668,7 @@
     paintCharts, drawSeries, drawDistribution,
     n1, pctSigned, samp, den, priceLabel, longDate, kickoffLabel,
     SPECIFIC_CONDITIONS, similarCondition, limitedHistoryHtml, rareTodayWindow, NO_PATTERN,
-    pickSlateGame, noNextGameHtml, isFinished
+    pickSlateGame, noNextGameHtml, isFinished,
+    resolveTeamGames, contextQuery, scheduleReady, heroNextFallback, marketStateHtml
   };
 })();

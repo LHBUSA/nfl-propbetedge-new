@@ -95,11 +95,11 @@
   function heroNext() {
     const c = state.ctx;
     if (!c) {
-      /* Say what is true rather than go blank: the team has nothing upcoming
-         on this slate, and here is what it last did. */
-      if (state.slatePick && !state.slatePick.next && state.dna) {
+      /* Say what is true rather than go blank: the scheduled next game from the
+         schedule authority, or - only when that authority says so - no game. */
+      if (state.slatePick && state.dna) {
         const tm = (state.dna.player.team && state.dna.player.team.abbreviation) || state.dna.player.current_team;
-        return PD.noNextGameHtml(state.slatePick, tm);
+        return PD.heroNextFallback(state.slatePick, tm);
       }
       return '';
     }
@@ -117,6 +117,7 @@
       ${env.length ? `<div class="q2-hero-next-e">${env.map(e => `<span>${esc(e)}</span>`).join('')}</div>`
         : `<div class="q2-hero-next-e is-none">${esc(PD.softReason(((c.unresolved || [])[0] || {}).reason)
             || 'conditions not resolved')}</div>`}
+      ${PD.marketStateHtml(c, state.slatePick)}
     </div>`;
   }
 
@@ -908,7 +909,9 @@
     try {
       // the schedule/venue/forecast resolver is shared with the family
       if (!state.slate) state.slate = await get('/api/qb-dna/game-context');
-      if (!state.slate.games.length) return;
+      /* Next game comes from the schedule authority (PD.resolveTeamGames), not
+         from whether ESPN's undated scoreboard still holds this team's week. */
+      await PD.scheduleReady();
       if (!state.eventId) {
         const team = (state.dna.player.team && state.dna.player.team.abbreviation)
           || state.dna.player.current_team || null;
@@ -917,7 +920,7 @@
         state.eventId = state.slatePick.next ? state.slatePick.next.espn_event_id : null;
       }
       if (!state.eventId) { state.ctx = null; state.ctxCmp = null; render(); return; }
-      state.ctx = await get(`/api/qb-dna/game-context?event_id=${encodeURIComponent(state.eventId)}`
+      state.ctx = await get(`/api/qb-dna/game-context?${state.slatePick && state.slatePick.nextGame && String(state.slatePick.nextGame.espn_event_id) === String(state.eventId) ? PD.contextQuery(state.slatePick) : `event_id=${encodeURIComponent(state.eventId)}`}`
         + '&kind=rushing');
       state.ctxCmp = null;
       if (state.dna.history_available === false) return;

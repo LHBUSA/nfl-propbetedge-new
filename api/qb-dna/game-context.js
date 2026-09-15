@@ -144,8 +144,19 @@ export default async function handler(req, res) {
     }, 120);
   }
 
-  const g = events.find(e => e.espn_event_id === String(q.event_id));
-  if (!g) return send(res, 404, { ok: false, error: 'event_not_on_current_scoreboard', event_id: String(q.event_id) });
+  let g = events.find(e => e.espn_event_id === String(q.event_id));
+  /* ESPN's undated board holds only the provider's current week, which stays on
+     the finished week until its calendar rolls midweek. The player's next game
+     comes from the schedule authority (nfl-current team_schedule) with its
+     kickoff date; read that date's board rather than calling the game absent. */
+  const date = String(q.date || '').replace(/\D/g, '');
+  if (!g && /^\d{8}$/.test(date)) {
+    try {
+      const dated = await getJSON(`${SCOREBOARD}?dates=${date}`);
+      g = (dated.events || []).map(shapeEvent).filter(Boolean).find(e => e.espn_event_id === String(q.event_id)) || null;
+    } catch (_) { g = null; }
+  }
+  if (!g) return send(res, 404, { ok: false, error: 'event_not_on_current_scoreboard', event_id: String(q.event_id), date: date || null });
 
   // A neutral-site game is NOT the home team's venue. Say so rather than
   // silently applying the wrong stadium's roof and coordinates.

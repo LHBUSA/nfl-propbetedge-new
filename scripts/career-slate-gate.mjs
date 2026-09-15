@@ -96,6 +96,7 @@ async function intercept(url) {
   if (u.origin === GATEWAY && u.pathname === '/api/season') return seasonCall(url);
   if (u.origin !== ORIGIN) return null;
   if (u.pathname === '/api/nfl-live') return vercelCall('nfl-live.js', url);
+  if (u.pathname === '/api/qb-dna/game-context') return vercelCall('qb-dna/game-context.js', url);
   if (u.pathname.startsWith('/api/')) return null;
   const rel = u.pathname === '/' ? 'index.html' : decodeURIComponent(u.pathname.slice(1));
   if (!rel || rel.includes('..') || !MIME[extname(rel)]) return null;
@@ -192,6 +193,7 @@ if (home && !home.__error) {
 if (!process.argv.includes('--dashboard-only')) {
 /* ---- Player DNA ------------------------------------------------------------------- */
 const CASES = [
+  ['qbdna', 'PBEQBDna', '00-0034857', '3918298', 'QB Josh Allen (BUF next-game bug)'],
   ['qbdna', 'PBEQBDna', '00-0019596', '2330', 'QB full history (Brady)'],
   ['qbdna', 'PBEQBDna', '00-0023459', '8439', 'QB team change (Rodgers)'],
   ['rbdna', 'PBERBDna', '00-0032764', '3043078', 'RB full history + team change (Henry)'],
@@ -215,6 +217,18 @@ for (const [route, global, gsis, espn, label] of CASES) {
   check(`${label}: ledger mounted under the hero`, r && r.underHero, r && { underHero: r.underHero, eyebrow: r.eyebrow });
   check(`${label}: label matches API (${api?.label})`, r && api && r.label === api.label && r.eyebrow.trim() === api.label, { page: r?.label, api });
   check(`${label}: regular-season games tile = API total`, r && api && r.tiles[0] === Number(api.games).toLocaleString('en-US'), { tile: r?.tiles?.[0], api: api?.games });
+  /* NEXT GAME TRUTH: the hero's next game comes from the schedule authority. */
+  const nx = await waitFor(`(()=>{const m=window.${global};const p=m.state.dna&&m.state.dna.player;const team=p&&((p.team&&p.team.abbreviation)||p.current_team);
+    const ts=PBESeason.data&&PBESeason.data.team_schedule;const sched=ts&&team?ts[team]:undefined;const el=document.querySelector('.q2-hero-next');
+    if(!el||!ts)return null;return {team,active:!!(p&&m.state.dna.player.active_2026),sched:sched?{next:sched.next&&sched.next.name,kick:sched.next&&sched.next.kickoff_utc}:null,text:el.textContent.replace(/\\s+/g,' ').trim(),mkt:(el.querySelector('.q2-hero-next-mkt')||{}).textContent||null}})()`, 25000);
+  if (nx && nx.sched && nx.sched.next) {
+    const [aw, hm] = nx.sched.next.split(' @ ');
+    const day = new Date(nx.sched.kick).toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric' }).toUpperCase();
+    check(`${label}: hero NEXT is the scheduled ${nx.sched.next} (${day}), market state separate`,
+      nx.text.includes(aw) && nx.text.includes(hm) && nx.text.includes(day) && !/no (upcoming|scheduled) game/i.test(nx.text) && /Market (open|unavailable)/.test(nx.text), nx);
+  } else if (espn === '3918298' || (nx && nx.active)) {
+    check(`${label}: hero NEXT resolved from the schedule authority`, false, nx);
+  }
   if (espn === '15847') check(`${label}: says TRACKED HISTORY and names the gap`, r && r.label === 'TRACKED HISTORY' && /2013/.test(r.why), r?.why);
   check(`${label}: existing DNA analytics + current layer still render`, r && r.currentLayer && r.analytics > 5, { currentLayer: r?.currentLayer, analytics: r?.analytics });
   check(`${label}: no horizontal overflow`, r && r.overflow <= 0, r?.overflow);

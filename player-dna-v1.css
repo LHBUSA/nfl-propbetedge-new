@@ -150,6 +150,13 @@
 .q2-hero-next-e span::before { content: '· '; color: var(--pbe-subtle); }
 .q2-hero-next-e span:first-child::before { content: ''; }
 .q2-hero-next-e.is-none { color: var(--pbe-unavailable); font-style: italic; }
+/* Market state is a property of the game, never whether the game exists. */
+.q2-hero-next-mkt {
+  grid-column: 2 / 4; justify-self: start;
+  font: 700 var(--fs-micro)/1 var(--pbe-font-data); letter-spacing: .12em; text-transform: uppercase;
+  color: var(--pbe-unavailable); border: 1px dashed var(--pbe-line); border-radius: 4px; padding: 4px 7px;
+}
+.q2-hero-next-mkt.is-on { color: var(--pbe-pos, #4ea373); border: 1px solid rgba(78,163,115,.4); }
 
 .q2-match { display: inline-flex; align-items: center; gap: 9px; }
 .q2-match em {

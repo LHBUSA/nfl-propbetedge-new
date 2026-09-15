@@ -27,7 +27,7 @@
  *   when the provider says the game is over. Nothing is inferred from a clock.
  */
 
-import { deriveSlate } from './slate.js';
+import { deriveSlate, teamSchedule, ymdET } from './slate.js';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -137,6 +137,16 @@ async function buildSeasonAndGames() {
   const games = A(board?.games).map(readGame).filter(g => g.id);
   const now = Date.now();
 
+  /* Team schedule truth reaches three weeks ahead so a bye week never reads as
+     "no upcoming game". A separate read: the ±10-day window above is what the
+     picks engine consumes and stays exactly as it was. Failure here only
+     withholds team_schedule; it never fails the season contract. */
+  let schedule = null;
+  try {
+    const ahead = await pbe(`range=${ymdET(now - 864e5)}-${ymdET(now + 21 * 864e5)}`);
+    schedule = { window: `${ymdET(now - 10 * 864e5)}-${ymdET(now + 21 * 864e5)}`, teams: teamSchedule([...games, ...A(ahead?.games).map(readGame)], now) };
+  } catch (_) { schedule = null; }
+
   /* Season identity comes from the provider's own labelling of the games it
      is serving, not from a calendar guess. */
   const cur = games.find(g => g.semantics === 'LIVE') || games.find(g => g.semantics === 'SCHEDULE') || games[games.length - 1] || null;
@@ -170,6 +180,8 @@ async function buildSeasonAndGames() {
     next_game: nextGame,
     default_event_hint: nextGame ? { id: nextGame.id, name: nextGame.name, kickoff: nextGame.kickoff, semantics: nextGame.semantics } : null,
     ...slateState,
+    team_schedule: schedule ? schedule.teams : null,
+    team_schedule_window: schedule ? schedule.window : null,
     window: rangeAround(),
     last_updated: new Date().toISOString(),
     source: { provider: 'espn_site_scoreboard', via: 'nfl.propbetedge.ai/api/nfl-live?range', transport: 'poll' }

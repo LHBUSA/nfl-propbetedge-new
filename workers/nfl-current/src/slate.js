@@ -135,3 +135,41 @@ export function deriveSlate(games, provider, now = Date.now()) {
     latest_completed_slate: latestCompleted ? { key: latestCompleted.key, season: latestCompleted.season, season_type: latestCompleted.season_type, week: latestCompleted.week, label: weekLabel(latestCompleted.season_type, latestCompleted.week) } : null
   };
 }
+
+/* ---- per-team schedule truth ------------------------------------------------
+   Player DNA needs "this team's next NFL game" and used to take it from
+   whatever scoreboard it happened to hold, so on the Tuesday after Week 1 every
+   team had "no upcoming game" while Week 2 was already scheduled. The answer
+   comes from the schedule, never from whether a market exists for the game.
+
+   next        the team's LIVE game, else its earliest open scheduled kickoff
+   last_final  the team's most recent FINAL
+   A team with no game in `window` genuinely has nothing scheduled in it
+   (offseason, eliminated, or a postseason round not yet drawn). */
+function brief(g) {
+  return {
+    espn_event_id: g.id, name: g.name, kickoff_utc: g.kickoff, season: g.season, season_type: g.season_type, week: g.week,
+    semantics: g.semantics, away_team: g.away?.abbreviation || null, home_team: g.home?.abbreviation || null,
+    away_score: g.semantics === 'SCHEDULE' ? null : (g.away?.score ?? null), home_score: g.semantics === 'SCHEDULE' ? null : (g.home?.score ?? null)
+  };
+}
+
+const NOT_TEAMS = new Set(['TBD', 'TBA', 'AFC', 'NFC']);
+
+export function teamSchedule(games, now = Date.now()) {
+  const out = {};
+  const rows = (Array.isArray(games) ? games : []).filter(g => g && g.id && g.away?.abbreviation && g.home?.abbreviation)
+    .sort((a, b) => kick(a) - kick(b));
+  const seen = new Set();
+  for (const g of rows) {
+    if (seen.has(g.id)) continue;
+    seen.add(g.id);
+    for (const team of [g.away.abbreviation, g.home.abbreviation]) {
+      if (!/^[A-Z]{2,4}$/.test(team) || NOT_TEAMS.has(team)) continue;  // an undrawn playoff slot or Pro Bowl side is not a team
+      const t = (out[team] ||= { next: null, last_final: null });
+      if (!t.next && (g.semantics === 'LIVE' || isOpen(g, now))) t.next = brief(g);
+      if (g.semantics === 'FINAL') t.last_final = brief(g);  // ascending, so the last write is the latest
+    }
+  }
+  return out;
+}
