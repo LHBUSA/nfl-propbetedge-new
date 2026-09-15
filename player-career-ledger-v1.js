@@ -128,6 +128,16 @@
     return s < 90 ? `UPDATED ${s}s AGO` : `UPDATED ${Math.round(s / 60)}m AGO`;
   }
 
+  /* ---- presentation state (contract revision 1.1, v1 fallback) ---------------- */
+  /* CAREER and TRACKED HISTORY come from `label` exactly as before; ROOKIE only
+     when the API says history_state is ROOKIE_NO_PRIOR_HISTORY. */
+  function historyState(p) {
+    if (p.history_state === 'CAREER' || p.history_state === 'TRACKED_HISTORY' || p.history_state === 'ROOKIE_NO_PRIOR_HISTORY') return p.history_state;
+    return p.label === 'CAREER' ? 'CAREER' : 'TRACKED_HISTORY';
+  }
+  const DISPLAY = { CAREER: 'CAREER', TRACKED_HISTORY: 'TRACKED HISTORY', ROOKIE_NO_PRIOR_HISTORY: 'ROOKIE · NO PRIOR NFL HISTORY' };
+  const displayLabel = p => DISPLAY[historyState(p)];
+
   /* ---- render ----------------------------------------------------------------- */
   function tiles(fields, t, liveT) {
     return `<dl class="pbe-car-tiles">${fields.map(k => {
@@ -147,11 +157,21 @@
     const seasons = new Set(arr(p.seasons).filter(s => s.season_type === 'REG').map(s => s.season));
     const span = p.career_span ? `${p.career_span.from}–${p.career_span.to}` : '—';
     const liveBanner = live ? `<div class="pbe-car-live" role="status">
-        <span class="pbe-car-livepill"><i aria-hidden="true"></i>LIVE ${esc(p.label === 'CAREER' ? 'CAREER' : 'TRACKED')} TOTALS</span>
+        <span class="pbe-car-livepill"><i aria-hidden="true"></i>LIVE ${esc({ CAREER: 'CAREER', ROOKIE_NO_PRIOR_HISTORY: 'ROOKIE' }[historyState(p)] || 'TRACKED')} TOTALS</span>
         <span>through <b>${esc(live.through || 'live')}</b>${live.score ? ` · ${esc(live.score)}` : ''}</span>
         <span class="pbe-car-age" data-cl-age>${esc(ageText(live.box_score_fetched_at))}</span>
         <small>Verified history through the prior final plus this game's currently published box score. It is replaced by the final line when the game ends.</small>
       </div>` : '';
+    /* A rookie who has not played has nothing to total: say so, never print zeros. */
+    if (historyState(p) === 'ROOKIE_NO_PRIOR_HISTORY' && !live && !(reg?.games) && !(post?.games)) {
+      return `<div class="pbe-car-empty is-rookie"><b>No NFL game played yet.</b> No NFL season before ${esc(p.coverage?.current_season?.season ?? 'this season')}; his record starts with his first game.</div>
+      <dl class="pbe-car-facts">
+        <div><dt>Seasons played</dt><dd>0</dd></div>
+        <div><dt>Career span</dt><dd>—</dd></div>
+        <div><dt>Current team</dt><dd>${esc(p.player?.current_team || '—')}</dd></div>
+        <div><dt>Position</dt><dd>${esc(p.player?.position || '—')}</dd></div>
+      </dl>`;
+    }
     return `${liveBanner}
       <div class="pbe-car-block"><h4>Regular season${liveReg ? ' · live' : ''}</h4>${tiles(f, reg, liveReg)}</div>
       ${post?.games || livePost ? `<div class="pbe-car-block is-post"><h4>Postseason${livePost ? ' · live' : ''}</h4>${tiles(f.filter(k => k !== 'starts'), post, livePost)}</div>` : ''}
@@ -184,6 +204,7 @@
     if (state.logSeason == null || !seasons.includes(state.logSeason)) state.logSeason = seasons[0] ?? null;
     const rows = all.filter(g => g.season === state.logSeason && (state.logType === 'ALL' || g.season_type === state.logType));
     const date = iso => { const d = new Date(iso); return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'America/New_York' }); };
+    if (!seasons.length) return '<div class="pbe-car-empty">No NFL game in the record yet.</div>';
     return `<div class="pbe-car-controls">
         <label class="pbe-car-select"><span>Season</span><select data-cl-logseason aria-label="Game log season">${seasons.map(s => `<option value="${esc(s)}"${s === state.logSeason ? ' selected' : ''}>${esc(s)}</option>`).join('')}</select></label>
         <div class="pbe-car-seg" role="group" aria-label="Game type">
@@ -198,9 +219,12 @@
   function coverageNote(p) {
     const c = p.coverage || {};
     const notes = arr(c.provider_reconciliation?.notes);
-    const tracked = p.label !== 'CAREER';
+    const hs = historyState(p);
+    const tracked = hs === 'TRACKED_HISTORY';
+    const rookieGames = (p.totals?.regular_season?.games || 0) + (p.totals?.postseason?.games || 0);
     return `<footer class="pbe-car-foot">
-      ${tracked ? `<p class="pbe-car-why"><b>Tracked history, not a full career.</b> ${esc(arr(c.why_not_career).slice(0, 4).join(' · ') || 'Debut-to-today coverage is not proven.')}${arr(c.why_not_career).length > 4 ? ` · +${esc(arr(c.why_not_career).length - 4)} more` : ''}</p>`
+      ${hs === 'ROOKIE_NO_PRIOR_HISTORY' ? `<p class="pbe-car-rookie"><b>Rookie · no prior NFL history.</b> No NFL season before ${esc(p.coverage?.current_season?.season ?? 'this season')}: the provider lists him as a rookie with no earlier season on record.${rookieGames ? ` ${esc(p.coverage?.current_season?.season ?? '')} games come from the current season; special-teams-only appearances can be missing from the provider's position game log.` : ''} This is not a proven career record.</p>`
+        : tracked ? `<p class="pbe-car-why"><b>Tracked history, not a full career.</b> ${esc(arr(c.why_not_career).slice(0, 4).join(' · ') || 'Debut-to-today coverage is not proven.')}${arr(c.why_not_career).length > 4 ? ` · +${esc(arr(c.why_not_career).length - 4)} more` : ''}</p>`
         : `<p>Every regular-season game from ${esc(c.debut_season)} through ${p.player?.active ? 'today' : esc(p.career_span?.to ?? '')} is in the ledger, reconciled season by season against the provider.</p>`}
       <p>ESPN game logs, joined on the ESPN athlete id. Totals are sums of the games below; games started is not published by the source and shows —. Pro Bowl games are not counted.</p>
       ${notes.length ? `<details class="pbe-car-notes"><summary>Provider surfaces disagree on ${esc(notes.length)} figure${notes.length === 1 ? '' : 's'}</summary><ul>${notes.slice(0, 12).map(n => `<li>${esc(n.season)} ${esc(LONG[n.field] || n.field)}: game log ${esc(n.ledger)}, season row ${esc(n.provider)}</li>`).join('')}</ul></details>` : ''}
@@ -216,13 +240,18 @@
       const text = p.error === 'not_tracked' ? 'This player is not in the Career Ledger yet. No history is matched by name.' : `Career ledger unavailable (${p.error || 'error'}). Nothing is estimated in its place.`;
       return `<section class="pbe-car" ${MARK}><div class="pbe-car-head"><span class="pbe-car-eyebrow">CAREER LEDGER</span></div><div class="pbe-car-empty">${esc(text)}</div></section>`;
     }
-    const tabs = [['career', p.label === 'CAREER' ? 'Career' : 'Tracked history'], ['seasons', 'Seasons'], ['log', 'Game log']];
+    const hs = historyState(p);
+    const tabs = [['career', hs === 'CAREER' ? 'Career' : hs === 'ROOKIE_NO_PRIOR_HISTORY' ? 'Rookie' : 'Tracked history'], ['seasons', 'Seasons'], ['log', 'Game log']];
     const body = state.tab === 'seasons' ? seasonsTab(p) : state.tab === 'log' ? logTab(p) : careerTab(p);
     const span = p.career_span ? `${p.career_span.from}–${p.career_span.to}` : '';
-    return `<section class="pbe-car${p.live ? ' is-live' : ''}" ${MARK} data-cl-label="${esc(p.label)}" data-cl-espn="${esc(p.player?.espn_id)}">
+    const regSeasons = arr(p.seasons).filter(s => s.season_type === 'REG').length;
+    const sub = hs === 'ROOKIE_NO_PRIOR_HISTORY'
+      ? [p.player?.position, regSeasons ? `${p.career_span?.from} only` : 'no NFL game yet']
+      : [p.player?.position, span, `${regSeasons} seasons`];
+    return `<section class="pbe-car${p.live ? ' is-live' : ''}" ${MARK} data-cl-label="${esc(p.label)}" data-cl-state="${esc(hs)}" data-cl-espn="${esc(p.player?.espn_id)}">
       <div class="pbe-car-head">
-        <div><span class="pbe-car-eyebrow${p.label === 'CAREER' ? '' : ' is-tracked'}">${esc(p.label)}</span>
-          <span class="pbe-car-sub">${esc([p.player?.position, span, `${arr(p.seasons).filter(s => s.season_type === 'REG').length} seasons`].filter(Boolean).join(' · '))}</span></div>
+        <div><span class="pbe-car-eyebrow${hs === 'CAREER' ? '' : hs === 'ROOKIE_NO_PRIOR_HISTORY' ? ' is-rookie' : ' is-tracked'}">${esc(displayLabel(p))}</span>
+          <span class="pbe-car-sub">${esc(sub.filter(Boolean).join(' · '))}</span></div>
         <div class="pbe-car-tabs" role="tablist" aria-label="Career ledger">${tabs.map(([k, t]) => `<button type="button" role="tab" data-cl-tab="${k}" aria-selected="${state.tab === k}">${esc(t)}</button>`).join('')}</div>
       </div>
       <div class="pbe-car-body" role="tabpanel">${body}</div>

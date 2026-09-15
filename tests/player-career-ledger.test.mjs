@@ -9,7 +9,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
-import { composeCareer, parseGamelog, boxScoreLine, eventState, totals, STAT_KEYS } from '../api/_career/ledger-core.js';
+import { composeCareer, parseGamelog, boxScoreLine, eventState, totals, STAT_KEYS, isRookieCandidate, parseRookieEvidence, evaluateRookie } from '../api/_career/ledger-core.js';
 
 const LEDGER = JSON.parse(readFileSync(new URL('../data/dist/career-ledger.json', import.meta.url), 'utf8'));
 const SUMMARY_FINAL = JSON.parse(readFileSync(new URL('./fixtures/career-summary-401872931-final.json', import.meta.url), 'utf8'));
@@ -247,3 +247,104 @@ test('client polling: live -> 15s cadence, never 1s; final/hidden/no game -> no 
   assert.equal(cl.nextPollDelay({ ...finalBody, today: { state: 'SCHEDULE', kickoff: '2026-09-18T00:15:00Z' } }, kick - 3600000, true), null, 'an hour before kickoff: nothing');
   assert.equal(cl.nextPollDelay({ ...finalBody, today: { state: 'SCHEDULE', kickoff: '2026-09-18T00:15:00Z' } }, kick - 300000, true), 60000, 'kickoff discovery: once a minute in the last ten minutes');
 });
+
+/* ---- ROOKIE · NO PRIOR NFL HISTORY (contract revision 1.1) --------------------- */
+const RK = {
+  haynesKing: '4428993',      // ESPN "Rookie", no stats, no 2026 game
+  zachBranch: '4870612',      // ESPN "Rookie", 2026 returning row, one 2026 game
+  jordanWaters: '4428803',    // ESPN "1st Season": must stay TRACKED
+  xavierGuillory: '4695910'   // ESPN "1st Season": must stay TRACKED
+};
+const ev = (over = {}) => ({ provider_experience: 'Rookie', provider_debut_year: null, provider_stat_seasons: [], stats_read: true, fetched_at: '2026-09-15T16:00:00Z', ...over });
+const rookieBody = (id, evidence, extra = {}) => composeCareer({ player: P(id), currentSeason: 2026, currentRows: [], currentAvailable: true, historyMeta: LEDGER.meta, rookieEvidence: evidence, ...extra });
+
+test('ROOKIE: every non-candidate keeps v1 label/coverage exactly; CAREER and TRACKED unchanged across all 1,203 players', () => {
+  let career = 0, tracked = 0, candidates = 0;
+  for (const [id, player] of Object.entries(LEDGER.players)) {
+    const base = composeCareer({ player, currentSeason: 2026, currentRows: [], currentAvailable: true, historyMeta: LEDGER.meta });
+    /* the most rookie-looking evidence possible, applied to everyone */
+    const withEv = composeCareer({ player, currentSeason: 2026, currentRows: [], currentAvailable: true, historyMeta: LEDGER.meta, rookieEvidence: ev() });
+    assert.equal(withEv.label, base.label, `${id}: v1 label unchanged`);
+    assert.equal(withEv.coverage.complete, base.coverage.complete, `${id}: completeness unchanged`);
+    assert.ok(['CAREER', 'TRACKED HISTORY'].includes(withEv.label), 'label keeps v1 values only');
+    if (base.label === 'CAREER') { career++; assert.equal(withEv.history_state, 'CAREER'); }
+    else tracked++;
+    if (isRookieCandidate(player)) candidates++;
+    else assert.notEqual(withEv.history_state, 'ROOKIE_NO_PRIOR_HISTORY', `${id}: a player with any ledger history is never ROOKIE`);
+    assert.equal(base.history_state, base.label === 'CAREER' ? 'CAREER' : 'TRACKED_HISTORY', 'without provider evidence nobody is ROOKIE');
+    assert.equal(base.contract, 'player-career/v1');
+    assert.equal(base.contract_revision, '1.1');
+  }
+  assert.equal(candidates, 172, 'exactly the no-history players are candidates');
+  assert.ok(career > 400 && tracked > 600);
+});
+
+test('ROOKIE: strict criteria pass -> ROOKIE · NO PRIOR NFL HISTORY, still TRACKED in v1 label, never CAREER', () => {
+  const b = rookieBody(RK.haynesKing, ev());
+  assert.equal(b.history_state, 'ROOKIE_NO_PRIOR_HISTORY');
+  assert.equal(b.display_label, 'ROOKIE · NO PRIOR NFL HISTORY');
+  assert.equal(b.label, 'TRACKED HISTORY', 'v1 consumers see the unchanged v1 value');
+  assert.equal(b.coverage.complete, false, 'no rookie is a proven career');
+  assert.equal(b.rookie.qualifies, true);
+  assert.equal(b.rookie.failed.length, 0);
+  assert.deepEqual(plainJson(b.coverage.why_not_career), ['no NFL season before 2026 (provider: Rookie)']);
+  assert.equal(b.totals.regular_season.games, 0);
+  assert.equal(b.career_span, null);
+});
+
+test('ROOKIE: a rookie who has played keeps ROOKIE with his current-season games, never CAREER', () => {
+  const rows = [{ e: '401872658', d: '2026-09-13T17:00:00Z', s: 2026, st: 'REG', w: 1, t: 'ATL', o: 'PIT', h: 0, r: 'L 13-20', x: { rec: 0, tgt: 0, recyd: 0, rectd: 0, car: 0, ryd: 0, rtd: 0 } }];
+  const b = rookieBody(RK.zachBranch, ev({ provider_stat_seasons: [2026] }), { currentRows: rows });
+  assert.equal(b.history_state, 'ROOKIE_NO_PRIOR_HISTORY');
+  assert.equal(b.label, 'TRACKED HISTORY');
+  assert.equal(b.coverage.complete, false);
+  assert.equal(b.totals.regular_season.games, 1);
+  assert.deepEqual(b.career_span, { from: 2026, to: 2026 });
+});
+
+test('ROOKIE: the two "1st Season" players remain TRACKED', () => {
+  for (const id of [RK.jordanWaters, RK.xavierGuillory]) {
+    const b = rookieBody(id, ev({ provider_experience: '1st Season' }));
+    assert.equal(b.history_state, 'TRACKED_HISTORY', P(id).name);
+    assert.equal(b.display_label, 'TRACKED HISTORY');
+    assert.ok(b.rookie.failed.includes('provider_experience_is_rookie'));
+  }
+});
+
+test('ROOKIE fails closed on every missing or contrary signal', () => {
+  const cases = [
+    ['no provider read', null, {}, 'provider_record_read'],
+    ['stats not read', ev({ stats_read: false }), {}, 'provider_record_read'],
+    ['a stat season before the current season', ev({ provider_stat_seasons: [2025, 2026] }), {}, 'no_provider_stat_season_before_current'],
+    ['provider debut in an earlier season', ev({ provider_debut_year: 2024 }), {}, 'provider_debut_year_none_or_current'],
+    ['experience not Rookie', ev({ provider_experience: '2nd Season' }), {}, 'provider_experience_is_rookie'],
+    ['current season unavailable', ev(), { currentAvailable: false }, 'current_season_available'],
+    ['ledger does not cover the prior season (2027 with history through 2025)', ev(), { currentSeason: 2027 }, 'no_ledger_games_before_current']
+  ];
+  for (const [name, evidence, extra, criterion] of cases) {
+    const b = rookieBody(RK.haynesKing, evidence, extra);
+    assert.equal(b.history_state, 'TRACKED_HISTORY', name);
+    assert.ok(b.rookie.failed.includes(criterion), `${name}: ${b.rookie.failed}`);
+  }
+  const blocked = composeCareer({ player: P(RK.haynesKing), currentSeason: 2026, currentRows: [], currentAvailable: true,
+    historyMeta: { ...LEDGER.meta, identity_audit: { ...LEDGER.meta.identity_audit, blocked_players: [RK.haynesKing] } }, rookieEvidence: ev() });
+  assert.equal(blocked.history_state, 'TRACKED_HISTORY');
+  assert.ok(blocked.rookie.failed.includes('identity_one_to_one'));
+  const noGsis = composeCareer({ player: { ...P(RK.haynesKing), gsis_id: null }, currentSeason: 2026, currentRows: [], currentAvailable: true, historyMeta: LEDGER.meta, rookieEvidence: ev() });
+  assert.equal(noGsis.history_state, 'TRACKED_HISTORY');
+});
+
+test('ROOKIE evidence reads every stat category (a special-teams row counts); no participation input exists', () => {
+  const e = parseRookieEvidence({ athlete: { displayExperience: 'Rookie', debutYear: null } },
+    { categories: [{ name: 'returning', statistics: [{ season: { year: 2025 }, stats: ['1'] }] }, { name: 'defensive', statistics: [{ season: { year: 2026 } }] }] }, 'x');
+  assert.deepEqual(e.provider_stat_seasons, [2025, 2026]);
+  const r = evaluateRookie({ player: P(RK.haynesKing), currentSeason: 2026, currentAvailable: true, evidence: e, historyMeta: LEDGER.meta });
+  assert.equal(r.qualifies, false, 'a 2025 returning row means prior NFL history');
+  assert.equal(parseRookieEvidence(null, null), null);
+  for (const f of ['../api/_career/ledger-core.js', '../api/player-career.js', '../player-career-ledger-v1.js']) {
+    const src = readFileSync(new URL(f, import.meta.url), 'utf8');
+    assert.doesNotMatch(src, /pbp_participation|players_on_play|nflverse_game_id/, `${f}: no participation input`);
+  }
+});
+
+function plainJson(v) { return JSON.parse(JSON.stringify(v)); }

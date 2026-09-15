@@ -14,13 +14,18 @@
  * 404, never a name search. Label is CAREER only when debut -> today is proven;
  * otherwise TRACKED HISTORY with the missing seasons named.
  *
+ * Revision 1.1 (additive): history_state / display_label add
+ * ROOKIE · NO PRIOR NFL HISTORY for a player with no NFL season before the current
+ * one, under strict fail-closed criteria (ledger-core.js evaluateRookie). `label`
+ * keeps its v1 values; CAREER and TRACKED HISTORY semantics are unchanged.
+ *
  * Freshness: a live response is no-store and carries box_score_fetched_at; the
  * client counts its age up every second locally and re-reads on the existing
  * live cadence, never on a one-second loop.
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { composeCareer, parseGamelog, boxScoreLine, eventState } from './_career/ledger-core.js';
+import { composeCareer, parseGamelog, boxScoreLine, eventState, isRookieCandidate, parseRookieEvidence } from './_career/ledger-core.js';
 
 const SITE = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl';
 const ATHLETE = 'https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes';
@@ -131,9 +136,23 @@ export default async function handler(req, res) {
     }
   } catch (_) { /* no live contribution rather than a guessed one */ }
 
+  /* ROOKIE evidence (contract 1.1): only for players the ledger holds no history
+     for. The provider's own athlete record and stat seasons across every
+     category. Any failure leaves evidence null, which fails closed to TRACKED. */
+  let rookieEvidence = null;
+  if (isRookieCandidate(player)) {
+    try {
+      const [athlete, stats] = await Promise.all([
+        cached(`ath:${espnId}`, 6 * 3600000, () => getJson(`${ATHLETE}/${espnId}`)),
+        cached(`stats:${espnId}`, 6 * 3600000, () => getJson(`${ATHLETE}/${espnId}/stats`))
+      ]);
+      rookieEvidence = parseRookieEvidence(athlete, stats, new Date(memo.get(`stats:${espnId}`)?.at || Date.now()).toISOString());
+    } catch (_) { rookieEvidence = null; }
+  }
+
   const body = composeCareer({
     player, currentSeason, currentRows, currentAvailable, currentError,
-    boxScore, boxFetchedAt, currentFetchedAt, historyMeta: data.meta
+    boxScore, boxFetchedAt, currentFetchedAt, historyMeta: data.meta, rookieEvidence
   });
   body.today = liveGame ? { event_id: liveGame.id, state: liveGame.state === 'in' ? 'LIVE' : liveGame.state === 'post' ? 'FINAL' : 'SCHEDULE', kickoff: liveGame.kickoff } : null;
   const cache = body.live ? 'no-store'

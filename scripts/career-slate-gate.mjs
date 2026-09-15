@@ -211,23 +211,37 @@ const CASES = [
   ['wrdna', 'PBEWRDna', '00-0030564', '15795', 'WR full history, 5 teams (Hopkins)'],
   ['wrdna', 'PBEWRDna', '00-0033536', '3045138', 'WR duplicate name (Mike Williams 2017)'],
   ['tedna', 'PBETEDna', '00-0027061', '12537', 'TE full history, 6 teams (Jared Cook)'],
-  ['tedna', 'PBETEDna', '00-0030506', '15847', 'TE missing history (Kelce)']
+  ['tedna', 'PBETEDna', '00-0030506', '15847', 'TE missing history (Kelce)'],
+  /* ROOKIE · NO PRIOR NFL HISTORY (contract revision 1.1) */
+  ['qbdna', 'PBEQBDna', '00-0041149', '4428993', 'QB rookie, no game yet (Haynes King)', 'ROOKIE_NO_PRIOR_HISTORY'],
+  ['rbdna', 'PBERBDna', '00-0041239', '4430893', 'RB rookie (Chip Trayanum)', 'ROOKIE_NO_PRIOR_HISTORY'],
+  ['wrdna', 'PBEWRDna', '00-0041044', '4870612', 'WR rookie who has played (Zachariah Branch)', 'ROOKIE_NO_PRIOR_HISTORY'],
+  ['tedna', 'PBETEDna', '00-0041483', '4431574', 'TE rookie (Eli Stowers)', 'ROOKIE_NO_PRIOR_HISTORY'],
+  ['rbdna', 'PBERBDna', '00-0040601', '4428803', 'RB "1st Season" stays TRACKED (Jordan Waters)', 'TRACKED_HISTORY'],
+  ['tedna', 'PBETEDna', '00-0040853', '4702120', 'TE rookie without a readable provider stats record stays TRACKED (Carson Towt)', 'TRACKED_HISTORY']
 ];
 const READ = `(()=>{const s=document.querySelector('[data-pbe-career-ledger]');if(!s)return null;
   const hero=document.querySelector('.q2-hero');
-  return {label:s.dataset.clLabel||null, espn:s.dataset.clEspn||null, underHero:!!hero&&hero.nextElementSibling===s,
+  return {label:s.dataset.clLabel||null, state:s.dataset.clState||null, espn:s.dataset.clEspn||null, underHero:!!hero&&hero.nextElementSibling===s,
+    rookieEmpty:!!s.querySelector('.pbe-car-empty.is-rookie'), rookieNote:(s.querySelector('.pbe-car-rookie')||{}).textContent||'',
     eyebrow:(s.querySelector('.pbe-car-eyebrow')||{}).textContent||'', tiles:[...s.querySelectorAll('.pbe-car-tiles dd')].map(x=>x.textContent).slice(0,12),
     tabs:[...s.querySelectorAll('[data-cl-tab]')].map(x=>x.textContent), why:(s.querySelector('.pbe-car-why')||{}).textContent||'',
     currentLayer:!!document.querySelector('[data-pbe-current-layer]'), analytics:document.querySelectorAll('.q2 section, .q2 .q2-card, .q2 [class*="q2-"]').length,
     height:Math.round(s.getBoundingClientRect().height), overflow:document.documentElement.scrollWidth-document.documentElement.clientWidth}})()`;
-for (const [route, global, gsis, espn, label] of CASES) {
+for (const [route, global, gsis, espn, label, expectState] of CASES) {
   exceptions = [];
   await evalIn(`(async()=>{App.nav('${route}');await new Promise(r=>setTimeout(r,1500));const m=window.${global};m.state.playerId='${gsis}';m.state.dna=null;m.state.lab=null;m.state.cmp=null;m.state.ctx=null;m.state.ctxCmp=null;m.state.eventId=null;await m.load();return true})()`, 60000);
-  const r = await waitFor(`(()=>{const v=${READ};return v&&v.espn==='${espn}'&&v.tiles.length?v:null})()`, 40000);
-  const api = await evalIn(`fetch('/api/player-career?espn_id=${espn}').then(r=>r.json()).then(b=>({label:b.label,games:b.totals&&b.totals.regular_season.games,teams:b.player&&b.player.teams,complete:b.coverage&&b.coverage.complete,missing:(b.coverage&&b.coverage.missing_seasons||[]).map(m=>m.season)}))`);
+  const r = await waitFor(`(()=>{const v=${READ};return v&&v.espn==='${espn}'&&(v.tiles.length||v.rookieEmpty)?v:null})()`, 40000);
+  const api = await evalIn(`fetch('/api/player-career?espn_id=${espn}').then(r=>r.json()).then(b=>({label:b.label,state:b.history_state,display:b.display_label,revision:b.contract_revision,games:b.totals&&b.totals.regular_season.games,teams:b.player&&b.player.teams,complete:b.coverage&&b.coverage.complete,missing:(b.coverage&&b.coverage.missing_seasons||[]).map(m=>m.season),failed:b.rookie&&b.rookie.failed}))`);
   check(`${label}: ledger mounted under the hero`, r && r.underHero, r && { underHero: r.underHero, eyebrow: r.eyebrow });
-  check(`${label}: label matches API (${api?.label})`, r && api && r.label === api.label && r.eyebrow.trim() === api.label, { page: r?.label, api });
-  check(`${label}: regular-season games tile = API total`, r && api && r.tiles[0] === Number(api.games).toLocaleString('en-US'), { tile: r?.tiles?.[0], api: api?.games });
+  /* v1 label on the element; the eyebrow shows the 1.1 display label (identical to label for CAREER/TRACKED). */
+  check(`${label}: label/state match API (${api?.display || api?.label})`, r && api && r.label === api.label && r.state === (api.state || (api.label === 'CAREER' ? 'CAREER' : 'TRACKED_HISTORY')) && r.eyebrow.trim() === (api.display || api.label), { page: { label: r?.label, state: r?.state, eyebrow: r?.eyebrow }, api });
+  if (expectState) {
+    check(`${label}: history_state is ${expectState}`, api && api.state === expectState && ['CAREER', 'TRACKED HISTORY'].includes(api.label) && api.complete === false, api);
+    if (expectState === 'ROOKIE_NO_PRIOR_HISTORY') check(`${label}: says ROOKIE · NO PRIOR NFL HISTORY and never CAREER`, r && r.eyebrow.trim() === 'ROOKIE · NO PRIOR NFL HISTORY' && api.label !== 'CAREER' && /Rookie · no prior NFL history/.test(r.rookieNote), { eyebrow: r?.eyebrow, note: r?.rookieNote });
+  }
+  if (r && r.rookieEmpty) check(`${label}: rookie without a game shows no zero totals`, api && api.games === 0 && r.tiles.length === 0, { tiles: r.tiles, api: api?.games });
+  else check(`${label}: regular-season games tile = API total`, r && api && r.tiles[0] === Number(api.games).toLocaleString('en-US'), { tile: r?.tiles?.[0], api: api?.games });
   /* NEXT GAME TRUTH: the hero's next game comes from the schedule authority. */
   const nx = await waitFor(`(()=>{const m=window.${global};const p=m.state.dna&&m.state.dna.player;const team=p&&((p.team&&p.team.abbreviation)||p.current_team);
     const ts=PBESeason.data&&PBESeason.data.team_schedule;const sched=ts&&team?ts[team]:undefined;const el=document.querySelector('.q2-hero-next');
@@ -244,8 +258,9 @@ for (const [route, global, gsis, espn, label] of CASES) {
   check(`${label}: existing DNA analytics + current layer still render`, r && r.currentLayer && r.analytics > 5, { currentLayer: r?.currentLayer, analytics: r?.analytics });
   check(`${label}: no horizontal overflow`, r && r.overflow <= 0, r?.overflow);
   if (exceptions.length) check(`${label}: no page exceptions`, false, exceptions.slice(0, 3));
-  if (espn === '2330' || espn === '15847' || espn === '3043078' || espn === '15795' || espn === '12537') {
-    const slug = { '2330': 'qb-brady', '3043078': 'rb-henry', '15795': 'wr-hopkins', '12537': 'te-cook', '15847': 'te-kelce-tracked' }[espn];
+  if (espn === '2330' || espn === '15847' || espn === '3043078' || espn === '15795' || espn === '12537' || expectState) {
+    const slug = { '2330': 'qb-brady', '3043078': 'rb-henry', '15795': 'wr-hopkins', '12537': 'te-cook', '15847': 'te-kelce-tracked',
+      '4428993': 'qb-rookie-king', '4430893': 'rb-rookie-trayanum', '4870612': 'wr-rookie-branch-played', '4431574': 'te-rookie-stowers', '4428803': 'rb-1st-season-waters-tracked', '4702120': 'te-rookie-towt-no-stats-tracked' }[espn];
     await shot(`${slug}-career`, '[data-pbe-career-ledger]');
     if (espn === '2330' || espn === '12537') {
       await evalIn(`document.querySelector('[data-pbe-career-ledger] [data-cl-tab="seasons"]').click()`);

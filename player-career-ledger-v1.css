@@ -9,6 +9,9 @@
 .pbe-car-head{display:flex;align-items:center;justify-content:space-between;gap:10px 16px;flex-wrap:wrap;margin-bottom:12px}
 .pbe-car-head>div:first-child{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;min-width:0}
 .pbe-car-eyebrow{display:inline-flex;align-items:center;min-height:24px;padding:0 10px;border-radius:999px;border:1px solid rgba(98,220,150,.32);background:rgba(98,220,150,.09);color:#7ce4a7;font:800 11px/1 'JetBrains Mono',ui-monospace,monospace;letter-spacing:.12em;white-space:nowrap}
+.pbe-car-eyebrow.is-rookie{color:#8ec5ff;border-color:rgba(142,197,255,.34);background:rgba(142,197,255,.09)}
+.pbe-car-empty.is-rookie b{color:var(--pbe-paper,#eef2f7)}
+.pbe-car-rookie b{color:#8ec5ff}
 .pbe-car-eyebrow.is-tracked{color:#f0c45b;border-color:rgba(240,196,91,.30);background:rgba(240,196,91,.08)}
 .pbe-car-sub{color:var(--pbe-dim,#8b95a5);font:700 11px/1.3 'JetBrains Mono',ui-monospace,monospace;letter-spacing:.05em}
 

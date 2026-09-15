@@ -23,6 +23,13 @@
  */
 
 export const CONTRACT = 'player-career/v1';
+/* Additive revisions of v1. 1.1 adds history_state, display_label and rookie.
+   `label` keeps its v1 values (CAREER | TRACKED HISTORY) so v1 consumers see
+   exactly what they saw before; a rookie is still "TRACKED HISTORY" there,
+   which stays true because his coverage is not proven. */
+export const CONTRACT_REVISION = '1.1';
+export const HISTORY_STATE = Object.freeze({ CAREER: 'CAREER', TRACKED: 'TRACKED_HISTORY', ROOKIE: 'ROOKIE_NO_PRIOR_HISTORY' });
+export const DISPLAY_LABEL = Object.freeze({ CAREER: 'CAREER', TRACKED_HISTORY: 'TRACKED HISTORY', ROOKIE_NO_PRIOR_HISTORY: 'ROOKIE · NO PRIOR NFL HISTORY' });
 
 export const STAT_KEYS = ['cmp', 'att', 'pyd', 'ptd', 'int', 'sck', 'car', 'ryd', 'rtd', 'rec', 'tgt', 'recyd', 'rectd', 'fum', 'fuml'];
 
@@ -235,8 +242,61 @@ export function gameLogOut(rows) {
   }));
 }
 
+/* ---- ROOKIE · NO PRIOR NFL HISTORY ------------------------------------------
+   A third presentation state for a player with no NFL season before the current
+   one. It never upgrades anyone to CAREER and never changes coverage.complete.
+
+   Candidates are only players the ledger holds NO history for (no game rows, no
+   debut season, no gaps or mismatches). Evidence is the provider's own athlete
+   record read at request time: experience label, debut year and the seasons of
+   EVERY stat category (the ledger only records passing/rushing/receiving, so a
+   special-teams row would otherwise be invisible). No participation data is used.
+   Every criterion must pass; a missing or failed read fails closed to TRACKED. */
+export function isRookieCandidate(player) {
+  const cov = player?.coverage || {};
+  return A(player?.games).length === 0 && player?.debut_season == null && cov.complete !== true
+    && A(cov.gaps).length === 0 && !A(cov.mismatches).some(m => m.blocking);
+}
+
+export function parseRookieEvidence(athleteBody, statsBody, fetchedAt) {
+  const a = athleteBody?.athlete;
+  if (!a) return null;
+  const seasons = new Set();
+  for (const cat of A(statsBody?.categories)) {
+    for (const row of A(cat?.statistics)) {
+      const y = num(row?.season?.year);
+      if (y != null) seasons.add(y);
+    }
+  }
+  return {
+    provider_experience: a.displayExperience ?? null,
+    provider_debut_year: num(a.debutYear),
+    provider_stat_seasons: [...seasons].sort((x, y) => x - y),
+    stats_read: Boolean(statsBody),
+    fetched_at: fetchedAt || null
+  };
+}
+
+export function evaluateRookie({ player, currentSeason, currentAvailable, evidence, historyMeta }) {
+  if (!isRookieCandidate(player)) return null;
+  const blocked = new Set(A(historyMeta?.identity_audit?.blocked_players).map(String));
+  const through = player.history_through_season ?? historyMeta?.history_through_season ?? null;
+  const cs = Number(currentSeason);
+  const criteria = {
+    provider_record_read: Boolean(evidence && evidence.stats_read),
+    provider_experience_is_rookie: evidence?.provider_experience === 'Rookie',
+    provider_debut_year_none_or_current: evidence ? (evidence.provider_debut_year == null || evidence.provider_debut_year === cs) : false,
+    no_provider_stat_season_before_current: evidence?.stats_read ? A(evidence.provider_stat_seasons).every(y => y >= cs) : false,
+    no_ledger_games_before_current: A(player.games).length === 0 && Number.isFinite(cs) && through === cs - 1,
+    current_season_available: currentAvailable === true,
+    identity_one_to_one: Boolean(player.gsis_id) && !blocked.has(String(player.espn_id))
+  };
+  const failed = Object.entries(criteria).filter(([, ok]) => !ok).map(([k]) => k);
+  return { qualifies: failed.length === 0, criteria, failed, evidence: evidence || null };
+}
+
 /* The whole response body, given the three layers. */
-export function composeCareer({ player, currentSeason, currentRows, currentAvailable, currentError, boxScore, boxFetchedAt, currentFetchedAt, historyMeta, now = Date.now() }) {
+export function composeCareer({ player, currentSeason, currentRows, currentAvailable, currentError, boxScore, boxFetchedAt, currentFetchedAt, historyMeta, rookieEvidence = null, now = Date.now() }) {
   const history = A(player?.games);
   const { rows, live } = composeRows({ history, current: currentAvailable ? currentRows : [], boxScore });
   const verifiedRows = rows.filter(r => r.status !== 'LIVE');
@@ -264,10 +324,19 @@ export function composeCareer({ player, currentSeason, currentRows, currentAvail
     };
   }
   const first = rows[0], last = rows[rows.length - 1];
+  const rookie = coverageComplete ? null : evaluateRookie({ player, currentSeason, currentAvailable, evidence: rookieEvidence, historyMeta });
+  const historyState = coverageComplete ? HISTORY_STATE.CAREER : rookie?.qualifies ? HISTORY_STATE.ROOKIE : HISTORY_STATE.TRACKED;
+  const rookieReason = rookie?.qualifies ? [`no NFL season before ${currentSeason} (provider: Rookie)`] : [];
   return {
     ok: true,
     contract: CONTRACT,
+    contract_revision: CONTRACT_REVISION,
+    /* v1 field, v1 values only. */
     label: coverageComplete ? 'CAREER' : 'TRACKED HISTORY',
+    /* 1.1: the presentation state and its words. */
+    history_state: historyState,
+    display_label: DISPLAY_LABEL[historyState],
+    rookie,
     player: {
       espn_id: player.espn_id, gsis_id: player.gsis_id || null, name: player.name, position,
       dna_positions: player.dna_positions || [], active: player.active_2026 === true, current_team: player.current_team || (last && last.t) || null,
@@ -289,7 +358,8 @@ export function composeCareer({ player, currentSeason, currentRows, currentAvail
       why_not_career: coverageComplete ? null : [
         ...A(cov.gaps).map(g => `${g.season}: ${g.reason}`),
         ...A(cov.mismatches).filter(m => m.blocking).map(m => `${m.season}: ledger has ${m.ledger} regular-season games, provider season row says ${m.provider}`),
-        ...(currentAvailable ? [] : [`${currentSeason}: ${currentError || 'current season game log unavailable'}`])
+        ...(currentAvailable ? [] : [`${currentSeason}: ${currentError || 'current season game log unavailable'}`]),
+        ...rookieReason
       ]
     },
     stat_fields: POSITION_FIELDS[position] || POSITION_FIELDS.WR,
