@@ -165,6 +165,7 @@ test('all four products route through the shared resolver (no per-product schedu
     assert.match(src, /PD\.pickSlateGame\(state\.slate, team, state\.dna\.player\)/, f);
     assert.match(src, /if \(state\.dna && PD\.isRetired\(state\.dna\.player\)\) return '';/, f);
     assert.match(src, /PD\.teamLabel\(p, t\)/, f);
+    assert.equal((src.match(/if \(state\.dna && PD\.isRetired\(state\.dna\.player\)\) return '';/g) || []).length, 2, `${f}: heroNext AND heroLines stand down for a retired player`);
     assert.match(src, /await PD\.scheduleReady\(\)/, f);
     assert.match(src, /PD\.contextQuery\(state\.slatePick\)/, f);
     assert.match(src, /PD\.heroNextFallback\(state\.slatePick, tm\)/, f);

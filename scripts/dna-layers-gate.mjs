@@ -84,7 +84,7 @@ const READ=`(()=>{const b=document.querySelector('[data-pbe-current-layer]');
  const g2=window[mod2]&&window[mod2].state&&window[mod2].state.ctx&&window[mod2].state.ctx.game;
  const meta=document.querySelector('.q2-hero-meta');
  return {present:true, player:p&&p.name, espn_id:p&&p.espn_id, team:p&&((p.team&&p.team.abbreviation)||p.current_team), active2026:p&&p.active_2026,
-   nextPresent:!!nx, marketChip:!!document.querySelector('.q2-hero-next-mkt'), heroMeta:meta?meta.textContent.replace(/\\s+/g,' ').trim():'',
+   nextPresent:!!nx, marketChip:!!document.querySelector('.q2-hero-next-mkt, .q2-hero-lines'), heroMeta:meta?meta.textContent.replace(/\\s+/g,' ').trim():'',
    nextText:nx?nx.textContent.replace(/\\s+/g,' ').trim():'', nextStatus:g2?String(g2.status||''):null,
    current:t(cur), baseline:t(base),
    currentIsNone:!!(cur&&cur.classList.contains('is-none')),

@@ -70,6 +70,8 @@
   }
 
   function heroLines() {
+    /* retired / not on a 2026 roster: no market state at all */
+    if (state.dna && PD.isRetired(state.dna.player)) return '';
     const c = state.ctx;
     if (!c || !c.markets || !c.markets.available) {
       return `<div class="q2-hero-lines is-none">${esc(MARKET_UNAVAILABLE)}</div>`;
