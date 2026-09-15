@@ -301,19 +301,9 @@
           : signedOutMarkup();
     }
     wire(host);
-  }
-
-  function checkoutReturnMessage() {
-    const params = new URLSearchParams(location.search);
-    if (params.get('checkout') !== 'success') return;
-    const s = state();
-    if (s.pro) return;
-    setTimeout(() => {
-      const el = document.getElementById('pbe-funnel-message');
-      if (!el) return;
-      el.className = 'pbe-pro-message success';
-      el.textContent = 'Payment received. Your NFL Pro access is activating now. If needed, refresh or sign in with the same email used at checkout.';
-    }, 100);
+    /* paywall.js owns the reader-facing notice (refused link, checkout return);
+       a re-render here must never drop it. */
+    window.PBEPro?.paintNotice?.();
   }
 
   function updateStructuredData() {
@@ -355,7 +345,6 @@
     queued = false;
     publishPurchaseContract();
     mountPurchaseState();
-    checkoutReturnMessage();
   }
   function queue() {
     if (queued) return;

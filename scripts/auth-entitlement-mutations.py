@@ -9,7 +9,7 @@ import pathlib, subprocess, sys
 
 sys.stdout.reconfigure(encoding='utf-8')
 REPO = pathlib.Path(__file__).resolve().parent.parent
-TESTS = ['tests/nfl-auth-entitlement-gate.test.mjs', 'tests/nfl-auth-access-v2.test.mjs', 'tests/nfl-auth-magic-link-single-use.test.mjs']
+TESTS = ['tests/nfl-auth-entitlement-gate.test.mjs', 'tests/nfl-auth-access-v2.test.mjs', 'tests/nfl-auth-magic-link-single-use.test.mjs', 'tests/nfl-purchase-delivery.test.mjs', 'tests/nfl-billing-worker.test.mjs']
 
 MUTATIONS = [
     ('lookup degrades to "any active subscription"', 'api/_nfl-entitlement-ledger.js',
@@ -30,6 +30,24 @@ MUTATIONS = [
     ('ledger outage treated as allowed at exchange', 'workers/nfl-auth/src/index-v5.js',
      "    return{allowed:false,role:null,reason:'entitlement_unavailable'};",
      "    return{allowed:true,role:'subscriber',reason:'entitlement_unavailable'};"),
+    ('checkout-complete stamps without a confirmed send', 'api/checkout-complete.js',
+     "  if(!CONFIRMED.has(result)){",
+     "  if(false){"),
+    ('internal delivery accepts browser (Origin) calls', 'workers/nfl-auth/src/index-v5.js',
+     "if(req.method!=='POST'||expected.length<32||req.headers.get('Origin'))",
+     "if(req.method!=='POST'||expected.length<32)"),
+    ('internal delivery skips the token check', 'workers/nfl-auth/src/index-v5.js',
+     "if(!auth.startsWith('Bearer ')||!(await sameSecret(auth.slice(7).trim(),expected)))",
+     "if(false)"),
+    ('internal delivery forgets confirmed sends (no idempotency)', 'workers/nfl-auth/src/index-v5.js',
+     "    const committed=await deliveryRecord(env,key,'commit',{resend_id:d.resend_id});",
+     "    const committed=await deliveryRecord(env,key,'release');"),
+    ('internal delivery reports sent without sending', 'workers/nfl-auth/src/index-v5.js',
+     "  if(d.result==='sent'){",
+     "  if(d.result==='sent'||d.result==='not_entitled'){"),
+    ('billing treats any delivery result as sent', 'workers/nfl-billing/src/index.js',
+     "  if (result === 'sent' || result === 'already_sent') return true;",
+     "  return true;"),
     ('auth-session no longer paywalls no_entitlement', 'api/auth-session.js',
      "    if (session.access === 'no_entitlement') {",
      "    if (false) {"),

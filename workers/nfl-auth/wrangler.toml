@@ -16,3 +16,14 @@ class_name = "MagicLinkLedger"
 [[migrations]]
 tag = "v1-magic-link-ledger"
 new_sqlite_classes = ["MagicLinkLedger"]
+
+# Decision logs ([nfl-auth] request/exchange/purchase-delivery) are the audit
+# trail for who was sent an NFL link. Emails are logged only as a hash.
+[observability]
+enabled = true
+head_sampling_rate = 1
+
+# Secrets (never committed): RESEND_API_KEY, NFL_SESSION_SIGNING_SECRET,
+# SUPABASE_SERVICE_ROLE_KEY, NFL_OWNER_EMAILS, NFL_AUTH_INTERNAL_TOKEN
+# (server-to-server purchase delivery; also on propbetedge-nfl-billing and
+# Vercel production for api/checkout-complete.js).

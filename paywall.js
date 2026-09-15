@@ -48,6 +48,7 @@
     loading: true,
     subscription: null,
     checkoutSyncing: false,
+    notice: null,
     stage: null,
     error: null
   };
@@ -237,13 +238,16 @@
     }
     if (window.PBECheckoutFunnel?.apply) {
       window.PBECheckoutFunnel.apply();
+      paintNotice();
       return;
     }
     if (state.pro || state.user) {
       if (setHtml(host,state.pro ? proUserHtml() : freeUserHtml())) wireModalActions();
+      paintNotice();
       return;
     }
     if (setHtml(host,signedOutHtml())) wireModalActions();
+    paintNotice();
   }
 
   function message(text,type='') {
@@ -253,6 +257,31 @@
     const className = `pbe-pro-message ${type}`.trim();
     if (el.className !== className) el.className = className;
     setText(el,text || '');
+  }
+
+  /* A reason the reader must keep seeing (a refused link, a checkout return)
+   * lives in state and is re-painted at the top of the checkout panel every
+   * time either this file or paywall-funnel-v2.js re-renders it. message() is
+   * for transient feedback inside the current render. */
+  function notice(text,type='') {
+    state.notice = text ? { text, type } : null;
+    paintNotice();
+  }
+
+  function paintNotice() {
+    const host = document.getElementById('pbe-pro-checkout');
+    if (!host) return;
+    let el = host.querySelector(':scope > .pbe-access-notice');
+    if (!state.notice) { el?.remove(); return; }
+    if (!el) {
+      el = document.createElement('div');
+      el.setAttribute('role','status');
+      el.style.margin = '0 0 14px';
+      host.prepend(el);
+    }
+    const className = `pbe-access-notice pbe-pro-message ${state.notice.type}`.trim();
+    if (el.className !== className) el.className = className;
+    setText(el,state.notice.text);
   }
 
   async function signIn() {
@@ -522,6 +551,8 @@
   }
 
   function close() {
+    state.notice = null;
+    paintNotice();
     document.getElementById('pbe-pro-backdrop')?.classList.remove('open');
     document.body.style.overflow = '';
   }
@@ -553,7 +584,7 @@
 
     if (auth === 'not_authorized') {
       open('upgrade');
-      message('No active NFL Pro access is linked to that email. Choose a plan to unlock NFL Pro.','error');
+      notice('No active NFL Pro access is linked to that email. Choose a plan to unlock NFL Pro.','error');
       return;
     }
 
@@ -562,7 +593,7 @@
       : auth === 'link_already_used' ? 'That sign-in link was already used. Each link works once.'
         : /unavailable|^exchange_/.test(auth) ? 'Sign-in is temporarily unavailable.'
           : 'That sign-in link is not valid.';
-    message(`${why} Request a new secure link. The rest of the site is unaffected.`,'error');
+    notice(`${why} Request a new secure link. The rest of the site is unaffected.`,'error');
   }
 
   async function syncCheckoutSuccess() {
@@ -576,10 +607,13 @@
     }
     state.checkoutSyncing = false;
     open('checkout-success');
-    if (state.pro) message('NFL Pro is active. Your premium model intelligence is unlocked.','success');
-    else if (!state.user) message('Purchase received. Sign in with the same email you used at Stripe to unlock NFL Pro.');
-    else message('Stripe checkout completed. Access is still syncing; use Refresh Access in a few seconds.');
-    cleanQuery(['checkout','session_id','tier']);
+    /* access_email is api/checkout-complete.js's CONFIRMED delivery result:
+     * sent / already_sent only when the auth Worker actually sent the link. */
+    const delivery = params.get('access_email');
+    if (state.pro) notice('NFL Pro is active. Your premium model intelligence is unlocked.','success');
+    else if (delivery === 'sent' || delivery === 'already_sent') notice('Payment received. Your secure NFL Pro access link was sent to the email you used at checkout.','success');
+    else notice('Payment received. Your access link has not been sent yet. In a minute, enter the email you used at checkout and choose "Sign in to NFL Pro" to request your secure access link.');
+    cleanQuery(['checkout','session_id','tier','access_email']);
   }
 
   async function init() {
@@ -599,6 +633,8 @@
     paymentLinks: { monthly: PRICING.monthly.url, weekly: PRICING.weekly.url },
     open,
     close,
+    notice,
+    paintNotice,
     checkout,
     refreshAccess,
     getToken,

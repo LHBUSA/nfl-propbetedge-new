@@ -8,7 +8,7 @@ import { resolveNflAccess, parseOwnerEmails } from '../../../api/_nfl-entitlemen
 import { normalizeEmail } from '../../../api/_nfl-entitlement.js';
 
 const SERVICE='propbetedge-nfl-auth';
-const VERSION='v7.0';
+const VERSION='v7.1';
 /* One answer for every accepted request, entitled or not, so the response
    never reveals whether an email owns NFL Pro. The decision and any email run
    after the response (ctx.waitUntil), so timing reveals nothing either. */
@@ -16,6 +16,20 @@ export const GENERIC_REQUEST_MESSAGE='If this email has NFL Pro access, a secure
 /* A purchase return can reach us a moment before the Stripe webhook writes
    the ledger row; purchase requests re-check briefly before giving up. */
 const PURCHASE_RECHECK_DELAYS_MS=[2000,4000,8000];
+/* Server-to-server purchase delivery. The public request endpoint above can
+   never say whether an email was sent; a checkout/billing backend that must
+   record delivery asks here instead, with NFL_AUTH_INTERNAL_TOKEN, and gets the
+   true result. Anything that is not a valid server call gets a bare 404. */
+export const INTERNAL_DELIVERY_PATH='/internal/v1/purchase-delivery';
+export const DELIVERY_RESULTS=Object.freeze(['sent','already_sent','in_progress','not_entitled','ledger_unavailable','resend_failed','delivery_ledger_unavailable']);
+/* The caller is waiting (a buyer's checkout redirect), so the late-webhook
+   re-check is shorter than the background one. */
+const INTERNAL_RECHECK_DELAYS_MS=[1500,3000];
+const DELIVERY_KEY=/^(?:checkout:cs_(?:live|test)_[A-Za-z0-9]{1,180}|subscription:sub_[A-Za-z0-9]{1,180})$/;
+/* A delivery reserved longer than this without a result was interrupted and
+   may be retried. */
+const DELIVERY_LEASE_MS=60*1000;
+const DELIVERY_RECORD_TTL_MS=120*24*60*60*1000;
 const APP_ORIGIN_DEFAULT='https://nfl.propbetedge.ai';
 const FROM_EMAIL='PropBetEdge Picks <picks@propbetedge.ai>';
 const MAGIC_TTL=15*60;
@@ -23,10 +37,11 @@ const SESSION_TTL=30*24*60*60;
 
 export default{async fetch(req,env,ctx){
   const url=new URL(req.url),origin=req.headers.get('Origin')||'',app=String(env.APP_ORIGIN||APP_ORIGIN_DEFAULT).replace(/\/$/,'');
+  if(url.pathname===INTERNAL_DELIVERY_PATH)return purchaseDelivery(req,env,app);
   if(req.method==='OPTIONS')return new Response(null,{status:204,headers:cors(origin,app)});
   if(url.pathname==='/health'){
     const signing=signingSecrets(env);
-    return out({ok:Boolean(env.RESEND_API_KEY&&signing.primary),service:SERVICE,version:VERSION,auth_issuer:'propbetedge',session:'vercel_first_party_cookie',session_authority:'vercel:/api/auth-session',exchange:'signed_magic_to_session',entitlement_store:'supabase:nfl_subscriptions',entitlement_gate:{request:true,exchange:true,owner_configured:parseOwnerEmails(env.NFL_OWNER_EMAILS).length>0},email_transport:'resend',sender:FROM_EMAIL,fallback:false,requirements:{RESEND_API_KEY:Boolean(env.RESEND_API_KEY),SESSION_SIGNING_SECRET:Boolean(signing.primary),SUPABASE_SERVICE_ROLE_KEY:Boolean(env.SUPABASE_SERVICE_ROLE_KEY)},signing:{mode:signing.mode,dedicated_configured:signing.dedicatedConfigured,legacy_verify_fallback:Boolean(signing.fallback)}},200,origin,app);
+    return out({ok:Boolean(env.RESEND_API_KEY&&signing.primary),service:SERVICE,version:VERSION,auth_issuer:'propbetedge',session:'vercel_first_party_cookie',session_authority:'vercel:/api/auth-session',exchange:'signed_magic_to_session',entitlement_store:'supabase:nfl_subscriptions',entitlement_gate:{request:true,exchange:true,owner_configured:parseOwnerEmails(env.NFL_OWNER_EMAILS).length>0,internal_delivery_configured:internalToken(env).length>=32},email_transport:'resend',sender:FROM_EMAIL,fallback:false,requirements:{RESEND_API_KEY:Boolean(env.RESEND_API_KEY),SESSION_SIGNING_SECRET:Boolean(signing.primary),SUPABASE_SERVICE_ROLE_KEY:Boolean(env.SUPABASE_SERVICE_ROLE_KEY)},signing:{mode:signing.mode,dedicated_configured:signing.dedicatedConfigured,legacy_verify_fallback:Boolean(signing.fallback)}},200,origin,app);
   }
   if((url.pathname==='/v1/auth/request'||url.pathname==='/v1/auth/email')&&req.method==='POST')return requestLink(req,env,origin,app,ctx);
   if(url.pathname==='/v1/auth/exchange'&&req.method==='POST')return exchangeLink(req,env,origin,app);
@@ -49,24 +64,26 @@ async function requestLink(req,env,origin,app,ctx){
 /* The gate. Nothing is signed and nothing is sent unless resolveNflAccess
    allows this exact email at this moment. A ledger that cannot answer is a
    denial. Returns the decision for tests; the HTTP answer never carries it. */
-export async function issueLinkIfEntitled(env,app,signing,email,purpose,{sleep=ms=>new Promise(r=>setTimeout(r,ms))}={}){
+export async function issueLinkIfEntitled(env,app,signing,email,purpose,{sleep=ms=>new Promise(r=>setTimeout(r,ms)),delays=PURCHASE_RECHECK_DELAYS_MS}={}){
   const tag=await emailTag(email);
   let access=await checkAccess(env,email);
   if(!access.allowed&&purpose==='purchase'&&access.reason!=='entitlement_unavailable'){
-    for(const delay of PURCHASE_RECHECK_DELAYS_MS){await sleep(delay);access=await checkAccess(env,email);if(access.allowed||access.reason==='entitlement_unavailable')break}
+    for(const delay of delays){await sleep(delay);access=await checkAccess(env,email);if(access.allowed||access.reason==='entitlement_unavailable')break}
   }
   if(!access.allowed){
     console.log(`[nfl-auth] request decision=denied reason=${access.reason} purpose=${purpose} email=${tag} magic_token=none resend=none`);
-    return{sent:false,reason:access.reason};
+    return{sent:false,result:access.reason==='entitlement_unavailable'?'ledger_unavailable':'not_entitled',reason:access.reason};
   }
   const now=Math.floor(Date.now()/1000),token=await sign({email,type:'magic',purpose,iat:now,exp:now+MAGIC_TTL,jti:crypto.randomUUID()},signing.primary);
   const link=`${app}/api/auth-verify?token=${encodeURIComponent(token)}`;
-  const r=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:`Bearer ${env.RESEND_API_KEY}`,'Content-Type':'application/json'},body:JSON.stringify({from:FROM_EMAIL,to:[email],subject:purpose==='purchase'?'PropBetEdge NFL Pro — your access is ready':'PropBetEdge NFL — secure sign-in',html:mailHtml(link,purpose),text:mailText(link,purpose)})});
+  let r;
+  try{r=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:`Bearer ${env.RESEND_API_KEY}`,'Content-Type':'application/json'},body:JSON.stringify({from:FROM_EMAIL,to:[email],subject:purpose==='purchase'?'PropBetEdge NFL Pro — your access is ready':'PropBetEdge NFL — secure sign-in',html:mailHtml(link,purpose),text:mailText(link,purpose)})})}
+  catch(e){console.error(`[nfl-auth] request decision=allowed role=${access.role} email=${tag} resend_status=network resend_error=${e?.message||e}`);return{sent:false,result:'resend_failed',reason:'resend_network',role:access.role}}
   const detail=await r.text().catch(()=>'');
-  if(!r.ok){console.error(`[nfl-auth] request decision=allowed role=${access.role} email=${tag} resend_status=${r.status} resend_error=${safeProviderMessage(detail)}`);return{sent:false,reason:'resend_failed',role:access.role}}
+  if(!r.ok){console.error(`[nfl-auth] request decision=allowed role=${access.role} email=${tag} resend_status=${r.status} resend_error=${safeProviderMessage(detail)}`);return{sent:false,result:'resend_failed',reason:'resend_failed',role:access.role}}
   let id='';try{id=String(JSON.parse(detail)?.id||'')}catch{}
   console.log(`[nfl-auth] request decision=allowed role=${access.role} purpose=${purpose} email=${tag} resend_status=${r.status} resend_id=${id}`);
-  return{sent:true,role:access.role,resend_id:id};
+  return{sent:true,result:'sent',role:access.role,resend_id:id};
 }
 
 async function checkAccess(env,email){
@@ -120,6 +137,66 @@ async function exchangeLink(req,env,origin,app){
   }
 }
 
+/* POST /internal/v1/purchase-delivery   Authorization: Bearer NFL_AUTH_INTERNAL_TOKEN
+   { email, delivery_key: "checkout:cs_…" | "subscription:sub_…" }
+   -> 200 { result } where result is one of DELIVERY_RESULTS.
+   Only a server can call it: no token, a wrong token, a browser Origin header,
+   a preflight or any other method is a bare 404 with no CORS headers. The
+   email must already be verified by the caller (Stripe); access is still
+   re-checked here through the same resolveNflAccess as sign-in. */
+async function purchaseDelivery(req,env,app){
+  const expected=internalToken(env);
+  if(req.method!=='POST'||expected.length<32||req.headers.get('Origin'))return internal({error:'not_found'},404);
+  const auth=req.headers.get('authorization')||'';
+  if(!auth.startsWith('Bearer ')||!(await sameSecret(auth.slice(7).trim(),expected)))return internal({error:'not_found'},404);
+  const signing=signingSecrets(env);
+  if(!env.RESEND_API_KEY||!signing.primary||!String(env.SUPABASE_SERVICE_ROLE_KEY||'').trim())return internal({result:'service_unavailable'},503);
+  let body;try{body=await req.json()}catch{return internal({result:'invalid_request'},400)}
+  const email=normalizeEmail(body?.email),key=String(body?.delivery_key||'');
+  if(!email||!DELIVERY_KEY.test(key))return internal({result:'invalid_request'},400);
+  const tag=await emailTag(email),kind=key.split(':')[0];
+  const record=await deliveryRecord(env,key,'reserve');
+  if(!record){console.error(`[nfl-auth] purchase-delivery result=delivery_ledger_unavailable key=${kind} email=${tag}`);return internal({result:'delivery_ledger_unavailable'})}
+  if(record.state==='sent'){console.log(`[nfl-auth] purchase-delivery result=already_sent key=${kind} email=${tag}`);return internal({result:'already_sent',sent_at:record.sent_at})}
+  if(record.state==='in_progress'){console.log(`[nfl-auth] purchase-delivery result=in_progress key=${kind} email=${tag}`);return internal({result:'in_progress'})}
+  let d;
+  try{d=await issueLinkIfEntitled(env,app,signing,email,'purchase',{delays:internalDelays(env)})}
+  catch(e){console.error(`[nfl-auth] purchase-delivery stage=exception error=${e?.message||e}`);d={result:'resend_failed'}}
+  if(d.result==='sent'){
+    const committed=await deliveryRecord(env,key,'commit',{resend_id:d.resend_id});
+    console.log(`[nfl-auth] purchase-delivery result=sent key=${kind} email=${tag} resend_id=${d.resend_id} recorded=${Boolean(committed)}`);
+    return internal({result:'sent',sent_at:committed?.sent_at||new Date().toISOString()});
+  }
+  await deliveryRecord(env,key,'release');
+  console.log(`[nfl-auth] purchase-delivery result=${d.result} key=${kind} email=${tag}`);
+  return internal({result:d.result});
+}
+
+async function deliveryRecord(env,key,op,body={}){
+  if(!env.MAGIC_LINKS)return null;
+  try{
+    const stub=env.MAGIC_LINKS.get(env.MAGIC_LINKS.idFromName(`purchase-delivery:${key}`));
+    const r=await stub.fetch(`https://magic-links/delivery/${op}`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+    return r.ok?await r.json():null;
+  }catch(e){console.error('[nfl-auth] delivery ledger',e?.message||e);return null}
+}
+
+function internalToken(env){return String(env.NFL_AUTH_INTERNAL_TOKEN||'').trim()}
+/* Test and incident knob only: comma-separated re-check delays, each <=5s. */
+function internalDelays(env){
+  const raw=String(env.NFL_AUTH_DELIVERY_RECHECK_MS||'').trim();
+  if(!raw)return INTERNAL_RECHECK_DELAYS_MS;
+  const list=raw.split(',').map(Number);
+  return list.length<=3&&list.every(n=>Number.isFinite(n)&&n>=0&&n<=5000)?list:INTERNAL_RECHECK_DELAYS_MS;
+}
+async function sameSecret(a,b){
+  const enc=new TextEncoder();
+  const [x,y]=await Promise.all([crypto.subtle.digest('SHA-256',enc.encode(`pbe-nfl-internal:${a}`)),crypto.subtle.digest('SHA-256',enc.encode(`pbe-nfl-internal:${b}`))]);
+  const u=new Uint8Array(x),v=new Uint8Array(y);let diff=0;for(let i=0;i<u.length;i++)diff|=u[i]^v[i];
+  return diff===0;
+}
+function internal(body,status=200){return new Response(JSON.stringify(body),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}})}
+
 async function selfTest(env,origin,app){
   const signing=signingSecrets(env);
   if(!signing.primary)return out({ok:false,error:'service_unavailable'},503,origin,app);
@@ -148,6 +225,8 @@ export class MagicLinkLedger{
   constructor(state){this.state=state}
   async fetch(req){
     if(req.method!=='POST')return new Response('method_not_allowed',{status:405});
+    const path=new URL(req.url).pathname;
+    if(path.startsWith('/delivery/'))return this.delivery(path,req);
     const used=await this.state.storage.get('used_at');
     if(used)return new Response(JSON.stringify({error:'link_already_used'}),{status:409});
     let exp=0;try{exp=Number((await req.json())?.exp)||0}catch{}
@@ -155,6 +234,32 @@ export class MagicLinkLedger{
     await this.state.storage.put('used_at',now);
     await this.state.storage.setAlarm(Math.max(now+60000,(exp*1000)+3600000));
     return new Response(JSON.stringify({ok:true}),{status:200});
+  }
+  /* A purchase-delivery record lives in its own object (named by delivery
+     key, never by a link jti): reserve -> commit (sent) or release. A sent
+     record is permanent for the retention window, so a repeated
+     checkout-complete or webhook never sends a second access email. */
+  async delivery(path,req){
+    const store=this.state.storage,now=Date.now(),rec=await store.get('delivery');
+    const reply=b=>new Response(JSON.stringify(b),{status:200,headers:{'content-type':'application/json'}});
+    if(path==='/delivery/reserve'){
+      if(rec?.state==='sent')return reply({state:'sent',sent_at:rec.sent_at});
+      if(rec?.state==='sending'&&now-rec.at<DELIVERY_LEASE_MS)return reply({state:'in_progress'});
+      await store.put('delivery',{state:'sending',at:now});
+      return reply({state:'reserved'});
+    }
+    if(path==='/delivery/commit'){
+      let body={};try{body=await req.json()}catch{}
+      const sent={state:'sent',sent_at:new Date(now).toISOString(),resend_id:String(body?.resend_id||'').slice(0,80)};
+      await store.put('delivery',sent);
+      await store.setAlarm(now+DELIVERY_RECORD_TTL_MS);
+      return reply(sent);
+    }
+    if(path==='/delivery/release'){
+      if(rec?.state!=='sent')await store.delete('delivery');
+      return reply({state:rec?.state==='sent'?'sent':'released'});
+    }
+    return new Response('not_found',{status:404});
   }
   async alarm(){await this.state.storage.deleteAll()}
 }

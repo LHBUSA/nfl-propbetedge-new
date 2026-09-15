@@ -20,6 +20,7 @@ head_sampling_rate = 1
 # Secrets — set directly on Cloudflare, never committed:
 #   STRIPE_WEBHOOK_SECRET       Stripe signing secret for the NFL endpoint
 #   SUPABASE_SERVICE_ROLE_KEY   server-only entitlement writes
+#   NFL_AUTH_INTERNAL_TOKEN     auth Worker purchase-delivery route (true send result)
 #
 # No cron. Stripe is the trigger.
 # No GitHub Actions runtime. GitHub stores source; Cloudflare operates it.

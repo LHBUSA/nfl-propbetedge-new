@@ -19,6 +19,7 @@ import { webcrypto } from 'node:crypto';
 import worker from '../workers/nfl-billing/src/index.js';
 
 const SECRET = 'whsec_test_nfl_billing';
+const INTERNAL_TOKEN = 'billing-test-internal-delivery-token-0123456789abcdef';
 const NOW = Math.floor(Date.now() / 1000);
 const WEEKLY = 'price_1UEWAOF3CaVzg4ORjkWpwOz9';
 const MONTHLY = 'price_1UEWAXF3CaVzg4ORGlsgboLq';
@@ -91,9 +92,14 @@ function harness({ key = 'eyJhbGciOiJIUzI1NiJ9.service.role' } = {}) {
     STRIPE_WEBHOOK_SECRET: SECRET,
     SUPABASE_SERVICE_ROLE_KEY: key,
     SUPABASE_URL: 'https://supabase.test',
+    NFL_AUTH_INTERNAL_TOKEN: INTERNAL_TOKEN,
+    /* The auth Worker's server-to-server delivery route; it reports `sent`. */
     AUTH: { fetch: async (url, init) => {
       if (String(url).endsWith('/health')) return new Response(JSON.stringify({ ok: true }), { status: 200 });
-      emails.push(JSON.parse(init.body)); return new Response(JSON.stringify({ ok: true }), { status: 200 });
+      assert.equal(new URL(String(url)).pathname, '/internal/v1/purchase-delivery', 'never the public sign-in request');
+      assert.equal(new Headers(init.headers).get('authorization'), `Bearer ${INTERNAL_TOKEN}`);
+      const body = JSON.parse(init.body);
+      emails.push({ email: body.email, purpose: 'purchase' }); return new Response(JSON.stringify({ result: 'sent' }), { status: 200 });
     } },
   };
   async function deliver(event, { secret = SECRET, t } = {}) {
@@ -330,4 +336,81 @@ test('health: configured flags, and ?deep=1 proves ledger + auth reachability wi
   const broken = harness({ key: '' });
   broken.env.SUPABASE_SERVICE_ROLE_KEY = '';
   assert.equal((await broken.health()).ok, false);
+});
+
+/* ------------------------------------------- with the REAL auth Worker gate */
+/* The billing webhook asks the real auth Worker (internal purchase-delivery,
+ * real entitlement predicate, real delivery record) to send. The auth Worker
+ * reads the same in-memory nfl_subscriptions this webhook writes. Whatever the
+ * delivery order, exactly one access email goes out, and only once the row
+ * the webhook wrote actually grants NFL. */
+const authWorker = (await import('../workers/nfl-auth/src/index-v5.js'));
+function withRealAuth(h, { resend = () => 'ok' } = {}) {
+  const objects = new Map();
+  const ns = { idFromName: name => ({ name }), get(id) {
+    if (!objects.has(id.name)) { const store = new Map(); objects.set(id.name, new authWorker.MagicLinkLedger({ storage: { get: async k => store.get(k), put: async (k, v) => { store.set(k, v); }, delete: async k => store.delete(k), setAlarm: async () => {}, deleteAll: async () => store.clear() } })); }
+    const obj = objects.get(id.name); return { fetch: (u, i) => obj.fetch(new Request(u, i)) };
+  } };
+  const sent = [];
+  const entitledAtSend = [];
+  const authEnv = { NFL_SESSION_SIGNING_SECRET: 'billing-auth-signing', SUPABASE_SERVICE_ROLE_KEY: 'k', SUPABASE_URL: 'https://ledger.test', RESEND_API_KEY: 're_x', APP_ORIGIN: 'https://nfl.propbetedge.ai', MAGIC_LINKS: ns, NFL_AUTH_INTERNAL_TOKEN: INTERNAL_TOKEN, NFL_AUTH_DELIVERY_RECHECK_MS: '0' };
+  h.env.AUTH = { fetch: async (url, init) => {
+    const outer = globalThis.fetch;
+    globalThis.fetch = async (u, i = {}) => {
+      const x = new URL(String(u));
+      if (x.host === 'ledger.test') {
+        const email = decodeURIComponent(/customer_email=ilike\.([^&]+)/.exec(decodeURIComponent(x.search))[1]).replace(/\\([%_*\\])/g, '$1');
+        return new Response(JSON.stringify(h.db.tables.nfl_subscriptions.filter(r => String(r.customer_email || '').toLowerCase() === email)), { status: 200 });
+      }
+      if (x.host === 'api.resend.com') {
+        if (resend() === 'fail') return new Response('{"message":"down"}', { status: 500 });
+        const body = JSON.parse(i.body); sent.push(body.to[0]);
+        entitledAtSend.push(h.db.tables.nfl_subscriptions.map(r => ({ status: r.status, end: r.current_period_end })));
+        return new Response('{"id":"re_1"}', { status: 200 });
+      }
+      return outer(u, i);
+    };
+    try { return await authWorker.default.fetch(new Request(url, init), authEnv); } finally { globalThis.fetch = outer; }
+  } };
+  return { sent, entitledAtSend };
+}
+
+test('real auth gate: every delivery order sends exactly one access email, only after the row grants NFL', async () => {
+  const names = ['created', 'updatedActive', 'invoicePaid', 'checkout'];
+  for (const order of permutations(names)) {
+    const h = harness();
+    const auth = withRealAuth(h);
+    const p = purchase();
+    for (const name of order) assert.equal((await h.deliver(p[name])).status, 200, `${order.join('>')}: ${name}`);
+    assertEntitled(rowFor(h, p.sub), p, WEEKLY);
+    assert.deepEqual(auth.sent, [p.email.toLowerCase()], `${order.join('>')}: exactly one real send`);
+    const atSend = auth.entitledAtSend[0][0];
+    assert.equal(atSend.status, 'active'); assert.ok(atSend.end && Date.parse(atSend.end) > Date.now(), `${order.join('>')}: sent only once entitled`);
+    assert.equal(h.db.tables.nfl_access_email_deliveries.length, 1, `${order.join('>')}: one delivery reservation, kept only for the real send`);
+  }
+});
+
+test('real auth gate: a Resend failure keeps no reservation and the retried event sends once', async () => {
+  const h = harness();
+  let mode = 'fail';
+  const auth = withRealAuth(h, { resend: () => mode });
+  const p = purchase();
+  for (const e of [p.created, p.updatedActive]) await h.deliver(e);
+  const failed = await h.deliver(p.invoicePaid);
+  assert.equal(failed.status, 500, 'Stripe must redeliver');
+  assert.equal(h.db.tables.nfl_access_email_deliveries.length, 0, 'no false "sent" reservation');
+  mode = 'ok';
+  assert.equal((await h.deliver(p.invoicePaid)).status, 200);
+  await h.deliver(p.checkout);
+  assert.deepEqual(auth.sent, [p.email.toLowerCase()]);
+  assert.equal(h.db.tables.nfl_access_email_deliveries.length, 1);
+});
+
+test('real auth gate: MLB traffic on the shared webhook never reaches delivery', async () => {
+  const h = harness();
+  const auth = withRealAuth(h);
+  const mlb = { id: 'sub_mlb2', customer: 'cus_mlb2', status: 'active', items: { data: [{ price: { id: MLB_PRICE }, current_period_end: NOW + 30 * 86400 }] } };
+  await h.deliver(evt('customer.subscription.created', mlb, NOW));
+  await h.deliver(evt('checkout.session.completed', { id: 'cs_live_mlb2', mode: 'subscription', subscription: 'sub_mlb2', customer: 'cus_mlb2', payment_status: 'paid', customer_details: { email: 'mlb2@x.test' }, metadata: { acquired_sport: 'mlb' } }, NOW));
+  assert.equal(auth.sent.length, 0);
 });

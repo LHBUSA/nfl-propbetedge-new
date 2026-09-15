@@ -2,7 +2,7 @@
  *
  * Production contract:
  *   Stripe webhook -> Cloudflare Worker -> Supabase entitlement truth
- *   purchase email -> propbetedge-nfl-auth Worker -> Resend
+ *   purchase email -> propbetedge-nfl-auth internal purchase-delivery -> Resend
  *
  * Vercel is frontend hosting only and is intentionally absent from this path.
  * GitHub stores this source; it does not schedule or execute billing work.
@@ -28,10 +28,12 @@
  */
 
 const SERVICE = 'propbetedge-nfl-billing';
-const VERSION = 'v1.2.0';
+const VERSION = 'v1.3.0';
 const DEFAULT_SUPABASE_URL = 'https://tkmlnhmylqnttmnsnief.supabase.co';
-const APP_ORIGIN = 'https://nfl.propbetedge.ai';
 const AUTH_WORKER_URL = 'https://propbetedge-nfl-auth.sales-fd3.workers.dev';
+/* Server-to-server delivery route on the auth Worker (NFL_AUTH_INTERNAL_TOKEN).
+ * Unlike the public sign-in request, it reports what actually happened. */
+const INTERNAL_DELIVERY_PATH = '/internal/v1/purchase-delivery';
 const SIGNATURE_TOLERANCE_SECONDS = 300;
 
 const PRICE = Object.freeze({
@@ -331,6 +333,15 @@ async function handleSubscriptionLifecycle(env, subscription, eventType, eventId
     await insert(env, 'nfl_subscriptions', record);
   }
 
+  /* The auth Worker only emails an email the entitlement predicate grants, and
+   * checkout/invoice events can arrive before this event supplies the period.
+   * When a known purchaser's subscription becomes live, try again; the delivery
+   * key keeps it to one email. */
+  const knownEmail = normalizeEmail(existing?.customer_email);
+  if (knownEmail && (status === 'active' || status === 'trialing') && record.current_period_end) {
+    await sendAccessEmailOnce(env, knownEmail, `subscription:${subscriptionId}`, eventId);
+  }
+
   return { applied: true, reason: `${planForPrice(record.stripe_price_id)}:${status}` };
 }
 
@@ -464,27 +475,47 @@ async function sendAccessEmailOnce(env, emailRaw, deliveryKey, eventId) {
     throw error;
   }
 
+  let result;
   try {
-    const init = {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', accept: 'application/json', origin: APP_ORIGIN },
-      body: JSON.stringify({ email, purpose: 'purchase' }),
-    };
-    const response = env.AUTH
-      ? await env.AUTH.fetch('https://auth/v1/auth/request', init)
-      : await fetch(`${AUTH_WORKER_URL}/v1/auth/request`, init);
-    const text = await response.text();
-    if (!response.ok) throw new Error(`access_email_${response.status}:${text.slice(0, 180)}`);
-    return true;
+    result = await requestPurchaseDelivery(env, email, deliveryKey);
   } catch (error) {
-    /* Only a failed delivery removes its reservation, allowing Stripe's retry to
-     * make another attempt without duplicating a successful email. */
-    await sbWrite(env,
-      `nfl_access_email_deliveries?delivery_key=eq.${encodeURIComponent(deliveryKey)}`,
-      { method: 'DELETE', headers: { prefer: 'return=minimal' } }
-    );
+    await releaseDelivery(env, deliveryKey);
     throw error;
   }
+  if (result === 'sent' || result === 'already_sent') return true;
+
+  /* Not delivered: free the reservation so a later event (or Stripe's retry)
+   * can try again. Not entitled yet / another backend mid-send is not an
+   * error: the lifecycle event that makes the row live retries. A transient
+   * failure throws so Stripe redelivers the event. */
+  await releaseDelivery(env, deliveryKey);
+  if (result === 'not_entitled' || result === 'in_progress') {
+    console.log(`[nfl-billing] access email deferred result=${result} key=${deliveryKey.split(':')[0]}`);
+    return false;
+  }
+  throw new Error(`access_email_${result}`);
+}
+
+async function releaseDelivery(env, deliveryKey) {
+  await sbWrite(env,
+    `nfl_access_email_deliveries?delivery_key=eq.${encodeURIComponent(deliveryKey)}`,
+    { method: 'DELETE', headers: { prefer: 'return=minimal' } }
+  );
+}
+
+async function requestPurchaseDelivery(env, email, deliveryKey) {
+  const token = String(env.NFL_AUTH_INTERNAL_TOKEN || '').trim();
+  if (!token) return 'internal_unconfigured';
+  const init = {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', accept: 'application/json', authorization: `Bearer ${token}` },
+    body: JSON.stringify({ email, delivery_key: deliveryKey }),
+  };
+  const response = env.AUTH
+    ? await env.AUTH.fetch(`https://auth${INTERNAL_DELIVERY_PATH}`, init)
+    : await fetch(`${AUTH_WORKER_URL}${INTERNAL_DELIVERY_PATH}`, init);
+  const body = await response.json().catch(() => ({}));
+  return String(body?.result || `internal_${response.status}`);
 }
 
 function supabaseUrl(env) {
