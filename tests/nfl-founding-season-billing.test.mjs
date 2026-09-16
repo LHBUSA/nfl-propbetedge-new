@@ -72,7 +72,7 @@ test('no customer-facing file states a retired or stale price', () => {
 
 test('active NFL Pro uses the same premium presentation authority', () => {
   assert.match(funnel, /data-funnel-state="\$\{owner \? 'active-owner' : 'active-pro'\}"/);
-  assert.match(funnel, /Your NFL intelligence desk is live\./);
+  assert.match(funnel, /Your NFL Pro decision desk is live\./);
   assert.match(funnel, /Verified account/);
   assert.match(funnel, /Open Pro Prop Board/);
   assert.match(funnel, /PBE Fair Line · Model Probability · Best Line · PBE Cast · Track Record/);
