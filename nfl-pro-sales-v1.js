@@ -48,52 +48,52 @@
     return `<section class="pbeprosell" data-nfl-pro-sales="free" aria-labelledby="pbeprosell-title">
       <div class="pbeprosell-grid">
         <div class="pbeprosell-copy">
-          <div class="pbeprosell-kicker"><span>NFL PRO · PBE PICKS</span><i>FOUNDING SEASON</i></div>
-          <h2 id="pbeprosell-title">Public proof is free.<br><em>The decisions are Pro.</em></h2>
-          <p class="pbeprosell-lede">NFL Pro unlocks official PBE Picks from the production champion and the model desk behind each qualified call. The decision is issued against a specific market state, preserved before the outcome is known, then graded without deleting losses or rewriting the original line.</p>
+          <div class="pbeprosell-kicker"><span>NFL PRO · AUTOMATED LEARNING PICKER</span><i>FOUNDING SEASON</i></div>
+          <h2 id="pbeprosell-title">A picker built to learn<br><em>from every finalized grade.</em></h2>
+          <p class="pbeprosell-lede">PBE Algo is not a static picks sheet. It evaluates eligible NFL games, publishes only qualified PBE Picks, locks the model and market state before the result, and grades the call afterward. Finalized grades form the learning set for an automated challenger system — and the live champion changes only when a challenger clears the integrity and promotion gates.</p>
 
-          <div class="pbeprosell-proofline" aria-label="PBE Picks accountability">
-            <div><b>QUALIFY</b><span>No forced pick</span></div>
-            <div><b>ISSUE</b><span>Decision-time market</span></div>
-            <div><b>LOCK</b><span>Receipt preserved</span></div>
-            <div><b>GRADE</b><span>Final result</span></div>
-            <div><b>LEARN</b><span>Challenger loop</span></div>
+          <div class="pbeprosell-proofline" aria-label="PBE Algo automated learning cycle">
+            <div><b>EVALUATE</b><span>Score eligible games</span></div>
+            <div><b>PICK</b><span>Publish only qualified calls</span></div>
+            <div><b>LOCK</b><span>Freeze the decision receipt</span></div>
+            <div><b>GRADE</b><span>Finalize the real result</span></div>
+            <div><b>LEARN</b><span>Train + gate challengers</span></div>
           </div>
 
           <div class="pbeprosell-actions">
-            <button type="button" class="pbeprosell-cta primary" data-pro-plan="monthly">Unlock NFL Pro · ${esc(monthly)}</button>
+            <button type="button" class="pbeprosell-cta primary" data-pro-plan="monthly">Unlock PBE Picks · ${esc(monthly)}</button>
             <button type="button" class="pbeprosell-cta" data-pro-plan="weekly">Fight Week · ${esc(weekly)}</button>
-            <button type="button" class="pbeprosell-link" data-pro-route="trackrecord">Audit the Track Record →</button>
+            <button type="button" class="pbeprosell-link" data-pro-route="trackrecord">Audit every graded call →</button>
           </div>
-          <div class="pbeprosell-fine">One verified account · Stripe checkout · Cancel anytime · Official picks only when the production engine qualifies a decision.</div>
+          <div class="pbeprosell-fine">Automated learning is governed, not reckless: only finalized observations can train challengers, and the production champion never silently replaces itself. One verified account · Stripe checkout · Cancel anytime.</div>
         </div>
 
         <div class="pbeprosell-preview" aria-label="Locked NFL Pro decision preview">
-          <div class="pbeprosell-preview-head"><span>PBE PICKS · DECISION RECEIPT</span><b>LOCKED PREVIEW</b></div>
-          <div class="pbeprosell-matchup"><small>WHAT PRO UNLOCKS</small><strong>Every qualified call has a receipt.</strong><p>No fake blur and no leaked pick values — just the exact fields waiting behind the entitlement.</p></div>
+          <div class="pbeprosell-preview-head"><span>PBE ALGO · DECISION RECEIPT</span><b>PRO OUTPUT</b></div>
+          <div class="pbeprosell-matchup"><small>THE PRODUCT</small><strong>The model makes the call. The system remembers it.</strong><p>Every qualified PBE Pick carries the exact model + market state used at issuance, then stays attached to the final grade.</p></div>
           <div class="pbeprosell-lockbox">
             ${lockedRow('Official PBE Pick', 'The qualified production-champion decision')}
-            ${lockedRow('Issued line + odds', 'The market state attached when the decision was made')}
-            ${lockedRow('Model probability', 'The champion model probability at issuance')}
-            ${lockedRow('PBE Edge / comparison', 'Model vs market context when the production record supplies it')}
-            ${lockedRow('Why this pick', 'Decision factors, model version and provenance')}
+            ${lockedRow('Model probability', 'The champion probability at issuance')}
+            ${lockedRow('Issued line + odds', 'The market state captured with the decision')}
+            ${lockedRow('PBE Edge / comparison', 'Model vs market context when available')}
+            ${lockedRow('Model version + provenance', 'Which champion made the call and why')}
           </div>
-          <button type="button" class="pbeprosell-preview-cta" data-pro-route="pbepicks">See the PBE Picks desk →</button>
+          <button type="button" class="pbeprosell-preview-cta" data-pro-route="pbepicks">Open the PBE Picks desk →</button>
         </div>
       </div>
 
       <div class="pbeprosell-products" aria-label="NFL Pro product stack">
-        <article><span>01</span><div><b>PBE Picks</b><p>Official qualified champion decisions — not filler picks.</p></div></article>
-        <article><span>02</span><div><b>Model Lab</b><p>Fair value, model probability, provenance and audit context.</p></div></article>
-        <article><span>03</span><div><b>Market Watch</b><p>Follow the market around the model instead of viewing either in isolation.</p></div></article>
-        <article><span>04</span><div><b>Simulation + SGP</b><p>Premium scenario and correlation workflows under the same Pro access.</p></div></article>
+        <article><span>01</span><div><b>Automated Learning Picker</b><p>Finalized grades feed a governed challenger pipeline built to improve the engine over time.</p></div></article>
+        <article><span>02</span><div><b>PBE Picks</b><p>Official qualified champion decisions — not filler picks and not hand-edited calls.</p></div></article>
+        <article><span>03</span><div><b>Verified Track Record</b><p>The receipt, the result and the misses stay visible instead of being rewritten later.</p></div></article>
+        <article><span>04</span><div><b>Model + Market Desk</b><p>Probability, market context, Best Line, simulation and supported premium research.</p></div></article>
       </div>
     </section>`;
   }
 
   function activeMarkup() {
     return `<section class="pbeprosell pbeprosell-active" data-nfl-pro-sales="active" aria-label="NFL Pro active">
-      <div><span>NFL PRO · ACTIVE</span><h2>Your decision desk is unlocked.</h2><p>PBE Picks, the premium model desk and supported NFL Pro research are available on this verified account.</p></div>
+      <div><span>NFL PRO · AUTOMATED LEARNING PICKER · ACTIVE</span><h2>Your PBE decision engine is unlocked.</h2><p>Official PBE Picks, model + market context, the verified Track Record and the governed learning system are available on this account.</p></div>
       <div class="pbeprosell-actions"><button type="button" class="pbeprosell-cta primary" data-pro-route="pbepicks">Open PBE Picks</button><button type="button" class="pbeprosell-cta" data-pro-route="picks">Open Model Lab</button><button type="button" class="pbeprosell-link" data-pro-route="trackrecord">Track Record →</button></div>
     </section>`;
   }
@@ -121,10 +121,10 @@
     const monthly = planLabel(p?.monthly, 'Monthly');
     const weekly = planLabel(p?.weekly, 'Weekly');
     return `<aside class="pbeprosell-mini" data-nfl-pro-mini="1" aria-label="NFL Pro">
-      <div class="pbeprosell-mini-top"><span>NFL PRO</span><b>PBE PICKS</b></div>
-      <strong>See the decision. Keep the receipt.</strong>
-      <p>Official PBE Picks + premium model and market intelligence.</p>
-      <button type="button" data-pro-plan="monthly">Go Pro · ${esc(monthly)}</button>
+      <div class="pbeprosell-mini-top"><span>NFL PRO</span><b>LEARNING PICKER</b></div>
+      <strong>A picker built to learn.</strong>
+      <p>Official PBE Picks + locked grading + a governed champion/challenger learning system.</p>
+      <button type="button" data-pro-plan="monthly">Unlock PBE Picks · ${esc(monthly)}</button>
       <small>${esc(weekly)} flexible access</small>
     </aside>`;
   }
