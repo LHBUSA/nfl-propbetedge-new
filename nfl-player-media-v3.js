@@ -56,7 +56,7 @@
 
   async function hydrate(el){
     if(!el?.isConnected||isInjuryStoryChip(el)||el.dataset.pbeMediaV3==='loading'||el.dataset.pbeMediaV3==='ready')return;
-    if(el.querySelector(':scope > .pbe-player-headshot')){el.dataset.pbeMediaV3='ready';return}
+    if(el.querySelector(':scope > .pbe5-avatar')||el.querySelector(':scope > .pbe-player-headshot')){el.dataset.pbeMediaV3='ready';return}
     const name=cleanName(el);if(!name)return;el.dataset.pbeMediaV3='loading';
     const src=await resolve(name);if(!el.isConnected)return;
     el.dataset.pbeMediaV3='ready';el.dataset.pbePlayerName=name;el.classList.add('pbe-player-name-enhanced','pbe-player-name-universal');

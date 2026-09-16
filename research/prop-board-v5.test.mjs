@@ -71,6 +71,22 @@ test('non-PRO board carries a single unlock message and one gated column state',
   assert.match(v5, /class="pbe5-gated"/);
 });
 
+test('player rows carry canonical DNA headshots with an in-board fallback', () => {
+  assert.match(v5, /media\?\.headshot_url/);
+  assert.match(v5, /data-pbe5-headshot/);
+  assert.match(v5, /pbe5-avatar/);
+  assert.match(v5, /playerInitials/);
+  assert.match(css, /Prop Board v5\.2: player identity/);
+});
+
+test('model coverage is explicit and long backend decision labels cannot clip the Status column', () => {
+  assert.match(v5, /label: 'MODELED'/);
+  assert.match(v5, />NOT MODELED</);
+  assert.match(v5, />MARKET ONLY</);
+  assert.match(v5, /pbe5-status-wrap/);
+  assert.match(css, /\.pbe5-status-wrap/);
+});
+
 test('pins and settings keep the existing localStorage keys so nothing a user pinned is lost', () => {
   assert.match(v5, /const SETTINGS_KEY = 'pbe_propboard_v4_settings'/);
   assert.match(v5, /const PIN_PREFIX = 'pbe_propboard_v4_pins_'/);

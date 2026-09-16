@@ -19,11 +19,11 @@
 (() => {
   'use strict';
 
-  const VERSION = 'v5.0.0';
+  const VERSION = 'v5.2.0';
   /* Same keys as the retired v4 layer so existing pins and settings survive. */
   const SETTINGS_KEY = 'pbe_propboard_v4_settings';
   const PIN_PREFIX = 'pbe_propboard_v4_pins_';
-  const ROSTER_KEY = 'pbe_propboard_roster_v1';
+  const ROSTER_KEY = 'pbe_propboard_roster_v2';
   const DEFAULT_THRESHOLD = 15;
   const TABLE_MIN = 1024;
   const CARD_TWO_COL_MIN = 761;
@@ -90,7 +90,11 @@
         const j = await r.json();
         for (const p of (Array.isArray(j?.players) ? j.players : [])) {
           const name = String(p?.name || '').trim().toLowerCase(); if (!name) continue;
-          map[name] = { team: p.team_2026 || p.team || '', position: p.position || pos.toUpperCase() };
+          map[name] = {
+            team: p.team_2026 || p.team || '',
+            position: p.position || pos.toUpperCase(),
+            headshot: p?.media?.headshot_url || ''
+          };
         }
       } catch (_) {}
     }));
@@ -99,6 +103,10 @@
     return ui.roster;
   }
   const identity = name => ui.roster?.get(String(name || '').trim().toLowerCase()) || null;
+  function playerInitials(name) {
+    const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+    return (parts.slice(0, 2).map(part => part[0] || '').join('').toUpperCase() || 'PBE').slice(0, 3);
+  }
 
   /* ------------------------------------------------------- row reading */
   const meta = market => (v3()?.marketMeta || (m => ({ label: m, family: 'other', short: m })))(market);
@@ -114,7 +122,7 @@
 
   /* Status is one word the reader can trust. */
   function status(row) {
-    if (modeled(row)) return { key: 'modeled', label: String(row.model.decision_status || 'MODELED').replace(/_/g, ' ').toUpperCase() };
+    if (modeled(row)) return { key: 'modeled', label: 'MODELED' };
     if (isPro()) return { key: 'market', label: 'MARKET ONLY' };
     return { key: 'market', label: 'MARKET' };
   }
@@ -212,36 +220,38 @@
   }
   function modelCells(row) {
     if (!isPro()) return `<td class="pbe5-td-fair"><span class="pbe5-gated" title="PBE fair line is part of NFL Pro">—</span></td><td class="pbe5-td-edge"><span class="pbe5-gated" title="PBE model gap is part of NFL Pro">—</span></td>`;
-    if (!row.model) return `<td class="pbe5-td-fair"><span class="pbe5-none" title="No production model output for this prop. Nothing is substituted.">—</span></td><td class="pbe5-td-edge"><span class="pbe5-none">—</span></td>`;
+    if (!row.model) return `<td class="pbe5-td-fair"><span class="pbe5-model-na" title="No production model output for this prop. Nothing is substituted.">NOT MODELED</span></td><td class="pbe5-td-edge"><span class="pbe5-model-na muted">MARKET ONLY</span></td>`;
     const gap = gapOf(row);
     return `<td class="pbe5-td-fair"><b class="pbe5-fair">${esc(fmt(fairOf(row), 1))}</b></td><td class="pbe5-td-edge">${Number.isFinite(gap) ? `<b class="pbe5-edge ${gap >= 0 ? 'pos' : 'neg'} ${Math.abs(gap) >= settings().threshold ? 'alert' : ''}">${esc(signed(gap))}</b>` : '<span class="pbe5-none">—</span>'}</td>`;
   }
   function playerCell(row, pinned) {
-    const id = identity(row.player); const m = meta(row.market);
+    const id = identity(row.player); const m = meta(row.market); const initials = playerInitials(row.player);
+    const photo = id?.headshot ? `<img data-pbe5-headshot="1" src="${esc(id.headshot)}" alt="" width="48" height="48" loading="lazy" decoding="async" aria-hidden="true">` : '';
     return `<div class="pbe5-player">
       <button type="button" class="pbe5-pin ${pinned ? 'on' : ''}" data-pbe5-pin="${esc(row.key)}" aria-pressed="${pinned ? 'true' : 'false'}" aria-label="${pinned ? 'Unpin' : 'Pin'} ${esc(row.player)} ${esc(m.label)}">${pinned ? '★' : '☆'}</button>
-      <div><a href="javascript:void(0)" class="pbe5-name" data-pbe5-player="${esc(row.player)}">${esc(row.player)}</a><small>${id ? `${esc(id.team)} · ${esc(id.position)} · ` : ''}${esc(m.label)}</small></div>
+      <span class="pbe5-avatar ${photo ? 'has-photo' : 'is-fallback'}" aria-hidden="true"><span>${esc(initials)}</span>${photo}</span>
+      <div class="pbe5-player-copy"><a href="javascript:void(0)" class="pbe5-name" data-pbe5-player="${esc(row.player)}">${esc(row.player)}</a><small>${id ? `${esc(id.team)} · ${esc(id.position)} · ` : ''}${esc(m.label)}</small></div>
     </div>`;
   }
 
   function tableRowHtml(row, pinned) {
     const st = status(row); const open = ui.expanded.has(row.key);
-    return `<tr class="pbe5-row ${open ? 'is-open' : ''} ${pinned ? 'is-pinned' : ''}" data-pbe5-row="${esc(row.key)}" aria-expanded="${open ? 'true' : 'false'}">
+    return `<tr class="pbe5-row ${open ? 'is-open' : ''} ${pinned ? 'is-pinned' : ''} ${modeled(row) ? 'is-modeled' : ''}" data-pbe5-row="${esc(row.key)}" aria-expanded="${open ? 'true' : 'false'}">
       <td class="pbe5-td-player">${playerCell(row, pinned)}</td>
       <td class="pbe5-td-cons"><b class="pbe5-cons">${esc(fmt(row.consensus, 1))}</b><small>${row.bookCount} book${row.bookCount === 1 ? '' : 's'}</small></td>
       <td class="pbe5-td-over">${quoteHtml(row.bestOver, 'Over')}</td>
       <td class="pbe5-td-under">${quoteHtml(row.bestUnder, 'Under')}</td>
       ${modelCells(row)}
-      <td class="pbe5-td-status"><span class="pbe5-status ${st.key}">${esc(st.label)}</span><i class="pbe5-chev" aria-hidden="true"></i></td>
+      <td class="pbe5-td-status"><div class="pbe5-status-wrap"><span class="pbe5-status ${st.key}">${esc(st.label)}</span><i class="pbe5-chev" aria-hidden="true"></i></div></td>
     </tr>${open ? `<tr class="pbe5-detail-row"><td colspan="7">${detailHtml(row)}</td></tr>` : ''}`;
   }
 
   function cardHtml(row, pinned) {
     const st = status(row); const open = ui.expanded.has(row.key); const gap = gapOf(row);
     const model = !isPro() ? `<div><span>PBE fair</span><b class="pbe5-gated">—</b></div><div><span>Edge</span><b class="pbe5-gated">—</b></div>`
-      : !row.model ? `<div><span>PBE fair</span><b class="pbe5-none">—</b></div><div><span>Edge</span><b class="pbe5-none">—</b></div>`
+      : !row.model ? `<div class="pbe5-card-model-note"><b>MARKET ONLY</b><span>No PBE model output has been published for this prop.</span></div>`
       : `<div><span>PBE fair</span><b class="pbe5-fair">${esc(fmt(fairOf(row), 1))}</b></div><div><span>Edge</span><b class="pbe5-edge ${gap >= 0 ? 'pos' : 'neg'}">${esc(signed(gap))}</b></div>`;
-    return `<article class="pbe5-card ${open ? 'is-open' : ''} ${pinned ? 'is-pinned' : ''}" data-pbe5-row="${esc(row.key)}" aria-expanded="${open ? 'true' : 'false'}">
+    return `<article class="pbe5-card ${open ? 'is-open' : ''} ${pinned ? 'is-pinned' : ''} ${modeled(row) ? 'is-modeled' : ''}" data-pbe5-row="${esc(row.key)}" aria-expanded="${open ? 'true' : 'false'}">
       <header>${playerCell(row, pinned)}<span class="pbe5-status ${st.key}">${esc(st.label)}</span></header>
       <div class="pbe5-card-cons"><span>Consensus</span><b>${esc(fmt(row.consensus, 1))}</b><small>${row.bookCount} book${row.bookCount === 1 ? '' : 's'}</small></div>
       <div class="pbe5-card-quotes"><div><span>Best over</span>${quoteHtml(row.bestOver, 'Over')}</div><div><span>Best under</span>${quoteHtml(row.bestUnder, 'Under')}</div></div>
@@ -370,6 +380,14 @@
     const t = event.target.closest('[data-pbe5-threshold]'); if (t && isPro()) { saveSettings({ threshold: Math.max(0, Math.min(100, Number(t.value) || 0)) }); paintFilters(); paintBoard(); }
   }
   function onKey(event) { if (event.key !== 'Enter' && event.key !== ' ') return; const row = event.target.closest?.('[data-pbe5-row], [data-pbe5-open]'); if (!row || event.target.closest('a, button, input, select')) return; event.preventDefault(); toggleRow(row.dataset.pbe5Row || row.dataset.pbe5Open); }
+  function onImageError(event) {
+    const img = event.target?.closest?.('img[data-pbe5-headshot]');
+    if (!img || !root()?.contains(img)) return;
+    const avatar = img.closest('.pbe5-avatar');
+    img.remove();
+    avatar?.classList.remove('has-photo');
+    avatar?.classList.add('is-fallback');
+  }
 
   function install() {
     if (!window.App?.VIEWS) return false;
@@ -383,6 +401,7 @@
   document.addEventListener('input', onInput);
   document.addEventListener('change', onChange);
   document.addEventListener('keydown', onKey);
+  document.addEventListener('error', onImageError, true);
   window.addEventListener('resize', onResize);
   /* PRO state flips repaint from the already-loaded state when the model is
      already present, and re-load (via v3) when it is not. */
