@@ -59,6 +59,15 @@ test('checkout messaging sells the live product instead of future validation', (
   assert.match(funnel, /PBE Picks/);
 });
 
+test('NFL Pro sells ongoing feature releases and in-product add-ons as subscription value', () => {
+  assert.match(sales, /New Pro Releases Included/);
+  assert.match(sales, /newest NFL Pro features, tools and in-product add-ons/i);
+  assert.match(sales, /included while your subscription is active/i);
+  assert.match(sales, /MORE THAN TODAY’S FEATURES/);
+  assert.match(sales, /YOUR PRO KEEPS EVOLVING/);
+  assert.doesNotMatch(sales, /every future product|all future products|lifetime access/i);
+});
+
 test('active member surface celebrates NFL PropBetEdge Pro and exposes Stripe management', () => {
   assert.match(sales, /You have NFL/);
   assert.match(sales, /PropBetEdge Pro/);
