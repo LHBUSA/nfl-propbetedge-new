@@ -1,0 +1,289 @@
+name: NFL Pro member experience rollout
+
+on:
+  push:
+    paths:
+      - .github/workflows/nfl-pro-member-experience.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: nfl-pro-member-experience
+  cancel-in-progress: false
+
+jobs:
+  rollout:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Build premium signed-in NFL Pro experience
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          BILLING = 'https://billing.stripe.com/p/login/cNi3cv2vY7em3lr4oj7wA00'
+
+          # 1) Canonical purchase/account modal: owner and subscribers render the
+          # exact same active-Pro state and everybody gets the Stripe portal.
+          p = Path('paywall-funnel-v2.js')
+          s = p.read_text(encoding='utf-8')
+          if "const BILLING_PORTAL" not in s:
+              s = s.replace(
+                  "  const STORAGE = 'pbe_nfl_pending_plan_v7';\n",
+                  "  const STORAGE = 'pbe_nfl_pending_plan_v7';\n  const BILLING_PORTAL = '" + BILLING + "';\n",
+                  1,
+              )
+
+          active = r'''  function activeProMarkup(email, subscription) {
+    return `<div class="pbe-funnel-root pbe-funnel-active pbe-funnel-member" data-funnel-state="active-pro">
+      <div class="pbe-funnel-head pbe-funnel-member-head">
+        <span>NFL PROPBETEDGE PRO · VERIFIED MEMBER</span>
+        <strong>You have NFL PropBetEdge Pro.</strong>
+        <p>A national-scale NFL sports analytics platform is fully unlocked on this verified account: PBE Algo, official PBE Picks, model + market intelligence, Player DNA, team research, simulation, Game Center and the permanent Track Record.</p>
+      </div>
+      <div class="pbe-funnel-member-status">
+        <div class="pbe-funnel-member-seal"><span>PRO</span><b>ACTIVE</b></div>
+        <div><small>VERIFIED ACCOUNT</small><strong>${escapeHtml(email || 'NFL Pro member')}</strong><span>${escapeHtml(accessPeriodCopy(subscription))}</span></div>
+      </div>
+      <div class="pbe-funnel-member-grid" aria-label="NFL Pro member access">
+        <div><b>PBE Algo</b><span>Automated learning picker</span></div>
+        <div><b>PBE Picks</b><span>Official qualified calls</span></div>
+        <div><b>Track Record</b><span>Permanent graded history</span></div>
+        <div><b>Model + Market Desk</b><span>Probability, lines + research</span></div>
+      </div>
+      <div class="pbe-pro-auth-state pbe-funnel-auth pbe-funnel-member-actions">
+        <button class="pbe-pro-cta" id="pbe-funnel-open-board" type="button">Open Pro Prop Board</button>
+        <a class="pbe-pro-cta secondary pbe-funnel-manage" href="${BILLING_PORTAL}" target="_blank" rel="noopener noreferrer">Manage subscription ↗</a>
+        <button class="pbe-pro-cta secondary" id="pbe-funnel-refresh" type="button">Refresh verified access</button>
+        <div class="pbe-pro-message" id="pbe-funnel-message"></div>
+      </div>
+      <div class="pbe-pro-secure">◆ NFL PropBetEdge Pro active · verified access · subscription management powered by Stripe</div>
+    </div>`;
+  }
+
+  function escapeHtml'''
+          s, n = re.subn(
+              r"  function activeProMarkup\(email, subscription, owner = false\) \{.*?\n  \}\n\n  function escapeHtml",
+              active,
+              s,
+              count=1,
+              flags=re.S,
+          )
+          if n != 1:
+              raise SystemExit('paywall-funnel activeProMarkup patch failed')
+
+          s = s.replace(
+              "    const owner = s.pro && s.role === 'owner';\n    const mode = s.pro ? (owner ? 'active-owner' : 'active-pro') : s.user ? 'signed-in-free' : 'signed-out';",
+              "    const mode = s.pro ? 'active-pro' : s.user ? 'signed-in-free' : 'signed-out';",
+              1,
+          )
+          s = s.replace(
+              "? activeProMarkup(String(s.user?.email || '').toLowerCase(), s.subscription, owner)",
+              "? activeProMarkup(String(s.user?.email || '').toLowerCase(), s.subscription)",
+              1,
+          )
+          if 'active-owner' in s:
+              raise SystemExit('paywall-funnel still contains active-owner')
+          if BILLING not in s or 'You have NFL PropBetEdge Pro.' not in s:
+              raise SystemExit('paywall-funnel member contract incomplete')
+          p.write_text(s, encoding='utf-8')
+
+          # 2) Fallback paywall state should tell the same story if the terminal
+          # funnel has not mounted yet. No owner-only customer-facing copy.
+          p = Path('paywall.js')
+          s = p.read_text(encoding='utf-8')
+          if "const BILLING_PORTAL" not in s:
+              anchor = "  const ACCESS_STATES = new Set(['anonymous','no_entitlement','granted','unavailable']);\n"
+              if anchor not in s:
+                  raise SystemExit('paywall billing portal anchor missing')
+              s = s.replace(anchor, anchor + "  const BILLING_PORTAL = '" + BILLING + "';\n", 1)
+
+          fallback = r'''  function proUserHtml() {
+    const email = state.user?.email || 'NFL Pro account';
+    const periodEnd = state.subscription?.current_period_end ? new Date(state.subscription.current_period_end) : null;
+    const renewCopy = periodEnd && !Number.isNaN(periodEnd.getTime())
+      ? `${state.subscription?.cancel_at_period_end ? 'Access through' : 'Current period through'} ${periodEnd.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}`
+      : 'NFL PropBetEdge Pro access verified.';
+    return `<div class="pbe-pro-price-card" style="border-color:rgba(85,214,140,.28);background:radial-gradient(circle at 100% 0,rgba(85,214,140,.14),transparent 42%),linear-gradient(145deg,rgba(85,214,140,.07),rgba(255,255,255,.018))">
+      <div class="pbe-pro-plan-label" style="color:#55d68c">NFL PROPBETEDGE PRO · ACTIVE</div>
+      <div class="pbe-pro-price"><strong style="font-size:32px;color:#fff">YOU HAVE PRO</strong></div>
+      <div class="pbe-pro-renew">${esc(renewCopy)}</div>
+    </div>
+    <div class="pbe-pro-user-card"><strong>${esc(email)}</strong><span>Verified NFL PropBetEdge Pro account</span></div>
+    <button class="pbe-pro-cta" type="button" id="pbe-pro-open-board">Open Pro Prop Board</button>
+    <a class="pbe-pro-cta secondary" href="${BILLING_PORTAL}" target="_blank" rel="noopener noreferrer" style="display:flex;align-items:center;justify-content:center;text-decoration:none">Manage subscription ↗</a>
+    <button class="pbe-pro-cta secondary" id="pbe-pro-refresh" type="button">Refresh access</button>
+    <button class="pbe-pro-cta secondary" id="pbe-pro-signout" type="button">Sign out</button>
+    <div class="pbe-pro-message" id="pbe-pro-message"></div>
+    <div class="pbe-pro-secure">◆ NFL PropBetEdge Pro active · verified access</div>`;
+  }
+
+  function ensureModal'''
+          s, n = re.subn(
+              r"  function proUserHtml\(\) \{.*?\n  \}\n\n  function ensureModal",
+              fallback,
+              s,
+              count=1,
+              flags=re.S,
+          )
+          if n != 1:
+              raise SystemExit('paywall proUserHtml patch failed')
+          if 'Verified owner · full NFL Pro access' in s:
+              raise SystemExit('paywall still exposes owner-specific member copy')
+          p.write_text(s, encoding='utf-8')
+
+          # 3) Homepage member presentation. Keep acquisition copy for free
+          # readers; active members get a celebratory product-status surface.
+          p = Path('nfl-pro-sales-v1.css')
+          s = p.read_text(encoding='utf-8')
+          marker = '/* ---- NFL Pro member experience v2 ---- */'
+          if marker not in s:
+              s += r'''
+
+/* ---- NFL Pro member experience v2 ---- */
+.pbeprosell-member{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(320px,.75fr);align-items:stretch;gap:0;padding:0;border-color:rgba(83,220,148,.38);background:radial-gradient(circle at 90% 0,rgba(83,220,148,.17),transparent 30%),radial-gradient(circle at 10% 120%,rgba(212,175,55,.12),transparent 32%),linear-gradient(145deg,#121a16 0%,#11130f 48%,#0b0d0b 100%);box-shadow:0 28px 70px rgba(0,0,0,.38),0 0 0 1px rgba(83,220,148,.035),inset 0 1px 0 rgba(255,255,255,.04)}
+.pbeprosell-member:before{background:linear-gradient(90deg,transparent,#55d68c 28%,var(--pbe-gold) 70%,transparent)}
+.pbeprosell-member-main{padding:31px 32px 30px;border-right:1px solid rgba(255,255,255,.07)}
+.pbeprosell-member-kicker{display:flex;align-items:center;gap:9px;flex-wrap:wrap;color:var(--pbe-paper-2);font:800 9px/1 var(--pbe-font-data);letter-spacing:.12em}
+.pbeprosell-member-status{display:inline-flex;align-items:center;padding:6px 9px;border:1px solid rgba(85,214,140,.38);border-radius:999px;background:rgba(85,214,140,.08);color:#6ee6a5!important;box-shadow:0 0 20px rgba(85,214,140,.06)}
+.pbeprosell-member h2{max-width:700px;margin:14px 0 10px!important;color:#fff;font:900 clamp(35px,4.5vw,58px)/.93 var(--pbe-font-display)!important;letter-spacing:-.04em!important}
+.pbeprosell-member h2 em{color:#70e8a8;font-style:normal}
+.pbeprosell-member-main>p{max-width:760px;margin:0;color:var(--pbe-paper-2);font:500 13px/1.67 var(--pbe-font-ui)}
+.pbeprosell-member-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:21px}
+.pbeprosell-manage{display:inline-flex;align-items:center;justify-content:center;min-height:43px;padding:0 14px;border:1px solid rgba(212,175,55,.48);border-radius:8px;background:rgba(212,175,55,.055);color:var(--pbe-gold-bright);font:800 11px/1 var(--pbe-font-ui);text-decoration:none;transition:transform .15s ease,background .15s ease,border-color .15s ease}
+.pbeprosell-manage:hover{transform:translateY(-1px);background:rgba(212,175,55,.10);border-color:var(--pbe-gold)}
+.pbeprosell-member-side{padding:25px 24px 23px;background:linear-gradient(180deg,rgba(85,214,140,.045),rgba(0,0,0,.10));display:flex;flex-direction:column;justify-content:center}
+.pbeprosell-member-badge{display:grid;justify-items:start;gap:3px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,.07)}
+.pbeprosell-member-badge span{color:#6ee6a5;font:800 9px/1 var(--pbe-font-data);letter-spacing:.14em}
+.pbeprosell-member-badge strong{color:#fff;font:900 29px/.95 var(--pbe-font-display);letter-spacing:-.035em}
+.pbeprosell-member-badge small{color:var(--pbe-dim);font:700 9px/1.3 var(--pbe-font-data)}
+.pbeprosell-member-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:15px}
+.pbeprosell-member-grid>div{min-width:0;padding:10px;border:1px solid rgba(255,255,255,.06);border-radius:8px;background:rgba(255,255,255,.018)}
+.pbeprosell-member-grid b{display:block;color:#fff;font-size:10px}
+.pbeprosell-member-grid span{display:block;margin-top:3px;color:var(--pbe-dim);font-size:8px;line-height:1.35}
+.pbeprosell-member-track{appearance:none;width:100%;min-height:39px;margin-top:13px;border:1px solid rgba(85,214,140,.22);border-radius:8px;background:rgba(85,214,140,.045);color:#8cebb5;font:800 9px/1 var(--pbe-font-ui);cursor:pointer}
+@media(max-width:1080px){.pbeprosell-member{grid-template-columns:1fr}.pbeprosell-member-main{border-right:0;border-bottom:1px solid rgba(255,255,255,.07)}}
+@media(max-width:620px){.pbeprosell-member-main,.pbeprosell-member-side{padding:20px 17px}.pbeprosell-member h2{font-size:clamp(34px,10vw,46px)!important}.pbeprosell-member-actions>*{width:100%;text-align:center}.pbeprosell-member-grid{grid-template-columns:1fr 1fr}}
+'''
+          p.write_text(s, encoding='utf-8')
+
+          # 4) Premium account modal styling.
+          p = Path('paywall-funnel-v2.css')
+          s = p.read_text(encoding='utf-8')
+          marker = '/* ---- NFL Pro verified member v2 ---- */'
+          if marker not in s:
+              s += r'''
+
+/* ---- NFL Pro verified member v2 ---- */
+.pbe-funnel-member .pbe-funnel-member-head>span{color:#6ee6a5!important}
+.pbe-funnel-member .pbe-funnel-member-head>strong{max-width:430px;font-size:clamp(31px,3.1vw,43px)!important;line-height:.95!important;letter-spacing:-.035em!important}
+.pbe-funnel-member .pbe-funnel-member-head>p{font-size:12px!important;line-height:1.6!important}
+.pbe-funnel-member-status{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:13px;margin-top:18px;padding:14px;border:1px solid rgba(85,214,140,.22);border-radius:13px;background:radial-gradient(circle at 100% 0,rgba(85,214,140,.12),transparent 48%),rgba(85,214,140,.035);box-shadow:inset 0 1px 0 rgba(255,255,255,.025)}
+.pbe-funnel-member-seal{display:grid;place-items:center;align-content:center;width:58px;height:58px;border:1px solid rgba(85,214,140,.42);border-radius:50%;background:rgba(85,214,140,.08);box-shadow:0 0 28px rgba(85,214,140,.08)}
+.pbe-funnel-member-seal span{color:#6ee6a5;font:800 8px/1 'JetBrains Mono',monospace;letter-spacing:.12em}
+.pbe-funnel-member-seal b{margin-top:3px;color:#fff;font:900 11px/1 'Inter',sans-serif}
+.pbe-funnel-member-status>div:last-child{display:grid;gap:4px;min-width:0}
+.pbe-funnel-member-status small{color:#6ee6a5;font:800 8px/1 'JetBrains Mono',monospace;letter-spacing:.11em}
+.pbe-funnel-member-status strong{overflow:hidden;color:#fff;font:800 13px/1.2 'Inter',sans-serif;text-overflow:ellipsis;white-space:nowrap}
+.pbe-funnel-member-status span{color:var(--pbe-paper-2);font-size:10px;line-height:1.35}
+.pbe-funnel-member-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.pbe-funnel-member-grid>div{padding:11px;border:1px solid rgba(255,255,255,.06);border-radius:9px;background:rgba(255,255,255,.018)}
+.pbe-funnel-member-grid b{display:block;color:#fff;font-size:11px}
+.pbe-funnel-member-grid span{display:block;margin-top:3px;color:var(--pbe-paper-2);font-size:9px;line-height:1.35}
+.pbe-funnel-member-actions{display:grid!important;grid-template-columns:1fr 1fr;gap:8px!important;margin-top:14px!important}
+.pbe-funnel-member-actions .pbe-pro-cta{min-height:45px!important;margin:0!important}
+.pbe-funnel-manage{display:flex!important;align-items:center!important;justify-content:center!important;text-decoration:none!important;border-color:rgba(216,183,91,.36)!important;color:var(--pbe-gold-bright)!important}
+.pbe-funnel-member-actions #pbe-funnel-refresh{grid-column:1/-1;min-height:38px!important;font-size:9px!important;opacity:.78}
+.pbe-funnel-member .pbe-pro-secure{color:rgba(110,230,165,.74)!important}
+@media(max-width:620px){.pbe-funnel-member-grid{grid-template-columns:1fr 1fr}.pbe-funnel-member-actions{grid-template-columns:1fr!important}.pbe-funnel-member-actions #pbe-funnel-refresh{grid-column:auto}.pbe-funnel-member-status{grid-template-columns:auto minmax(0,1fr)}}
+'''
+          p.write_text(s, encoding='utf-8')
+
+          # 5) Keep the tests aligned with the customer-facing product contract.
+          p = Path('tests/nfl-founding-season-billing.test.mjs')
+          s = p.read_text(encoding='utf-8')
+          old = '''test('active NFL Pro uses the same premium presentation authority', () => {
+  assert.match(funnel, /data-funnel-state="\\$\\{owner \\? 'active-owner' : 'active-pro'\\}"/);
+  assert.match(funnel, /Your NFL Pro decision desk is live\\./);
+  assert.match(funnel, /Verified account/);
+  assert.match(funnel, /Open Pro Prop Board/);
+  assert.match(funnel, /PBE Fair Line · Model Probability · Best Line · PBE Cast · Track Record/);
+  assert.match(funnel, /const mode = s\\.pro \\? \\(owner \\? 'active-owner' : 'active-pro'\\) : s\\.user \\? 'signed-in-free' : 'signed-out'/);
+});'''
+          new = '''test('active NFL Pro uses one premium member presentation for subscribers and owner', () => {
+  assert.match(funnel, /data-funnel-state="active-pro"/);
+  assert.match(funnel, /You have NFL PropBetEdge Pro\\./);
+  assert.match(funnel, /VERIFIED ACCOUNT/);
+  assert.match(funnel, /Open Pro Prop Board/);
+  assert.match(funnel, /Manage subscription/);
+  assert.match(funnel, /billing\\.stripe\\.com\\/p\\/login\\/cNi3cv2vY7em3lr4oj7wA00/);
+  assert.match(funnel, /PBE Algo/);
+  assert.match(funnel, /PBE Picks/);
+  assert.match(funnel, /Track Record/);
+  assert.match(funnel, /const mode = s\\.pro \\? 'active-pro' : s\\.user \\? 'signed-in-free' : 'signed-out'/);
+  assert.doesNotMatch(funnel, /active-owner|Owner access/);
+});'''
+          if old not in s:
+              raise SystemExit('billing active presentation test block not found')
+          p.write_text(s.replace(old, new, 1), encoding='utf-8')
+
+          p = Path('tests/nfl-pro-sales-v1.test.mjs')
+          s = p.read_text(encoding='utf-8')
+          s = s.replace("test('sales surface leads with PBE Picks and accountability', () => {\n  assert.match(sales, /Public proof is free\\./);\n  assert.match(sales, /The decisions are Pro\\./);\n  assert.match(sales, /PBE PICKS/);\n  assert.match(sales, /QUALIFY/);\n  assert.match(sales, /ISSUE/);\n  assert.match(sales, /LOCK/);\n  assert.match(sales, /GRADE/);\n  assert.match(sales, /LEARN/);\n  assert.match(sales, /Every qualified call has a receipt\\./);\n});",
+          "test('sales surface leads with the automated learning picker and accountability', () => {\n  assert.match(sales, /A picker built to learn/);\n  assert.match(sales, /from every finalized grade/);\n  assert.match(sales, /AUTOMATED LEARNING PICKER/);\n  assert.match(sales, /EVALUATE/);\n  assert.match(sales, /PICK/);\n  assert.match(sales, /LOCK/);\n  assert.match(sales, /GRADE/);\n  assert.match(sales, /LEARN/);\n  assert.match(sales, /The model makes the call\\. The system remembers it\\./);\n});", 1)
+          s = s.replace("for (const field of ['Official PBE Pick', 'Issued line + odds', 'Model probability', 'PBE Edge / comparison', 'Why this pick'])", "for (const field of ['Official PBE Pick', 'Issued line + odds', 'Model probability', 'PBE Edge / comparison', 'Model version + provenance'])", 1)
+          s = s.replace("  assert.match(sales, /No fake blur and no leaked pick values/);", "  assert.match(sales, /PRO OUTPUT/);", 1)
+          if "You have NFL" not in s:
+              s += "\n\ntest('active member surface celebrates NFL PropBetEdge Pro and links subscription management', () => {\n  assert.match(sales, /You have NFL/);\n  assert.match(sales, /PropBetEdge Pro/);\n  assert.match(sales, /Manage subscription/);\n  assert.match(sales, /billing\\.stripe\\.com\\/p\\/login\\/cNi3cv2vY7em3lr4oj7wA00/);\n  assert.doesNotMatch(sales, /isOwner|owner preview/i);\n});\n"
+          p.write_text(s, encoding='utf-8')
+
+          p = Path('scripts/qa-access-v2/acceptance.mjs')
+          s = p.read_text(encoding='utf-8')
+          old = "owner: { email: 'owner@qa.test', expect: { access: 'granted', role: 'owner', premium: PREMIUM.allowed, modal: 'active-owner', unlock: false, modalText: /Owner access/ } },"
+          new = "owner: { email: 'owner@qa.test', expect: { access: 'granted', role: 'owner', premium: PREMIUM.allowed, modal: 'active-pro', unlock: false, modalText: /You have NFL PropBetEdge Pro/ } },"
+          if old not in s:
+              raise SystemExit('acceptance owner state not found')
+          p.write_text(s.replace(old, new, 1), encoding='utf-8')
+
+          # The competitive-size statement deliberately stays supportable rather
+          # than claiming an unverified national traffic/rank position.
+          for required in [
+              ('nfl-pro-sales-v1.js', 'You have NFL'),
+              ('nfl-pro-sales-v1.js', BILLING),
+              ('paywall-funnel-v2.js', 'You have NFL PropBetEdge Pro.'),
+              ('paywall-funnel-v2.js', BILLING),
+              ('paywall-funnel-v2.css', 'NFL Pro verified member v2'),
+          ]:
+              if required[1] not in Path(required[0]).read_text(encoding='utf-8'):
+                  raise SystemExit(f'missing member contract {required}')
+          PY
+
+      - name: Syntax and focused contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/check-syntax.mjs paywall.js paywall-funnel-v2.js nfl-pro-sales-v1.js
+          node --test tests/nfl-founding-season-billing.test.mjs tests/nfl-pro-sales-v1.test.mjs
+
+      - name: Commit rollout
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "PropBetEdge Build Bot"
+          git config user.email "buildbot@propbetedge.ai"
+          git rm .github/workflows/nfl-pro-member-experience.yml
+          git add nfl-pro-sales-v1.js nfl-pro-sales-v1.css paywall.js paywall-funnel-v2.js paywall-funnel-v2.css tests/nfl-founding-season-billing.test.mjs tests/nfl-pro-sales-v1.test.mjs scripts/qa-access-v2/acceptance.mjs
+          git diff --cached --check
+          git commit -m "Make NFL Pro membership world class"
+          git push origin HEAD:main
