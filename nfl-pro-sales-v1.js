@@ -1,6 +1,11 @@
 /* PropBetEdge NFL — NFL Pro conversion surface v1
  * Presentation only. It reads the canonical pricing/auth state, never premium
  * decision data, and turns the homepage + sidebar into a clear NFL Pro funnel.
+ *
+ * The verified owner always sees the public conversion surface on the homepage
+ * and sidebar. That makes the live sales experience inspectable without signing
+ * out or using a second browser. Paid subscribers still see the clean active
+ * state instead of acquisition CTAs.
  */
 (() => {
   'use strict';
@@ -16,6 +21,7 @@
   function pricing() { return window.PBEPricing || null; }
   function proState() { return window.PBEPro?.state || {}; }
   function isPro() { return Boolean(proState().pro); }
+  function isOwner() { return proState().role === 'owner'; }
   function isHome() { return window.App?.current === 'home' && Boolean(document.querySelector('.pbehome7')); }
 
   function planLabel(plan, fallback) {
@@ -98,11 +104,14 @@
     const root = document.querySelector('.pbehome7');
     const hero = root?.querySelector('.pbe7-hero');
     if (!root || !hero) return;
-    const mode = isPro() ? 'active' : 'free';
+
+    /* Owner preview deliberately mirrors the acquisition experience. */
+    const acquisitionView = !isPro() || isOwner();
+    const mode = acquisitionView ? 'free' : 'active';
     if (existing?.dataset?.nflProSales === mode && existing.parentElement === root) return;
     existing?.remove();
     const wrap = document.createElement('div');
-    wrap.innerHTML = isPro() ? activeMarkup() : salesMarkup();
+    wrap.innerHTML = acquisitionView ? salesMarkup() : activeMarkup();
     const node = wrap.firstElementChild;
     if (node) hero.insertAdjacentElement('afterend', node);
   }
@@ -122,7 +131,9 @@
 
   function mountSidebar() {
     const old = document.querySelector('[data-nfl-pro-mini]');
-    if (isPro()) { old?.remove(); return; }
+    /* Subscribers do not get acquisition chrome. The owner does, by design,
+       so the live public funnel can be inspected without signing out. */
+    if (isPro() && !isOwner()) { old?.remove(); return; }
     if (old) return;
     const search = document.querySelector('.sidebar-search');
     if (!search) return;
