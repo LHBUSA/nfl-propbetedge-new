@@ -48,7 +48,7 @@
         <div class="pbeprosell-copy">
           <div class="pbeprosell-kicker"><span>NFL PRO · AUTOMATED LEARNING PICKER</span><i>FOUNDING SEASON</i></div>
           <h2 id="pbeprosell-title">A picker built to learn<br><em>from every finalized grade.</em></h2>
-          <p class="pbeprosell-lede">PBE Algo is not a static picks sheet. It evaluates eligible NFL games, publishes only qualified PBE Picks, locks the model and market state before the result, and grades the call afterward. Finalized grades form the learning set for an automated challenger system — and the live champion changes only when a challenger clears the integrity and promotion gates.</p>
+          <p class="pbeprosell-lede">PBE Algo is not a static picks sheet. It evaluates eligible NFL games, publishes only qualified PBE Picks, locks the model and market state before the result, and grades the call afterward. Finalized grades form the learning set for an automated challenger system — and the live champion changes only when a challenger clears the integrity and promotion gates. NFL Pro also keeps evolving: active members get the latest NFL Pro features, tools and in-product add-ons as they ship.</p>
 
           <div class="pbeprosell-proofline" aria-label="PBE Algo automated learning cycle">
             <div><b>EVALUATE</b><span>Score eligible games</span></div>
@@ -63,7 +63,7 @@
             <button type="button" class="pbeprosell-cta" data-pro-plan="weekly">Fight Week · ${esc(weekly)}</button>
             <button type="button" class="pbeprosell-link" data-pro-route="trackrecord">Audit every graded call →</button>
           </div>
-          <div class="pbeprosell-fine">Automated learning is governed, not reckless: only finalized observations can train challengers, and the production champion never silently replaces itself. One verified account · Stripe checkout · Cancel anytime.</div>
+          <div class="pbeprosell-fine">Automated learning is governed, not reckless: only finalized observations can train challengers, and the production champion never silently replaces itself. New NFL Pro releases and in-product add-ons are included while your subscription is active. One verified account · Stripe checkout · Cancel anytime.</div>
         </div>
 
         <div class="pbeprosell-preview" aria-label="Locked NFL Pro decision preview">
@@ -84,7 +84,7 @@
         <article><span>01</span><div><b>Automated Learning Picker</b><p>Finalized grades feed a governed challenger pipeline built to improve the engine over time.</p></div></article>
         <article><span>02</span><div><b>PBE Picks</b><p>Official qualified champion decisions — not filler picks and not hand-edited calls.</p></div></article>
         <article><span>03</span><div><b>Verified Track Record</b><p>The receipt, the result and the misses stay visible instead of being rewritten later.</p></div></article>
-        <article><span>04</span><div><b>Model + Market Desk</b><p>Probability, market context, Best Line, simulation and supported premium research.</p></div></article>
+        <article><span>04</span><div><b>New Pro Releases Included</b><p>Get the newest NFL Pro features, tools and in-product add-ons under the same active subscription as they ship.</p></div></article>
       </div>
     </section>`;
   }
@@ -94,7 +94,7 @@
       <div class="pbeprosell-member-main">
         <div class="pbeprosell-member-kicker"><span class="pbeprosell-member-status">✓ PRO ACTIVE</span><span>NFL PROPBETEDGE PRO</span></div>
         <h2>You have NFL<br><em>PropBetEdge Pro.</em></h2>
-        <p>National-scale NFL analytics, PBE Algo, official PBE Picks, live market intelligence, player and team research, simulation, Game Center and a verified Track Record — all under one Pro account.</p>
+        <p>National-scale NFL analytics, PBE Algo, official PBE Picks, live market intelligence, player and team research, simulation, Game Center, a verified Track Record, and the newest NFL Pro features and in-product add-ons as they ship — all under one Pro account.</p>
         <div class="pbeprosell-member-actions">
           <button type="button" class="pbeprosell-cta primary" data-pro-route="pbepicks">Open PBE Picks</button>
           <button type="button" class="pbeprosell-cta" data-pro-route="picks">Open Model Lab</button>
@@ -107,7 +107,7 @@
           <div><b>PBE Algo</b><span>Automated learning picker</span></div>
           <div><b>PBE Picks</b><span>Official qualified calls</span></div>
           <div><b>Track Record</b><span>Permanent graded history</span></div>
-          <div><b>Market Desk</b><span>Lines, probability + research</span></div>
+          <div><b>New Releases</b><span>Latest Pro features + add-ons included</span></div>
         </div>
         <button type="button" class="pbeprosell-member-track" data-pro-route="trackrecord">View your Track Record access →</button>
       </div>
@@ -137,9 +137,9 @@
     return `<aside class="pbeprosell-mini" data-nfl-pro-mini="1" aria-label="NFL Pro">
       <div class="pbeprosell-mini-top"><span>NFL PRO</span><b>LEARNING PICKER</b></div>
       <strong>A picker built to learn.</strong>
-      <p>Official PBE Picks + locked grading + a governed champion/challenger learning system.</p>
+      <p>Official PBE Picks + locked grading + a governed learning system + new NFL Pro features and add-ons as they ship.</p>
       <button type="button" data-pro-plan="monthly">Unlock PBE Picks · ${esc(monthly)}</button>
-      <small>${esc(weekly)} flexible access</small>
+      <small>${esc(weekly)} flexible access · new Pro releases included</small>
     </aside>`;
   }
 
