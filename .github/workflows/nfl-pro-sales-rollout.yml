@@ -1,0 +1,141 @@
+name: NFL Pro sales rollout
+
+on:
+  push:
+    paths:
+      - .github/workflows/nfl-pro-sales-rollout.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: nfl-pro-sales-rollout
+  cancel-in-progress: false
+
+jobs:
+  rollout:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Wire PBE Picks into the NFL Pro funnel
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_one(path, old, new, label):
+              p = Path(path)
+              text = p.read_text()
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{path}: expected one {label}, found {count}')
+              p.write_text(text.replace(old, new, 1))
+
+          # Production loader: additive sales layer immediately after the existing checkout authority.
+          replace_one(
+              'page-loader.js',
+              "const VERSION='20260915castpre1';",
+              "const VERSION='20260916prosales1';",
+              'loader version',
+          )
+          replace_one(
+              'page-loader.js',
+              "    {css:'./paywall-funnel-v2.css',js:'./paywall-funnel-v2.js'},",
+              "    {css:'./paywall-funnel-v2.css',js:'./paywall-funnel-v2.js'},\n    /* PBE Picks-first NFL Pro conversion layer. Presentation only; reads no premium decisions. */\n    {css:'./nfl-pro-sales-v1.css',js:'./nfl-pro-sales-v1.js'},",
+              'paywall loader entry',
+          )
+
+          # The modal must sell the live decision product, not sound like a roadmap.
+          replacements = [
+              ('<div class="pbe-pro-kicker">PROPBETEDGE NFL PRO</div>', '<div class="pbe-pro-kicker">PROPBETEDGE NFL PRO · PBE PICKS</div>', 'modal kicker'),
+              ('<h2>See the market.<br><em>Own the intelligence.</em></h2>', '<h2>The model makes the call.<br><em>The record keeps it honest.</em></h2>', 'modal headline'),
+              ("<p>Sportsbook pricing stays useful for everyone. NFL Pro unlocks the proprietary PBE layer built on top of the market: fair lines, model probability, model gap and the premium tools we add next.</p>", "<p>NFL Pro unlocks official qualified PBE Picks from the production champion, plus the model and market desk behind each call. The decision-time market state is preserved before the outcome is known, then the result is graded without deleting losses or rewriting the original decision.</p>", 'modal lede'),
+              ('<div class="pbe-pro-feature"><div class="pbe-pro-feature-icon">◇</div><div><strong>PBE Fair Line</strong><span>See where the current passing model prices the prop independent of the sportsbook consensus.</span></div></div>', '<div class="pbe-pro-feature"><div class="pbe-pro-feature-icon">◎</div><div><strong>Official PBE Picks</strong><span>Qualified production-champion decisions. If the engine does not qualify a game, Pro shows no forced pick.</span></div></div>', 'feature 1'),
+              ('<div class="pbe-pro-feature"><div class="pbe-pro-feature-icon">%</div><div><strong>Model Probability</strong><span>Unlock the model\'s probability at the current consensus line with explicit model provenance.</span></div></div>', '<div class="pbe-pro-feature"><div class="pbe-pro-feature-icon">▧</div><div><strong>Decision Receipt</strong><span>Issued line and odds, model probability, market comparison and model provenance stay attached to the decision.</span></div></div>', 'feature 2'),
+              ('<div class="pbe-pro-feature"><div class="pbe-pro-feature-icon">↗</div><div><strong>Model Gap</strong><span>Compare market consensus with PBE fair value without relabeling the difference as guaranteed edge.</span></div></div>', '<div class="pbe-pro-feature"><div class="pbe-pro-feature-icon">✓</div><div><strong>Verified Track Record</strong><span>Official picks are graded against final results and remain auditable instead of disappearing after a loss.</span></div></div>', 'feature 3'),
+              ('<div class="pbe-pro-feature"><div class="pbe-pro-feature-icon">＋</div><div><strong>Premium modules as they clear validation</strong><span>Usage, matchup, simulation, SGP and live intelligence move behind the same NFL Pro entitlement as they become production-ready.</span></div></div>', '<div class="pbe-pro-feature"><div class="pbe-pro-feature-icon">＋</div><div><strong>Model + Market Desk</strong><span>Model Lab, Market Watch, Best Line, simulation and supported premium research live under one NFL Pro entitlement.</span></div></div>', 'feature 4'),
+          ]
+          for old, new, label in replacements:
+              replace_one('paywall.js', old, new, label)
+
+          # Purchase panel: make the customer understand the purchase before asking for email/Stripe.
+          funnel_replacements = [
+              ('<strong>Unlock the intelligence layer.</strong>', '<strong>Unlock the decisions, not just the dashboard.</strong>', 'signed-out headline'),
+              ('<p>Premium NFL model intelligence at introductory 2026 pricing. Pick your access, use one email, and you are in.</p>', '<p>NFL Pro unlocks official PBE Picks, the decision receipt behind each qualified call, and the premium model + market desk under one verified account.</p>', 'signed-out lede'),
+              ("<strong>${note ? 'Unlock NFL Pro again.' : 'Your account is ready. Choose Pro.'}</strong>", "<strong>${note ? 'Unlock NFL Pro again.' : 'Your account is ready. Unlock PBE Picks.'}</strong>", 'signed-in headline'),
+              ('<strong>Your NFL intelligence desk is live.</strong>', '<strong>Your NFL Pro decision desk is live.</strong>', 'active headline'),
+              ('<p>The premium PBE layer is active across supported NFL surfaces. Market truth stays visible; model intelligence stays separately labeled.</p>', '<p>PBE Picks and the premium model + market desk are active across supported NFL surfaces. Market truth stays visible; model intelligence stays separately labeled.</p>', 'active lede'),
+              ('<span>PBE Fair Line · Model Probability · Best Line · PBE Cast · Track Record · premium research as it clears validation.</span>', '<span>PBE Picks · PBE Fair Line · Model Probability · Best Line · PBE Cast · Track Record · premium research under the same verified Pro entitlement.</span>', 'active capabilities'),
+              ("if (btn) btn.textContent = `Continue to Stripe · ${p.price}${selected === 'monthly' ? '/mo' : '/wk'}`;", "if (btn) btn.textContent = `Unlock NFL Pro · ${p.price}${selected === 'monthly' ? '/mo' : '/wk'}`;", 'checkout CTA'),
+          ]
+          for old, new, label in funnel_replacements:
+              replace_one('paywall-funnel-v2.js', old, new, label)
+
+          # First-paint product positioning and navigation should match the live Pro contract.
+          index_replacements = [
+              ('<title>PropBetEdge NFL — Football Intelligence OS</title>', '<title>PropBetEdge NFL — PBE Picks, Model Intelligence & Live NFL Research</title>', 'title'),
+              ('<meta name="description" content="PropBetEdge NFL is a football intelligence operating system for live NFL games, sportsbook prop markets, PBE model research, matchup intelligence, usage context and verified NFL archives.">', '<meta name="description" content="PropBetEdge NFL combines live NFL intelligence with NFL Pro: official qualified PBE Picks, model probability, market context, verified Track Record and premium research.">', 'description'),
+              ('<meta property="og:title" content="PropBetEdge NFL — Football Intelligence OS">', '<meta property="og:title" content="PropBetEdge NFL — PBE Picks & Football Intelligence">', 'og title'),
+              ('<meta property="og:description" content="Live NFL game context, prop markets, model research, matchup intelligence and verified historical archives in one football intelligence operating system.">', '<meta property="og:description" content="Live NFL intelligence plus NFL Pro: official qualified PBE Picks, model and market context, verified Track Record and premium research.">', 'og description'),
+              ('<meta name="twitter:title" content="PropBetEdge NFL — Football Intelligence OS">', '<meta name="twitter:title" content="PropBetEdge NFL — PBE Picks & Football Intelligence">', 'twitter title'),
+              ('<meta name="twitter:description" content="NFL game, market, model and research intelligence from PropBetEdge.">', '<meta name="twitter:description" content="Official qualified PBE Picks, model + market context, verified Track Record and live NFL intelligence from PropBetEdge.">', 'twitter description'),
+              ('"description": "Football intelligence for live NFL games, sportsbook prop markets, PBE model research, matchup analysis, usage context and verified NFL archives."', '"description": "Live NFL intelligence with NFL Pro: official qualified PBE Picks, model and market context, verified Track Record and premium research."', 'schema description'),
+              ('<a class="nav-item" id="nav-pbepicks" href="javascript:void(0)" onclick="App.nav(\'pbepicks\')"><span class="ni-icon">◎</span> PBE Picks <span class="nav-badge" style="color:var(--pbe-live)">LIVE</span></a>', '<a class="nav-item" id="nav-pbepicks" href="javascript:void(0)" onclick="App.nav(\'pbepicks\')"><span class="ni-icon">◎</span> PBE Picks <span class="nav-badge" style="color:var(--pbe-pro)">PRO</span></a>', 'PBE Picks nav badge'),
+          ]
+          for old, new, label in index_replacements:
+              replace_one('index.html', old, new, label)
+
+          # The normal CI now parses the additive module and enforces its sales/security contract.
+          replace_one(
+              '.github/workflows/ci.yml',
+              '            app-core-v3.js page-loader.js paywall.js paywall-funnel-v2.js ui-v2.js \\\n',
+              '            app-core-v3.js page-loader.js paywall.js paywall-funnel-v2.js nfl-pro-sales-v1.js ui-v2.js \\\n',
+              'syntax file list',
+          )
+          replace_one(
+              '.github/workflows/ci.yml',
+              '        run: node --test tests/nfl-founding-season-billing.test.mjs\n',
+              '        run: node --test tests/nfl-founding-season-billing.test.mjs tests/nfl-pro-sales-v1.test.mjs\n',
+              'billing test command',
+          )
+
+          # Hard stop if the old weak positioning survived anywhere in the two purchase authorities.
+          paywall = Path('paywall.js').read_text()
+          funnel = Path('paywall-funnel-v2.js').read_text()
+          loader = Path('page-loader.js').read_text()
+          index = Path('index.html').read_text()
+          assert 'Premium modules as they clear validation' not in paywall
+          assert 'premium research as it clears validation' not in funnel
+          assert 'Official PBE Picks' in paywall
+          assert 'Unlock the decisions, not just the dashboard.' in funnel
+          assert "{css:'./nfl-pro-sales-v1.css',js:'./nfl-pro-sales-v1.js'}" in loader
+          assert 'PBE Picks <span class="nav-badge" style="color:var(--pbe-pro)">PRO</span>' in index
+          PY
+
+      - name: Validate the new sales contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/check-syntax.mjs page-loader.js paywall.js paywall-funnel-v2.js nfl-pro-sales-v1.js
+          node --test tests/nfl-founding-season-billing.test.mjs tests/nfl-pro-sales-v1.test.mjs
+          node --test tests/pbe-card-v3.test.mjs tests/pbe-picks-runtime.test.mjs tests/pbe-track-record-v3.test.mjs
+          node scripts/release-module-gate.mjs HEAD
+
+      - name: Commit verified rollout
+        shell: bash
+        run: |
+          git config user.name "PropBetEdge Build Bot"
+          git config user.email "buildbot@propbetedge.ai"
+          git rm .github/workflows/nfl-pro-sales-rollout.yml
+          git add page-loader.js paywall.js paywall-funnel-v2.js index.html .github/workflows/ci.yml nfl-pro-sales-v1.js nfl-pro-sales-v1.css tests/nfl-pro-sales-v1.test.mjs
+          git diff --cached --check
+          git commit -m "Make PBE Picks the NFL Pro sales flagship"
+          git push origin HEAD:main
