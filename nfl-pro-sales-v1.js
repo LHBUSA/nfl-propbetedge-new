@@ -2,15 +2,14 @@
  * Presentation only. It reads the canonical pricing/auth state, never premium
  * decision data, and turns the homepage + sidebar into a clear NFL Pro funnel.
  *
- * The verified owner always sees the public conversion surface on the homepage
- * and sidebar. That makes the live sales experience inspectable without signing
- * out or using a second browser. Paid subscribers still see the clean active
- * state instead of acquisition CTAs.
+ * Every verified Pro account receives the same signed-in product experience.
+ * Owner access is intentionally not given a separate public-sales preview.
  */
 (() => {
   'use strict';
 
   const STORAGE = 'pbe_nfl_pending_plan_v7';
+  const BILLING_PORTAL = 'https://billing.stripe.com/p/login/cNi3cv2vY7em3lr4oj7wA00';
   let queued = false;
   let observer = null;
 
@@ -21,7 +20,6 @@
   function pricing() { return window.PBEPricing || null; }
   function proState() { return window.PBEPro?.state || {}; }
   function isPro() { return Boolean(proState().pro); }
-  function isOwner() { return proState().role === 'owner'; }
   function isHome() { return window.App?.current === 'home' && Boolean(document.querySelector('.pbehome7')); }
 
   function planLabel(plan, fallback) {
@@ -92,9 +90,27 @@
   }
 
   function activeMarkup() {
-    return `<section class="pbeprosell pbeprosell-active" data-nfl-pro-sales="active" aria-label="NFL Pro active">
-      <div><span>NFL PRO · AUTOMATED LEARNING PICKER · ACTIVE</span><h2>Your PBE decision engine is unlocked.</h2><p>Official PBE Picks, model + market context, the verified Track Record and the governed learning system are available on this account.</p></div>
-      <div class="pbeprosell-actions"><button type="button" class="pbeprosell-cta primary" data-pro-route="pbepicks">Open PBE Picks</button><button type="button" class="pbeprosell-cta" data-pro-route="picks">Open Model Lab</button><button type="button" class="pbeprosell-link" data-pro-route="trackrecord">Track Record →</button></div>
+    return `<section class="pbeprosell pbeprosell-active pbeprosell-member" data-nfl-pro-sales="active" aria-label="NFL PropBetEdge Pro active">
+      <div class="pbeprosell-member-main">
+        <div class="pbeprosell-member-kicker"><span class="pbeprosell-member-status">✓ PRO ACTIVE</span><span>NFL PROPBETEDGE PRO</span></div>
+        <h2>You have NFL<br><em>PropBetEdge Pro.</em></h2>
+        <p>National-scale NFL analytics, PBE Algo, official PBE Picks, live market intelligence, player and team research, simulation, Game Center and a verified Track Record — all under one Pro account.</p>
+        <div class="pbeprosell-member-actions">
+          <button type="button" class="pbeprosell-cta primary" data-pro-route="pbepicks">Open PBE Picks</button>
+          <button type="button" class="pbeprosell-cta" data-pro-route="picks">Open Model Lab</button>
+          <a class="pbeprosell-manage" href="${BILLING_PORTAL}" target="_blank" rel="noopener noreferrer">Manage subscription ↗</a>
+        </div>
+      </div>
+      <div class="pbeprosell-member-side">
+        <div class="pbeprosell-member-badge"><span>NFL PRO</span><strong>UNLOCKED</strong><small>Verified access</small></div>
+        <div class="pbeprosell-member-grid">
+          <div><b>PBE Algo</b><span>Automated learning picker</span></div>
+          <div><b>PBE Picks</b><span>Official qualified calls</span></div>
+          <div><b>Track Record</b><span>Permanent graded history</span></div>
+          <div><b>Market Desk</b><span>Lines, probability + research</span></div>
+        </div>
+        <button type="button" class="pbeprosell-member-track" data-pro-route="trackrecord">View your Track Record access →</button>
+      </div>
     </section>`;
   }
 
@@ -105,13 +121,11 @@
     const hero = root?.querySelector('.pbe7-hero');
     if (!root || !hero) return;
 
-    /* Owner preview deliberately mirrors the acquisition experience. */
-    const acquisitionView = !isPro() || isOwner();
-    const mode = acquisitionView ? 'free' : 'active';
+    const mode = isPro() ? 'active' : 'free';
     if (existing?.dataset?.nflProSales === mode && existing.parentElement === root) return;
     existing?.remove();
     const wrap = document.createElement('div');
-    wrap.innerHTML = acquisitionView ? salesMarkup() : activeMarkup();
+    wrap.innerHTML = isPro() ? activeMarkup() : salesMarkup();
     const node = wrap.firstElementChild;
     if (node) hero.insertAdjacentElement('afterend', node);
   }
@@ -131,9 +145,7 @@
 
   function mountSidebar() {
     const old = document.querySelector('[data-nfl-pro-mini]');
-    /* Subscribers do not get acquisition chrome. The owner does, by design,
-       so the live public funnel can be inspected without signing out. */
-    if (isPro() && !isOwner()) { old?.remove(); return; }
+    if (isPro()) { old?.remove(); return; }
     if (old) return;
     const search = document.querySelector('.sidebar-search');
     if (!search) return;
