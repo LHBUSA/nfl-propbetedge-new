@@ -8,7 +8,8 @@ on:
 permissions:
   contents: write
 
-# Retry after aligning the existing active-Pro billing assertion with the new decision-desk copy.
+# Product files are committed by the workflow; workflow/CI mutations stay out
+# of that commit so the Actions token never needs workflows:write.
 concurrency:
   group: nfl-pro-sales-rollout
   cancel-in-progress: false
@@ -40,7 +41,6 @@ jobs:
                   raise SystemExit(f'{path}: expected one {label}, found {count}')
               p.write_text(text.replace(old, new, 1))
 
-          # Production loader: additive sales layer immediately after the existing checkout authority.
           replace_one(
               'page-loader.js',
               "const VERSION='20260915castpre1';",
@@ -54,7 +54,6 @@ jobs:
               'paywall loader entry',
           )
 
-          # The modal must sell the live decision product, not sound like a roadmap.
           replacements = [
               ('<div class="pbe-pro-kicker">PROPBETEDGE NFL PRO</div>', '<div class="pbe-pro-kicker">PROPBETEDGE NFL PRO · PBE PICKS</div>', 'modal kicker'),
               ('<h2>See the market.<br><em>Own the intelligence.</em></h2>', '<h2>The model makes the call.<br><em>The record keeps it honest.</em></h2>', 'modal headline'),
@@ -67,7 +66,6 @@ jobs:
           for old, new, label in replacements:
               replace_one('paywall.js', old, new, label)
 
-          # Purchase panel: make the customer understand the purchase before asking for email/Stripe.
           funnel_replacements = [
               ('<strong>Unlock the intelligence layer.</strong>', '<strong>Unlock the decisions, not just the dashboard.</strong>', 'signed-out headline'),
               ('<p>Premium NFL model intelligence at introductory 2026 pricing. Pick your access, use one email, and you are in.</p>', '<p>NFL Pro unlocks official PBE Picks, the decision receipt behind each qualified call, and the premium model + market desk under one verified account.</p>', 'signed-out lede'),
@@ -80,7 +78,6 @@ jobs:
           for old, new, label in funnel_replacements:
               replace_one('paywall-funnel-v2.js', old, new, label)
 
-          # First-paint product positioning and navigation should match the live Pro contract.
           index_replacements = [
               ('<title>PropBetEdge NFL — Football Intelligence OS</title>', '<title>PropBetEdge NFL — PBE Picks, Model Intelligence & Live NFL Research</title>', 'title'),
               ('<meta name="description" content="PropBetEdge NFL is a football intelligence operating system for live NFL games, sportsbook prop markets, PBE model research, matchup intelligence, usage context and verified NFL archives.">', '<meta name="description" content="PropBetEdge NFL combines live NFL intelligence with NFL Pro: official qualified PBE Picks, model probability, market context, verified Track Record and premium research.">', 'description'),
@@ -94,21 +91,6 @@ jobs:
           for old, new, label in index_replacements:
               replace_one('index.html', old, new, label)
 
-          # The normal CI now parses the additive module and enforces its sales/security contract.
-          replace_one(
-              '.github/workflows/ci.yml',
-              '            app-core-v3.js page-loader.js paywall.js paywall-funnel-v2.js ui-v2.js \\\n',
-              '            app-core-v3.js page-loader.js paywall.js paywall-funnel-v2.js nfl-pro-sales-v1.js ui-v2.js \\\n',
-              'syntax file list',
-          )
-          replace_one(
-              '.github/workflows/ci.yml',
-              '        run: node --test tests/nfl-founding-season-billing.test.mjs\n',
-              '        run: node --test tests/nfl-founding-season-billing.test.mjs tests/nfl-pro-sales-v1.test.mjs\n',
-              'billing test command',
-          )
-
-          # Hard stop if the old weak positioning survived anywhere in the two purchase authorities.
           paywall = Path('paywall.js').read_text()
           funnel = Path('paywall-funnel-v2.js').read_text()
           loader = Path('page-loader.js').read_text()
@@ -130,13 +112,12 @@ jobs:
           node --test tests/pbe-card-v3.test.mjs tests/pbe-picks-runtime.test.mjs tests/pbe-track-record-v3.test.mjs
           node scripts/release-module-gate.mjs HEAD
 
-      - name: Commit verified rollout
+      - name: Commit verified product rollout
         shell: bash
         run: |
           git config user.name "PropBetEdge Build Bot"
           git config user.email "buildbot@propbetedge.ai"
-          git rm .github/workflows/nfl-pro-sales-rollout.yml
-          git add page-loader.js paywall.js paywall-funnel-v2.js index.html .github/workflows/ci.yml nfl-pro-sales-v1.js nfl-pro-sales-v1.css tests/nfl-pro-sales-v1.test.mjs
+          git add page-loader.js paywall.js paywall-funnel-v2.js index.html
           git diff --cached --check
           git commit -m "Make PBE Picks the NFL Pro sales flagship"
           git push origin HEAD:main
