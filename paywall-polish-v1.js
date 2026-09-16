@@ -66,10 +66,8 @@
     setText(document.getElementById('pbe-pro-upgrade'),`Unlock PBE Algo${window.PBEPricing?` · ${window.PBEPricing.ctaSuffix}`:''}`);
   }
 
-  function activePeriod(root){
-    const renew=root.querySelector('.pbe-pro-renew')?.textContent?.trim()||'';
-    if(/owner access/i.test(renew)||!renew)return 'Verified NFL PropBetEdge Pro access.';
-    return renew;
+  function activePeriod(){
+    return 'Verified NFL PropBetEdge Pro access.';
   }
 
   function applyActiveMember(root,head){
@@ -77,7 +75,7 @@
     if(state!=='active-pro'&&state!=='active-owner')return false;
 
     const email=root.querySelector('.pbe-funnel-user strong')?.textContent?.trim()||'NFL Pro member';
-    const period=activePeriod(root);
+    const period=activePeriod();
     root.dataset.funnelState='active-pro';
     root.classList.add('pbe-funnel-member');
 
