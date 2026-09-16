@@ -1,0 +1,84 @@
+/* PropBetEdge NFL — Prop Board premium finish v1
+ * Additive presentation layer loaded by the universal player-media resolver
+ * only while Prop Board v5 is mounted. No data authority, no polling, no
+ * behavioral ownership.
+ */
+
+.pbe5.pbe5-media-enhanced{border-color:rgba(255,245,220,.13);box-shadow:0 28px 72px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.02)}
+.pbe5.pbe5-media-enhanced .pbe5-head-id{min-width:0}
+.pbe5.pbe5-media-enhanced .pbe5-head-id::before{content:"PLAYER PROP INTELLIGENCE · CURRENT MARKET SNAPSHOT";display:block;margin-bottom:8px;color:var(--pbe-gold);font:800 10px/1 var(--pbe-font-data);letter-spacing:.11em;text-transform:uppercase}
+.pbe5.pbe5-media-enhanced .pbe5-head h1{font-size:clamp(26px,2.2vw,34px);letter-spacing:-.035em}
+.pbe5.pbe5-media-enhanced .pbe5-head p{max-width:760px;line-height:1.55}
+.pbe5.pbe5-media-enhanced .pbe5-updated{padding:8px 10px;border:1px solid var(--pbe-line);border-radius:8px;background:var(--pbe-ink-2)}
+.pbe5.pbe5-media-enhanced .pbe5-filters{padding-top:12px}
+.pbe5.pbe5-media-enhanced .pbe5-filter,
+.pbe5.pbe5-media-enhanced .pbe5-toggle{border-color:var(--pbe-line-strong);box-shadow:inset 0 1px 0 rgba(255,255,255,.015)}
+.pbe5.pbe5-media-enhanced .pbe5-filter:hover,
+.pbe5.pbe5-media-enhanced .pbe5-toggle:hover:not(:disabled){border-color:rgba(212,175,55,.33)}
+
+.pbe5.pbe5-media-enhanced .pbe5-signal{border-color:var(--pbe-line-strong);box-shadow:0 10px 26px rgba(0,0,0,.10)}
+.pbe5.pbe5-media-enhanced .pbe5-signal>div{padding-top:11px;padding-bottom:11px}
+.pbe5.pbe5-media-enhanced .pbe5-signal b{font-size:16px}
+
+.pbe5.pbe5-media-enhanced .pbe5-table-wrap{border-color:var(--pbe-line-strong);box-shadow:0 22px 48px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.02)}
+.pbe5.pbe5-media-enhanced .pbe5-table th{height:40px;background:#15130f;border-bottom-color:rgba(255,245,220,.13)}
+.pbe5.pbe5-media-enhanced .pbe5-table td{padding-top:9px;padding-bottom:9px}
+.pbe5.pbe5-media-enhanced .pbe5-row{position:relative}
+.pbe5.pbe5-media-enhanced .pbe5-row:hover{background:rgba(255,245,220,.037)}
+.pbe5.pbe5-media-enhanced .pbe5-row:has(.pbe5-status.modeled) td:first-child{box-shadow:inset 2px 0 0 var(--pbe-model)}
+.pbe5.pbe5-media-enhanced .pbe5-row.is-open{background:rgba(212,175,55,.075)}
+
+.pbe5.pbe5-media-enhanced .pbe5-player{gap:9px}
+.pbe5.pbe5-media-enhanced .pbe5-player>.pbe5-pin{order:0}
+.pbe5.pbe5-media-enhanced .pbe5-player>.pbe-player-headshot-v3{order:1;display:block!important;width:46px!important;height:46px!important;flex:0 0 46px!important;margin:0!important;border:1px solid var(--pbe-line-strong)!important;border-radius:11px!important;object-fit:cover!important;object-position:50% 18%!important;background:var(--pbe-ink-4)!important;box-shadow:0 7px 18px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.035)!important;transition:border-color .15s,transform .15s!important}
+.pbe5.pbe5-media-enhanced .pbe5-player>.pbe-player-headshot-v3.is-fallback{object-fit:contain!important;padding:8px!important;opacity:.76!important}
+.pbe5.pbe5-media-enhanced .pbe5-player>div{order:2;min-width:0;flex:1 1 auto}
+.pbe5.pbe5-media-enhanced .pbe5-row:hover .pbe-player-headshot-v3{border-color:rgba(212,175,55,.48)!important;transform:translateY(-1px)}
+.pbe5.pbe5-media-enhanced .pbe5-name{font-size:14.5px;font-weight:750;letter-spacing:-.01em}
+.pbe5.pbe5-media-enhanced .pbe5-player small{margin-top:4px;color:var(--pbe-paper-2);font-size:11.5px;line-height:1.3}
+
+.pbe5.pbe5-media-enhanced .pbe5-cons{font-size:20px;letter-spacing:-.03em}
+.pbe5.pbe5-media-enhanced .pbe5-td-cons small{margin-top:5px}
+.pbe5.pbe5-media-enhanced .pbe5-td-over .pbe5-quote,
+.pbe5.pbe5-media-enhanced .pbe5-td-under .pbe5-quote{padding:8px 9px;border:1px solid var(--pbe-line);border-radius:8px;background:var(--pbe-ink-4);box-shadow:inset 0 1px 0 rgba(255,255,255,.015)}
+.pbe5.pbe5-media-enhanced .pbe5-td-over .pbe5-quote{border-color:rgba(78,163,115,.22)}
+.pbe5.pbe5-media-enhanced .pbe5-td-under .pbe5-quote{border-color:rgba(193,39,61,.22)}
+.pbe5.pbe5-media-enhanced .pbe5-quote b{font-size:17px}
+.pbe5.pbe5-media-enhanced .pbe5-fair,
+.pbe5.pbe5-media-enhanced .pbe5-edge{font-size:17px}
+.pbe5.pbe5-media-enhanced .pbe5-status{padding:5px 8px;border-radius:999px}
+
+.pbe5.pbe5-media-enhanced .pbe5-card{position:relative;padding:14px;border-color:var(--pbe-line-strong);box-shadow:0 14px 32px rgba(0,0,0,.17),inset 0 1px 0 rgba(255,255,255,.018);transition:border-color .15s,transform .15s,box-shadow .15s}
+.pbe5.pbe5-media-enhanced .pbe5-card:hover{transform:translateY(-1px);border-color:rgba(255,245,220,.22);box-shadow:0 18px 38px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.025)}
+.pbe5.pbe5-media-enhanced .pbe5-card:has(.pbe5-status.modeled){border-color:rgba(79,180,226,.28);box-shadow:inset 2px 0 0 var(--pbe-model),0 14px 32px rgba(0,0,0,.17)}
+.pbe5.pbe5-media-enhanced .pbe5-card header{align-items:center}
+.pbe5.pbe5-media-enhanced .pbe5-card .pbe-player-headshot-v3{width:54px!important;height:54px!important;flex-basis:54px!important;border-radius:12px!important}
+.pbe5.pbe5-media-enhanced .pbe5-card .pbe5-name{font-size:15.5px;white-space:normal}
+.pbe5.pbe5-media-enhanced .pbe5-card-cons{padding:10px 0 8px;margin:9px 0;border-top:1px solid var(--pbe-line-faint)}
+.pbe5.pbe5-media-enhanced .pbe5-card-cons b{font-size:24px}
+.pbe5.pbe5-media-enhanced .pbe5-card-quotes>div{padding:10px;border-color:var(--pbe-line-strong);box-shadow:inset 0 1px 0 rgba(255,255,255,.018)}
+.pbe5.pbe5-media-enhanced .pbe5-card-model{padding:10px;border:1px solid var(--pbe-line);border-radius:8px;background:var(--pbe-ink-4)}
+.pbe5.pbe5-media-enhanced .pbe5-card:has(.pbe5-status.modeled) .pbe5-card-model{border-color:rgba(79,180,226,.24);background:rgba(79,180,226,.035)}
+.pbe5.pbe5-media-enhanced .pbe5-card-open{background:var(--pbe-ink-4);font-weight:700}
+.pbe5.pbe5-media-enhanced .pbe5-card-open::after{content:"  ›";color:var(--pbe-gold)}
+.pbe5.pbe5-media-enhanced .pbe5-card.is-open .pbe5-card-open::after{content:"  ↑"}
+.pbe5.pbe5-media-enhanced .pbe5-detail{border-top-color:var(--pbe-line-strong)}
+.pbe5.pbe5-media-enhanced .pbe5-detail-row td{background:rgba(212,175,55,.052)}
+.pbe5.pbe5-media-enhanced .pbe5-foot{padding-top:14px}
+
+@media (max-width:1180px){
+  .pbe5.pbe5-media-enhanced .pbe5-player>.pbe-player-headshot-v3{width:41px!important;height:41px!important;flex-basis:41px!important;border-radius:9px!important}
+}
+@media (max-width:760px){
+  .pbe5.pbe5-media-enhanced .pbe5-head-id::before{font-size:10px;line-height:1.3}
+  .pbe5.pbe5-media-enhanced .pbe5-card{padding:13px 12px}
+  .pbe5.pbe5-media-enhanced .pbe5-card .pbe-player-headshot-v3{width:52px!important;height:52px!important;flex-basis:52px!important}
+  .pbe5.pbe5-media-enhanced .pbe5-card-quotes{gap:8px}
+  .pbe5.pbe5-media-enhanced .pbe5-card-model{gap:8px}
+}
+@media (prefers-reduced-motion:reduce){
+  .pbe5.pbe5-media-enhanced .pbe-player-headshot-v3,
+  .pbe5.pbe5-media-enhanced .pbe5-card{transition:none!important}
+  .pbe5.pbe5-media-enhanced .pbe5-row:hover .pbe-player-headshot-v3,
+  .pbe5.pbe5-media-enhanced .pbe5-card:hover{transform:none!important}
+}
