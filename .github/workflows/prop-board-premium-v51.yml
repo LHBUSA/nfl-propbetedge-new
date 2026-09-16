@@ -1,0 +1,278 @@
+name: Premium Prop Board v5.1 rollout
+
+on:
+  push:
+    paths:
+      - .github/workflows/prop-board-premium-v51.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: prop-board-premium-v51
+  cancel-in-progress: false
+
+jobs:
+  rollout:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Upgrade Prop Board identity and presentation
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          js_path = Path('prop-board-v5.js')
+          js = js_path.read_text(encoding='utf-8')
+
+          js = js.replace("  const VERSION = 'v5.0.0';", "  const VERSION = 'v5.1.0';", 1)
+
+          old = "          map[name] = { team: p.team_2026 || p.team || '', position: p.position || pos.toUpperCase() };"
+          new = "          map[name] = {\n            team: p.team_2026 || p.team || '',\n            position: p.position || pos.toUpperCase(),\n            headshot: p?.media?.headshot_url || p?.headshot_url || ''\n          };"
+          if old not in js:
+              raise SystemExit('roster identity anchor missing')
+          js = js.replace(old, new, 1)
+
+          old = "  const identity = name => ui.roster?.get(String(name || '').trim().toLowerCase()) || null;\n"
+          new = old + "  function playerInitials(name) {\n    const parts = String(name || '').trim().split(/\\s+/).filter(Boolean);\n    return (parts.slice(0, 2).map(part => part[0] || '').join('').toUpperCase() || 'PBE').slice(0, 3);\n  }\n"
+          if old not in js:
+              raise SystemExit('identity helper anchor missing')
+          js = js.replace(old, new, 1)
+
+          old = """    const missing = Array.isArray(d?.missingMarkets) ? d.missingMarkets : [];
+    return `<header class=\"pbe5-head\">
+      <div class=\"pbe5-head-id\"><h1>Prop Board</h1><p>NFL player prop markets across sportsbooks<span class=\"pbe5-head-ev\"> · <b>${esc(away)} @ ${esc(home)}</b>${kickoff(ev.commence_time) ? ` · ${esc(kickoff(ev.commence_time))}` : ''}</span></p></div>
+"""
+          new = """    const missing = Array.isArray(d?.missingMarkets) ? d.missingMarkets : [];
+    const boardRows = rows();
+    const bookCount = new Set(boardRows.flatMap(row => row.books || [])).size;
+    const marketCount = new Set(boardRows.map(row => row.market).filter(Boolean)).size;
+    return `<header class=\"pbe5-head\">
+      <div class=\"pbe5-head-id\">
+        <div class=\"pbe5-head-kicker\"><span>PLAYER PROP INTELLIGENCE</span><i>CURRENT MARKET SNAPSHOT</i></div>
+        <h1>Prop Board</h1>
+        <p>NFL player prop markets across sportsbooks<span class=\"pbe5-head-ev\"> · <b>${esc(away)} @ ${esc(home)}</b>${kickoff(ev.commence_time) ? ` · ${esc(kickoff(ev.commence_time))}` : ''}</span></p>
+        <div class=\"pbe5-head-metrics\"><span><b>${boardRows.length}</b> props</span><span><b>${bookCount}</b> books</span><span><b>${marketCount}</b> markets</span></div>
+      </div>
+"""
+          if old not in js:
+              raise SystemExit('header anchor missing')
+          js = js.replace(old, new, 1)
+
+          old = """  function playerCell(row, pinned) {
+    const id = identity(row.player); const m = meta(row.market);
+    return `<div class=\"pbe5-player\">
+      <button type=\"button\" class=\"pbe5-pin ${pinned ? 'on' : ''}\" data-pbe5-pin=\"${esc(row.key)}\" aria-pressed=\"${pinned ? 'true' : 'false'}\" aria-label=\"${pinned ? 'Unpin' : 'Pin'} ${esc(row.player)} ${esc(m.label)}\">${pinned ? '★' : '☆'}</button>
+      <div><a href=\"javascript:void(0)\" class=\"pbe5-name\" data-pbe5-player=\"${esc(row.player)}\">${esc(row.player)}</a><small>${id ? `${esc(id.team)} · ${esc(id.position)} · ` : ''}${esc(m.label)}</small></div>
+    </div>`;
+  }
+"""
+          new = """  function playerCell(row, pinned) {
+    const id = identity(row.player); const m = meta(row.market);
+    const initials = playerInitials(row.player);
+    const photo = id?.headshot ? `<img data-pbe5-headshot=\"1\" src=\"${esc(id.headshot)}\" alt=\"${esc(row.player)} headshot\" loading=\"lazy\" decoding=\"async\">` : '';
+    return `<div class=\"pbe5-player\">
+      <button type=\"button\" class=\"pbe5-pin ${pinned ? 'on' : ''}\" data-pbe5-pin=\"${esc(row.key)}\" aria-pressed=\"${pinned ? 'true' : 'false'}\" aria-label=\"${pinned ? 'Unpin' : 'Pin'} ${esc(row.player)} ${esc(m.label)}\">${pinned ? '★' : '☆'}</button>
+      <span class=\"pbe5-avatar ${photo ? 'has-photo' : 'is-fallback'}\" aria-hidden=\"true\"><span>${esc(initials)}</span>${photo}</span>
+      <div class=\"pbe5-player-copy\"><a href=\"javascript:void(0)\" class=\"pbe5-name\" data-pbe5-player=\"${esc(row.player)}\">${esc(row.player)}</a><small class=\"pbe5-player-meta\">${id?.team ? `<span class=\"pbe5-team-chip\">${esc(id.team)}</span>` : ''}${id?.position ? `<span class=\"pbe5-pos-chip\">${esc(id.position)}</span>` : ''}<span class=\"pbe5-prop-label\">${esc(m.label)}</span></small></div>
+    </div>`;
+  }
+"""
+          if old not in js:
+              raise SystemExit('playerCell anchor missing')
+          js = js.replace(old, new, 1)
+
+          old = '<tr class="pbe5-row ${open ? \'is-open\' : \'\'} ${pinned ? \'is-pinned\' : \'\'}" data-pbe5-row="${esc(row.key)}" aria-expanded="${open ? \'true\' : \'false\'}">'
+          new = '<tr class="pbe5-row ${open ? \'is-open\' : \'\'} ${pinned ? \'is-pinned\' : \'\'} ${modeled(row) ? \'is-modeled\' : \'\'}" data-pbe5-row="${esc(row.key)}" aria-expanded="${open ? \'true\' : \'false\'}">'
+          if old not in js:
+              raise SystemExit('table row class anchor missing')
+          js = js.replace(old, new, 1)
+
+          old = '<article class="pbe5-card ${open ? \'is-open\' : \'\'} ${pinned ? \'is-pinned\' : \'\'}" data-pbe5-row="${esc(row.key)}" aria-expanded="${open ? \'true\' : \'false\'}">'
+          new = '<article class="pbe5-card ${open ? \'is-open\' : \'\'} ${pinned ? \'is-pinned\' : \'\'} ${modeled(row) ? \'is-modeled\' : \'\'}" data-pbe5-row="${esc(row.key)}" aria-expanded="${open ? \'true\' : \'false\'}">'
+          if old not in js:
+              raise SystemExit('card class anchor missing')
+          js = js.replace(old, new, 1)
+
+          old = '      <div class="pbe5-card-model">${model}</div>'
+          new = '      <div class="pbe5-card-model ${modeled(row) ? \'has-model\' : \'\'}">${model}</div>'
+          if old not in js:
+              raise SystemExit('card model anchor missing')
+          js = js.replace(old, new, 1)
+
+          old = """  function onKey(event) { if (event.key !== 'Enter' && event.key !== ' ') return; const row = event.target.closest?.('[data-pbe5-row], [data-pbe5-open]'); if (!row || event.target.closest('a, button, input, select')) return; event.preventDefault(); toggleRow(row.dataset.pbe5Row || row.dataset.pbe5Open); }
+
+  function install() {
+"""
+          new = """  function onKey(event) { if (event.key !== 'Enter' && event.key !== ' ') return; const row = event.target.closest?.('[data-pbe5-row], [data-pbe5-open]'); if (!row || event.target.closest('a, button, input, select')) return; event.preventDefault(); toggleRow(row.dataset.pbe5Row || row.dataset.pbe5Open); }
+  function onImageError(event) {
+    const img = event.target?.closest?.('img[data-pbe5-headshot]');
+    if (!img || !root()?.contains(img)) return;
+    img.hidden = true;
+    img.parentElement?.classList.remove('has-photo');
+    img.parentElement?.classList.add('is-fallback');
+  }
+
+  function install() {
+"""
+          if old not in js:
+              raise SystemExit('image error handler anchor missing')
+          js = js.replace(old, new, 1)
+
+          old = "  document.addEventListener('keydown', onKey);\n"
+          new = old + "  document.addEventListener('error', onImageError, true);\n"
+          if old not in js:
+              raise SystemExit('event listener anchor missing')
+          js = js.replace(old, new, 1)
+
+          required = [
+              "v5.1.0",
+              "headshot_url",
+              "data-pbe5-headshot",
+              "pbe5-avatar",
+              "pbe5-head-metrics",
+              "CURRENT MARKET SNAPSHOT",
+              "is-modeled",
+              "onImageError",
+          ]
+          for marker in required:
+              if marker not in js:
+                  raise SystemExit(f'Prop Board JS missing {marker}')
+          js_path.write_text(js, encoding='utf-8')
+
+          css_path = Path('prop-board-v5.css')
+          css = css_path.read_text(encoding='utf-8')
+          marker = '/* ---- premium player identity + board finish v5.1 ---- */'
+          if marker in css:
+              raise SystemExit('premium Prop Board CSS already installed')
+          css += r'''
+
+/* ---- premium player identity + board finish v5.1 ---- */
+.pbe5-head-id{min-width:0}
+.pbe5-head-kicker{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;font:800 10px/1 var(--pbe-font-data);letter-spacing:.11em;text-transform:uppercase}
+.pbe5-head-kicker span{color:var(--pbe-gold)}
+.pbe5-head-kicker i{padding:4px 7px;border:1px solid var(--pbe-line-strong);border-radius:999px;color:var(--pbe-faint);font-style:normal;letter-spacing:.08em;background:var(--pbe-ink-3)}
+.pbe5-head-metrics{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:10px}
+.pbe5-head-metrics span{display:inline-flex;align-items:baseline;gap:5px;padding:5px 8px;border:1px solid var(--pbe-line);border-radius:6px;background:var(--pbe-ink-2);color:var(--pbe-faint);font:700 10px/1 var(--pbe-font-data);letter-spacing:.05em;text-transform:uppercase}
+.pbe5-head-metrics b{color:var(--pbe-paper);font:800 12px/1 var(--pbe-font-data)}
+
+.pbe5-table-wrap{box-shadow:0 18px 44px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.02)}
+.pbe5-table th{height:38px}
+.pbe5-table td{padding-top:8px;padding-bottom:8px}
+.pbe5-row td:first-child{position:relative}
+.pbe5-row.is-modeled td:first-child::before{content:"";position:absolute;left:0;top:9px;bottom:9px;width:2px;border-radius:0 2px 2px 0;background:var(--pbe-model)}
+.pbe5-row:hover{background:rgba(255,245,220,.035)}
+.pbe5-row:hover .pbe5-avatar{border-color:rgba(212,175,55,.48)}
+.pbe5-row.is-open .pbe5-avatar{border-color:rgba(212,175,55,.58)}
+
+.pbe5-player{gap:9px}
+.pbe5-player-copy{min-width:0;flex:1 1 auto}
+.pbe5-avatar{position:relative;display:grid;place-items:center;width:44px;height:44px;flex:0 0 44px;overflow:hidden;border:1px solid var(--pbe-line-strong);border-radius:10px;background:var(--pbe-ink-4);box-shadow:inset 0 1px 0 rgba(255,255,255,.035);transition:border-color .15s,transform .15s}
+.pbe5-avatar>span{color:var(--pbe-gold);font:800 11px/1 var(--pbe-font-data);letter-spacing:.03em}
+.pbe5-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 18%;background:var(--pbe-ink-4)}
+.pbe5-avatar.has-photo>span{opacity:.16}
+.pbe5-avatar.is-fallback{border-style:dashed}
+.pbe5-name{font-size:14px;line-height:1.12}
+.pbe5-player-meta{display:flex!important;align-items:center;gap:5px;flex-wrap:wrap;margin-top:5px!important;white-space:normal!important;overflow:visible!important;text-overflow:clip!important}
+.pbe5-player-meta>span{display:inline-flex;align-items:center;min-height:18px}
+.pbe5-team-chip,.pbe5-pos-chip{padding:2px 5px;border-radius:4px;font:800 10px/1 var(--pbe-font-data)!important;letter-spacing:.04em;text-transform:uppercase}
+.pbe5-team-chip{border:1px solid var(--pbe-line-strong);background:var(--pbe-ink-3);color:var(--pbe-paper-2)}
+.pbe5-pos-chip{border:1px solid rgba(212,175,55,.34);background:var(--pbe-gold-soft);color:var(--pbe-gold-bright)}
+.pbe5-prop-label{min-width:0;color:var(--pbe-dim);font:600 11px/1.25 var(--pbe-font-ui)}
+.pbe5-td-cons .pbe5-cons{font-size:20px;letter-spacing:-.025em}
+.pbe5-td-over .pbe5-quote,.pbe5-td-under .pbe5-quote{padding:7px 8px;border:1px solid var(--pbe-line);border-radius:7px;background:var(--pbe-ink-4)}
+.pbe5-td-over .pbe5-quote{border-color:rgba(78,163,115,.20)}
+.pbe5-td-under .pbe5-quote{border-color:rgba(193,39,61,.20)}
+.pbe5-status{border-radius:999px;padding:5px 8px}
+
+.pbe5-card{position:relative;padding:14px;border-color:var(--pbe-line-strong);box-shadow:0 12px 28px rgba(0,0,0,.14),inset 0 1px 0 rgba(255,255,255,.018);transition:border-color .15s,transform .15s,box-shadow .15s}
+.pbe5-card:hover{transform:translateY(-1px);border-color:rgba(255,245,220,.22);box-shadow:0 16px 34px rgba(0,0,0,.2),inset 0 1px 0 rgba(255,255,255,.025)}
+.pbe5-card.is-modeled{border-color:rgba(79,180,226,.26)}
+.pbe5-card.is-modeled::before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:2px;border-radius:0 2px 2px 0;background:var(--pbe-model)}
+.pbe5-card header{align-items:center}
+.pbe5-card .pbe5-avatar{width:50px;height:50px;flex-basis:50px;border-radius:11px}
+.pbe5-card .pbe5-name{font-size:15px}
+.pbe5-card-cons{padding:10px 0 8px;margin:8px 0;border-top:1px solid var(--pbe-line-faint)}
+.pbe5-card-quotes>div{padding:10px;border-color:var(--pbe-line-strong);box-shadow:inset 0 1px 0 rgba(255,255,255,.018)}
+.pbe5-card-model{position:relative;padding:10px;border:1px solid var(--pbe-line);border-radius:8px;background:var(--pbe-ink-4)}
+.pbe5-card-model.has-model{padding-top:25px;border-color:rgba(79,180,226,.27);background:rgba(79,180,226,.035)}
+.pbe5-card-model.has-model::before{content:"PBE MODEL";position:absolute;left:10px;top:8px;color:var(--pbe-model);font:800 10px/1 var(--pbe-font-data);letter-spacing:.09em}
+.pbe5-card-open{background:var(--pbe-ink-4);font-weight:700}
+.pbe5-card-open::after{content:"  ›";color:var(--pbe-gold)}
+.pbe5-card.is-open .pbe5-card-open::after{content:"  ↑"}
+.pbe5-detail{border-top-color:var(--pbe-line-strong)}
+
+@media (max-width:1180px){
+  .pbe5-avatar{width:40px;height:40px;flex-basis:40px;border-radius:9px}
+  .pbe5-player-meta{gap:4px}
+  .pbe5-prop-label{flex-basis:100%}
+}
+@media (max-width:760px){
+  .pbe5-head-kicker{margin-bottom:7px}
+  .pbe5-head-metrics{margin-top:9px}
+  .pbe5-head-metrics span{flex:1 1 auto;justify-content:center}
+  .pbe5-card{padding:13px 12px}
+  .pbe5-card .pbe5-avatar{width:48px;height:48px;flex-basis:48px}
+  .pbe5-card .pbe5-player-meta{display:flex!important}
+  .pbe5-team-chip,.pbe5-pos-chip{font-size:10px!important}
+}
+@media (prefers-reduced-motion:reduce){.pbe5-avatar,.pbe5-card{transition:none!important}.pbe5-card:hover{transform:none!important}}
+'''
+          css_path.write_text(css, encoding='utf-8')
+
+          test_path = Path('research/prop-board-v5.test.mjs')
+          test = test_path.read_text(encoding='utf-8')
+          anchor = """test('pins and settings keep the existing localStorage keys so nothing a user pinned is lost', () => {
+"""
+          addition = r'''test('player identity uses the existing canonical roster media with a safe fallback', () => {
+  assert.match(v5, /media\?\.headshot_url/);
+  assert.match(v5, /data-pbe5-headshot/);
+  assert.match(v5, /loading=\\"lazy\\"/);
+  assert.match(v5, /playerInitials/);
+  assert.match(css, /\.pbe5-avatar/);
+  assert.match(css, /\.pbe5-team-chip/);
+  assert.match(css, /\.pbe5-pos-chip/);
+  assert.doesNotMatch(v5, /espncdn|sports\.espn/i, 'Prop Board does not create a new direct media provider dependency');
+});
+
+test('premium Prop Board finish preserves truth and scan architecture', () => {
+  assert.match(v5, /PLAYER PROP INTELLIGENCE/);
+  assert.match(v5, /CURRENT MARKET SNAPSHOT/);
+  assert.match(v5, /pbe5-head-metrics/);
+  assert.match(v5, /is-modeled/);
+  assert.match(css, /premium player identity \+ board finish v5\.1/);
+});
+
+'''
+          if anchor not in test:
+              raise SystemExit('test insertion anchor missing')
+          test = test.replace(anchor, addition + anchor, 1)
+          test_path.write_text(test, encoding='utf-8')
+          PY
+
+      - name: Validate Prop Board
+        shell: bash
+        run: |
+          node --check prop-board-v5.js
+          node --test research/prop-board-v5.test.mjs
+          git diff --check
+
+      - name: Commit premium Prop Board
+        shell: bash
+        run: |
+          git config user.name "PropBetEdge Build Bot"
+          git config user.email "buildbot@propbetedge.ai"
+          git rm .github/workflows/prop-board-premium-v51.yml
+          git add prop-board-v5.js prop-board-v5.css research/prop-board-v5.test.mjs
+          git diff --cached --check
+          git commit -m "Upgrade NFL Prop Board with player media"
+          git push origin HEAD:main
