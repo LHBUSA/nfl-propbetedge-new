@@ -31,6 +31,7 @@
     try { localStorage.setItem(STORAGE, plan); } catch (_) {}
     window.PBEPro?.open?.();
     queueMicrotask(() => window.PBECheckoutFunnel?.apply?.());
+    setTimeout(enhanceProModal, 60);
   }
 
   function nav(route) { window.App?.nav?.(route); }
@@ -162,10 +163,33 @@
     badge.style.color = 'var(--pbe-pro)';
   }
 
+  function enhanceProModal() {
+    const root = document.querySelector('.pbe-funnel-root');
+    if (!root) return;
+    const state = root.dataset.funnelState || '';
+    let note = root.querySelector('[data-pro-release-value]');
+    if (!note) {
+      note = document.createElement('div');
+      note.className = 'pbe-pro-today';
+      note.setAttribute('data-pro-release-value', '1');
+      const plans = root.querySelector('.pbe-funnel-plans');
+      const status = root.querySelector('.pbe-member-status-card,.pbe-funnel-user');
+      const anchor = plans || status || root.querySelector('.pbe-funnel-head');
+      if (anchor) anchor.insertAdjacentElement('beforebegin', note);
+      else root.prepend(note);
+    }
+    if (state === 'active-pro' || state === 'active-owner') {
+      note.innerHTML = '<b>YOUR PRO KEEPS EVOLVING</b><span>New NFL Pro feature releases, product upgrades and in-product add-ons are included while your Pro access is active.</span>';
+    } else {
+      note.innerHTML = '<b>MORE THAN TODAY’S FEATURES</b><span>Your active NFL Pro subscription includes new NFL Pro feature releases, product upgrades and in-product add-ons as they ship — not just the tools available on the day you subscribe.</span>';
+    }
+  }
+
   function paint() {
     mountHome();
     mountSidebar();
     markPicksPro();
+    enhanceProModal();
   }
 
   function schedule() {
@@ -178,7 +202,8 @@
     const plan = event.target.closest?.('[data-pro-plan]')?.dataset?.proPlan;
     if (plan) { event.preventDefault(); openPro(plan); return; }
     const route = event.target.closest?.('[data-pro-route]')?.dataset?.proRoute;
-    if (route) { event.preventDefault(); nav(route); }
+    if (route) { event.preventDefault(); nav(route); return; }
+    if (event.target.closest?.('.pbe-pro-account,[data-pbe-open-pro],[data-pro]')) setTimeout(enhanceProModal, 60);
   });
 
   window.addEventListener('pbe:pro-state', schedule);
@@ -194,5 +219,5 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true });
   else boot();
 
-  window.NFLProSalesV1 = { paint, openPro, get observer() { return observer; } };
+  window.NFLProSalesV1 = { paint, openPro, enhanceProModal, get observer() { return observer; } };
 })();
