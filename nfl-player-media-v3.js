@@ -1,11 +1,16 @@
-/* PropBetEdge NFL — universal player media v3.2
+/* PropBetEdge NFL — universal player media v3.3
  * Extends the identity-safe resolver to player-name treatments without observing
  * every DOM mutation. Hydration runs in bounded bursts on route/render events.
+ *
+ * Prop Board v5 now participates in the same resolver: its player rows are
+ * marked semantically at scan time and receive the same identity-safe headshot
+ * treatment already used across Player DNA and other NFL surfaces.
  */
 (() => {
   'use strict';
 
   const PBE_MARK='https://propbetedge.ai/logo/pbe-mark-160.png';
+  const PROP_BOARD_CSS='./prop-board-premium-v1.css';
   const cache=new Map();
   let timer=null;
   let burstToken=0;
@@ -26,7 +31,7 @@
   const normalize=value=>String(value||'').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
 
   function cleanName(el){
-    const explicit=el.dataset.player||el.dataset.pbePlayer||el.getAttribute('data-player')||'';
+    const explicit=el.dataset.player||el.dataset.pbePlayer||el.dataset.pbe5Player||el.getAttribute('data-player')||'';
     if(explicit)return String(explicit).trim();
     const clone=el.cloneNode(true);
     clone.querySelectorAll('img,.pbe-player-media,.pbe-player-headshot').forEach(node=>node.remove());
@@ -58,7 +63,31 @@
     if(!el.querySelector(':scope > .pbe-player-headshot'))el.prepend(image(name,src));
   }
 
+  function ensurePropBoardCss(){
+    const board=document.querySelector('.pbe5');
+    if(!board)return;
+    board.classList.add('pbe5-media-enhanced');
+    if(document.getElementById('pbe-prop-board-premium-v1'))return;
+    const link=document.createElement('link');
+    link.id='pbe-prop-board-premium-v1';
+    link.rel='stylesheet';
+    link.href=PROP_BOARD_CSS;
+    document.head.appendChild(link);
+  }
+
+  function markPropBoardPlayers(){
+    ensurePropBoardCss();
+    document.querySelectorAll('.pbe5-player').forEach(row=>{
+      const name=row.querySelector('[data-pbe5-player]')?.dataset?.pbe5Player?.trim()||'';
+      if(!name)return;
+      row.dataset.pbePlayerMedia='1';
+      row.dataset.player=name;
+      row.classList.add('pbe5-player-media');
+    });
+  }
+
   function markSemanticPlayers(){
+    markPropBoardPlayers();
     document.querySelectorAll('.pbe15-node').forEach(node=>{const type=node.querySelector('.pbe15-node-value')?.textContent?.trim().toUpperCase();const label=node.querySelector('.pbe15-node-label')?.textContent?.trim().toUpperCase();if(type==='PLAYER'&&label?.includes('AFFECTED ENTITY')){const name=node.querySelector('h3');if(name){name.dataset.pbePlayerMedia='1';name.dataset.player=name.textContent.trim()}}});
     const hero=document.querySelector('.pbe13-title')?.textContent?.toLowerCase()||'';
     if(hero.includes('injury intelligence'))document.querySelectorAll('.pbe13-aff-name').forEach(name=>{name.dataset.pbePlayerMedia='1';name.dataset.player=name.textContent.trim()});
