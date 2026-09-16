@@ -1,7 +1,7 @@
 /* PropBetEdge NFL - ordered page/product upgrade loader v45 recovery */
 (() => {
   'use strict';
-  const VERSION='20260915castpre1';
+  const VERSION='20260916prosales1';
   const upgrades=[
     /* Establish the final homepage authority first. v6 replaces the v5 DOM with
        .pbehome6; v7 historically registered itself after that without repainting
@@ -124,6 +124,8 @@
 
     /* Production authorities. */
     {css:'./paywall-funnel-v2.css',js:'./paywall-funnel-v2.js'},
+    /* PBE Picks-first NFL Pro conversion layer. Presentation only; reads no premium decisions. */
+    {css:'./nfl-pro-sales-v1.css',js:'./nfl-pro-sales-v1.js'},
     /* PBEcast v6 is the sole route authority: #pbecast -> PBEcastV6.load ->
        .pbecast6. v7 is additive only — it decorates v6's DOM and state and
        never registers a route or renders the container itself. */

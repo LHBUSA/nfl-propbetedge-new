@@ -122,14 +122,14 @@
         <button class="pbe-pro-close" type="button" aria-label="Close NFL Pro">×</button>
         <div class="pbe-pro-modal-grid">
           <section class="pbe-pro-pitch">
-            <div class="pbe-pro-kicker">PROPBETEDGE NFL PRO</div>
-            <h2>See the market.<br><em>Own the intelligence.</em></h2>
-            <p>Sportsbook pricing stays useful for everyone. NFL Pro unlocks the proprietary PBE layer built on top of the market: fair lines, model probability, model gap and the premium tools we add next.</p>
+            <div class="pbe-pro-kicker">PROPBETEDGE NFL PRO · PBE PICKS</div>
+            <h2>The model makes the call.<br><em>The record keeps it honest.</em></h2>
+            <p>NFL Pro unlocks official qualified PBE Picks from the production champion, plus the model and market desk behind each call. The decision-time market state is preserved before the outcome is known, then the result is graded without deleting losses or rewriting the original decision.</p>
             <div class="pbe-pro-feature-list">
-              <div class="pbe-pro-feature"><div class="pbe-pro-feature-icon">◇</div><div><strong>PBE Fair Line</strong><span>See where the current passing model prices the prop independent of the sportsbook consensus.</span></div></div>
-              <div class="pbe-pro-feature"><div class="pbe-pro-feature-icon">%</div><div><strong>Model Probability</strong><span>Unlock the model's probability at the current consensus line with explicit model provenance.</span></div></div>
-              <div class="pbe-pro-feature"><div class="pbe-pro-feature-icon">↗</div><div><strong>Model Gap</strong><span>Compare market consensus with PBE fair value without relabeling the difference as guaranteed edge.</span></div></div>
-              <div class="pbe-pro-feature"><div class="pbe-pro-feature-icon">＋</div><div><strong>Premium modules as they clear validation</strong><span>Usage, matchup, simulation, SGP and live intelligence move behind the same NFL Pro entitlement as they become production-ready.</span></div></div>
+              <div class="pbe-pro-feature"><div class="pbe-pro-feature-icon">◎</div><div><strong>Official PBE Picks</strong><span>Qualified production-champion decisions. If the engine does not qualify a game, Pro shows no forced pick.</span></div></div>
+              <div class="pbe-pro-feature"><div class="pbe-pro-feature-icon">▧</div><div><strong>Decision Receipt</strong><span>Issued line and odds, model probability, market comparison and model provenance stay attached to the decision.</span></div></div>
+              <div class="pbe-pro-feature"><div class="pbe-pro-feature-icon">✓</div><div><strong>Verified Track Record</strong><span>Official picks are graded against final results and remain auditable instead of disappearing after a loss.</span></div></div>
+              <div class="pbe-pro-feature"><div class="pbe-pro-feature-icon">＋</div><div><strong>Model + Market Desk</strong><span>Model Lab, Market Watch, Best Line, simulation and supported premium research live under one NFL Pro entitlement.</span></div></div>
             </div>
           </section>
           <section class="pbe-pro-checkout" id="pbe-pro-checkout"></section>

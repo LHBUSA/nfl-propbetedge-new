@@ -65,8 +65,8 @@
     return `<div class="pbe-funnel-root" data-funnel-state="signed-out">
       <div class="pbe-funnel-head">
         <span>FOUNDING SEASON · NFL PRO</span>
-        <strong>Unlock the intelligence layer.</strong>
-        <p>Premium NFL model intelligence at introductory 2026 pricing. Pick your access, use one email, and you are in.</p>
+        <strong>Unlock the decisions, not just the dashboard.</strong>
+        <p>NFL Pro unlocks official PBE Picks, the decision receipt behind each qualified call, and the premium model + market desk under one verified account.</p>
       </div>
       <div class="pbe-pro-plans pbe-funnel-plans" role="radiogroup" aria-label="NFL Pro plans">
         ${planCard('monthly', selected)}
@@ -94,7 +94,7 @@
     return `<div class="pbe-funnel-root" data-funnel-state="signed-in-free" data-funnel-note="${escapeHtml(state().entitlement?.reason || '')}">
       <div class="pbe-funnel-head">
         <span>FOUNDING SEASON · NFL PRO</span>
-        <strong>${note ? 'Unlock NFL Pro again.' : 'Your account is ready. Choose Pro.'}</strong>
+        <strong>${note ? 'Unlock NFL Pro again.' : 'Your account is ready. Unlock PBE Picks.'}</strong>
         <p>${note ? escapeHtml(note) : 'Upgrade the verified email below. No new account setup and no free-trial handoff.'}</p>
       </div>
       <div class="pbe-funnel-user"><span>Signed in as</span><strong>${escapeHtml(email)}</strong></div>
@@ -125,8 +125,8 @@
     return `<div class="pbe-funnel-root pbe-funnel-active" data-funnel-state="${owner ? 'active-owner' : 'active-pro'}">
       <div class="pbe-funnel-head">
         <span>NFL PRO · VERIFIED ACCESS</span>
-        <strong>Your NFL intelligence desk is live.</strong>
-        <p>The premium PBE layer is active across supported NFL surfaces. Market truth stays visible; model intelligence stays separately labeled.</p>
+        <strong>Your NFL Pro decision desk is live.</strong>
+        <p>PBE Picks and the premium model + market desk are active across supported NFL surfaces. Market truth stays visible; model intelligence stays separately labeled.</p>
       </div>
       <div class="pbe-funnel-user"><span>Verified account</span><strong>${escapeHtml(email || 'NFL Pro member')}</strong></div>
       <div class="pbe-pro-price-card pbe-funnel-active-card">
@@ -142,7 +142,7 @@
       </div>
       <div class="pbe-funnel-email-label pbe-funnel-capabilities">
         <b>Your Pro desk</b>
-        <span>PBE Fair Line · Model Probability · Best Line · PBE Cast · Track Record · premium research as it clears validation.</span>
+        <span>PBE Picks · PBE Fair Line · Model Probability · Best Line · PBE Cast · Track Record · premium research under the same verified Pro entitlement.</span>
       </div>
       <div class="pbe-pro-auth-state pbe-funnel-auth">
         <button class="pbe-pro-cta" id="pbe-funnel-open-board" type="button">Open Pro Prop Board</button>
@@ -192,7 +192,7 @@
     });
     const btn = document.getElementById('pbe-funnel-checkout');
     const p = PLANS[selected] || PLANS.monthly;
-    if (btn) btn.textContent = `Continue to Stripe · ${p.price}${selected === 'monthly' ? '/mo' : '/wk'}`;
+    if (btn) btn.textContent = `Unlock NFL Pro · ${p.price}${selected === 'monthly' ? '/mo' : '/wk'}`;
   }
 
   function stripeUrl(plan, email) {
