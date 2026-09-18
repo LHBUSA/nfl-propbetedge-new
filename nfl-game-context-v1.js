@@ -143,8 +143,7 @@
       isNum(f.wind_mph) ? `Wind ${f.wind_mph} mph` : null,
       isNum(f.gust_mph) ? `Gusts ${f.gust_mph} mph` : null,
       isNum(f.precip_probability_pct) ? `Rain ${f.precip_probability_pct}%` : null,
-      roofNote,
-      stale ? 'Last verified forecast · refresh delayed' : null
+      roofNote
     ].filter(Boolean);
 
     return {
