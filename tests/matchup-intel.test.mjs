@@ -286,3 +286,24 @@ test('the contract is versioned and the thresholds are published', () => {
   const endpoint = readFileSync(join(REPO, 'api', 'matchup-intel.js'), 'utf8');
   assert.match(endpoint, /thresholds:/, 'the page can show how it classified');
 });
+
+test('the collision engine fires on the dimension that is actually sourced', async () => {
+  const { COLLISION_DIMENSIONS } = await import('../api/_matchup/intel-core.js');
+  assert.ok(COLLISION_DIMENSIONS.includes('overall'),
+    'the aggregate rating is the only dimension sourced today; if the engine does '
+    + 'not iterate it, the centrepiece section is empty for every game forever');
+
+  /* The real PHI @ TEN shape from production: a top-quartile defence meeting a
+     bottom-quartile offence, which must produce a pressure point. */
+  const out = collisions({
+    offense: { overall: { percentile: 81, plays: 140, state: STATE.OK, limited: false } },
+    defense: { overall: { percentile: 16, plays: 132, state: STATE.OK, limited: false } },
+    offenseTeam: 'PHI', defenseTeam: 'TEN',
+  });
+  assert.equal(out.length, 1);
+  assert.equal(out[0].dimension, 'overall');
+  assert.match(out[0].statement, /PHI overall offence ranks 81st percentile/);
+  assert.match(out[0].statement, /TEN overall defence allows at the 16th percentile/);
+  /* 'overall' must read as overall, never as a pass or rush split we do not have. */
+  assert.equal(/pass |rush /.test(out[0].statement), false);
+});

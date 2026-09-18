@@ -342,11 +342,13 @@ export function abbrOf(name) {
 /** The three dimensions the collision engine compares, from a composed side. */
 function dimensionsOf(side, which) {
   if (!side) return null;
-  /* Only the aggregate is available today, so the aggregate is what is
-     compared, and `splits.state` on the payload says the per-dimension numbers
-     are not yet sourced. A fabricated split would be worse than none. */
+  /* Only the aggregate is sourced today, so it is compared under its own name,
+     'overall'. The pass/rush/explosive slots stay null until 2026 play-by-play
+     exists — a fabricated split would be worse than none, and an engine that
+     only iterates dimensions it never receives produces an empty section
+     forever, which is how this one first shipped. */
   const base = which === 'offence' ? side.form.offence : side.form.defence;
-  return { pass: null, rush: null, explosive: null, aggregate: base };
+  return { overall: base, pass: null, rush: null, explosive: null };
 }
 
 /**

@@ -176,9 +176,18 @@ export function classify(percentile) {
  * it produces is descriptive: it says what the metrics are, not what will
  * happen.
  */
+export const COLLISION_DIMENSIONS = ['overall', 'pass', 'rush', 'explosive'];
+
+/* How each dimension reads in a sentence. 'overall' is the aggregate
+   opponent-adjusted rating — the only one sourced today — and it is named
+   "overall" rather than allowed to masquerade as a pass or rush split. */
+export const DIMENSION_LABEL = {
+  overall: 'overall', pass: 'pass', rush: 'rush', explosive: 'explosive-play',
+};
+
 export function collisions({ offense, defense, offenseTeam, defenseTeam }) {
   const out = [];
-  for (const dimension of ['pass', 'rush', 'explosive']) {
+  for (const dimension of COLLISION_DIMENSIONS) {
     const off = offense?.[dimension];
     const def = defense?.[dimension];
     if (!off || !def) continue;
@@ -196,8 +205,10 @@ export function collisions({ offense, defense, offenseTeam, defenseTeam }) {
       defense_plays: def.plays ?? null,
       limited: !!(off.limited || def.limited),
       /* Descriptive, traceable to the two numbers beside it. */
-      statement: `${offenseTeam} ${dimension} offence ranks ${ordinal(off.percentile)} percentile; `
-        + `${defenseTeam} ${dimension} defence allows at the ${ordinal(def.percentile)} percentile.`,
+      statement: `${offenseTeam} ${DIMENSION_LABEL[dimension] || dimension} offence ranks `
+        + `${ordinal(off.percentile)} percentile; ${defenseTeam} `
+        + `${DIMENSION_LABEL[dimension] || dimension} defence allows at the `
+        + `${ordinal(def.percentile)} percentile.`,
     });
   }
   return out;
