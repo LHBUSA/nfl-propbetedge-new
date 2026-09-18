@@ -78,41 +78,72 @@
     const v = game.venue;
     if (!v || v.status !== 'VERIFIED') return { kind: 'unavailable', title: 'Weather unavailable', detail: 'Venue not confirmed' };
     const roof = v.roof?.state;
-    if (roof === 'INDOOR') return { kind: 'indoor', title: 'Indoor', detail: 'Weather neutralized' };
-    if (roof === 'ROOF_STATUS_UNKNOWN') return { kind: 'retractable', title: 'Retractable roof', detail: 'Status not confirmed' };
-    if (roof !== 'OUTDOOR') return { kind: 'unavailable', title: 'Weather unavailable', detail: v.neutral_site ? 'Neutral-site venue not resolved for a forecast' : 'Roof state not confirmed' };
-    if (!wx || wx.status === 'loading') return { kind: 'loading', title: 'Reading forecast…' };
+    if (!['OUTDOOR', 'INDOOR', 'ROOF_STATUS_UNKNOWN'].includes(roof)) {
+      return { kind: 'unavailable', title: 'Weather unavailable', detail: v.neutral_site ? 'Neutral-site venue not resolved for a forecast' : 'Roof state not confirmed' };
+    }
+
+    const roofLabel = roof === 'INDOOR' ? 'DOME / INDOOR' : roof === 'ROOF_STATUS_UNKNOWN' ? 'RETRACTABLE ROOF' : 'OUTDOOR';
+    const roofNote = roof === 'INDOOR'
+      ? 'Outdoor conditions only — fixed roof'
+      : roof === 'ROOF_STATUS_UNKNOWN'
+        ? 'Outdoor conditions · roof status not confirmed'
+        : 'Weather applies to the field';
+
+    if (!wx || wx.status === 'loading') {
+      if (roof === 'INDOOR') return { kind: 'indoor', title: roofLabel, detail: 'Reading local weather…', roof_context: roofNote };
+      if (roof === 'ROOF_STATUS_UNKNOWN') return { kind: 'retractable', title: roofLabel, detail: 'Reading local weather…', roof_context: roofNote };
+      return { kind: 'loading', title: 'Reading forecast…' };
+    }
     const body = wx.body;
-    if (wx.status !== 'ok' || !body?.ok) return { kind: 'unavailable', title: 'Weather unavailable', detail: 'Forecast service unavailable' };
+    if (wx.status !== 'ok' || !body?.ok) {
+      if (roof === 'INDOOR') return { kind: 'indoor', title: roofLabel, detail: 'Local weather unavailable', roof_context: roofNote };
+      if (roof === 'ROOF_STATUS_UNKNOWN') return { kind: 'retractable', title: roofLabel, detail: 'Local weather unavailable · roof status not confirmed', roof_context: roofNote };
+      return { kind: 'unavailable', title: 'Weather unavailable', detail: 'Forecast service unavailable' };
+    }
     if (body.stale) return { kind: 'unavailable', title: 'Weather unavailable', detail: 'Latest forecast is out of date' };
+
     const kick = Date.parse(game.kickoff_utc || '');
     const row = arr(body.games).find(r => String(r.event_id) === String(game.espn_event_id));
     if (!row) {
       const horizon = now + (isNum(body.horizon_hours) ? body.horizon_hours : 192) * 3600000;
       if (Number.isFinite(kick) && kick > horizon) return { kind: 'pending', title: 'Forecast pending', detail: 'Outside the forecast window' };
+      if (roof === 'INDOOR') return { kind: 'indoor', title: roofLabel, detail: 'Local forecast unavailable', roof_context: roofNote };
+      if (roof === 'ROOF_STATUS_UNKNOWN') return { kind: 'retractable', title: roofLabel, detail: 'Local forecast unavailable · roof status not confirmed', roof_context: roofNote };
       return { kind: 'unavailable', title: 'Weather unavailable', detail: 'No forecast for this game' };
     }
-    /* the event id is the join; teams, kickoff and venue must all agree with it */
+
+    /* the event id is the join; teams, kickoff, venue and roof classification
+       must all agree. A fixed/retractable roof changes game impact, not whether
+       the local stadium weather can be useful context. */
     const rowKick = Date.parse(row.kickoff_utc || '');
     const agrees = team(row.away_team) === team(game.away_team) && team(row.home_team) === team(game.home_team)
       && Number.isFinite(rowKick) && Number.isFinite(kick) && Math.abs(rowKick - kick) <= 5 * 60000
       && venueKey(row.venue?.name) === venueKey(v.name)
-      && row.roof?.state === 'OUTDOOR';
+      && row.roof?.state === roof;
     if (!agrees) return { kind: 'unavailable', title: 'Weather unavailable', detail: 'Forecast did not match this game', rejected: true };
+
     const f = row.forecast;
-    if (!row.available || !f || !isNum(f.temp_f)) return { kind: 'unavailable', title: 'Weather unavailable', detail: 'Forecast not available for kickoff' };
+    if (!row.available || !f || !isNum(f.temp_f)) {
+      if (roof === 'INDOOR') return { kind: 'indoor', title: roofLabel, detail: 'Local forecast unavailable', roof_context: roofNote };
+      if (roof === 'ROOF_STATUS_UNKNOWN') return { kind: 'retractable', title: roofLabel, detail: 'Local forecast unavailable · roof status not confirmed', roof_context: roofNote };
+      return { kind: 'unavailable', title: 'Weather unavailable', detail: 'Forecast not available for kickoff' };
+    }
+
     const lines = [
       isNum(f.wind_mph) ? `Wind ${f.wind_mph} mph` : null,
       isNum(f.gust_mph) ? `Gusts ${f.gust_mph} mph` : null,
       isNum(f.precip_probability_pct) ? `Rain ${f.precip_probability_pct}%` : null
     ].filter(Boolean);
+    lines.push(roofNote);
+
     return {
       kind: 'forecast',
-      title: `${f.temp_f}°F${f.condition ? ` · ${f.condition}` : ''}`,
+      title: `${roofLabel} · ${f.temp_f}°F${f.condition ? ` · ${f.condition}` : ''}`,
       lines,
       alerts: arr(row.nws).map(a => a.event).filter(Boolean),
       event_id: row.event_id,
-      fetched_at: body.fetched_at
+      fetched_at: body.fetched_at,
+      roof_context: roofNote
     };
   }
 

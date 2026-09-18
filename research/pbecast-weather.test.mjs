@@ -96,7 +96,7 @@ test('DEN @ KC selected in PBEcast: the hero renders the Arrowhead kickoff forec
   assert.equal(e.wx, '401872931', 'weather event id equals the selected ESPN event id');
   assert.equal(e.venue, 'Arrowhead Stadium');
   assert.equal(e.roof, 'OUTDOOR');
-  assert.match(e.text, new RegExp(`${Math.round(w.temp_f)}°F`));
+  assert.match(e.text, new RegExp(`OUTDOOR · ${Math.round(w.temp_f)}°F`));
   assert.match(e.text, new RegExp(`Wind ${Math.round(w.wind_mph)} mph · Gusts ${Math.round(w.gust_mph)} mph · Rain ${Math.round(w.precip_probability_pct)}%`));
   s.cast.patchFreshness();
   assert.ok(s.env(s.hero()), 'patching the live hero includes the environment row');
@@ -108,8 +108,8 @@ test('PBEcast renders useful environment states and hides non-actionable weather
   const later = FIX.week3.content.sbData.events.find(e => !e.competitions[0].venue.indoor && !e.competitions[0].neutralSite);
 
   for (const [id, kind, text, venue] of [
-    ['401872927', 'indoor', /Indoor Weather neutralized/i, 'U.S. Bank Stadium'],
-    ['401872933', 'retractable', /Retractable roof Status not confirmed/i, 'Mercedes-Benz Stadium']
+    ['401872927', 'indoor', /DOME \/ INDOOR Local forecast unavailable/i, 'U.S. Bank Stadium'],
+    ['401872933', 'forecast', /RETRACTABLE ROOF · 87°F · Overcast.*Outdoor conditions · roof status not confirmed/i, 'Mercedes-Benz Stadium']
   ]) {
     await s.select(id);
     const e = s.env(s.cast.envHtml());

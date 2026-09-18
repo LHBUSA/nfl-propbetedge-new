@@ -139,15 +139,18 @@ test('card: DEN @ KC shows 8:15 PM ET, Mon Sep 14, ESPN and ABC links, Arrowhead
   const row = WX.games.find(x => x.game_id === '401872931').window;
   assert.equal(m.kind, 'forecast');
   assert.equal(m.event_id, '401872931');
-  assert.equal(m.title, `${Math.round(row.temp_f)}°F · ${wmoDescription(row.weather_code)}`);
-  assert.deepEqual(JSON.parse(JSON.stringify(m.lines)), [`Wind ${Math.round(row.wind_mph)} mph`, `Gusts ${Math.round(row.gust_mph)} mph`, `Rain ${Math.round(row.precip_probability_pct)}%`]);
+  assert.equal(m.title, `OUTDOOR · ${Math.round(row.temp_f)}°F · ${wmoDescription(row.weather_code)}`);
+  assert.deepEqual(JSON.parse(JSON.stringify(m.lines)), [`Wind ${Math.round(row.wind_mph)} mph`, `Gusts ${Math.round(row.gust_mph)} mph`, `Rain ${Math.round(row.precip_probability_pct)}%`, 'Weather applies to the field']);
   assert.doesNotMatch(html, /LIVE WEATHER UNAVAILABLE/);
 });
 
 test('card: indoor, retractable, neutral site, beyond horizon and unavailable are explicit states', () => {
   const C = client().PBEGameContext;
-  assert.deepEqual([C.weatherModel(cardGame('2026_01_GB_MIN'), view(), NOW).title, C.weatherModel(cardGame('2026_01_GB_MIN'), view(), NOW).detail], ['Indoor', 'Weather neutralized']);
-  assert.deepEqual([C.weatherModel(cardGame('2026_02_CAR_ATL'), view(), NOW).title, C.weatherModel(cardGame('2026_02_CAR_ATL'), view(), NOW).detail], ['Retractable roof', 'Status not confirmed']);
+  assert.deepEqual([C.weatherModel(cardGame('2026_01_GB_MIN'), view(), NOW).title, C.weatherModel(cardGame('2026_01_GB_MIN'), view(), NOW).detail], ['DOME / INDOOR', 'Local forecast unavailable']);
+  const atl = C.weatherModel(cardGame('2026_02_CAR_ATL'), view(), NOW);
+  assert.equal(atl.kind, 'forecast');
+  assert.match(atl.title, /^RETRACTABLE ROOF · 87°F · Overcast$/);
+  assert.ok(atl.lines.includes('Outdoor conditions · roof status not confirmed'));
   assert.equal(C.weatherModel(cardGame('2026_03_BAL_DAL'), view(), NOW).title, 'Weather unavailable', 'neutral site in Rio');
   const later = { ...cardGame('2026_02_NO_BAL'), espn_event_id: '999', kickoff_utc: '2026-10-11T17:00:00.000Z' };
   assert.equal(C.weatherModel(later, view(), NOW).title, 'Forecast pending');
