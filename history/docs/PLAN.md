@@ -121,3 +121,49 @@ holdout, calibration and promotion rules. The official track record is untouched
 | **R7** | Warehouse venue defects: 42 neutral-site games and 102 LA/LAC home games mapped to the wrong venue; 31 got weather for the wrong location | data audit |
 
 R1-R2 touch the picks lineage and R3-R5 touch the live product, so I have changed none of them.
+
+---
+
+# Decisions taken, and what changed (2026-09-18)
+
+The owner accepted D1-D6. What each now means in the code:
+
+| # | Decision | State |
+|---|---|---|
+| **D1** | nflverse/PFR-derived data is **not** expanded onto new public or pro surfaces until the upstream chain is verified or replaced. Existing production dependencies were inventoried, not removed. | Enforced in the data layer: nflverse sources are `internal_only`, and the row-level security policies make a public or pro connection unable to read a row backed by them (`docs/SUPABASE_DEPLOYMENT.md`). |
+| **D2** | The history graph gets its **own Supabase project**. Nothing created yet. | Deployment package prepared and proven against PGlite. The commands refuse the two product project refs and have no default connection string. |
+| **D3** | Do not ingest CollegeFootballData yet; audit upstream rights first. | `docs/COLLEGE_DATA_RIGHTS.md` — go / restricted / no-go by dataset. No college data ingested. |
+| **D4** | Write down what a licensed feed must provide. Do not purchase, do not contact anyone. | `docs/LICENSED_FEED_REQUIREMENTS.md`. Sportradar is listed as one candidate among others, evaluated on the requirements rather than assumed. |
+| **D5** | Prefer Wikidata CC0 and other redistributable structured sources. Wikipedia prose is not a canonical source. | The whole skeleton is CC0 Wikidata via SPARQL, with the query, retrieval time and content hash recorded per snapshot. No prose was parsed. |
+| **D6** | Legacy generated history must not be canonical, and must not be silently replaced by guesses. | Every route exposing `archive/*.js` history is suppressed behind a provenance guard that fails closed; nothing was replaced with invented data. Suppressed, not overwritten. |
+
+## Risks: current state
+
+| # | State |
+|---|---|
+| **R1** | Fixed in source, proven by tests first: `qbTierMap` now reads `teams[].injuries[]` and maps through `nflverseCode`; `line_move` and the other optional features report unavailability instead of sending 0 into the model. Behind `PICKS_FEATURES_V2` and **not yet deployed** — a champion trained on zeros must not meet live non-zero inputs without a deliberate re-tune. |
+| **R2** | Modelled, not renamed. `history/lib/game-identity.mjs` measures the week rather than assuming it, refuses Pro Bowl ids, returns ambiguity instead of guessing, and issues an additive alias so old ids keep resolving. No production migration — the receipt chain is append-only and an in-place rewrite would drop picks from the verified record. |
+| **R3** | Suppressed at the renderer seams (never by editing `archive/*.js`, which a workflow re-downloads and force-pushes). 16 tests assert the suppressed claims cannot reappear. |
+| **R4** | All four production call sites go through one provider abstraction that fails closed; NOAA/ERA5/Meteostat and a licensed replacement are declared but not implemented. `docs/OPEN_METEO_DEPENDENCY.md`. |
+| **R5** | Fixed and verified live: `.vercelignore` now allowlists the public surface, worker source / migrations / tests / rights docs return 404, and both a unit test and a live gate assert it. |
+| **R6** | Still open. Capture the ten unsourced gateway bindings before any new history service is built. |
+| **R7** | Venue defects fixed in the warehouse earlier; the skeleton models venues and their names through time so a rename never creates a second venue. |
+
+## Phase 2 result
+
+The rights-clean historical skeleton is built and validated: NFL, AFL (1960-69) and AAFC;
+46 franchises; 69 time-bounded identities; relocations, renames, conferences and divisions;
+61 venues with names through time; 121 seasons (1920-2026); 139 coaching tenures; 64 championship
+results. The 2023 slice attaches to it, 32/32.
+
+Three things the skeleton deliberately does not do:
+
+- It does not claim a Super Bowl **game**. Wikidata records the winner of all 64 and the
+  participants of none, so a game row with two teams could not be built honestly. They are
+  championship *results*, and a check enforces that.
+- It does not fill an unknown bound. 22 identity bounds the source never gave are null with a
+  stated basis; 20 identities inside multi-item lineages have unknown starts because the only
+  available date was the franchise's inception, which is not that name's start.
+- It does not resolve a conflict the source contains. Wikidata says the Washington Redskins name
+  ended 2020-07-24 and the Washington Football Team name began 2020-07-23; both are reported by
+  name rather than reconciled by picking one.
