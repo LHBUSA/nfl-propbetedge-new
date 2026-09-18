@@ -82,7 +82,7 @@ jobs:
       # and College Path (the rights refusals, and that an unresolved player
       # never reads as a negative claim about the player).
       - name: Week transition, Career Ledger and College Path contracts
-        run: node --test tests/nfl-slate.test.mjs tests/player-career-ledger.test.mjs tests/player-dna-next-game.test.mjs tests/nfl-state-invariants.test.mjs tests/pbecast-preview.test.mjs tests/nfl-college-path.test.mjs
+        run: node --test tests/nfl-slate.test.mjs tests/player-career-ledger.test.mjs tests/player-dna-next-game.test.mjs tests/nfl-state-invariants.test.mjs tests/pbecast-preview.test.mjs tests/nfl-college-path.test.mjs tests/news-team-attribution.test.mjs tests/matchup-intel.test.mjs
 
       - name: Validate Vercel config JSON
         run: node -e "JSON.parse(require('fs').readFileSync('vercel.json','utf8')); console.log('vercel.json OK')"

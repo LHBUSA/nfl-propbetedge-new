@@ -1,7 +1,7 @@
 /* PropBetEdge NFL - ordered page/product upgrade loader v45 recovery */
 (() => {
   'use strict';
-  const VERSION='20260918collegepath1';
+  const VERSION='20260918matchupsv3';
   const upgrades=[
     /* Establish the final homepage authority first. v6 replaces the v5 DOM with
        .pbehome6; v7 historically registered itself after that without repainting
@@ -92,7 +92,12 @@
        runtime; git history is the rollback. */
     {js:'./propchain-core-v3.js'},
     {css:'./propchain-v3.css',js:'./propchain-v3.js'},
-    {css:'./matchups-v2.css',js:'./matchups-v2.js'},
+    /* Matchups v3 replaces v2 outright. v2 attached news by city substring and
+       by an upstream team tag that was wrong for 27 of 50 stories, counted
+       injury-shaped headlines as "injury stories", shipped a QA event id as the
+       consumer default, and led a September 2026 game with 2025 standings. It
+       is not loaded: two renderers would fight over App.VIEWS.matchups. */
+    {css:'./matchups-v3.css',js:'./matchups-v3.js'},
     {css:'./simulator-v2.css',js:'./simulator-v2.js'},
     {css:'./simulator-v3-enhance.css',js:'./simulator-v3-enhance.js'},
     {css:'./sgp-lab-v2.css',js:'./sgp-lab-v2.js'},
