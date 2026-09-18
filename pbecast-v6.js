@@ -243,6 +243,28 @@
     return `${stamp}${state.syncing?' · SYNCING':''}`;
   }
 
+  function gameContextHtml(g,a,h,sem){
+    const B=window.PBEBroadcast;
+    const id=g?.id?String(g.id):'';
+    const row=id&&B?.state?.games?.length?B.find({event:id}):null;
+    const liveVenue=g?.venue||{};
+    const schedVenue=row?.venue?.status==='VERIFIED'?row.venue:null;
+    const venueName=clean(liveVenue?.name)||clean(schedVenue?.name);
+    const venueCity=clean(liveVenue?.city)||clean(schedVenue?.city);
+    const venueState=clean(liveVenue?.state)||clean(schedVenue?.state);
+    const venuePlace=[venueCity,venueState].filter(Boolean).join(', ');
+
+    const venue=venueName
+      ? `<div class="cast6-context-item is-venue"><span>VENUE</span><b>${esc(venueName)}</b>${venuePlace?`<small>${esc(venuePlace)}</small>`:''}</div>`
+      : '';
+
+    const watch=sem!=='FINAL'&&id
+      ? `<div class="cast6-context-item is-watch"><span>WATCH</span><b>${B?.slot?.({event:id,away:a?.display_name,home:h?.display_name,mode:'link'})||`<span class="pbe-tv-slot" data-tv-event="${esc(id)}"></span>`}</b></div>`
+      : '';
+
+    return venue||watch?`<div class="cast6-contextbar">${venue}${watch}</div>`:'';
+  }
+
   /* Environment for the SELECTED game only: the schedule row is found by that
      game's ESPN event id (never by team names), and environmentHtml refuses a
      row or forecast for any other event. */
@@ -265,7 +287,7 @@
     const d=state.detail,g=d?.game||{},a=g?.teams?.away||{},h=g?.teams?.home||{},sem=semantics(d),facts=situationFacts(d);
     const fresh=freshnessBadge();
     const until=sem==='SCHEDULE'?window.PBEcastPreview?.countdown?.(g?.date):null;
-    return `<section class="cast6-hero" data-cast6-game="${esc(g?.id||'')}"><div class="cast6-hero-head"><div><span class="cast6-live ${fresh.cls}">${sem==='LIVE'?'<i></i>':''}${esc(fresh.label)}</span>${until?`<em class="cast6-countdown${until.started?' is-due':''}">${esc(until.text)}</em>`:''}<b>${esc(sourceLabel(d))}</b></div><small data-cast6-stamp></small></div><div class="cast6-score"><div class="cast6-team">${teamLogo(a)}<span><b>${esc(a.abbreviation||'AWY')}</b><small>${esc(a.display_name||'Away')}${teamRecord(a)?` · ${esc(teamRecord(a))}`:''}</small></span></div><div class="cast6-score-center">${sem==='SCHEDULE'&&kickoffParts(g?.date)?`<strong class="is-kickoff">${esc(kickoffParts(g.date).time)}<small>ET</small></strong><span><em class="cast6-kick-k">Kickoff · </em>${esc(kickoffParts(g.date).day)}</span>`:`<strong>${esc(score(a,sem))}<i>:</i>${esc(score(h,sem))}</strong><span>${esc(statusLabel(g))}</span>`}<small>${esc([g?.venue?.name,[g?.venue?.city,g?.venue?.state].filter(Boolean).join(', ')].filter(Boolean).join(' · '))}${sem!=='FINAL'&&g?.id?(window.PBEBroadcast?.slot?.({event:g.id,away:a.display_name,home:h.display_name,lead:g?.venue?.name?' · WATCH · ':'WATCH · '})||''):''}</small></div><div class="cast6-team home"><span><b>${esc(h.abbreviation||'HME')}</b><small>${esc(h.display_name||'Home')}${teamRecord(h)?` · ${esc(teamRecord(h))}`:''}</small></span>${teamLogo(h)}</div></div>${envHtml()}${facts.length?`<div class="cast6-facts">${facts.map(([k,v])=>`<div><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}</div>`:''}</section>`;
+    return `<section class="cast6-hero" data-cast6-game="${esc(g?.id||'')}"><div class="cast6-hero-head"><div><span class="cast6-live ${fresh.cls}">${sem==='LIVE'?'<i></i>':''}${esc(fresh.label)}</span>${until?`<em class="cast6-countdown${until.started?' is-due':''}">${esc(until.text)}</em>`:''}<b>${esc(sourceLabel(d))}</b></div><small data-cast6-stamp></small></div><div class="cast6-score"><div class="cast6-team">${teamLogo(a)}<span><b>${esc(a.abbreviation||'AWY')}</b><small>${esc(a.display_name||'Away')}${teamRecord(a)?` · ${esc(teamRecord(a))}`:''}</small></span></div><div class="cast6-score-center">${sem==='SCHEDULE'&&kickoffParts(g?.date)?`<strong class="is-kickoff">${esc(kickoffParts(g.date).time)}<small>ET</small></strong><span><em class="cast6-kick-k">Kickoff · </em>${esc(kickoffParts(g.date).day)}</span>`:`<strong>${esc(score(a,sem))}<i>:</i>${esc(score(h,sem))}</strong><span>${esc(statusLabel(g))}</span>`}</div><div class="cast6-team home"><span><b>${esc(h.abbreviation||'HME')}</b><small>${esc(h.display_name||'Home')}${teamRecord(h)?` · ${esc(teamRecord(h))}`:''}</small></span>${teamLogo(h)}</div></div>${gameContextHtml(g,a,h,sem)}${envHtml()}${facts.length?`<div class="cast6-facts">${facts.map(([k,v])=>`<div><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}</div>`:''}</section>`;
   }
 
   const pregame=()=>semantics(state.detail)==='SCHEDULE';
