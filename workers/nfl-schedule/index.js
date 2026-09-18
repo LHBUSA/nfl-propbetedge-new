@@ -89,7 +89,13 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname;
     const p = url.searchParams;
-    const now = Date.now();
+    /* The clock comes from env when one is supplied, so a point-in-time capture
+       can be evaluated at its own moment. Broadcast staleness is an age
+       comparison (6h near kickoff, 60h otherwise), so a fixture captured on the
+       Monday starts reporting STALE on the Thursday and a suite that was green
+       when written goes red without a line of code changing. Production sets
+       nothing and keeps Date.now(). */
+    const now = Number(env?.NOW_MS) || Date.now();
 
     if (path.endsWith('/schedule/broadcast/registry')) {
       return json({ registry_version: REGISTRY_VERSION, broadcasters: BROADCASTERS, allowed_hosts: allowedHostsById() });

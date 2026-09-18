@@ -84,7 +84,12 @@ test('a game the source never published has no venue and falls back to the sched
 test('API: every game carries broadcast, venue and kickoff', async () => {
   resetSnapshotMemo();
   const snap = snapshot();
-  const res = await worker.fetch(new Request('https://nfl-schedule.internal/api/schedule?season=2026&week=2'), { NFL_KV: { get: async () => snap } });
+  /* Evaluated at the capture's own moment. The assertion below is unchanged —
+     every game must carry a verified venue, a real kickoff and a broadcast that
+     is VERIFIED or UNASSIGNED — but broadcast staleness is an age comparison,
+     so judging a 2026-09-14 capture by today's clock tested the calendar rather
+     than the join. */
+  const res = await worker.fetch(new Request('https://nfl-schedule.internal/api/schedule?season=2026&week=2'), { NFL_KV: { get: async () => snap }, NOW_MS: NOW });
   const body = await res.json();
   assert.equal(body.count, 16);
   for (const g of body.games) {
