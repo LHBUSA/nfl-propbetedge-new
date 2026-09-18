@@ -34,6 +34,11 @@ import {
 } from './_matchup/intel-core.js';
 
 const GATEWAY = process.env.NFL_GATEWAY || 'https://nfl-api.propbetedge.ai';
+/* Same-origin reads: game-intel and news-feed are Vercel functions in this repo,
+   not gateway routes. VERCEL_URL is the running deployment, so a preview reads
+   its own functions rather than production's. */
+const SELF = process.env.PBE_SELF_ORIGIN
+  || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://nfl.propbetedge.ai');
 const DEFAULT_SUPABASE_URL = 'https://tkmlnhmylqnttmnsnief.supabase.co';
 const TIMEOUT_MS = 6000;
 
@@ -198,10 +203,16 @@ export default async function handler(req, res) {
 
   const [board, consensus, injuries, changes, news, ratings] = await Promise.all([
     soft('board', () => getJson(`${GATEWAY}/api/odds/board?event_id=${encodeURIComponent(eventId)}`)),
-    soft('consensus', () => getJson(`${GATEWAY}/api/game-intel?event_id=${encodeURIComponent(eventId)}`)),
+    /* game-intel is a Vercel function in this repo, not a gateway route. Asking
+       the gateway for it returned 404 in production and quietly left spread,
+       total and moneyline null while the board still reported 18 books — the
+       market looked present and read empty. It is same-origin, and it needs the
+       team names as well as the id. */
+    soft('consensus', () => getJson(`${SELF}/api/game-intel?event_id=${encodeURIComponent(eventId)}`
+      + `${away ? `&away=${encodeURIComponent(away)}` : ''}${home ? `&home=${encodeURIComponent(home)}` : ''}`)),
     soft('injuries', () => getJson(`${GATEWAY}/api/injuries`)),
     soft('changes', () => getJson(`${GATEWAY}/api/changes?window_hours=72`)),
-    soft('news', () => getJson('https://nfl.propbetedge.ai/api/news-feed?limit=100')),
+    soft('news', () => getJson(`${SELF}/api/news-feed?limit=100`)),
     soft('ratings', () => teamRatings(season)),
   ]);
 
