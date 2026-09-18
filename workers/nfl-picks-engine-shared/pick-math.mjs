@@ -434,9 +434,20 @@ export function priorBlendWeight(week) {
   return Number(((8 - w) / 7).toFixed(6));
 }
 
+/* Inputs that can be genuinely unmeasurable: a zero here is indistinguishable
+ * from a measured zero, so the caller records which ones were absent beside the
+ * vector (never inside it — the receipt hashes the vector and the tuner replays
+ * it). null/undefined means unavailable; false and 0 mean measured. */
+export const OPTIONAL_FEATURES = Object.freeze(['qb_tier_diff', 'line_move', 'wind15', 'cold25']);
+
+export function unavailableFeatures(input = {}) {
+  return OPTIONAL_FEATURES.filter(name => input[name] === null || input[name] === undefined).sort();
+}
+
 /* Builds the immutable snapshot. Every declared feature is present and finite;
  * a missing input is an explicit 0, never undefined, so the stored vector can
- * always be replayed by the tuner. */
+ * always be replayed by the tuner. Which of those zeros were measured is
+ * answered by unavailableFeatures(), not by the vector. */
 export function buildFeatureVector(input) {
   const v = {
     off_epa_diff: Number(input.off_epa_diff || 0),

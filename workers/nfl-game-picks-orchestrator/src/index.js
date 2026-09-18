@@ -15,7 +15,7 @@ import {
   select, insert, patch, rpc, audit, latestPromotedWeights,
 } from '../../nfl-picks-engine-shared/supabase.mjs';
 import {
-  devigTwoWay, modelProbability, buildFeatureVector,
+  devigTwoWay, modelProbability, buildFeatureVector, unavailableFeatures,
   confidenceBucket, qualifies, quarterKellyUnits, edgeThreshold,
   probToAmerican, KILL_THRESHOLD, selectedWinProbability, normalCdf,
   spreadCoverProbability, fairSpreadFromMargin, edgeAnomaly, monotonicityValid,
@@ -769,7 +769,7 @@ async function runOrchestration(env, slate, base) {
         if (!quotes || !quotes.length) { record.markets.push({ market, outcome: 'no_quote' }); continue; }
 
         const evaluated = quotes.map(quote =>
-          evaluate({ game, market, quote, ratings, weather, champion, season, week, marketAnchor }));
+          evaluate({ game, market, quote, ratings, weather, champion, season, week, marketAnchor, featuresV2: featuresV2Enabled(env) }));
 
         /* Snapshot EVERY evaluated side — issued or not. Best Line shows model
          * value whenever the engine evaluated the market successfully; it does
@@ -997,7 +997,14 @@ async function runOrchestration(env, slate, base) {
 
 /* Pure decision step — exported so acceptance tests can drive it with fixtures
  * and no network. */
-export function evaluate({ game, market, quote, ratings, weather, champion, season, week, marketAnchor = null }) {
+/* Repaired feature inputs stay off until the owner enables them: the champion
+   in production was trained while qb_tier_diff and line_move were constant 0.
+   Unset means today's behaviour. */
+export function featuresV2Enabled(env) {
+  return /^(1|true|yes|on)$/i.test(String(env?.PICKS_FEATURES_V2 ?? ''));
+}
+
+export function evaluate({ game, market, quote, ratings, weather, champion, season, week, marketAnchor = null, featuresV2 = false }) {
   const selectedIsHome = quote.selected_is_home === true;
 
   /* Totals are intentionally unavailable until they have a dedicated expected-
@@ -1042,23 +1049,36 @@ export function evaluate({ game, market, quote, ratings, weather, champion, seas
 
   const integrityVersion = Number(champion?.weights?.meta?.integrity_version || 0);
   const dome = isIndoor(game.home_team);
+  /* The champion in production was trained while qb_tier_diff and line_move
+     were constant 0. Repairing the inputs without retraining would move live
+     prices under a model that never saw them, so the repaired inputs are off
+     until the owner turns them on and the tuner is released. */
+  const weatherObserved = Boolean(weather && Number.isFinite(Number(weather.wind_mph)) && Number.isFinite(Number(weather.temp_f)));
+  const qbTierDiff = (Number.isFinite(Number(awayRating?.qb_tier)) && Number.isFinite(Number(homeRating?.qb_tier)))
+    ? Number(awayRating.qb_tier) - Number(homeRating.qb_tier) : null;
+  const homeLineMove = Number.isFinite(Number(marketAnchor?.home_line_move)) ? Number(marketAnchor.home_line_move) : null;
+  /* A forecast that was never read is not a calm, mild day: unavailable stays
+     null, which the vector stores as 0 and the audit names as absent. */
+  const wind15 = dome ? false : (weatherObserved ? weather.wind_mph >= 15 : null);
+  const cold25 = dome ? false : (weatherObserved ? weather.temp_f <= 25 : null);
   /* One canonical HOME-perspective vector drives both moneyline and spread.
    * No quote direction or current market tick is allowed to change the latent
    * team-strength projection, which prevents paired-market contradictions. */
   const features = buildFeatureVector({
     off_epa_diff: num(homeRating.off_epa_play) - num(awayRating.def_epa_play),
     def_epa_diff: num(awayRating.off_epa_play) - num(homeRating.def_epa_play),
-    qb_tier_diff: num(awayRating.qb_tier) - num(homeRating.qb_tier),
+    qb_tier_diff: featuresV2 ? qbTierDiff : 0,
     rest_diff: num(game.rest_home) - num(game.rest_away),
     home: true,
     dome,
-    wind15: !dome && weather?.wind_mph >= 15,
-    cold25: !dome && weather?.temp_f <= 25,
+    wind15, cold25,
     proe_diff: num(homeRating.proe) - num(awayRating.proe),
     pace_sum: num(homeRating.pace) + num(awayRating.pace),
-    line_move: 0,
+    line_move: featuresV2 ? homeLineMove : 0,
     week,
   });
+  /* Recorded beside the vector, never inside it. */
+  const featuresUnavailable = unavailableFeatures({ qb_tier_diff: qbTierDiff, line_move: homeLineMove, wind15, cold25 });
 
   const anchor = validAnchor(marketAnchor) ? marketAnchor : quoteMarketAnchor(market, quote);
   if (!validAnchor(anchor)) {
@@ -1127,6 +1147,8 @@ export function evaluate({ game, market, quote, ratings, weather, champion, seas
 
   return {
     qualifies: doesQualify, ratings_available: true, unavailable_reason: null,
+    features_unavailable: featuresUnavailable, weather_observed: weatherObserved,
+    features_v2: featuresV2,
     integrity_status: integrityStatus, integrity_reason: integrityReason,
     integrity_warning: edgeState.warn && !edgeState.hard ? edgeState.reason : null,
     integrity_context: { anchor_source: anchor.source, anchor_home_win_prob: Number(anchor.home_win_prob.toFixed(6)), model_home_margin: Number(modelHomeMargin.toFixed(3)), residual_points: Number(residual.toFixed(3)) },
@@ -1180,6 +1202,12 @@ async function reconcile(env, { open, decision, champion, game, market, season, 
       detail: {
         market, side: decision.side, edge_pct: decision.edge_pct,
         publication_scope: scope,
+        /* Which declared features were absent rather than measured, and whether
+           a forecast was actually read. The stored vector cannot say this: its
+           keys are fixed and a missing input lands there as 0. */
+        features_unavailable: decision.features_unavailable || [],
+        weather_observed: decision.weather_observed === true,
+        features_v2: decision.features_v2 === true,
         selection_team: decision.selection_team,
         selection_over_under: decision.selection_over_under,
         side_is_home: decision.side_is_home,

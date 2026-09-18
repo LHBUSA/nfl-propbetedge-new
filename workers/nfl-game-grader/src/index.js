@@ -23,7 +23,7 @@
 import {
   select, upsert, patch, audit,
 } from '../../nfl-picks-engine-shared/supabase.mjs';
-import { loadSlate, gradable } from '../../nfl-picks-engine-shared/current-slate.mjs';
+import { loadSlate, gradable, nflverseCode } from '../../nfl-picks-engine-shared/current-slate.mjs';
 import { recordRun, readLane, laneHealth } from '../../nfl-picks-engine-shared/runs.mjs';
 import {
   collectPlaysFromUrl, buildSeasonRatings, blendSeasons, toRatingRows,
@@ -247,17 +247,25 @@ async function refreshRatings(env, { season, week }) {
 /* QB tier comes from the injury/role source already feeding Injury
  * Intelligence. If it is unavailable the tier is left null rather than
  * defaulted to a middle value that would look like real information. */
-async function qbTierMap(env) {
+export async function qbTierMap(env) {
   try {
     const base = String(env.NFL_GATEWAY || 'https://nfl-api.propbetedge.ai').replace(/\/$/, '');
     const response = await fetch(`${base}/api/injuries`, { cf: { cacheTtl: 600 } });
     if (!response.ok) return {};
     const body = await response.json();
-    const rows = Array.isArray(body?.injuries) ? body.injuries : [];
+    /* The endpoint answers { teams: [{ abbreviation, injuries: [...] }] }, in
+       ESPN abbreviations. Reading `body.injuries` silently produced an empty
+       map, which became qb_tier = null on every rating and qb_tier_diff = 0 on
+       every pick. Flatten the real shape and translate the codes, because
+       rating rows are keyed by nflverse codes (LAR -> LA, WSH -> WAS). */
+    const teams = Array.isArray(body?.teams) ? body.teams : [];
+    const rows = teams.flatMap(t => (Array.isArray(t?.injuries) ? t.injuries : [])
+      .map(inj => ({ ...inj, team: inj?.team || inj?.athlete?.team?.abbreviation || t?.abbreviation })));
     const out = {};
     for (const row of rows) {
-      if (String(row?.position || '').toUpperCase() !== 'QB') continue;
-      const team = String(row?.team || '').toUpperCase();
+      const position = String(row?.position || row?.athlete?.position?.abbreviation || '').toUpperCase();
+      if (position !== 'QB') continue;
+      const team = nflverseCode(String(row?.team || '').toUpperCase());
       if (!team) continue;
       const status = String(row?.status || '').toUpperCase();
       const tier = /OUT|IR|DOUBTFUL/.test(status) ? 4
