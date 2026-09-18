@@ -27,3 +27,6 @@ scripts/tmp/
 # Football history graph working output (slice CSV, seed, local PGlite database).
 history/.out/
 history/node_modules/
+
+# Wrangler local cache (account id, session state) — never tracked.
+.wrangler/

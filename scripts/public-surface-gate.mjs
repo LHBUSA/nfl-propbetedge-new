@@ -43,7 +43,10 @@ const MUST_SERVE = [
   '/pbe-tokens.css', '/base-v3.css', '/site.webmanifest',
   '/archive/teams.js', '/archive/superbowls.js', '/archive/standings-2025.js',
   '/stadiums/sofi-bg.webp',
-  '/api/nfl-live', '/api/pbe-picks?view=state', '/api/home-market?away=SF&home=LA', '/api/auth-session',
+  '/api/nfl-live', '/api/pbe-picks?view=state', '/api/auth-session',
+  /* The function answers 400 without a matchup and 404 for a pairing that is
+     not on the slate; either proves it deployed and ran. */
+  { path: '/api/home-market', accept: [200, 400] },
 ];
 
 async function status(path) {
@@ -63,9 +66,11 @@ for (const path of MUST_NOT_SERVE) {
   if (!ok) failures.push(`SERVED ${code} ${path}`);
   console.log(`${ok ? 'ok  ' : 'FAIL'} ${String(code).padEnd(6)} hidden   ${path}`);
 }
-for (const path of MUST_SERVE) {
+for (const entry of MUST_SERVE) {
+  const path = typeof entry === 'string' ? entry : entry.path;
+  const accept = typeof entry === 'string' ? [200, 304] : entry.accept;
   const code = await status(path);
-  const ok = code === 200 || code === 304 || (path === '/' && code === 200);
+  const ok = accept.includes(code);
   if (!ok) failures.push(`MISSING ${code} ${path}`);
   console.log(`${ok ? 'ok  ' : 'FAIL'} ${String(code).padEnd(6)} required ${path}`);
 }
