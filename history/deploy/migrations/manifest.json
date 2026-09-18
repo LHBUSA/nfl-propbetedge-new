@@ -1,0 +1,45 @@
+{
+ "generated_from": "history/schema/*.sql + history/deploy/policy/*.sql",
+ "steps": [
+  {
+   "filename": "001_provenance_and_competition.sql",
+   "source": "schema/001_provenance_and_competition.sql",
+   "sha256": "669c8ab3a604e458f346b71161d6d40ab61a1bbe4a994a733bea31e51deecba3"
+  },
+  {
+   "filename": "002_franchise_venue_person.sql",
+   "source": "schema/002_franchise_venue_person.sql",
+   "sha256": "66f86b0a40eeee243a3e3d5d489bce8f1f6fbfa526aec73946bfe2cb09d3ae52"
+  },
+  {
+   "filename": "003_career_draft_roster.sql",
+   "source": "schema/003_career_draft_roster.sql",
+   "sha256": "beed99a92c10b0627df432ce8a8dfaf33200f4cbacf1d14d04e7c866fc2592ae"
+  },
+  {
+   "filename": "004_game_drive_play_derived.sql",
+   "source": "schema/004_game_drive_play_derived.sql",
+   "sha256": "c12bc3f091be6c0d5bc314877f4f56077725d60556ce8e81724781e41d214b9c"
+  },
+  {
+   "filename": "005_championships.sql",
+   "source": "schema/005_championships.sql",
+   "sha256": "402bd9e7a84046aa1ae88ae8dc14a53e0ee483bf46c0b5790056aa7ec3b2d91d"
+  },
+  {
+   "filename": "006_roles_and_grants.sql",
+   "source": "deploy/policy/010_roles_and_grants.sql",
+   "sha256": "df8f3280e23a13633a721ed312c18a4a5cc34b47dfb71858f750051422464793"
+  },
+  {
+   "filename": "007_rights_row_level_security.sql",
+   "source": "generated",
+   "sha256": "9367ac89c68349d12c52a36a22932dfefaca58c659826d71711798a45f26139e"
+  },
+  {
+   "filename": "008_deployment_ledger.sql",
+   "source": "generated",
+   "sha256": "86607aeea0c90011712b42f6bd9bbced1b3efd53a02078104beb7b9d7a1284ff"
+  }
+ ]
+}

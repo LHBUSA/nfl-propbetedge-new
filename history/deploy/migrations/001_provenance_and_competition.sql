@@ -1,3 +1,7 @@
+-- 001_provenance_and_competition.sql
+-- source: schema/001_provenance_and_competition.sql
+-- Generated; apply with history/deploy/apply.mjs, never by hand-editing this file.
+
 -- PropBetEdge football history graph — 001 provenance + competition graph
 -- STATUS: DESIGN. NOT APPLIED ANYWHERE. Target: an isolated Postgres schema set
 -- (football_src / football / football_derived) in a project chosen by the owner.
