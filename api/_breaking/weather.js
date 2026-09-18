@@ -85,7 +85,8 @@ export const THRESHOLDS = {
   monitor_from_hours: 72
 };
 
-const FORECAST = 'https://api.open-meteo.com/v1/forecast';
+/* Which provider may be used is a rights decision: api/_weather/provider.mjs. */
+import { forecastRequest } from '../_weather/provider.mjs';
 const NWS_ALERTS = 'https://api.weather.gov/alerts/active';
 /* NWS asks for a contact in the User-Agent. Sending one is the price of using
    a public service politely, and an anonymous request may be refused. */
@@ -190,11 +191,8 @@ const HOURLY = ['temperature_2m', 'apparent_temperature', 'precipitation_probabi
   'wind_speed_10m', 'wind_gusts_10m', 'wind_direction_10m', 'visibility'];
 
 export function forecastUrl(lat, lon, tz, dates) {
-  return `${FORECAST}?latitude=${lat}&longitude=${lon}`
-    + `&hourly=${HOURLY.join(',')}`
-    + '&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch'
-    + `&timezone=${encodeURIComponent(tz)}`
-    + `&start_date=${dates[0]}&end_date=${dates[dates.length - 1]}`;
+  const req = forecastRequest({ lat, lon, tz, startDate: dates[0], endDate: dates[dates.length - 1], hourly: HOURLY });
+  return req.ok ? req.url : null;
 }
 
 /** WMO code families. Only used to say WHAT KIND, never how bad. */
@@ -401,15 +399,22 @@ export async function gameSnapshot(game, { fetchNws = true, now = Date.now() } =
 
   const stamps = windowStamps(game.kickoff_utc, row.tz);
   const dates = [...new Set(stamps.map(s => s.stamp.slice(0, 10)))].sort();
-  const url = forecastUrl(row.lat, row.lon, row.tz, dates);
+  const request = forecastRequest({ lat: row.lat, lon: row.lon, tz: row.tz, startDate: dates[0], endDate: dates[dates.length - 1], hourly: HOURLY });
+  const url = request.ok ? request.url : null;
 
   let window = null; const unresolved = [];
-  try {
-    const f = await getJSON(url);
-    window = aggregateWindow(f.hourly, stamps);
-    if (!window) unresolved.push({ field: 'weather', reason: 'no forecast hour matched the kickoff window' });
-  } catch (e) {
-    unresolved.push({ field: 'weather', reason: `forecast unavailable: ${e.message}` });
+  if (!request.ok) {
+    /* No provider, no request, no value. A missing forecast is unresolved,
+       never "calm and mild". */
+    unresolved.push({ field: 'weather', reason: request.reason });
+  } else {
+    try {
+      const f = await getJSON(url);
+      window = aggregateWindow(f.hourly, stamps);
+      if (!window) unresolved.push({ field: 'weather', reason: 'no forecast hour matched the kickoff window' });
+    } catch (e) {
+      unresolved.push({ field: 'weather', reason: `forecast unavailable: ${e.message}` });
+    }
   }
 
   let nws = [];

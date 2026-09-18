@@ -11,6 +11,7 @@
  */
 import VENUE_TABLE from '../../../data/dist/nfl-venues.json' with { type: 'json' };
 import { setVenues, gameSnapshot, weatherEvents, wmoDescription, THRESHOLDS } from '../../../api/_breaking/weather.js';
+import { setWeatherPolicy } from '../../../api/_weather/provider.mjs';
 
 setVenues(VENUE_TABLE);
 
@@ -29,6 +30,9 @@ async function neutralFlags(fetchImpl) {
 }
 
 export async function refreshWeather(env, { games, now = Date.now(), fetchImpl = fetch } = {}) {
+  /* A Worker has no process.env, so the rights policy comes from its own
+     bindings. Set before any snapshot is taken. */
+  setWeatherPolicy(env);
   const prev = await env.INTEL_KV.get(WX_KEY, 'json');
   let neutral;
   try { neutral = await neutralFlags(fetchImpl); }

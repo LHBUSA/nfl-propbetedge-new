@@ -17,7 +17,7 @@ import { dataWindow, provenance } from '../_qbdna/engine.js';
 import { teamBlock } from '../_playerdna/media.js';
 
 const SCOREBOARD = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard';
-const FORECAST = 'https://api.open-meteo.com/v1/forecast';
+import { forecastRequest } from '../_weather/provider.mjs';
 
 let VENUES = null;
 function venues() {
@@ -202,11 +202,13 @@ export default async function handler(req, res) {
     unresolved.push({ field: 'weather',
       reason: 'roofed venue - no forecast is fetched and no conditions are inferred' });
   } else {
-    const url = `${FORECAST}?latitude=${g.venue.lat}&longitude=${g.venue.lon}`
-      + '&hourly=temperature_2m,wind_speed_10m,precipitation,rain,snowfall,weather_code'
-      + '&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch'
-      + `&timezone=${encodeURIComponent(g.venue.tz)}&start_date=${local.date}&end_date=${local.date}`;
+    const request = forecastRequest({ lat: g.venue.lat, lon: g.venue.lon, tz: g.venue.tz,
+      startDate: local.date, endDate: local.date,
+      hourly: ['temperature_2m', 'wind_speed_10m', 'precipitation', 'rain', 'snowfall', 'weather_code'] });
+    const url = request.ok ? request.url : null;
+    if (!request.ok) unresolved.push({ field: 'weather', reason: request.reason });
     try {
+      if (!request.ok) throw new Error(request.reason);
       const f = await getJSON(url);
       const stamp = `${local.date}T${String(local.hour).padStart(2, '0')}:00`;
       const i = f.hourly.time.indexOf(stamp);
