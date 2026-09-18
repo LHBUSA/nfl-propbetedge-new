@@ -253,7 +253,12 @@
     const loaded=Boolean(B?.state?.games?.length);
     const row=loaded?B.find({event:id}):null;
     const ctx=row?C.fromSchedule(row,{state:semantics(state.detail),away_name:g?.teams?.away?.display_name,home_name:g?.teams?.home?.display_name}):null;
-    return C.environmentHtml(ctx,C.state,{selectedEventId:id,scheduleLoading:!loaded&&!B?.state?.error&&!B?.state?.disabled});
+    const opts={selectedEventId:id,scheduleLoading:!loaded&&!B?.state?.error&&!B?.state?.disabled};
+    const model=C.environmentModel(ctx,C.state,opts);
+    // PBECast is a live command center, not a diagnostics surface. Render only
+    // useful game context; stale/missing/pending weather stays in API health.
+    if(!['forecast','indoor','retractable'].includes(model?.kind))return'';
+    return C.environmentHtml(ctx,C.state,opts);
   }
 
   function heroHtml(){

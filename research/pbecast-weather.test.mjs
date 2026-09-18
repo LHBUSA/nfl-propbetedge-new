@@ -102,25 +102,36 @@ test('DEN @ KC selected in PBEcast: the hero renders the Arrowhead kickoff forec
   assert.ok(s.env(s.hero()), 'patching the live hero includes the environment row');
 });
 
-test('indoor, retractable, neutral-site and later-season games render their explicit states', async () => {
+test('PBEcast renders useful environment states and hides non-actionable weather diagnostics', async () => {
   const s = sandbox();
   await s.ready();
   const later = FIX.week3.content.sbData.events.find(e => !e.competitions[0].venue.indoor && !e.competitions[0].neutralSite);
-  const cases = [
+
+  for (const [id, kind, text, venue] of [
     ['401872927', 'indoor', /Indoor Weather neutralized/i, 'U.S. Bank Stadium'],
-    ['401872933', 'retractable', /Retractable roof Status not confirmed/i, 'Mercedes-Benz Stadium'],
-    ['401872960', 'unavailable', /Weather unavailable Neutral-site venue not resolved for a forecast/i, 'Maracanã Stadium'],
-    [later.id, 'pending', /Forecast pending/i, later.competitions[0].venue.fullName]
-  ];
-  for (const [id, kind, text, venue] of cases) {
+    ['401872933', 'retractable', /Retractable roof Status not confirmed/i, 'Mercedes-Benz Stadium']
+  ]) {
     await s.select(id);
     const e = s.env(s.cast.envHtml());
     assert.equal(e.kind, kind, id);
     assert.match(e.text, text, id);
     assert.equal(e.venue, venue, id);
-    assert.equal(e.wx, null, `${id}: no forecast event is attached to a non-forecast state`);
-    assert.doesNotMatch(e.text, /°F/, `${id}: nothing estimated`);
   }
+
+  for (const id of ['401872960', later.id]) {
+    await s.select(id);
+    assert.equal(s.cast.envHtml(), '', `${id}: unavailable/pending weather must not become a hero error banner`);
+  }
+});
+
+test('a stale weather snapshot is hidden from the PBEcast hero instead of rendered as an error banner', async () => {
+  const stale = gameWeatherView(WX, NOW + 3 * 3600000);
+  assert.equal(stale.stale, true);
+  const s = sandbox({ weather: stale, now: NOW + 3 * 3600000 });
+  await s.ready();
+  await s.select('401872932');
+  assert.equal(s.cast.envHtml(), '');
+  assert.doesNotMatch(s.hero(), /Weather unavailable|Latest forecast is out of date/i);
 });
 
 test('switching the selected game switches the weather; the previous game never lingers', async () => {
