@@ -267,7 +267,17 @@
 
   function redZonePanel(p) {
     const rz = p.red_zone || {};
-    if (rz.state === 'PRO_REQUIRED') return '';
+    if (rz.state === 'PRO_REQUIRED') {
+      /* A teaser, not silence. The role panel shows one, and a section that
+         simply vanishes for free readers reads as a section that does not
+         exist rather than one they have not paid for. */
+      return `<section class="pbe17m-panel is-pro">
+        <div class="pbe17m-head"><strong>RED ZONE BATTLE</strong><span>NFL PRO</span></div>
+        <p class="pbe17m-note">Trips inside the 20, conversion rate, and the carries and targets that
+        get them there are part of NFL Pro.</p>
+        <button type="button" class="pbe17m-cta" onclick="window.PBEPro?.open?.('upgrade')">Unlock red zone</button>
+      </section>`;
+    }
     if (rz.state !== 'OK') return '';
     const side = (abbr, z) => {
       if (!z) return `<div class="pbe17m-rz"><h4>${esc(abbr)}</h4><p class="pbe17m-none">No red-zone rows.</p></div>`;
