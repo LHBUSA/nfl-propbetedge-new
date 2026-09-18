@@ -26,6 +26,8 @@
  * UNAVAILABLE, never as league average; a split with no plays is not 0.0 EPA;
  * a player with no injury row is absent, not healthy.
  */
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { getNflSession, verifiedEmail, supabaseAdminHeaders } from './_nfl-auth.js';
 import {
   CONTRACT, STATE, ratingUsable, ratingLabel, metric, percentileOf, classify,
@@ -41,6 +43,21 @@ const SELF = process.env.PBE_SELF_ORIGIN
   || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://nfl.propbetedge.ai');
 const DEFAULT_SUPABASE_URL = 'https://tkmlnhmylqnttmnsnief.supabase.co';
 const TIMEOUT_MS = 6000;
+
+/* The 2026 Matchup Lab layer: per-team pass/rush/explosive splits, per-player
+   role and red-zone work, built by scripts/build-matchup-2026.mjs from the same
+   nflverse releases the picks engine already streams. A release artifact, so a
+   page view is a file read and not a season-long aggregation. */
+let LAB = null;
+function lab() {
+  if (LAB !== null) return LAB;
+  try {
+    LAB = JSON.parse(readFileSync(join(process.cwd(), 'data', 'dist', 'matchup-2026.json'), 'utf8'));
+  } catch {
+    LAB = false;            // absent is a state, not a crash
+  }
+  return LAB;
+}
 
 const supabaseUrl = () => String(process.env.SUPABASE_URL || DEFAULT_SUPABASE_URL).replace(/\/$/, '');
 const supabaseSecret = () => String(process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
@@ -155,19 +172,68 @@ function sideFor(teamAbbr, ratings, distributions, week) {
       proe: { ...proe, percentile: percentileOf(proe.value, distributions.proe, 'high') },
       pace: { ...pace, percentile: percentileOf(pace.value, distributions.pace, 'high') },
     },
-    /* Pass/rush/explosive splits need 2026 play-by-play, which this product has
-       no approved path to yet. They are declared unavailable rather than
-       approximated from the team aggregate — an aggregate is not a split. */
-    splits: {
-      state: STATE.UNAVAILABLE,
-      reason: 'no_2026_play_by_play_source',
-      pass: null, rush: null, explosive: null,
+    splits: splitsFor(teamAbbr, distributions),
+  };
+}
+
+/** One split as a displayable metric, with its own play sample. */
+function splitMetric(raw, key, distribution, better) {
+  if (!raw) return { state: STATE.UNAVAILABLE, value: null, plays: null, percentile: null, limited: false };
+  const value = key === 'explosive_rate' ? raw.explosive_rate : raw.epa_per_play;
+  const m = metric(value, { plays: raw.plays, better });
+  return { ...m, percentile: percentileOf(m.value, distribution, better) };
+}
+
+/**
+ * The real pass / rush / explosive splits, computed from 2026 play-by-play.
+ *
+ * Nothing here is derived from the aggregate rating. A team with no plays in a
+ * split gets UNAVAILABLE for that split, and a split under the play floor is
+ * reported LIMITED SAMPLE rather than quietly ranked as though it were settled.
+ */
+function splitsFor(teamAbbr, distributions) {
+  const data = lab();
+  const row = data && data.teams ? data.teams[teamAbbr] : null;
+  if (!row) {
+    return { state: STATE.UNAVAILABLE, reason: data === false ? 'lab_artifact_missing' : 'team_not_in_2026_sample' };
+  }
+  return {
+    state: STATE.OK,
+    season: data.meta?.season ?? null,
+    games: row.games ?? null,
+    weeks: row.weeks ?? [],
+    offence: {
+      pass: splitMetric(row.offence?.pass, 'epa_per_play', distributions.offPass, 'high'),
+      rush: splitMetric(row.offence?.rush, 'epa_per_play', distributions.offRush, 'high'),
+      explosive: splitMetric(row.offence?.all, 'explosive_rate', distributions.offExpl, 'high'),
     },
+    defence: {
+      /* better:'low' — the fewest EPA allowed is the best defence. */
+      pass: splitMetric(row.defence?.pass, 'epa_per_play', distributions.defPass, 'low'),
+      rush: splitMetric(row.defence?.rush, 'epa_per_play', distributions.defRush, 'low'),
+      explosive: splitMetric(row.defence?.all, 'explosive_rate', distributions.defExpl, 'low'),
+    },
+    red_zone: row.red_zone || null,
   };
 }
 
 function distributionsFrom(ratings) {
-  const out = { off: [], def: [], proe: [], pace: [] };
+  const out = {
+    off: [], def: [], proe: [], pace: [],
+    offPass: [], offRush: [], offExpl: [], defPass: [], defRush: [], defExpl: [],
+  };
+  /* League distributions for every split, so a percentile is measured against
+     real peers rather than an assumed scale. */
+  const data = lab();
+  for (const row of Object.values((data && data.teams) || {})) {
+    const push = (arr, v) => { if (Number.isFinite(Number(v)) && v !== null) arr.push(Number(v)); };
+    push(out.offPass, row.offence?.pass?.epa_per_play);
+    push(out.offRush, row.offence?.rush?.epa_per_play);
+    push(out.offExpl, row.offence?.all?.explosive_rate);
+    push(out.defPass, row.defence?.pass?.epa_per_play);
+    push(out.defRush, row.defence?.rush?.epa_per_play);
+    push(out.defExpl, row.defence?.all?.explosive_rate);
+  }
   for (const rating of (ratings?.values?.() || [])) {
     if (!ratingUsable(rating).usable) continue;
     if (Number.isFinite(Number(rating.off_epa_play))) out.off.push(Number(rating.off_epa_play));
@@ -302,19 +368,38 @@ export default async function handler(req, res) {
     /* PBE EDGE. Model fair value against the market — a different question, in
        a different object, on purpose. */
     model: { state: 'PENDING', rows: [] },
-    role: { state: STATE.UNAVAILABLE, reason: 'no_2026_snap_or_usage_source', players: [] },
-    red_zone: { state: STATE.UNAVAILABLE, reason: 'no_2026_play_by_play_source' },
+    role: {
+      state: lab() ? STATE.OK : STATE.UNAVAILABLE,
+      away: roleFor(abbrOf(away)),
+      home: roleFor(abbrOf(home)),
+      note: 'Snap share, targets and carries from 2026 play-by-play and snap counts, '
+        + 'joined on GSIS / PFR through the weekly roster. Never joined by name.',
+    },
+    red_zone: {
+      state: lab() ? STATE.OK : STATE.UNAVAILABLE,
+      away: awaySide?.splits?.red_zone ?? null,
+      home: homeSide?.splits?.red_zone ?? null,
+    },
     news: { state: 'CLIENT_FILTERED', note: 'Attribution is applied in the browser by pbe-news-trust.js', raw: news.ok ? news.value : null },
     data_quality: {
       ratings: ratings.ok ? { state: STATE.OK, teams: ratingMap?.size ?? 0, as_of_week: awaySide?.rating?.as_of_week ?? null }
         : { state: STATE.UNAVAILABLE, reason: ratings.error },
       market: market.state === STATE.NO_MARKET ? { state: STATE.NO_MARKET } : { state: STATE.OK, captured_at: market.captured_at, age_seconds: market.age_seconds },
       availability: injuries.ok ? { state: STATE.OK, generated_at: injuries.value?.generated_at || null } : { state: STATE.UNAVAILABLE, reason: injuries.error },
+      lab: lab()
+        ? {
+          state: STATE.OK,
+          season: lab().meta?.season ?? null,
+          generated_at: lab().meta?.generated_at ?? null,
+          weeks: lab().meta?.weeks ?? [],
+          definitions: lab().meta?.definitions ?? null,
+          counts: lab().meta?.counts ?? null,
+          identity: lab().meta?.identity ?? null,
+        }
+        : { state: STATE.UNAVAILABLE, reason: 'matchup-2026.json not built' },
       missing_inputs: [
-        { input: 'pass / rush / explosive splits', reason: 'no approved 2026 play-by-play path for this surface' },
-        { input: 'snap share, target share, carry share', reason: 'no 2026 snap-count or usage source' },
-        { input: 'red-zone detail', reason: 'no approved 2026 play-by-play path for this surface' },
-        { input: 'pressure, blitz, coverage', reason: '2026 charting data is not licensed' },
+        { input: 'pressure, blitz, coverage shell', reason: '2026 charting data is not licensed' },
+        { input: 'routes run', reason: 'not carried by any source we hold' },
       ],
       upstream: [board, injuries, changes, news, ratings]
         .map(r => ({ source: r.label, ok: r.ok, error: r.error })),
@@ -359,6 +444,30 @@ export function abbrOf(name) {
   return NAME_TO_ABBR[key] || null;
 }
 
+/**
+ * The players who shape this matchup: the highest-usage offensive rows for one
+ * team, ordered by the work they actually did.
+ *
+ * Every row resolved on a strong id in the build step; a player who resolved on
+ * none is absent rather than guessed at, and the counts in data_quality say how
+ * many that was. A week-over-week delta appears only when two real 2026 weeks
+ * exist — one observation is not a trend, and last season is not last week.
+ */
+function roleFor(teamAbbr) {
+  const data = lab();
+  if (!data || !teamAbbr) return { state: STATE.UNAVAILABLE, players: [] };
+  const rows = Object.values(data.players || {})
+    .filter(p => p.team === teamAbbr)
+    .map(p => ({
+      ...p,
+      work: (Number(p.targets) || 0) + (Number(p.carries) || 0),
+    }))
+    .sort((a, b) => b.work - a.work)
+    .slice(0, 8)
+    .map(({ work, gsis_id, ...rest }) => rest);
+  return { state: rows.length ? STATE.OK : STATE.UNAVAILABLE, players: rows };
+}
+
 /** The three dimensions the collision engine compares, from a composed side. */
 function dimensionsOf(side, which) {
   if (!side) return null;
@@ -368,7 +477,14 @@ function dimensionsOf(side, which) {
      only iterates dimensions it never receives produces an empty section
      forever, which is how this one first shipped. */
   const base = which === 'offence' ? side.form.offence : side.form.defence;
-  return { overall: base, pass: null, rush: null, explosive: null };
+  const sp = side.splits;
+  const from = sp?.state === STATE.OK ? (which === 'offence' ? sp.offence : sp.defence) : null;
+  return {
+    overall: base,
+    pass: from?.pass ?? null,
+    rush: from?.rush ?? null,
+    explosive: from?.explosive ?? null,
+  };
 }
 
 /**

@@ -337,3 +337,117 @@ test('the page renders the profile above the collision', () => {
   const api = readFileSync(join(REPO, 'api', 'matchup-intel.js'), 'utf8');
   assert.match(api, /profile: \{ away:/);
 });
+
+/* ============================================================ the 2026 lab */
+
+import { existsSync } from 'node:fs';
+const LAB_PATH = join(REPO, 'data', 'dist', 'matchup-2026.json');
+const LAB = existsSync(LAB_PATH) ? JSON.parse(readFileSync(LAB_PATH, 'utf8')) : null;
+const lab = (name, fn) => test(name, { skip: LAB ? false : 'matchup-2026.json not built' }, fn);
+
+lab('splits are computed from play-by-play, never from the aggregate rating', () => {
+  const build = readFileSync(join(REPO, 'scripts', 'build-matchup-2026.mjs'), 'utf8');
+  assert.match(build, /play_by_play_\$\{SEASON\}\.csv\.gz/);
+  /* Comments stripped: the header names nfl_team_ratings to say these are the
+     same nflverse releases the picks engine streams. The CODE must not read it. */
+  const code = build.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  assert.equal(/nfl_team_ratings/.test(code), false,
+    'the split builder must not read the aggregate rating at all');
+  /* and a pass split really is a different number from the rush split */
+  const team = Object.values(LAB.teams)[0];
+  assert.notEqual(team.offence.pass.epa_per_play, team.offence.rush.epa_per_play);
+});
+
+lab('every split carries its own play sample, and the floor is applied per split', () => {
+  for (const [abbr, t] of Object.entries(LAB.teams)) {
+    for (const side of ['offence', 'defence']) {
+      for (const k of ['pass', 'rush', 'all']) {
+        const s = t[side][k];
+        assert.equal(typeof s.plays, 'number', `${abbr} ${side}.${k}`);
+        assert.equal(s.limited, s.plays < 50, `${abbr} ${side}.${k} limited flag must follow its own sample`);
+        if (s.plays === 0) assert.equal(s.epa_per_play, null, 'no plays is not 0.0 EPA');
+      }
+    }
+    /* pass + rush must account for every offensive play counted */
+    assert.equal(t.offence.pass.plays + t.offence.rush.plays, t.offence.all.plays, `${abbr} offence split total`);
+    assert.equal(t.defence.pass.plays + t.defence.rush.plays, t.defence.all.plays, `${abbr} defence split total`);
+  }
+});
+
+lab('explosive rate uses the documented definition and is a rate, not a count', () => {
+  assert.equal(LAB.meta.definitions.explosive_play, 'yards_gained >= 20');
+  for (const t of Object.values(LAB.teams)) {
+    for (const side of ['offence', 'defence']) {
+      const s = t[side].all;
+      if (!s.plays) continue;
+      assert.ok(s.explosive_rate >= 0 && s.explosive_rate <= 1, 'a rate is between 0 and 1');
+      assert.equal(s.explosive_rate, Math.round((s.explosive_plays / s.plays) * 1e4) / 1e4);
+    }
+  }
+});
+
+lab('role rows resolve on a strong id and never on a name', () => {
+  const build = readFileSync(join(REPO, 'scripts', 'build-matchup-2026.mjs'), 'utf8');
+  assert.match(build, /roster_weekly/, 'the crosswalk is the hub');
+  assert.match(LAB.meta.identity, /Names are never joined/i);
+  assert.equal(LAB.meta.counts.players_dropped_no_strong_id >= 0, true);
+  for (const [gsis, p] of Object.entries(LAB.players)) {
+    assert.match(gsis, /^00-\d{7}$/, `${gsis} is not a GSIS id`);
+    assert.equal(p.gsis_id, gsis);
+    assert.ok(p.team, 'every role row names a team');
+    for (const share of ['target_share', 'carry_share']) {
+      if (p[share] !== null) assert.ok(p[share] >= 0 && p[share] <= 1, `${p.name} ${share}`);
+    }
+  }
+});
+
+lab('a week-over-week delta appears only when two real weeks exist', () => {
+  for (const p of Object.values(LAB.players)) {
+    if (p.week_over_week_state === 'ONE_WEEK_ONLY') {
+      assert.equal(p.week_over_week, null, `${p.name} must not carry a delta from one week`);
+    } else {
+      assert.equal(p.week_over_week_state, 'OK');
+      assert.ok(p.week_over_week.to_week > p.week_over_week.from_week, 'a delta runs forward');
+    }
+  }
+});
+
+lab('red zone uses the documented field and never invents a conversion', () => {
+  assert.equal(LAB.meta.definitions.red_zone, 'yardline_100 <= 20');
+  for (const [abbr, t] of Object.entries(LAB.teams)) {
+    const z = t.red_zone;
+    assert.ok(z.touchdowns <= z.trips || z.trips === 0, `${abbr}: more TDs than trips`);
+    if (z.trips === 0) assert.equal(z.touchdown_rate, null, 'no trips is not a 0% rate');
+    assert.ok(z.carries_inside_20 >= 0 && z.targets_inside_20 >= 0);
+  }
+});
+
+lab('nothing unlicensed is computed', () => {
+  assert.deepEqual(LAB.meta.not_included, ['routes run', 'pressure rate', 'blitz rate', 'coverage shell']);
+  const text = JSON.stringify(LAB).toLowerCase();
+  for (const forbidden of ['routes_run', 'pressure_rate', 'blitz_rate', 'coverage_shell']) {
+    assert.equal(text.includes(forbidden), false, `${forbidden} must not appear`);
+  }
+});
+
+lab('the collision engine can now fire on a real split dimension', () => {
+  /* Measured live: CHI explosive offence 97th percentile against a Minnesota
+     explosive defence at the 6th. The engine must classify that. */
+  const out = collisions({
+    offense: { explosive: { percentile: 97, plays: 70, state: STATE.OK, limited: false } },
+    defense: { explosive: { percentile: 6, plays: 66, state: STATE.OK, limited: false } },
+    offenseTeam: 'CHI', defenseTeam: 'MIN',
+  });
+  assert.equal(out.length, 1);
+  assert.equal(out[0].dimension, 'explosive');
+  assert.match(out[0].statement, /CHI explosive-play offence ranks 97th percentile/);
+  assert.match(out[0].statement, /MIN explosive-play defence allows at the 6th percentile/);
+});
+
+lab('the endpoint reads the lab artifact rather than recomputing it per request', () => {
+  const api = readFileSync(join(REPO, 'api', 'matchup-intel.js'), 'utf8');
+  assert.match(api, /matchup-2026\.json/);
+  assert.equal(/nflverse-data\/releases/.test(api), false, 'no per-request harvest');
+  assert.match(api, /splitsFor/);
+  assert.match(api, /roleFor/);
+});

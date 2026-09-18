@@ -81,10 +81,10 @@ const REQUIRED = [
   'archive/utils.js', 'archive/teams.js', 'archive/superbowls.js', 'archive/hof.js',
   'archive/seasons.js', 'archive/records.js', 'archive/stats-2025.js', 'archive/standings-2025.js',
   'stadiums/sofi-bg.webp', 'stadiums/lambeau-thumb.webp',
-  /* the seven datasets api/* reads from the deployment filesystem at runtime */
+  /* the eight datasets api/* reads from the deployment filesystem at runtime */
   'data/dist/nfl-venues.json', 'data/dist/career-ledger.json', 'data/dist/qb-dna-dataset.json',
   'data/dist/rb-dna-dataset.json', 'data/dist/wr-dna-dataset.json', 'data/dist/te-dna-dataset.json',
-  'data/dist/college-path.json',
+  'data/dist/college-path.json', 'data/dist/matchup-2026.json',
 ];
 
 test('everything the product serves or reads at runtime still ships', () => {

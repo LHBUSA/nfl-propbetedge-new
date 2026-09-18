@@ -157,8 +157,7 @@
       <p class="pbe17m-sample">${r.games_sample !== null && r.games_sample !== undefined
         ? `${esc(r.season || '')} · ${esc(r.games_sample)} games · ${esc(r.plays_sample ?? '—')} plays`
         : 'Sample unavailable'}${r.as_of_week ? ` · through week ${esc(r.as_of_week)}` : ''}</p>
-      ${side.splits?.state === 'UNAVAILABLE'
-        ? `<p class="pbe17m-none">Pass / rush / explosive splits are not sourced for 2026 on this surface.</p>` : ''}
+      ${splitsBlock(side)}
     </section>`;
   }
 
@@ -187,6 +186,105 @@
         ${block(p.game?.away?.abbr || 'AWAY', away)}
         ${block(p.game?.home?.abbr || 'HOME', home)}
       </div>
+    </section>`;
+  }
+
+  /* The Matchup Lab splits, from 2026 play-by-play. A split carries its own
+     play sample because it is a different, smaller sample than the team total —
+     a rush EPA over 18 carries is not the same claim as one over 180. */
+  function splitsBlock(side) {
+    const sp = side.splits;
+    if (!sp || sp.state !== 'OK') {
+      return `<p class="pbe17m-none">Pass / rush / explosive splits are not available for this team${
+        sp?.reason ? ` (${esc(sp.reason.replace(/_/g, ' '))})` : ''}.</p>`;
+    }
+    const row = (label, m) => {
+      if (!m || m.state === 'UNAVAILABLE' || m.value === null) {
+        return `<tr><th>${esc(label)}</th><td colspan="3" class="pbe17m-na">UNAVAILABLE</td></tr>`;
+      }
+      const isRate = label.includes('Explosive');
+      const shown = isRate ? `${(Number(m.value) * 100).toFixed(1)}%` : signed(m.value);
+      return `<tr${m.limited ? ' class="is-limited"' : ''}>
+        <th>${esc(label)}</th>
+        <td>${esc(shown)}</td>
+        <td>${esc(pct(m.percentile) || '—')}</td>
+        <td>${esc(m.plays ?? '—')}${m.limited ? ' <b>LTD</b>' : ''}</td>
+      </tr>`;
+    };
+    return `<div class="pbe17m-splits">
+      <h5>Matchup lab · ${esc(sp.games ?? '—')} game${sp.games === 1 ? '' : 's'}</h5>
+      <table class="pbe17m-table">
+        <thead><tr><th>Split</th><th>EPA / rate</th><th>Pct</th><th>Plays</th></tr></thead>
+        <tbody>
+          ${row('Pass offence', sp.offence?.pass)}
+          ${row('Rush offence', sp.offence?.rush)}
+          ${row('Explosive gained', sp.offence?.explosive)}
+          ${row('Pass defence allowed', sp.defence?.pass)}
+          ${row('Rush defence allowed', sp.defence?.rush)}
+          ${row('Explosive allowed', sp.defence?.explosive)}
+        </tbody>
+      </table>
+    </div>`;
+  }
+
+  /* Who actually does the work. Pro: this is role leverage, not identity. */
+  function rolePanel(p) {
+    const r = p.role || {};
+    if (r.state === 'PRO_REQUIRED') {
+      return `<section class="pbe17m-panel is-pro">
+        <div class="pbe17m-head"><strong>PLAYERS WHO SHAPE THIS MATCHUP</strong><span>NFL PRO</span></div>
+        <p class="pbe17m-note">Snap share, target share, carry share and depth rank for the players who
+        touch these matchups are part of NFL Pro.</p>
+        <button type="button" class="pbe17m-cta" onclick="window.PBEPro?.open?.('upgrade')">Unlock player role</button>
+      </section>`;
+    }
+    if (r.state !== 'OK') return '';
+    const side = (abbr, block) => {
+      const rows = arr(block?.players);
+      if (!rows.length) return `<div class="pbe17m-roleside"><h4>${esc(abbr)}</h4>
+        <p class="pbe17m-none">No usage rows resolved for this team.</p></div>`;
+      return `<div class="pbe17m-roleside"><h4>${esc(abbr)}</h4>
+        <table class="pbe17m-table">
+          <thead><tr><th>Player</th><th>Snap</th><th>Tgt</th><th>Car</th><th>Dep</th></tr></thead>
+          <tbody>${rows.map(x => `<tr>
+            <td>${esc(x.name || '—')}<small>${esc(x.position || '')}</small></td>
+            <td>${x.snap_share === null ? '—' : esc(`${Math.round(x.snap_share * 100)}%`)}</td>
+            <td>${esc(x.targets ?? 0)}${x.target_share ? `<small>${Math.round(x.target_share * 100)}%</small>` : ''}</td>
+            <td>${esc(x.carries ?? 0)}${x.carry_share ? `<small>${Math.round(x.carry_share * 100)}%</small>` : ''}</td>
+            <td>${esc(x.depth_rank ?? '—')}</td>
+          </tr>`).join('')}</tbody>
+        </table>
+        ${rows.some(x => x.week_over_week_state === 'ONE_WEEK_ONLY')
+          ? '<p class="pbe17m-none">Week-over-week change needs two played weeks; only one exists so far.</p>' : ''}
+      </div>`;
+    };
+    return `<section class="pbe17m-panel">
+      <div class="pbe17m-head"><strong>PLAYERS WHO SHAPE THIS MATCHUP</strong>
+        <span>2026 USAGE · JOINED ON ID, NEVER NAME</span></div>
+      <div class="pbe17m-roles">${side(p.game?.away?.abbr, p.role.away)}${side(p.game?.home?.abbr, p.role.home)}</div>
+    </section>`;
+  }
+
+  function redZonePanel(p) {
+    const rz = p.red_zone || {};
+    if (rz.state === 'PRO_REQUIRED') return '';
+    if (rz.state !== 'OK') return '';
+    const side = (abbr, z) => {
+      if (!z) return `<div class="pbe17m-rz"><h4>${esc(abbr)}</h4><p class="pbe17m-none">No red-zone rows.</p></div>`;
+      const cell = (k, v) => `<div><dt>${esc(k)}</dt><dd>${v === null || v === undefined ? '—' : esc(v)}</dd></div>`;
+      return `<div class="pbe17m-rz"><h4>${esc(abbr)}</h4>
+        <dl class="pbe17m-tiles">
+          ${cell('Trips', z.trips)}
+          ${cell('TD rate', z.touchdown_rate === null ? null : `${Math.round(z.touchdown_rate * 100)}%`)}
+          ${cell('Carries in 20', z.carries_inside_20)}
+          ${cell('Targets in 20', z.targets_inside_20)}
+          ${cell('Goal-to-go', z.goal_to_go_plays)}
+        </dl>
+        ${z.limited ? '<b class="pbe17m-limited">LIMITED SAMPLE</b>' : ''}</div>`;
+    };
+    return `<section class="pbe17m-panel">
+      <div class="pbe17m-head"><strong>RED ZONE BATTLE</strong><span>yardline_100 &le; 20</span></div>
+      <div class="pbe17m-rzs">${side(p.game?.away?.abbr, rz.away)}${side(p.game?.home?.abbr, rz.home)}</div>
     </section>`;
   }
 
@@ -319,7 +417,9 @@
       <div class="pbe17m-grid">${formPanel(p.teams?.away, 'AWAY')}${formPanel(p.teams?.home, 'HOME')}</div>
       ${profilePanel(p)}
       ${pressurePanel(p)}
+      ${rolePanel(p)}
       ${availabilityPanel(p)}
+      ${redZonePanel(p)}
       ${modelPanel(p)}
       ${newsPanel(p)}
       ${qualityPanel(p)}
