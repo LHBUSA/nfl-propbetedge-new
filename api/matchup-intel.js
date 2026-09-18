@@ -245,6 +245,25 @@ export default async function handler(req, res) {
     }),
   ];
 
+  /* Requirement: each team's own classified strengths and weaknesses, separate
+     from the collision. A pressure point needs BOTH sides to qualify and is
+     deliberately strict; this says what each team is, so the page has substance
+     on a week where no mismatch clears the bar. */
+  const profileOf = side => {
+    if (!side) return null;
+    const out = [];
+    for (const [key, label] of [['offence', 'Offence'], ['defence', 'Defence'],
+      ['proe', 'Pass rate over expected'], ['pace', 'Pace']]) {
+      const m = side.form?.[key];
+      if (!m || m.state === STATE.UNAVAILABLE) continue;
+      const band = classify(m.percentile);
+      if (band.band === 'STRENGTH' || band.band === 'WEAKNESS') {
+        out.push({ dimension: key, label, band: band.band, percentile: m.percentile, plays: m.plays, limited: m.limited });
+      }
+    }
+    return out;
+  };
+
   const payload = {
     ok: true,
     contract: CONTRACT,
@@ -264,6 +283,7 @@ export default async function handler(req, res) {
       started: !!e.started, books: e.books ?? null,
     })),
     teams: { away: awaySide, home: homeSide },
+    profile: { away: profileOf(awaySide), home: profileOf(homeSide) },
     availability: {
       away: away ? availabilityFor(abbrOf(away)) : null,
       home: home ? availabilityFor(abbrOf(home)) : null,

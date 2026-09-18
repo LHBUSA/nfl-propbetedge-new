@@ -162,6 +162,34 @@
     </section>`;
   }
 
+  /* Each team's own classified profile. Separate from the collision on purpose:
+     a pressure point needs both sides to qualify, and on a week where none does
+     the reader still has to be able to see what each team is. */
+  function profilePanel(p) {
+    const block = (abbr, rows) => {
+      if (!rows || !rows.length) {
+        return `<div class="pbe17m-prof"><h4>${esc(abbr)}</h4>
+          <p class="pbe17m-none">No dimension clears the strength or weakness threshold.</p></div>`;
+      }
+      return `<div class="pbe17m-prof"><h4>${esc(abbr)}</h4>
+        <ul>${rows.map(r => `<li class="is-${esc(r.band.toLowerCase())}">
+          <b>${esc(r.band)}</b><span>${esc(r.label)}</span>
+          <em>${esc(pct(r.percentile) || '—')} pct</em>
+          ${r.limited ? '<small class="pbe17m-limited">LIMITED SAMPLE</small>' : ''}
+        </li>`).join('')}</ul></div>`;
+    };
+    const away = p.profile?.away, home = p.profile?.home;
+    if (!away && !home) return '';
+    return `<section class="pbe17m-panel">
+      <div class="pbe17m-head"><strong>STRENGTHS &amp; WEAKNESSES</strong>
+        <span>TOP ${esc(100 - (p.thresholds?.strength_percentile ?? 75))}% = STRENGTH · BOTTOM ${esc(p.thresholds?.weakness_percentile ?? 25)}% = WEAKNESS</span></div>
+      <div class="pbe17m-profs">
+        ${block(p.game?.away?.abbr || 'AWAY', away)}
+        ${block(p.game?.home?.abbr || 'HOME', home)}
+      </div>
+    </section>`;
+  }
+
   function pressurePanel(p) {
     const points = arr(p.pressure_points);
     if (!points.length) {
@@ -289,6 +317,7 @@
       ${hero(p)}
       ${mattersPanel(p)}
       <div class="pbe17m-grid">${formPanel(p.teams?.away, 'AWAY')}${formPanel(p.teams?.home, 'HOME')}</div>
+      ${profilePanel(p)}
       ${pressurePanel(p)}
       ${availabilityPanel(p)}
       ${modelPanel(p)}

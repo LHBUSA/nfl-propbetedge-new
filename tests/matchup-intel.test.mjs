@@ -307,3 +307,33 @@ test('the collision engine fires on the dimension that is actually sourced', asy
   /* 'overall' must read as overall, never as a pass or rush split we do not have. */
   assert.equal(/pass |rush /.test(out[0].statement), false);
 });
+
+test('a team profile classifies each dimension independently of the collision', () => {
+  /* The collision needs BOTH sides to qualify and is deliberately strict — on
+     the week-2 slate measured in production, none of eight games cleared it.
+     The profile is what carries the page: it says what each team IS, from the
+     same thresholds, and it fires on one side alone. */
+  const side = {
+    form: {
+      offence: { percentile: 97, plays: 130, state: STATE.OK, limited: false },
+      defence: { percentile: 6, plays: 130, state: STATE.OK, limited: false },
+      proe: { percentile: 50, plays: 130, state: STATE.OK, limited: false },
+      pace: { percentile: null, state: STATE.UNAVAILABLE },
+    },
+  };
+  const bands = ['offence', 'defence', 'proe', 'pace']
+    .map(k => [k, classify(side.form[k].percentile).band]);
+  assert.deepEqual(bands, [
+    ['offence', 'STRENGTH'], ['defence', 'WEAKNESS'],
+    ['proe', 'NEUTRAL'], ['pace', STATE.UNAVAILABLE],
+  ]);
+});
+
+test('the page renders the profile above the collision', () => {
+  const page = readFileSync(join(REPO, 'matchups-v3.js'), 'utf8');
+  assert.match(page, /STRENGTHS &amp; WEAKNESSES/);
+  assert.ok(page.indexOf('profilePanel(p)}') < page.indexOf('pressurePanel(p)}'),
+    'what each team is comes before where they collide');
+  const api = readFileSync(join(REPO, 'api', 'matchup-intel.js'), 'utf8');
+  assert.match(api, /profile: \{ away:/);
+});
