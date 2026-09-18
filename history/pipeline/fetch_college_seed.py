@@ -130,11 +130,24 @@ SELECT ?item ?pfr WHERE {
 }
 """
 
+# MEASURED: P831 "parent club" on a football programme does NOT point at the
+# university. It points at the ATHLETICS CLUB — "Georgia State Panthers football"
+# -> "Georgia State Panthers" — and the club then represents the university via
+# P1268. Joining on P831 alone matched zero of 7,149 P69 targets, because P69
+# names the university and P831 names the club. The second hop is the fix:
+# P831/P1268 reaches a university for 194 of 195 programmes, and 190 of those
+# universities really are attended by someone with a PFR id.
+#
+# The conference (P118) sits on the club more often than on the programme, so
+# both are read and the programme's own value wins where it exists.
 PROGRAMS = """
-SELECT ?team ?teamLabel ?srcfbSchool ?school ?schoolLabel ?conference ?conferenceLabel
+SELECT ?team ?teamLabel ?srcfbSchool ?club ?clubLabel ?school ?schoolLabel
+       ?conference ?conferenceLabel ?clubConference ?clubConferenceLabel
        ?venue ?venueLabel ?inception ?coach ?coachLabel WHERE {
   ?team wdt:P8761 ?srcfbSchool .
-  OPTIONAL { ?team wdt:P831 ?school }
+  OPTIONAL { ?team wdt:P831 ?club .
+             OPTIONAL { ?club wdt:P1268 ?school }
+             OPTIONAL { ?club wdt:P118 ?clubConference } }
   OPTIONAL { ?team wdt:P118 ?conference }
   OPTIONAL { ?team wdt:P115 ?venue }
   OPTIONAL { ?team wdt:P571 ?inception }

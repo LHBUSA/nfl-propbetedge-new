@@ -15,7 +15,9 @@
     "college:eada": "python pipeline/fetch_eada.py --years 2003 2025",
     "college:build": "python pipeline/build_college_spine.py",
     "migrations": "node deploy/generate.mjs",
-    "migrations:check": "node deploy/generate.mjs --check"
+    "migrations:check": "node deploy/generate.mjs --check",
+    "college:crosswalk": "python pipeline/build_college_crosswalk.py",
+    "college:product": "node pipeline/build_college_product.mjs"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.2.17"

@@ -201,11 +201,16 @@ def main():
     for r in programs_seed['rows']:
         qid = r['team']
         pid = gid('gct', qid)
+        # r['school'] is already the UNIVERSITY, reached as P831/P1268: the
+        # programme's parent club, then the institution that club represents.
+        # P831 alone is the athletics club and matches no P69 target at all.
         school_qid = r.get('school')
         school_id = school_by_qid.get(school_qid) if school_qid else None
         if school_id is None:
-            # A programme whose parent club is absent keeps no invented school.
-            orphan_programs.append({'program': qid, 'label': r.get('teamLabel')})
+            # A programme whose institution cannot be reached keeps no invented
+            # school. It is a gap, not a guess.
+            orphan_programs.append({'program': qid, 'label': r.get('teamLabel'),
+                                    'club': r.get('clubLabel')})
             continue
         if once('football.college_team', pid, global_college_team_id=pid, global_school_id=school_id,
                 nickname=r.get('teamLabel'), source_snapshot_id=snap_programs):
@@ -216,7 +221,9 @@ def main():
         program_by_qid[qid] = pid
         program_by_school.setdefault(school_id, pid)
 
-        conf_qid = r.get('conference')
+        # The programme's own conference wins; the club's is the fallback. Both
+        # exist in Wikidata and neither is present for every programme.
+        conf_qid = r.get('conference') or r.get('clubConference')
         if conf_qid and conf_qid in conf_by_qid:
             mid = gid('gcm', qid, conf_qid)
             # Wikidata's P118 carries no season bounds here, so the membership is

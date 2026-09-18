@@ -1,0 +1,61 @@
+/* College Path — the verified career path before the NFL, under the Player DNA
+   hero. Additive only; restyles nothing the DNA pages own. Same visual family
+   as player-career-ledger-v1.css, with the timeline geometry from records-v2. */
+
+.pbe-cp{margin:14px 0 6px;border:1px solid rgba(255,255,255,.09);border-radius:12px;background:rgba(9,12,17,.86);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);padding:14px;min-width:0;color:var(--pbe-paper,#eef2f7)}
+.pbe-cp *{box-sizing:border-box}
+
+.pbe-cp-head{display:flex;align-items:center;justify-content:space-between;gap:10px 16px;flex-wrap:wrap;margin-bottom:12px}
+.pbe-cp-head>div{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;min-width:0}
+.pbe-cp-eyebrow{display:inline-flex;align-items:center;min-height:24px;padding:0 10px;border-radius:999px;border:1px solid rgba(125,167,255,.32);background:rgba(125,167,255,.09);color:#8ec5ff;font:800 11px/1 'JetBrains Mono',ui-monospace,monospace;letter-spacing:.12em;white-space:nowrap}
+.pbe-cp-sub{color:var(--pbe-dim,#8b95a5);font:700 11px/1.3 'JetBrains Mono',ui-monospace,monospace;letter-spacing:.06em}
+/* Says what the section is, so a reader never waits for stats that are not coming. */
+.pbe-cp-tag{color:var(--pbe-faint,#5d6675);font:700 10px/1 'JetBrains Mono',ui-monospace,monospace;letter-spacing:.1em;white-space:nowrap}
+
+/* ---- timeline ---------------------------------------------------------- */
+.pbe-cp-time{list-style:none;margin:0;padding:0}
+.pbe-cp-row{display:grid;grid-template-columns:15px 1fr;gap:12px;min-height:54px}
+.pbe-cp-axis{position:relative}
+.pbe-cp-axis:before{content:'';position:absolute;left:7px;top:2px;bottom:0;width:1px;background:rgba(125,167,255,.18)}
+.pbe-cp-row.is-last .pbe-cp-axis:before{bottom:auto;height:14px}
+.pbe-cp-axis i{position:absolute;left:3px;top:5px;width:9px;height:9px;border:2px solid #0b0f15;border-radius:50%;background:#8ec5ff;box-shadow:0 0 0 1px rgba(125,167,255,.28)}
+.pbe-cp-body{padding:0 0 16px;min-width:0}
+.pbe-cp-body h4{margin:0;color:var(--pbe-paper,#eef2f7);font:700 15px/1.25 'Inter',system-ui,sans-serif;overflow-wrap:anywhere}
+.pbe-cp-meta{margin:4px 0 0;color:var(--pbe-paper-2,#d8dee9);font:700 12px/1.35 'JetBrains Mono',ui-monospace,monospace;letter-spacing:.03em;overflow-wrap:anywhere}
+.pbe-cp-prog{margin:3px 0 0;color:var(--pbe-dim,#8b95a5);font:600 12px/1.35 'Inter',system-ui,sans-serif}
+.pbe-cp-basis{margin:5px 0 0;color:var(--pbe-faint,#5d6675);font:500 11.5px/1.45 'Inter',system-ui,sans-serif}
+.pbe-cp-prec{margin:3px 0 0;color:var(--pbe-faint,#5d6675);font:700 10px/1.3 'JetBrains Mono',ui-monospace,monospace;letter-spacing:.08em;text-transform:uppercase}
+
+/* ---- blocks ------------------------------------------------------------ */
+.pbe-cp-block{margin-top:12px;padding-top:11px;border-top:1px solid rgba(255,255,255,.06)}
+.pbe-cp-block h5{margin:0 0 7px;color:var(--pbe-dim,#8b95a5);font:800 10.5px/1 'JetBrains Mono',ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase}
+.pbe-cp-coaches{list-style:none;margin:0;padding:0;display:grid;gap:5px}
+.pbe-cp-coaches li{display:flex;align-items:baseline;gap:8px 10px;flex-wrap:wrap;padding:7px 10px;border:1px solid rgba(255,255,255,.06);border-radius:8px;background:rgba(255,255,255,.025);min-width:0}
+.pbe-cp-coaches b{color:var(--pbe-paper,#eef2f7);font:700 13px/1.3 'Inter',system-ui,sans-serif;overflow-wrap:anywhere}
+.pbe-cp-coaches span{color:var(--pbe-paper-2,#d8dee9);font:700 11px/1 'JetBrains Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.pbe-cp-coaches em{margin-left:auto;color:var(--pbe-faint,#5d6675);font:500 11px/1.3 'Inter',system-ui,sans-serif;font-style:normal}
+.pbe-cp-route{margin:0;color:var(--pbe-paper-2,#d8dee9);font:600 13px/1.4 'Inter',system-ui,sans-serif}
+.pbe-cp-route b{color:var(--pbe-paper,#eef2f7);font-weight:700}
+.pbe-cp-route span{margin-left:6px;color:#8ec5ff;font:800 12px/1 'JetBrains Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+
+/* A stated absence, never an empty box a reader could fill in themselves. */
+.pbe-cp-none{margin:0;color:var(--pbe-faint,#5d6675);font:500 12px/1.5 'Inter',system-ui,sans-serif}
+.pbe-cp-foot{margin:12px 0 0;padding-top:10px;border-top:1px solid rgba(255,255,255,.06);color:var(--pbe-faint,#5d6675);font:600 10.5px/1.4 'JetBrains Mono',ui-monospace,monospace;letter-spacing:.05em;overflow-wrap:anywhere}
+
+/* ---- the unresolved state ---------------------------------------------- */
+.pbe-cp.is-none{border-style:dashed;border-color:rgba(255,255,255,.10);background:rgba(9,12,17,.6)}
+.pbe-cp-empty{margin:0;color:var(--pbe-paper-2,#d8dee9);font:600 13px/1.4 'Inter',system-ui,sans-serif}
+.pbe-cp-empty b{color:var(--pbe-paper,#eef2f7);font-weight:700}
+.pbe-cp-note{margin:6px 0 0;color:var(--pbe-faint,#5d6675);font:500 12px/1.5 'Inter',system-ui,sans-serif;max-width:62ch}
+
+@media (max-width:560px){
+  .pbe-cp{padding:12px;border-radius:11px}
+  .pbe-cp-body h4{font-size:14px}
+  .pbe-cp-coaches em{margin-left:0;flex-basis:100%}
+  .pbe-cp-tag{flex-basis:100%}
+}
+
+/* An open interval is shown open. A tenure whose end the source never recorded
+   must not read as a single season. */
+.pbe-cp-coaches span.is-open{color:var(--pbe-dim,#8b95a5)}
+.pbe-cp-coaches span.is-open:after{content:'?';margin-left:2px;color:var(--pbe-faint,#5d6675);font-size:10px;vertical-align:super}

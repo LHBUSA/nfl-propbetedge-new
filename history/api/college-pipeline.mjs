@@ -58,6 +58,18 @@ export const FORBIDDEN_SUBSTRINGS = [
   'spread', 'moneyline', 'over_under',
 ];
 
+/**
+ * Keys that are provenance rather than content, and so are exempt from the
+ * substring check.
+ *
+ * `snapshot_id` is the case that proved the exemption necessary: it contains
+ * "snaps", which is on the forbidden list because snap counts are a rejected
+ * source. A citation is not a statistic. Without this, the guard would force the
+ * payload to drop the one field that makes it auditable — which is the opposite
+ * of what it is for.
+ */
+export const PROVENANCE_KEYS = new Set(['provenance', 'snapshot_id', 'source_id', 'lane', 'sources', 'lanes']);
+
 export class ContractViolation extends Error {
   constructor(findings) {
     super(`college pipeline contract violation: ${findings.join('; ')}`);
@@ -73,8 +85,9 @@ const isPlainObject = v => v !== null && typeof v === 'object' && !Array.isArray
  * at any depth, and is the gate the tests assert on — the allowlist is the
  * intent, this is the proof.
  *
- * `provenance` is exempt from the substring check: it names source ids, and a
- * source id that contains 'cfbd' is exactly the disclosure we want to keep.
+ * PROVENANCE_KEYS are exempt from the substring check: they name source ids and
+ * snapshots, and a source id that contains 'cfbd' is exactly the disclosure we
+ * want to keep.
  */
 export function assertContract(payload, { path = '', findings = [] } = {}) {
   const walk = (node, at) => {
@@ -82,7 +95,7 @@ export function assertContract(payload, { path = '', findings = [] } = {}) {
     if (!isPlainObject(node)) return;
     for (const [key, v] of Object.entries(node)) {
       const here = at ? `${at}.${key}` : key;
-      if (key === 'provenance') continue;
+      if (PROVENANCE_KEYS.has(key)) continue;
       const lower = key.toLowerCase();
       const hit = FORBIDDEN_SUBSTRINGS.find(f => lower.includes(f));
       if (hit) findings.push(`${here} matches forbidden "${hit}"`);

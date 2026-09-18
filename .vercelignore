@@ -56,7 +56,7 @@ workers/nfl-weight-tuner/
 workers/nfl-picks-engine-shared/tests/
 
 # --- derived datasets the runtime never reads --------------------------------
-# api/* reads exactly six files from data/dist with readFileSync, so those stay.
+# api/* reads exactly seven files from data/dist with readFileSync, so those stay.
 data/dist/active-*.json
 data/dist/media-coverage*.json
 data/dist/*-coverage-audit.json

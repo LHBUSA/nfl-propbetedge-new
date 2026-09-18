@@ -1,7 +1,7 @@
 /* PropBetEdge NFL - ordered page/product upgrade loader v45 recovery */
 (() => {
   'use strict';
-  const VERSION='20260917pbecastwx4';
+  const VERSION='20260918collegepath1';
   const upgrades=[
     /* Establish the final homepage authority first. v6 replaces the v5 DOM with
        .pbehome6; v7 historically registered itself after that without repainting
@@ -214,7 +214,13 @@
     /* Career Ledger: the factual game-by-game record under the hero (CAREER |
        SEASONS | GAME LOG), from /api/player-career. Attaches the same way;
        feeds nothing analytical. */
-    {css:'./player-career-ledger-v1.css',js:'./player-career-ledger-v1.js'}
+    {css:'./player-career-ledger-v1.css',js:'./player-career-ledger-v1.js'},
+    /* College Path: the verified career path BEFORE the NFL — institution,
+       programme, conference, years, head coach in post, route into professional
+       football. Loaded last of the hero-attached layers because it anchors after
+       whichever of them is on screen. Factual only: it carries no college
+       statistics, and there are none to add — see history/docs/RIGHTS_ENGINE.md. */
+    {css:'./nfl-college-path-v1.css',js:'./nfl-college-path-v1.js'}
   ];
 
   /* ---- Terminal route authorities ----------------------------------------

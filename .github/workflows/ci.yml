@@ -77,10 +77,12 @@ jobs:
       - name: NFL game context contract
         run: node --test tests/nfl-schedule-broadcast.test.mjs tests/nfl-game-context.test.mjs
 
-      # Week transition (primary_slate vs provider current_week) and the Career
-      # Ledger (coverage labels, live totals, final transition, no double count).
-      - name: Week transition and Career Ledger contracts
-        run: node --test tests/nfl-slate.test.mjs tests/player-career-ledger.test.mjs tests/player-dna-next-game.test.mjs tests/nfl-state-invariants.test.mjs tests/pbecast-preview.test.mjs
+      # Week transition (primary_slate vs provider current_week), the Career
+      # Ledger (coverage labels, live totals, final transition, no double count)
+      # and College Path (the rights refusals, and that an unresolved player
+      # never reads as a negative claim about the player).
+      - name: Week transition, Career Ledger and College Path contracts
+        run: node --test tests/nfl-slate.test.mjs tests/player-career-ledger.test.mjs tests/player-dna-next-game.test.mjs tests/nfl-state-invariants.test.mjs tests/pbecast-preview.test.mjs tests/nfl-college-path.test.mjs
 
       - name: Validate Vercel config JSON
         run: node -e "JSON.parse(require('fs').readFileSync('vercel.json','utf8')); console.log('vercel.json OK')"
