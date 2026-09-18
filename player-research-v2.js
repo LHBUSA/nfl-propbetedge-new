@@ -78,13 +78,10 @@
         items.push({type:'2025 FINAL STATS',title:cat.title||'2025 leaderboard',copy:`${row[2]||''}${pairs.length?` · ${pairs.join(' · ')}`:''}`});
       });
     });
-    (window.HOF_MEMBERS||[]).forEach(m=>{if(samePlayer(m.name,player))items.push({type:'HALL OF FAME',title:`Inducted ${m.inducted||'—'} · ${m.pos||''}`,copy:`${m.teams||''}${m.era?` · ${m.era}`:''}${m.note?` · ${m.note}`:''}`});});
-    (window.MVP_HISTORY||[]).forEach(m=>{if(samePlayer(m.player,player))items.push({type:'MVP HISTORY',title:`${m.year} League MVP`,copy:`${m.pos||''}${m.team?` · ${m.team}`:''}`});});
-    Object.entries(window.NFL_RECORDS||{}).forEach(([cat,rows])=>(rows||[]).forEach(r=>{if(samePlayer(r.holder,player)||String(r.holder||'').toLowerCase().includes(String(player||'').toLowerCase()))items.push({type:`NFL RECORD · ${cat}`,title:`${r.record} · ${r.stat}`,copy:`${r.team||''}${r.year?` · ${r.year}`:''}${r.note?` · ${r.note}`:''}`});}));
-    (window.SUPER_BOWLS||[]).forEach(sb=>{const mvp=String(sb.mvp||'').split(',')[0].trim();if(samePlayer(mvp,player))items.push({type:'SUPER BOWL MVP',title:`Super Bowl ${sb.roman||''} · ${sb.year||''}`,copy:`${sb.winner||''} ${sb.score||''} vs ${sb.loser||''} · ${sb.venue||''}`});});
-    (window.NFL_SEASONS||[]).forEach(s=>{
-      [['Passing Leader',s.passLeader],['Rushing Leader',s.rushLeader],['Receiving Leader',s.recLeader]].forEach(([label,l])=>{if(l?.player&&samePlayer(l.player,player))items.push({type:`SEASON ARCHIVE · ${s.year}`,title:label,copy:`${l.team||''}${l.yards?` · ${Number(l.yards).toLocaleString()} YDS`:''}${l.tds?` · ${l.tds} TD`:''}`});});
-    });
+    /* Hall of Fame, MVP history, all-time records, Super Bowl MVPs and season
+       leaders came from archive datasets with no provenance and no rights
+       classification, so they are not shown here. 2025 final stats above are
+       provenanced (NFL.com, verified 2026-08-29) and stay. */
     const seen=new Set();return items.filter(item=>{const key=`${item.type}|${item.title}|${item.copy}`;if(seen.has(key))return false;seen.add(key);return true;}).slice(0,16);
   }
 

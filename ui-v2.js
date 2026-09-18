@@ -187,7 +187,7 @@
       ['🏈','Teams','32 CLUBS','Team profiles, rosters and franchise research.','teams'],
       ['📊','Stats Leaders','ARCHIVE','Season leaders and player statistical research.','stats'],
       ['🏆','Standings','ARCHIVE','Season standings and conference context.','standings'],
-      ['📚','Season Archive','106 SEASONS','Season-by-season encyclopedia and historical context.','seasonhistory'],
+      ['📚','Season Archive','PROVENANCE REVIEW','Season history is being re-sourced from records that carry provenance.','seasonhistory'],
       ['📈','Records','ALL TIME','League records, milestones and historical leaders.','records'],
       ['🏅','Hall of Fame','HISTORY','Hall of Fame player research and classes.','hof']
     ];

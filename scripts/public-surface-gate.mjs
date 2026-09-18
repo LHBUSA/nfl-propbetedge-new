@@ -43,7 +43,7 @@ const MUST_SERVE = [
   '/pbe-tokens.css', '/base-v3.css', '/site.webmanifest',
   '/archive/teams.js', '/archive/superbowls.js', '/archive/standings-2025.js',
   '/stadiums/sofi-bg.webp',
-  '/api/nfl-live', '/api/pbe-picks?view=state', '/api/home-market', '/api/auth-session',
+  '/api/nfl-live', '/api/pbe-picks?view=state', '/api/home-market?away=SF&home=LA', '/api/auth-session',
 ];
 
 async function status(path) {

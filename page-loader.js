@@ -7,6 +7,9 @@
        .pbehome6; v7 historically registered itself after that without repainting
        until the next navigation. The loader explicitly invokes v7 after install. */
     {js:'./team-globals-v1.js'},
+    /* Decides which historical surfaces may publish. Loaded before every
+       surface that states a historical fact; those surfaces fail closed. */
+    {js:'./history-provenance-v1.js'},
     /* The one way into PBEcast for a chosen game (explicit selection handoff).
        Loaded before every surface that links a game to PBEcast. */
     {js:'./pbe-game-handoff-v1.js'},
