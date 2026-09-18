@@ -143,8 +143,8 @@ test('a collision fires only when a strength meets a weakness in the same dimens
   assert.equal(out[0].dimension, 'pass');
   assert.equal(out[0].offense_team, 'CAR');
   assert.equal(out[0].defense_team, 'ATL');
-  assert.match(out[0].statement, /CAR pass offence ranks 82nd/);
-  assert.match(out[0].statement, /ATL pass defence allows at the 18th/);
+  assert.match(out[0].statement, /CAR pass offense ranks 82nd/);
+  assert.match(out[0].statement, /ATL pass defense allows at the 18th/);
   /* Descriptive only — never a claim about the result. */
   assert.equal(/will |dominat|lock|guarantee/i.test(out[0].statement), false);
 });
@@ -188,7 +188,7 @@ test('every "what matters most" line traces to a state that is displayed', () =>
   const lines = whatMattersMost({
     away: { team: 'CAR', rating: { state: STATE.PRIOR_BASELINE }, availability: [{ status: 'OUT' }] },
     home: { team: 'ATL', rating: { state: STATE.OK, prior_weight: 0.28 }, availability: [] },
-    pressurePoints: [{ statement: 'CAR pass offence ranks 82nd percentile; ATL pass defence allows at the 18th percentile.', limited: false }],
+    pressurePoints: [{ statement: 'CAR pass offense ranks 82nd percentile; ATL pass defense allows at the 18th percentile.', limited: false }],
     market: { state: STATE.OK },
   });
   const text = lines.map(l => l.text).join(' | ');
@@ -302,8 +302,8 @@ test('the collision engine fires on the dimension that is actually sourced', asy
   });
   assert.equal(out.length, 1);
   assert.equal(out[0].dimension, 'overall');
-  assert.match(out[0].statement, /PHI overall offence ranks 81st percentile/);
-  assert.match(out[0].statement, /TEN overall defence allows at the 16th percentile/);
+  assert.match(out[0].statement, /PHI overall offense ranks 81st percentile/);
+  assert.match(out[0].statement, /TEN overall defense allows at the 16th percentile/);
   /* 'overall' must read as overall, never as a pass or rush split we do not have. */
   assert.equal(/pass |rush /.test(out[0].statement), false);
 });
@@ -440,8 +440,8 @@ lab('the collision engine can now fire on a real split dimension', () => {
   });
   assert.equal(out.length, 1);
   assert.equal(out[0].dimension, 'explosive');
-  assert.match(out[0].statement, /CHI explosive-play offence ranks 97th percentile/);
-  assert.match(out[0].statement, /MIN explosive-play defence allows at the 6th percentile/);
+  assert.match(out[0].statement, /CHI explosive-play offense ranks 97th percentile/);
+  assert.match(out[0].statement, /MIN explosive-play defense allows at the 6th percentile/);
 });
 
 lab('the endpoint reads the lab artifact rather than recomputing it per request', () => {
@@ -450,4 +450,86 @@ lab('the endpoint reads the lab artifact rather than recomputing it per request'
   assert.equal(/nflverse-data\/releases/.test(api), false, 'no per-request harvest');
   assert.match(api, /splitsFor/);
   assert.match(api, /roleFor/);
+});
+
+/* ---------------------------------------------------- US spelling guard */
+
+/* This is a US football product: the page says OFFENSE and DEFENSE.
+ *
+ * Internal identifiers are deliberately out of scope — the artifact's `offence`
+ * key, `const offence = metric(...)`, the `which === 'offence'` dispatch and
+ * `off_epa_play` never reach a screen, and renaming them would be churn with no
+ * reader-visible effect.
+ *
+ * The rule this encodes: the British spelling is COPY when it sits inside a
+ * string or in the literal text of a template, and an IDENTIFIER everywhere
+ * else. So the check reads the strings rather than trying to subtract every
+ * shape an identifier can take — which is also how an aria-label, a title or a
+ * generated sentence would leak, since all three are strings.
+ */
+function visibleStrings(code) {
+  const out = [];
+  /* Single and double quoted literals. */
+  for (const m of code.matchAll(/'((?:[^'\\\n]|\\.)*)'|"((?:[^"\\\n]|\\.)*)"/g)) {
+    out.push(m[1] ?? m[2] ?? '');
+  }
+  /* Template literals, with every ${...} expression blanked so a property read
+     inside an interpolation is not mistaken for copy. */
+  for (const m of code.matchAll(/`((?:[^`\\]|\\.)*)`/g)) {
+    out.push(m[1].replace(/\$\{[^}]*\}/g, ' '));
+  }
+  return out;
+}
+
+/** The strings from one source that a reader could actually see. */
+function copyOf(code) {
+  return visibleStrings(code)
+    /* A bare key passed as a string argument is an identifier, not copy. */
+    .filter(s => !/^(offence|defence)$/.test(s.trim()))
+    .filter(s => /offence|defence/i.test(s));
+}
+
+test('no user-visible copy ships the British spelling', () => {
+  const files = ['matchups-v3.js', 'api/matchup-intel.js', 'api/_matchup/intel-core.js'];
+  const offenders = [];
+  for (const rel of files) {
+    const text = readFileSync(join(REPO, ...rel.split('/')), 'utf8');
+    /* Comments are prose for maintainers, not product copy. */
+    const code = text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    for (const s of copyOf(code)) offenders.push(`${rel}: ${JSON.stringify(s)}`);
+  }
+  assert.deepEqual(offenders, [], `user-visible British spelling found:\n${offenders.join('\n')}`);
+});
+
+test('the spelling guard actually catches a leak', () => {
+  /* A guard that cannot fail is not a guard: every shape that reaches a reader
+     — a label, a template, an aria-label, a title — must be caught. */
+  for (const leak of [
+    "const label = 'Pass offence';",
+    'const t = `${team} pass offence ranks first`;',
+    "el.setAttribute('aria-label', 'Rush defence allowed');",
+    'const h = \'<b title="Pass offence">x</b>\';',
+  ]) {
+    assert.ok(copyOf(leak).length > 0, `guard missed: ${leak}`);
+  }
+  /* and must not fire on an identifier or an interpolated property read */
+  for (const ok of [
+    'const offence = metric(x);',
+    'const t = `${sp.offence?.pass} plays`;',
+    "const d = which === 'offence' ? a : b;",
+    'push(out.offPass, row.offence?.pass?.epa_per_play);',
+  ]) {
+    assert.deepEqual(copyOf(ok), [], `guard false-positived on: ${ok}`);
+  }
+});
+
+test('the collision sentence is generated in US spelling', () => {
+  const out = collisions({
+    offense: { pass: { percentile: 82, plays: 200, state: STATE.OK, limited: false } },
+    defense: { pass: { percentile: 18, plays: 200, state: STATE.OK, limited: false } },
+    offenseTeam: 'CAR', defenseTeam: 'ATL',
+  });
+  assert.equal(/offence|defence/i.test(out[0].statement), false, out[0].statement);
+  assert.match(out[0].statement, /offense ranks/);
+  assert.match(out[0].statement, /defense allows/);
 });

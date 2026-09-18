@@ -205,9 +205,9 @@ export function collisions({ offense, defense, offenseTeam, defenseTeam }) {
       defense_plays: def.plays ?? null,
       limited: !!(off.limited || def.limited),
       /* Descriptive, traceable to the two numbers beside it. */
-      statement: `${offenseTeam} ${DIMENSION_LABEL[dimension] || dimension} offence ranks `
+      statement: `${offenseTeam} ${DIMENSION_LABEL[dimension] || dimension} offense ranks `
         + `${ordinal(off.percentile)} percentile; ${defenseTeam} `
-        + `${DIMENSION_LABEL[dimension] || dimension} defence allows at the `
+        + `${DIMENSION_LABEL[dimension] || dimension} defense allows at the `
         + `${ordinal(def.percentile)} percentile.`,
     });
   }

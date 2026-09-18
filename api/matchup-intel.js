@@ -146,8 +146,8 @@ function sideFor(teamAbbr, ratings, distributions, week) {
   const usable = ratingUsable(rating).usable;
   const plays = usable ? rating.plays_sample ?? null : null;
 
-  const offence = metric(usable ? rating.off_epa_play : null, { plays, label: 'Offence EPA/play', better: 'high' });
-  const defence = metric(usable ? rating.def_epa_play : null, { plays, label: 'Defence EPA/play allowed', better: 'low' });
+  const offence = metric(usable ? rating.off_epa_play : null, { plays, label: 'Offense EPA/play', better: 'high' });
+  const defence = metric(usable ? rating.def_epa_play : null, { plays, label: 'Defense EPA/play allowed', better: 'low' });
   const proe = metric(usable ? rating.proe : null, { plays, label: 'PROE', better: 'high' });
   const pace = metric(usable ? rating.pace : null, { plays, label: 'Plays per game', better: 'high' });
 
@@ -318,7 +318,7 @@ export default async function handler(req, res) {
   const profileOf = side => {
     if (!side) return null;
     const out = [];
-    for (const [key, label] of [['offence', 'Offence'], ['defence', 'Defence'],
+    for (const [key, label] of [['offence', 'Offense'], ['defence', 'Defense'],
       ['proe', 'Pass rate over expected'], ['pace', 'Pace']]) {
       const m = side.form?.[key];
       if (!m || m.state === STATE.UNAVAILABLE) continue;

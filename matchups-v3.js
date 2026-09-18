@@ -149,8 +149,8 @@
         <span class="pbe17m-ratepill is-${esc(String(r.state).toLowerCase())}">${esc(r.label || '—')}</span></div>
       ${r.note ? `<p class="pbe17m-note">${esc(r.note)}</p>` : ''}
       <dl class="pbe17m-tiles">
-        ${metricTile(side.form?.offence, 'Offence EPA/play')}
-        ${metricTile(side.form?.defence, 'Defence EPA/play allowed')}
+        ${metricTile(side.form?.offence, 'Offense EPA/play')}
+        ${metricTile(side.form?.defence, 'Defense EPA/play allowed')}
         ${metricTile(side.form?.proe, 'PROE')}
         ${metricTile(side.form?.pace, 'Plays / game')}
       </dl>
@@ -216,11 +216,11 @@
       <table class="pbe17m-table">
         <thead><tr><th>Split</th><th>EPA / rate</th><th>Pct</th><th>Plays</th></tr></thead>
         <tbody>
-          ${row('Pass offence', sp.offence?.pass)}
-          ${row('Rush offence', sp.offence?.rush)}
+          ${row('Pass offense', sp.offence?.pass)}
+          ${row('Rush offense', sp.offence?.rush)}
           ${row('Explosive gained', sp.offence?.explosive)}
-          ${row('Pass defence allowed', sp.defence?.pass)}
-          ${row('Rush defence allowed', sp.defence?.rush)}
+          ${row('Pass defense allowed', sp.defence?.pass)}
+          ${row('Rush defense allowed', sp.defence?.rush)}
           ${row('Explosive allowed', sp.defence?.explosive)}
         </tbody>
       </table>
@@ -310,7 +310,7 @@
     return `<section class="pbe17m-panel">
       <div class="pbe17m-head"><strong>PRESSURE POINTS</strong><span>MATCHUP ADVANTAGE · NOT A PRICE</span></div>
       ${points.map(pt => `<div class="pbe17m-press">
-        <b>${esc(pt.offense_team)} ${esc(pt.dimension)} offence → ${esc(pt.defense_team)} ${esc(pt.dimension)} defence</b>
+        <b>${esc(pt.offense_team)} ${esc(pt.dimension)} offense → ${esc(pt.defense_team)} ${esc(pt.dimension)} defense</b>
         <p>${esc(pt.statement)}</p>
         ${pt.limited ? '<span class="pbe17m-limited">LIMITED SAMPLE</span>' : ''}
       </div>`).join('')}
