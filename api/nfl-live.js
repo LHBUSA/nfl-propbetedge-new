@@ -57,6 +57,62 @@ const BOARD_SOURCES=[
   {provider:'espn_cdn_scoreboard', url:date=>`${CDN}/scoreboard?xhr=1&limit=100&dates=${encodeURIComponent(date)}`}
 ];
 
+const RANGE_SOURCES=[
+  {provider:'espn_site_scoreboard',url:range=>`${SITE}/scoreboard?limit=100&dates=${encodeURIComponent(range)}`},
+  {provider:'espn_cdn_scoreboard', url:range=>`${CDN}/scoreboard?xhr=1&limit=100&dates=${encodeURIComponent(range)}`}
+];
+
+function rangeDays(range){
+  const [a,b]=String(range||'').split('-');
+  const parse=x=>Date.UTC(+x.slice(0,4),+x.slice(4,6)-1,+x.slice(6));
+  const start=parse(a),end=parse(b);
+  if(!Number.isFinite(start)||!Number.isFinite(end)||end<start)return[];
+  const out=[];for(let t=start;t<=end;t+=864e5)out.push(new Date(t).toISOString().slice(0,10).replace(/-/g,''));
+  return out;
+}
+async function exactDateBoard(date){
+  const {raw,provider}=await firstUpstream(BOARD_SOURCES,date,false,null);
+  return {raw,provider};
+}
+async function rangeBoard(range){
+  const directErrors=[];
+  for(const src of RANGE_SOURCES){
+    try{
+      const raw=await upstream(src.url(range));
+      return {raw,provider:src.provider,complete:true,fallback:null};
+    }catch(error){directErrors.push(`${src.provider}:${error instanceof Error?error.message:String(error)}`)}
+  }
+
+  const days=rangeDays(range);
+  if(days.length&&days.length<=35){
+    const eventMap=new Map();let provider='espn_site_scoreboard_daily_fallback';
+    for(let i=0;i<days.length;i+=6){
+      const batch=await Promise.all(days.slice(i,i+6).map(async date=>{
+        try{return await exactDateBoard(date)}catch{return null}
+      }));
+      for(const row of batch){
+        if(!row)continue;
+        provider=row.provider==='espn_cdn_scoreboard'?'espn_mixed_scoreboard_daily_fallback':provider;
+        for(const ev of findEvents(row.raw)){const id=S(ev?.id);if(id)eventMap.set(id,ev)}
+      }
+    }
+    if(eventMap.size)return {
+      raw:{events:[...eventMap.values()]},provider,complete:true,
+      fallback:'daily_exact_dates',direct_errors:directErrors
+    };
+  }
+
+  /* Very wide internal ranges are used only by the incremental stats accumulator.
+     Do not fan out hundreds of provider calls when ESPN's range syntax is down.
+     Return the current board as a clearly PARTIAL fallback; persisted historical
+     stats stay intact and future ticks can catch up when the range endpoint recovers. */
+  const {raw,provider}=await firstUpstream(BOARD_SOURCES,todayET(),true,null);
+  return {
+    raw,provider,complete:false,fallback:'current_board_only',
+    direct_errors:directErrors
+  };
+}
+
 /* A live command center must not be served stale edge data, so the LIVE paths
    carry no cache at all and nothing anywhere carries stale-while-revalidate on
    live play data. Pregame and final keep ordinary caching. */
@@ -273,12 +329,21 @@ export default async function handler(req,res){
          own range reads never share its cache entry. */
       const slateView=S(req.query?.view).trim()==='slate';
       if(slateView){const [a,b]=range.split('-');const span=(Date.UTC(+b.slice(0,4),+b.slice(4,6)-1,+b.slice(6))-Date.UTC(+a.slice(0,4),+a.slice(4,6)-1,+a.slice(6)))/864e5;if(!(span>=0&&span<=16))return send(res,400,{ok:false,error:'invalid_range',expected:'at most 16 days for view=slate'})}
-      const raw=await upstream(`${SITE}/scoreboard?limit=100&dates=${encodeURIComponent(range)}`);
+      const ranged=await rangeBoard(range);
+      const raw=ranged.raw;
       const games=findEvents(raw).map(game);
+      const now=Date.now();
+      const meta=games.find(g=>g.status.semantics==='LIVE')
+        ||games.filter(g=>g.status.semantics==='SCHEDULE'&&Date.parse(g.date)>=now-6*36e5).sort((a,b)=>Date.parse(a.date)-Date.parse(b.date))[0]
+        ||games.slice().sort((a,b)=>Date.parse(b.date)-Date.parse(a.date))[0]
+        ||null;
       const anyLive=games.some(g=>g.status.semantics==='LIVE');
       return send(res,200,{ok:true,mode:'range',range,count:games.length,
-        season:N(raw?.season?.year),season_type:N(raw?.season?.type),week:N(raw?.week?.number),
-        source:{provider:'espn_site_scoreboard',semantics:'SCOREBOARD',fetched_at:new Date().toISOString(),transport:'poll'},
+        range_complete:ranged.complete,fallback:ranged.fallback||null,
+        season:N(raw?.season?.year)??N(meta?.season?.year),
+        season_type:N(raw?.season?.type)??N(meta?.season?.type),
+        week:N(raw?.week?.number)??N(meta?.week),
+        source:{provider:ranged.provider,semantics:'SCOREBOARD',fetched_at:new Date().toISOString(),transport:'poll'},
         games},slateView?(anyLive?'public, s-maxage=3':'public, s-maxage=30, stale-while-revalidate=60'):'no-store');
     }
     if(standingsSeason){
