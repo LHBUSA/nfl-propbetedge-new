@@ -46,11 +46,26 @@
   const isPro = () => Boolean(window.PBEPro?.state?.pro);
 
   /* The event comes from the URL or the selector. There is deliberately no
-     fallback constant: with neither, the server resolves the current slate. */
-  const currentEvent = () =>
-    new URLSearchParams(location.search).get('event')
-    || localStorage.getItem('pbe_nfl_event')
-    || '';
+     fallback constant: with neither, the server resolves the current slate.
+     
+     Both link shapes are honoured, because app-core's deep-link contract
+     accepts both: ?event=<id>#matchups and #matchups?event=<id>. Reading only
+     location.search silently ignored the hash form and kept showing whichever
+     game the slate resolved to, which looks exactly like a page that ignores
+     the selector. */
+  function currentEvent() {
+    const fromApp = window.App?.params?.event;
+    if (fromApp) return String(fromApp);
+    const search = new URLSearchParams(location.search).get('event');
+    if (search) return search;
+    const hash = String(location.hash || '');
+    const at = hash.indexOf('?');
+    if (at >= 0) {
+      const inHash = new URLSearchParams(hash.slice(at + 1)).get('event');
+      if (inHash) return inHash;
+    }
+    return localStorage.getItem('pbe_nfl_event') || '';
+  }
 
   /* ---- numbers ------------------------------------------------------------ */
   const num = (v, digits = 3) => (Number.isFinite(Number(v)) ? Number(v).toFixed(digits) : null);
@@ -326,6 +341,11 @@
   function install() {
     if (window.App?.VIEWS) window.App.VIEWS.matchups = render;
     window.addEventListener('pbe:event-changed', () => { state.payload = null; load(); });
+    window.addEventListener('hashchange', () => {
+      if (window.App?.current !== 'matchups') return;
+      const next = currentEvent();
+      if (next && next !== state.eventId) { state.payload = null; load(); }
+    });
     window.addEventListener('pbe:pro-state', () => { state.payload = null; load(); });
   }
 

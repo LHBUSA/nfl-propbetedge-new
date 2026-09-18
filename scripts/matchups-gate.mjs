@@ -1,3 +1,11 @@
+/* Matchups visual gate.
+ *
+ *   node scripts/matchups-gate.mjs [--width=1440] [--label=x] [--event=<odds id>]
+ *
+ * Opens the live page, asserts the v3 section rendered, reports the section
+ * order, horizontal overflow and any console/page error, and writes a
+ * screenshot to .gate/matchups/. Development only.
+ */
 import {spawn} from 'node:child_process';
 import {mkdtempSync,rmSync,mkdirSync,writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
