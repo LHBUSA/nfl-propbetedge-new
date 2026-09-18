@@ -138,8 +138,16 @@ test('franchise founding years and championship counts are withheld on team and 
   assert.equal(/founded \$\{esc\(t\.founded/.test(team), false, 'founding year withheld');
   assert.equal(team.includes('Franchise Super Bowl wins'), false, 'championship count withheld');
   assert.match(team, /provenance review/i);
-  const matchups = read('matchups-v2.js');
+  /* Matchups v3 replaced v2. It carries no franchise history at all — the
+     unprovenanced 2025/all-time panels were the thing it was built to remove —
+     so the assertion is that none of it came back. */
+  const matchups = read('matchups-v3.js');
   assert.equal(matchups.includes('Super Bowl wins · franchise'), false);
+  /* Comments are stripped: the header deliberately records WHAT v2 showed and
+     why it went, and that documentation must not trip the check on the code. */
+  const code = matchups.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  assert.equal(/2025 Final Context|playoff seed|point differential/i.test(code), false,
+    'the retired 2025 panels must not return');
 });
 
 test('no hardcoded season-count claim remains on the dashboard', () => {

@@ -64,8 +64,11 @@ test('no customer-facing file states a retired or stale price', () => {
   assert.ok(html.includes(`NFL Pro · ${PRICING.shortSummary}`));
   const ld = JSON.parse(html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)[1]);
   assert.deepEqual(ld.offers.map(o => o.price), PRICING.order.map(k => PRICING[k].amount));
-  /* modules name the price only through the canonical source */
-  for (const f of ['sgp-lab-v2.js', 'simulator-v2.js', 'market-watch-v3.js', 'prop-board-v3.js', 'player-research-v2.js', 'model-lab.js', 'matchups-v2.js', 'dashboard-v7.js', 'global-polish-v5.js', 'paywall-polish-v1.js']) {
+  /* Modules that NAME the price must take it from the canonical source.
+     matchups-v3 is deliberately absent: its Pro card states no price at all, it
+     just opens the upgrade modal, so there is no number for it to get wrong.
+     The stale-price sweep above still covers it like every other client file. */
+  for (const f of ['sgp-lab-v2.js', 'simulator-v2.js', 'market-watch-v3.js', 'prop-board-v3.js', 'player-research-v2.js', 'model-lab.js', 'dashboard-v7.js', 'global-polish-v5.js', 'paywall-polish-v1.js']) {
     assert.match(fs.readFileSync(new URL(f, root), 'utf8'), /window\.PBEPricing/, f);
   }
 });
