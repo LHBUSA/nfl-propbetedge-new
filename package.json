@@ -13,6 +13,7 @@
     "test": "node --test tests/nfl-auth.test.mjs",
     "test:research": "node --test research/*.test.mjs",
     "verify-deploy-target": "node scripts/verify-deploy-target.mjs",
-    "deploy:preview": "node scripts/verify-deploy-target.mjs && vercel deploy --scope justins-projects-ad4f4bb7"
+    "deploy:preview": "node scripts/verify-deploy-target.mjs && vercel deploy --scope justins-projects-ad4f4bb7",
+    "matchup:build": "node scripts/build-matchup-2026.mjs"
   }
 }
