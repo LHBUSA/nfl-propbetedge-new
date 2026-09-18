@@ -9,6 +9,13 @@ a primary document is marked **UNVERIFIED**.
 upstream is — Rad Sports Analytics LLC documents the origin of three datasets,
 documents a redistribution licence for none, and §8 assigns that risk to us.**
 
+> **Status (2026-09-18): this audit is no longer only a document.** Its matrix is
+> encoded as executable policy in `history/registry/lanes.v2.json` and enforced by
+> `football_src.source_lane_policy`, the row-level security policies, and the
+> ingestion boundary in `history/lib/cfbd-policy.mjs`. The refused datasets are
+> refused at ingestion, not hidden at display. See `RIGHTS_ENGINE.md`.
+> **CFBD ingestion remains disabled: no key, no request, no data.**
+
 ## 1. The contract layer — https://collegefootballdata.com/terms (effective 2026-08-12)
 
 | Question | Answer |

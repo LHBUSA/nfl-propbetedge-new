@@ -166,6 +166,42 @@ conference per season), `college_enrollment` (arrival type, transfer, redshirt s
   `global_college_team_id`; **no view sums college and professional numbers.**
 - Recruiting-service rankings are out of scope until rights are resolved (commercial ToU).
 
+### Built (2026-09-18): the rights-clean half
+
+`006_college_spine.sql` adds what the CC0/federal layer actually needs, and the naming is
+deliberate about what each table can carry:
+
+| Table | Holds |
+|---|---|
+| `college_conference` + `college_conference_membership` | a conference as an entity, not a string on a membership row. Programmes move; conferences are founded and dissolve; the same name has meant different things. |
+| `college_program_season` | which institution reported fielding football in which year, with `sponsored`, the reported squad size, the **survey year**, and `reporting_basis = institution_self_report`. EADA is a filing, not an audit, and the row says so. |
+| `player_college_affiliation` | the CC0 association edge, with the precision the source actually gave. `basis` distinguishes `educated_at` (attendance) from `member_of_sports_team` (played there); `played_football` stays null for the former rather than being inferred. Separate from `college_enrollment`, which expects a roster-grade source we do not have. |
+| `college_to_pro_transition` | how a player entered professional football. `draft_round` and `draft_overall_pick` are nullable and stay null unless an **approved** source supplies them, and a check constraint refuses a draft detail with no snapshot to justify it. |
+
+The programme layer comes from two sources because neither is sufficient alone: Wikidata supplies
+195 programme entities (the items carrying `P8761`, linked to their university by `P831`), and the
+EADA filing is what actually establishes that a programme existed in a given year. They join on the
+IPEDS unit id (`P1771` = EADA's `unitid`), never on institution name.
+
+### The public read contract
+
+`api/college-pipeline.mjs`. A field allowlist, a forbidden-name check that runs after composition
+at any depth, and the mixed-source rule — a composed record is withheld entirely rather than served
+with the restricted component quietly removed. It joins the spine and no statistics table, so
+widening it would mean adding a join on purpose rather than loosening a select.
+
+## K2. The rights engine
+
+`football_src.source_lane_policy` refines a source per dataset family; every snapshot names its
+lane; row-level security resolves the pair. A lane narrows a source and never widens it, and every
+undecided state fails closed. Ingestion is a stronger gate than display: a lane with
+`ingest_allowed = false` must never reach canonical storage, including inside a JSON column. Model
+use is a third question — a lane can be readable and still be unusable for a named model purpose,
+which is how the CC0 college spine's survivorship bias is enforced rather than noted.
+
+Full description: `docs/RIGHTS_ENGINE.md`. The CFBD adapter (`ingest/cfbd-adapter.mjs`) is built,
+tested and **disabled**; no key exists and no CFBD data is stored.
+
 ## L. Game / drive / play schema
 
 `004`:

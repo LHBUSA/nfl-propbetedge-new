@@ -4,7 +4,7 @@
   {
    "filename": "001_provenance_and_competition.sql",
    "source": "schema/001_provenance_and_competition.sql",
-   "sha256": "669c8ab3a604e458f346b71161d6d40ab61a1bbe4a994a733bea31e51deecba3"
+   "sha256": "a8d34fa7421ada3c1615a8068de9a3ae394556cef329a4c4aa00034e67095d2f"
   },
   {
    "filename": "002_franchise_venue_person.sql",
@@ -27,19 +27,24 @@
    "sha256": "402bd9e7a84046aa1ae88ae8dc14a53e0ee483bf46c0b5790056aa7ec3b2d91d"
   },
   {
-   "filename": "006_roles_and_grants.sql",
+   "filename": "006_college_spine.sql",
+   "source": "schema/006_college_spine.sql",
+   "sha256": "099b2a93bf777699ed9f7e015f0a1b4b283049d89551b8d52ae58bec194711a0"
+  },
+  {
+   "filename": "007_roles_and_grants.sql",
    "source": "deploy/policy/010_roles_and_grants.sql",
-   "sha256": "df8f3280e23a13633a721ed312c18a4a5cc34b47dfb71858f750051422464793"
+   "sha256": "1ea8c93734d624ad7c554126b246e373900144eb3a3ec6607fa1b2c17ff838ec"
   },
   {
-   "filename": "007_rights_row_level_security.sql",
+   "filename": "008_rights_row_level_security.sql",
    "source": "generated",
-   "sha256": "9367ac89c68349d12c52a36a22932dfefaca58c659826d71711798a45f26139e"
+   "sha256": "fe77b3dde31a9657ef96909d3dea7580c58ffcd1cef77d07248b9950b2d886a7"
   },
   {
-   "filename": "008_deployment_ledger.sql",
+   "filename": "009_deployment_ledger.sql",
    "source": "generated",
-   "sha256": "86607aeea0c90011712b42f6bd9bbced1b3efd53a02078104beb7b9d7a1284ff"
+   "sha256": "64f1c73ed9d021e4e8b7833f66132e1d57874f1f954581b219451f20e50db5cf"
   }
  ]
 }

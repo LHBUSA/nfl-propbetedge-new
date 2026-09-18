@@ -4,10 +4,20 @@
   "type": "module",
   "description": "Football history graph: design, policy libraries, schema and the technical-validation slice. Not deployed; excluded from the Vercel build.",
   "scripts": {
-    "test": "node --test tests/core.test.mjs",
+    "test": "node --test tests/core.test.mjs tests/deploy.test.mjs tests/skeleton.test.mjs tests/rights-lanes.test.mjs",
+    "test:all": "node --test tests/core.test.mjs tests/deploy.test.mjs tests/skeleton.test.mjs tests/slice-api.test.mjs tests/rights-lanes.test.mjs tests/college-spine.test.mjs",
+    "test:rights": "node --test tests/rights-lanes.test.mjs",
+    "test:college": "node --test tests/college-spine.test.mjs",
     "slice:seed": "python pipeline/fetch_wikidata_seed.py",
     "slice:build": "python pipeline/build_slice_2023.py",
-    "slice:load": "node pipeline/load_and_validate.mjs --fresh"
+    "slice:load": "node pipeline/load_and_validate.mjs --fresh",
+    "college:seed": "python pipeline/fetch_college_seed.py",
+    "college:eada": "python pipeline/fetch_eada.py --years 2003 2025",
+    "college:build": "python pipeline/build_college_spine.py",
+    "migrations": "node deploy/generate.mjs",
+    "migrations:check": "node deploy/generate.mjs --check"
   },
-  "devDependencies": { "@electric-sql/pglite": "^0.2.17" }
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.2.17"
+  }
 }

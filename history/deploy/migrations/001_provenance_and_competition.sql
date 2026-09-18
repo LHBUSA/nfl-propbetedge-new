@@ -40,13 +40,64 @@ create table football_src.source (
   display_policy       text not null default 'internal_only'
                          check (display_policy in ('public','pro','internal_only','measurement_only','none')),
   model_use_allowed    boolean not null default false,
+  -- When true, every snapshot of this source must name a lane that has a policy
+  -- row below. A snapshot that names no lane, or names one we have not decided,
+  -- is invisible on every surface and unusable for models. Set for any source
+  -- whose datasets were found to carry materially different rights (CFBD).
+  lane_policy_required boolean not null default false,
   notes                text
+);
+
+-- ---------------------------------------------------------------- lane policy
+-- A source is not one rights decision. CollegeFootballData serves games under
+-- one set of facts, ESPN-shaped play-by-play under another, and relays SP+, FPI
+-- and the 247Sports talent composite that it does not own at all. The lane is
+-- where that difference is expressed and enforced.
+--
+-- A lane REFINES its source and can never widen it: the surfaces a row may
+-- appear on are the intersection of the source's display_policy and the lane's
+-- own flags, and model use requires both to allow it. See
+-- football_rights.effective_surfaces() in the policy migration.
+--
+-- ingest_allowed is not a display rule. False means the value must never reach
+-- canonical storage at all — not in a column, not inside a JSON blob, not in a
+-- retained raw payload. Hiding it at read time would leave it in the database.
+create table football_src.source_lane_policy (
+  source_id            text not null references football_src.source(source_id),
+  lane                 text not null,                  -- 'plays', 'talent', 'college_affiliation'
+  dataset_family       text not null,                  -- what the lane covers, in words
+  commercial_verdict   text not null check (commercial_verdict in
+                         ('clear','license_required','review','hold','rejected','do_not_use')),
+  public_allowed       boolean not null default false,
+  pro_allowed          boolean not null default false,
+  internal_allowed     boolean not null default false,
+  ingest_allowed       boolean not null default false,
+  model_use_allowed    boolean not null default false,
+  -- Named model purposes this lane may never serve even when model_use_allowed
+  -- is true. '*' means none at all. A sampling bias lives here, not in a note:
+  -- a CC0 licence says nothing about whether absence means "did not happen".
+  prohibited_model_uses text[] not null default '{}',
+  redistribution       text not null check (redistribution in
+                         ('prohibited','reasonable_portions','derived_only','permitted')),
+  origin_state         text not null check (origin_state in
+                         ('documented','inferred','undocumented','contradicted')),
+  verification         text not null check (verification in ('V','S','U')),
+  sampling_bias        text,                           -- 'notability_survivorship'
+  governing_basis      text not null,                  -- document + quote the decision rests on
+  obligations          text,
+  notes                text,
+  primary key (source_id, lane)
 );
 
 create table football_src.source_snapshot (
   source_snapshot_id   text primary key,               -- 'snp_<ulid>'
   source_id            text not null references football_src.source(source_id),
   dataset              text not null,                  -- 'play_by_play_2023'
+  -- Which lane of the source this retrieval belongs to. Null means the source
+  -- has one rights decision and the parent policy governs; a source marked
+  -- lane_policy_required refuses null. A lane naming no policy row is refused
+  -- either way: a snapshot cannot assert a rights class we have not decided.
+  lane                 text,
   retrieved_from       text not null,                  -- URL or object path
   retrieved_at         timestamptz not null,
   content_sha256       text not null,
@@ -66,7 +117,11 @@ create table football_src.entity_source_record (
   entity_id            text not null,
   source_snapshot_id   text not null references football_src.source_snapshot(source_snapshot_id),
   source_record_key    text not null,                  -- the source's own key
-  role                 text not null default 'supports' check (role in ('supports','conflicts','supersedes')),
+  -- 'required' is the mixed-source rule: the entity cannot be shown at all
+  -- unless this source may be shown here. 'supports' is corroboration, and one
+  -- corroborating source being restricted does not hide a fact another source
+  -- publishes freely. The difference matters and is not a matter of degree.
+  role                 text not null default 'supports' check (role in ('supports','required','conflicts','supersedes')),
   observed_at          timestamptz not null,
   primary key (entity_type, entity_id, source_snapshot_id, source_record_key)
 );

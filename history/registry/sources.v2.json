@@ -1,16 +1,21 @@
 {
  "registry": "pbe-football-source-registry",
- "version": "1.0.0",
- "as_of": "2026-09-15",
- "status": "SUPERSEDED — kept as the record of what was decided on 2026-09-15, not as current policy.",
- "superseded_by": "sources.v2.json + lanes.v2.json (2026-09-18)",
- "superseded_because": "This file can only hold one rights decision per source. The D3 college audit established that CollegeFootballData's datasets carry materially different rights from each other, which this schema cannot express. Its src_cfbd entry in particular is stale: do not read it as current.",
+ "version": "2.0.0",
+ "supersedes": "sources.v1.json",
+ "as_of": "2026-09-18",
+ "changes_from_v1": [
+  "src_cfbd is no longer one rights decision. Its per-lane policy lives in registry/lanes.v2.json and is enforced by football_src.source_lane_policy; the source row now sets lane_policy_required so a CFBD snapshot that names no lane sees nothing and trains nothing.",
+  "src_cfbd display_policy widens to the widest any lane needs (public) and model_use_allowed to true. Neither is a loosening on its own: the lane narrows both, and a lane-less snapshot is refused.",
+  "src_eada added: the US Department of Education Equity in Athletics dataset, one narrow lane.",
+  "src_wikidata gains lanes so the college affiliation spine can carry its sampling bias as an enforceable model-use rule rather than a note."
+ ],
  "legend": {
   "commercial_verdict": "clear | review | hold | license_required | rejected | do_not_use",
   "display_policy": "public | pro | internal_only | measurement_only | none",
   "verification": "V = read in the governing primary document; S = secondary/search excerpt only; U = unverified",
   "owner_decision": "recorded owner decision, if any; otherwise null (a verdict without owner decision is a recommendation)"
  },
+ "lane_policy": "history/registry/lanes.v2.json — a lane refines a source and can never widen it",
  "sources": [
   {
    "source_id": "src_nflverse_pbp",
@@ -29,7 +34,7 @@
    "acquisition": "GitHub release parquet/csv",
    "licence_class": "proprietary_terms",
    "terms_url": "https://www.nfl.com/legal/terms/",
-   "terms_quote": "Systematic retrieval of data \u2026 to create or compile \u2026 a collection, compilation, database, or directory, is prohibited absent our express prior written consent.",
+   "terms_quote": "Systematic retrieval of data … to create or compile … a collection, compilation, database, or directory, is prohibited absent our express prior written consent.",
    "verification": "V",
    "commercial_verdict": "review",
    "owner_decision": null,
@@ -94,7 +99,7 @@
    "display_policy": "internal_only",
    "model_use_allowed": false,
    "ids": {
-    "player": "gsis,espn,pfr,pff,sportradar,\u2026"
+    "player": "gsis,espn,pfr,pff,sportradar,…"
    },
    "entities": [
     "roster_snapshots",
@@ -431,7 +436,8 @@
    "completeness": "PFR-id people 28,896; drafted-by 263; SB MVP award links 4; AAFC teams via P118: 2; franchise modelling inconsistent (relocated eras as separate items)",
    "verification": "V",
    "confidence": "high (licence) / medium (quality)",
-   "notes": "skeleton + crosswalk only; every row curated and cited"
+   "notes": "skeleton + crosswalk only; every row curated and cited Lanes in lanes.v2.json: skeleton, college_affiliation (sampling_bias=notability_survivorship), identifiers (internal only).",
+   "lane_policy_required": false
   },
   {
    "source_id": "src_wikipedia_facts",
@@ -445,6 +451,41 @@
    "notes": "individual facts low risk; bulk table extraction needs counsel on sui generis waiver",
    "verification": "V",
    "confidence": "medium"
+  },
+  {
+   "source_id": "src_eada",
+   "name": "Equity in Athletics Disclosure Act data (US Department of Education)",
+   "origin": "institutional self-reports filed under 20 U.S.C. 1092(g)",
+   "governing_org": "US Department of Education, Office of Postsecondary Education",
+   "leagues": [
+    "NCAA",
+    "NAIA",
+    "NJCAA"
+   ],
+   "country": "US",
+   "seasons": "survey years as published",
+   "acquisition": "bulk data file download from ope.ed.gov",
+   "licence_class": "public_domain",
+   "terms_url": "https://ope.ed.gov/Athletics/public/html/home/home.html",
+   "terms_quote": "This database consists of athletics data that are submitted annually as required by the Equity in Athletics Disclosure Act (EADA)",
+   "verification": "S",
+   "commercial_verdict": "clear",
+   "owner_decision": null,
+   "display_policy": "public",
+   "model_use_allowed": true,
+   "lane_policy_required": false,
+   "entities": [
+    "institutions",
+    "sport_sponsorship_by_year",
+    "squad_size_reported"
+   ],
+   "gaps": [
+    "no player identity",
+    "no results",
+    "no conference alignment"
+   ],
+   "confidence": "high (content) / medium (licence)",
+   "notes": "No licence text is printed on the page. US federal agency publications are generally public domain, but that is an inference, not a quote, so the licence confidence is medium and every derived row stores its survey year. One narrow lane only: any other EADA field has no lane and therefore cannot be persisted."
   },
   {
    "source_id": "src_chronicling_america",
@@ -482,12 +523,13 @@
    "terms_url": "https://collegefootballdata.com/terms",
    "terms_quote": "Commercial use is permitted.",
    "commercial_verdict": "review",
-   "owner_decision": null,
-   "display_policy": "internal_only",
-   "model_use_allowed": false,
-   "notes": "contract layer clear (no bulk resale/mirror; reasonable portions); upstream chain of rights unconfirmed",
-   "verification": "V",
-   "confidence": "high (terms) / low (origin)"
+   "owner_decision": "D3 accepted 2026-09-18: per-lane policy; ingestion remains DISABLED pending owner approval and a key",
+   "display_policy": "public",
+   "model_use_allowed": true,
+   "notes": "Contract layer clear (commercial use granted; no bulk resale, mirror or substitute API; reasonable portions only). Upstream chain of rights undocumented and varies by lane. The source-level policy here is only a ceiling: every snapshot must name a lane in football_src.source_lane_policy or it is invisible and unusable. No CFBD data has been ingested.",
+   "verification": "V (terms) / U (origin)",
+   "confidence": "high (terms) / low (origin)",
+   "lane_policy_required": true
   },
   {
    "source_id": "src_ncaa_stats",
@@ -593,7 +635,7 @@
    "owner_decision": null,
    "display_policy": "none",
    "model_use_allowed": false,
-   "notes": "free tier non-commercial \u2014 CURRENTLY USED by data/warehouse/nfl_game_environment and DNA weather (om_* fields): needs paid plan or ERA5 replacement",
+   "notes": "free tier non-commercial — CURRENTLY USED by data/warehouse/nfl_game_environment and DNA weather (om_* fields): needs paid plan or ERA5 replacement",
    "verification": "V",
    "confidence": "high",
    "production_dependency": "DNA weather context, nfl_game_environment"

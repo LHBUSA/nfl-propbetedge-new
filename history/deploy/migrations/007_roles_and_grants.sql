@@ -1,3 +1,7 @@
+-- 007_roles_and_grants.sql
+-- source: deploy/policy/010_roles_and_grants.sql
+-- Generated; apply with history/deploy/apply.mjs, never by hand-editing this file.
+
 -- PropBetEdge football history — roles, grants and the surface contract.
 --
 -- Two roles, and the API never connects as the one that can write.

@@ -78,7 +78,9 @@ The binding constraint is **rights, not architecture**.
 ## O. Recommended ingestion sequence
 
 Each stage is gated: nothing ingests until its source has an owner decision recorded in
-`history/registry/sources.v1.json`.
+`history/registry/sources.v2.json`, and — where the provider's datasets carry different rights —
+a lane policy in `history/registry/lanes.v2.json`. A lane with `ingest_allowed = false` is refused
+at the boundary, not filtered at display.
 
 | # | Stage | Source status | Unlocks |
 |---|---|---|---|
@@ -88,7 +90,8 @@ Each stage is gated: nothing ingests until its source has an owner decision reco
 | 3 | Modern era games/plays/drives/box scores 1999-2025 | **needs D1** (nflverse/NFL chain) or a licensed feed | Game DNA, records, PropChain history, Similar Game Finder |
 | 4 | Rosters, transactions, injuries, depth charts | needs D1/licensed feed | roster-as-of, availability timeline, OL continuity |
 | 5 | Draft + combine | **needs a licensed source** (PFR rejected) | Draft Explorer, draft-class analytics |
-| 6 | College pathway (CFBD, upstream check) | needs D3 | College→NFL graph, player passport depth |
+| 6a | **College spine (Wikidata CC0 + EADA)** | **CLEAR — BUILT** | school/programme identity, conference, coaches, player→college, college→pro transition |
+| 6b | College performance (CFBD) | **D3 resolved; adapter built and DISABLED** — needs owner approval + a key | production curves, usage, efficiency. Nothing else in the CFBD contract unlocks this |
 | 7 | Pre-1999 NFL, AFL, AAFC | public-domain newspapers + curation; or licence | deep history, franchise records |
 | 8 | Snaps/participation | blocked (rejected/hold) | usage, workload |
 | 9 | Other leagues (CFL/UFL/international) | licence | global pathways |
@@ -132,7 +135,7 @@ The owner accepted D1-D6. What each now means in the code:
 |---|---|---|
 | **D1** | nflverse/PFR-derived data is **not** expanded onto new public or pro surfaces until the upstream chain is verified or replaced. Existing production dependencies were inventoried, not removed. | Enforced in the data layer: nflverse sources are `internal_only`, and the row-level security policies make a public or pro connection unable to read a row backed by them (`docs/SUPABASE_DEPLOYMENT.md`). |
 | **D2** | The history graph gets its **own Supabase project**. Nothing created yet. | Deployment package prepared and proven against PGlite. The commands refuse the two product project refs and have no default connection string. |
-| **D3** | Do not ingest CollegeFootballData yet; audit upstream rights first. | `docs/COLLEGE_DATA_RIGHTS.md` — go / restricted / no-go by dataset. No college data ingested. |
+| **D3** | Do not ingest CollegeFootballData yet; audit upstream rights first. | **Resolved and made executable (2026-09-18).** The audit is `docs/COLLEGE_DATA_RIGHTS.md`; the policy it produced is no longer a document. CFBD's **contract** rights were reviewed and are permissive. Its **upstream** rights vary by dataset, so `src_cfbd` carries a per-lane policy rather than one verdict: named third-party relays (SP+, FPI, talent, recruiting, betting lines, pre-draft grades) are refused at the ingestion boundary, ambiguous raw lanes (plays, drives, box scores, player stats) are internal-only, and thin-fact lanes (games, coaches, venues) are public. The clean CC0/federal college spine is built and approved. **CFBD ingestion remains disabled pending owner approval and a key; no CFBD data has been ingested.** See `docs/RIGHTS_ENGINE.md`. |
 | **D4** | Write down what a licensed feed must provide. Do not purchase, do not contact anyone. | `docs/LICENSED_FEED_REQUIREMENTS.md`. Sportradar is listed as one candidate among others, evaluated on the requirements rather than assumed. |
 | **D5** | Prefer Wikidata CC0 and other redistributable structured sources. Wikipedia prose is not a canonical source. | The whole skeleton is CC0 Wikidata via SPARQL, with the query, retrieval time and content hash recorded per snapshot. No prose was parsed. |
 | **D6** | Legacy generated history must not be canonical, and must not be silently replaced by guesses. | Every route exposing `archive/*.js` history is suppressed behind a provenance guard that fails closed; nothing was replaced with invented data. Suppressed, not overwritten. |
@@ -167,3 +170,49 @@ Three things the skeleton deliberately does not do:
 - It does not resolve a conflict the source contains. Wikidata says the Washington Redskins name
   ended 2020-07-24 and the Washington Football Team name began 2020-07-23; both are reported by
   name rather than reconciled by picking one.
+
+## Phase 3 result — the rights engine and the college spine (2026-09-18)
+
+Two things shipped, and they are separate things.
+
+**The rights model became executable.** A source used to carry one decision. That could not
+express what the D3 audit found — that CollegeFootballData serves publishable facts,
+ESPN-shaped records and relayed third-party ratings through one contract — so the registry
+was versioned rather than bent. `football_src.source_lane_policy` now refines a source per
+dataset family, every snapshot names its lane, and row-level security resolves the pair. A
+lane can narrow a source and never widen it; a snapshot with no decided lane is invisible
+everywhere and unusable for models. `docs/RIGHTS_ENGINE.md`.
+
+**The clean college spine was built** from CC0 Wikidata and the federal EADA filing, and from
+nothing else: 1,149 institutions, 951 programmes, 849 conferences, 28,896 NFL players of whom
+13,947 carry a college association, 317 college coaching tenures, and 5,580 EADA
+institution-seasons across 2016-2024.
+
+Four things the spine deliberately does not do:
+
+- **It carries no college statistics at all** — not because they are missing, but because we
+  hold no rights to any of them. The public read contract refuses fields that would imply
+  otherwise, by name, at any depth.
+- **It does not fill in a draft pick.** 273 transitions come from Wikidata's own P647
+  statements and **none** carries a round or a pick. Every draft-detail source we hold is
+  marked `do_not_use`, and a fact being widely known is not a licence, so the column stays
+  null and a schema constraint refuses an uncited one.
+- **It does not upgrade attendance into having played.** Wikidata's P69 is an attendance
+  claim; `played_football` stays null for every such row rather than being inferred.
+- **It does not present itself as a population.** Every player in it is anchored on a
+  Pro-Football-Reference id, so every player in it reached professional football. There is no
+  denominator. The lane carries `sampling_bias = notability_survivorship` and refuses six
+  named model purposes, enforced in SQL and in the model builder.
+
+Two findings worth recording because they were measured rather than assumed:
+
+- **Wikidata does not model college football programmes as entities.** `P641` (sport) =
+  college football is a statement on *people*; querying it returns 2,893 players, not teams.
+  The programme layer that does exist is the 195 items carrying `P8761`, linked to their
+  university by `P831`. The EADA filing is what actually establishes that a programme existed
+  in a given year, and the two join on the IPEDS unit id (`P1771`) rather than on institution
+  name — which would merge Miami in Florida with Miami in Ohio on its first attempt.
+- **EADA sport codes are not stable across years.** Code 7 is football in most years, absent
+  in 2018-19, and in 2019-20 selects a sport with 1,754 institutions and a median squad of 41.
+  The code is now detected from squad-size shape and verified per year; a year that does not
+  fit is refused and recorded as a gap rather than ingested as football.

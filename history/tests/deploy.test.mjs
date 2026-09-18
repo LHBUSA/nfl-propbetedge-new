@@ -18,7 +18,7 @@ import { fileURLToPath } from 'node:url';
 import { PGlite } from '@electric-sql/pglite';
 import { CHECKS, CANARIES, runChecks } from '../deploy/checks.mjs';
 import { resolveTarget, RefusedTarget, FORBIDDEN_PROJECT_REFS } from '../deploy/target.mjs';
-import { registrySql } from '../deploy/seed.mjs';
+import { registrySql, lanePolicySql, REGISTRY_FILE, LANES_FILE } from '../deploy/seed.mjs';
 import { buildRightsSql, parseTables, plan } from '../deploy/generate.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -70,7 +70,8 @@ const db = await PGlite.create();
 for (const file of readdirSync(MIGRATIONS).filter(f => f.endsWith('.sql')).sort()) {
   await db.exec(readFileSync(join(MIGRATIONS, file), 'utf8'));
 }
-await db.exec(registrySql(JSON.parse(readFileSync(join(REPO, 'history', 'registry', 'sources.v1.json'), 'utf8'))));
+await db.exec(registrySql(JSON.parse(readFileSync(join(REPO, 'history', 'registry', REGISTRY_FILE), 'utf8'))));
+await db.exec(lanePolicySql(JSON.parse(readFileSync(join(REPO, 'history', 'registry', LANES_FILE), 'utf8'))));
 await db.exec(`insert into football_deploy.migration (filename, sha256)
   select f, repeat('0', 64) from unnest(array[${readdirSync(MIGRATIONS).filter(f => f.endsWith('.sql')).map(f => `'${f}'`).join(',')}]) f;`);
 
@@ -125,7 +126,9 @@ test('the deployment checks run against the applied database', async () => {
   const { results } = await runChecks(sql => db.query(sql), CHECKS);
   const byName = Object.fromEntries(results.map(r => [r.name, r]));
   for (const name of ['schema.present', 'schema.isolated', 'migrations.recorded', 'rights.rls_on_every_table',
-    'rights.surface_function', 'rights.registry_complete', 'provenance.every_row_cited', 'provenance.snapshot_has_source']) {
+    'rights.surface_function', 'rights.registry_complete', 'rights.lane_policy_present',
+    'rights.refused_lanes_cannot_be_ingested', 'rights.cfbd_not_ingested',
+    'provenance.every_row_cited', 'provenance.snapshot_has_source']) {
     assert.equal(byName[name].pass, true, `${name}: ${byName[name].detail}`);
   }
   // The skeleton is not loaded in this fixture, so its content check must fail
@@ -144,7 +147,7 @@ test.after(() => db.close());
 test('the registry vocabulary is the vocabulary the schema accepts', async () => {
   // This caught six sources whose verdict ('do_not_use') the schema refused:
   // a rights decision that could never have reached the database.
-  const registry = JSON.parse(readFileSync(join(REPO, 'history', 'registry', 'sources.v1.json'), 'utf8'));
+  const registry = JSON.parse(readFileSync(join(REPO, 'history', 'registry', REGISTRY_FILE), 'utf8'));
   const loaded = (await db.query(`select source_id from football_src.source`)).rows.map(r => r.source_id).sort();
   assert.deepEqual(loaded, registry.sources.map(s => s.source_id).sort(),
     'every source in the registry must be loadable');

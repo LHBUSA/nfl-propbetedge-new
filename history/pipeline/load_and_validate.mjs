@@ -20,6 +20,7 @@ const SLICE = join(REPO, 'history', '.out', 'slice2023');
 const SKELETON = join(REPO, 'history', '.out', 'skeleton');
 const DB_DIR = join(REPO, 'history', '.out', 'pg');
 const SCHEMA_DIR = join(REPO, 'history', 'schema');
+const POLICY_DIR = join(REPO, 'history', 'deploy', 'policy');
 
 /* FK-safe load order. */
 const ORDER = [
@@ -46,6 +47,13 @@ const started = Date.now();
 for (const f of readdirSync(SCHEMA_DIR).filter(f => f.endsWith('.sql')).sort()) {
   await db.exec(readFileSync(join(SCHEMA_DIR, f), 'utf8'));
 }
+/* The rights policy is part of the schema, not an extra. Since a source's
+   permission is now resolved per lane by football_rights.*, a database with the
+   tables but not the functions would answer rights questions by not having
+   them — so the validation database applies the policy the deployment does. */
+for (const f of readdirSync(POLICY_DIR).filter(f => f.endsWith('.sql')).sort()) {
+  await db.exec(readFileSync(join(POLICY_DIR, f), 'utf8'));
+}
 
 /* The skeleton loads first and owns franchises, identities, venues, seasons and
    leagues; the season slice attaches to it. Rows both datasets carry (a league,
@@ -57,9 +65,14 @@ async function load(dir, label) {
     if (!existsSync(file)) continue;
     const text = readFileSync(file, 'utf8');
     const header = text.slice(0, text.indexOf('\n')).trim();
-    await db.exec(`create temp table _stage (like ${table})`);
+    await db.exec(`create temp table _stage (like ${table} including defaults)`);
     await db.query(`COPY _stage (${header}) FROM '/dev/blob' WITH (FORMAT csv, HEADER true)`, [], { blob: new Blob([text]) });
-    const inserted = await db.query(`insert into ${table} select * from _stage on conflict do nothing`);
+    /* Name the columns rather than `select *`. A positional insert writes an
+       explicit NULL into every column the CSV does not carry, which defeats the
+       target's defaults — that is how a file written before
+       source.lane_policy_required existed started failing its NOT NULL. */
+    const inserted = await db.query(
+      `insert into ${table} (${header}) select ${header} from _stage on conflict do nothing`);
     await db.exec('drop table _stage');
     total += inserted.affectedRows ?? 0;
   }

@@ -1,4 +1,4 @@
--- 007_rights_row_level_security.sql
+-- 008_rights_row_level_security.sql
 -- source: generated
 -- Generated; apply with history/deploy/apply.mjs, never by hand-editing this file.
 
@@ -16,6 +16,12 @@ alter table football_src.source enable row level security;
 alter table football_src.source force row level security;
 drop policy if exists football_src_source_rights on football_src.source;
 create policy football_src_source_rights on football_src.source for select to pbe_history_reader
+  using (true);
+
+alter table football_src.source_lane_policy enable row level security;
+alter table football_src.source_lane_policy force row level security;
+drop policy if exists football_src_source_lane_policy_rights on football_src.source_lane_policy;
+create policy football_src_source_lane_policy_rights on football_src.source_lane_policy for select to pbe_history_reader
   using (true);
 
 alter table football_src.source_snapshot enable row level security;
@@ -404,4 +410,34 @@ alter table football.championship_result enable row level security;
 alter table football.championship_result force row level security;
 drop policy if exists football_championship_result_rights on football.championship_result;
 create policy football_championship_result_rights on football.championship_result for select to pbe_history_reader
+  using (football_rights.snapshot_visible(source_snapshot_id));
+
+alter table football.college_conference enable row level security;
+alter table football.college_conference force row level security;
+drop policy if exists football_college_conference_rights on football.college_conference;
+create policy football_college_conference_rights on football.college_conference for select to pbe_history_reader
+  using (football_rights.snapshot_visible(source_snapshot_id));
+
+alter table football.college_conference_membership enable row level security;
+alter table football.college_conference_membership force row level security;
+drop policy if exists football_college_conference_membership_rights on football.college_conference_membership;
+create policy football_college_conference_membership_rights on football.college_conference_membership for select to pbe_history_reader
+  using (football_rights.snapshot_visible(source_snapshot_id));
+
+alter table football.college_program_season enable row level security;
+alter table football.college_program_season force row level security;
+drop policy if exists football_college_program_season_rights on football.college_program_season;
+create policy football_college_program_season_rights on football.college_program_season for select to pbe_history_reader
+  using (football_rights.snapshot_visible(source_snapshot_id));
+
+alter table football.player_college_affiliation enable row level security;
+alter table football.player_college_affiliation force row level security;
+drop policy if exists football_player_college_affiliation_rights on football.player_college_affiliation;
+create policy football_player_college_affiliation_rights on football.player_college_affiliation for select to pbe_history_reader
+  using (football_rights.snapshot_visible(source_snapshot_id));
+
+alter table football.college_to_pro_transition enable row level security;
+alter table football.college_to_pro_transition force row level security;
+drop policy if exists football_college_to_pro_transition_rights on football.college_to_pro_transition;
+create policy football_college_to_pro_transition_rights on football.college_to_pro_transition for select to pbe_history_reader
   using (football_rights.snapshot_visible(source_snapshot_id));

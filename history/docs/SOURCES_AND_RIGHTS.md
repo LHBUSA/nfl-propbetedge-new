@@ -1,9 +1,21 @@
 # Football History Graph — Source Registry and Rights Map (C, D)
 
-Machine-readable registry: `history/registry/sources.v1.json` (40 sources, the shape the
-`football_src.source` table loads). This document is the decision view of it.
-Research date 2026-09-15. **Not legal advice**; every verdict below is either an owner decision
-already on record, or my recommendation pending your call.
+Machine-readable registry: **`history/registry/sources.v2.json`** (41 sources) plus
+**`history/registry/lanes.v2.json`** (25 per-dataset lane policies). Together they are the shape
+the `football_src.source` and `football_src.source_lane_policy` tables load.
+`sources.v1.json` is kept as the record of what was decided on 2026-09-15 and is marked
+**superseded** — its `src_cfbd` entry in particular is stale, and should not be read as current.
+
+This document is the decision view. Research date 2026-09-15; college layer 2026-09-18.
+**Not legal advice**; every verdict below is either an owner decision already on record, or my
+recommendation pending your call.
+
+> **A source is no longer one rights decision.** Where a provider's datasets carry materially
+> different rights — CollegeFootballData is the case that forced this — the source row is only a
+> ceiling and the **lane** decides. A lane can narrow a source and never widen it, and a snapshot
+> that names no decided lane is invisible on every surface and unusable for models. See
+> `RIGHTS_ENGINE.md` for the mechanism and `COLLEGE_DATA_RIGHTS.md` for the CFBD findings the
+> lanes encode.
 
 Marks: **[V]** read in the governing primary document · **[S]** secondary/search excerpt ·
 **[U]** unverified.
@@ -89,10 +101,49 @@ unwinding parts of production.
 | **Sports Reference bulk licence** [V] | 1920+, drafts, combine | the only route to deep pre-1999 history; the AI/ML clause would have to be expressly overridden |
 | **FTN Data** [U] | charting/participation 2022+ | participation without ShareAlike |
 
+## Lanes: where a provider's datasets disagree with each other
+
+Added 2026-09-18 for the college layer. `lanes.v2.json` holds 25 lane policies across three
+sources. The CFBD ones encode the D3 matrix directly:
+
+| Lane | Surfaces | Ingest | Model | Why |
+|---|---|---|---|---|
+| `games`, `coaches`, `venues` | public / pro / internal | yes | yes | thin facts; never presented as official |
+| `cfbd_models` (Elo, SRS, PPA, WEPA, CORE, WP) | public / pro / internal | yes | yes | CFBD states these are its own models |
+| `team_stats` | pro / internal | yes | yes | ESPN-shaped underneath; no public raw rows |
+| `drives`, `plays`, `box_scores`, `player_stats`, `player_usage` | internal | yes | yes | strongest ESPN evidence; model training is the safest use |
+| `rosters`, `draft_picks` | pro / internal | yes | yes | text facts only; no media, no downloadable table |
+| `transfer_portal_movement` | internal | yes | yes | origin/destination/date only |
+| `identifier_crosswalk` | internal | yes | yes | a crosswalk is definitionally "a standalone dataset" under CFBD §5 |
+| `recruiting`, `talent`, `sp_plus`, `fpi`, `betting_lines`, `pre_draft_evaluation`, `transfer_portal_ratings` | **none** | **no** | **no** | third parties CFBD relays and does not own |
+
+And for the clean sources:
+
+| Lane | Surfaces | Note |
+|---|---|---|
+| `src_wikidata / skeleton` | public | CC0, no obligations |
+| `src_wikidata / college_affiliation` | public | CC0, **but `sampling_bias = notability_survivorship`** — six model purposes prohibited |
+| `src_wikidata / identifiers` | internal | the id VALUES are CC0; they name third-party systems, so they stay internal reconciliation keys |
+| `src_eada / institution_program_year` | public | US Dept of Education; public domain **inferred** (no licence text on the page); every row stores its survey year |
+
+## Rights-clean now, added since 2026-09-15
+
+| Source | Licence | Covers | Obligations |
+|---|---|---|---|
+| **EADA (US Dept of Education)** [S] | federal publication; public domain **inferred**, not quoted | which institutions reported fielding football in which year, and the squad size reported (2016-2024 seasons built) | store the survey year; the row is what the institution self-reported, not an audited fact |
+
 ## How rights are enforced, not just documented
 
-`football_src.source` carries `commercial_verdict`, `display_policy` and `model_use_allowed`, and
-the API filters every row by the requested surface. The 2023 slice proves it: the same request
-returns **0 play rows on `public` and `pro`** and the full play list on `internal`, while CC0
-franchise identities are public. A source on HOLD can therefore sit in staging for measurement and
-remain invisible to users and models — the state the owner's participation decision requires.
+`football_src.source` carries `commercial_verdict`, `display_policy` and `model_use_allowed`;
+`football_src.source_lane_policy` refines those per dataset family; and every snapshot names its
+lane. Row-level security resolves the pair at read time, so no query written anywhere can return a
+row the licence does not allow on that surface.
+
+The 2023 slice proves the source-level rule: the same request returns **0 play rows on `public` and
+`pro`** and the full play list on `internal`, while CC0 franchise identities are public. The lane
+tests prove the refinement: **one source, five lanes, five different answers on the same surface**,
+with a lane-less and an undecided snapshot invisible on all three.
+
+A source on HOLD can therefore sit in staging for measurement and remain invisible to users and
+models — the state the owner's participation decision requires — and a source we may use for some
+things and not others no longer has to be accepted or refused whole.

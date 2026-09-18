@@ -1,0 +1,175 @@
+{
+ "policy": "pbe-cfbd-ingest-policy",
+ "version": "1.0.0",
+ "as_of": "2026-09-18",
+ "enabled": false,
+ "enable_flag": "CFBD_ENABLED",
+ "secret_name": "CFBD_API_KEY",
+ "base_url": "https://api.collegefootballdata.com",
+ "governing_basis": "history/docs/COLLEGE_DATA_RIGHTS.md (D3); lane policy in history/registry/lanes.v2.json",
+ "legend": {
+  "endpoints": "Exact CFBD REST paths, each classified into exactly one lane. A path that is not listed is REFUSED: an unclassified endpoint has no rights decision.",
+  "denied_endpoints": "Listed so the refusal is explicit and testable rather than merely absent.",
+  "denied_fields": "Field names that must be deleted before canonical persistence, wherever they appear in a payload, at any depth.",
+  "conditional_denied_fields": "Field names denied only on the listed lanes, because the same word is innocuous elsewhere."
+ },
+
+ "endpoints": {
+  "/games": "games",
+  "/games/teams": "team_stats",
+  "/games/players": "box_scores",
+  "/games/media": "games",
+  "/games/weather": "games",
+  "/calendar": "games",
+  "/records": "games",
+  "/scoreboard": "games",
+  "/teams": "games",
+  "/teams/fbs": "games",
+  "/teams/matchup": "games",
+  "/conferences": "games",
+  "/conferences/changes": "games",
+  "/conferences/affiliations": "games",
+  "/playoffs/cfp": "games",
+  "/playoffs/cfp/participants": "games",
+  "/playoffs/cfp/games": "games",
+  "/rankings": "games",
+
+  "/coaches": "coaches",
+  "/coaches/profile": "coaches",
+  "/coaches/seasons": "coaches",
+  "/coaches/tenures": "coaches",
+
+  "/venues": "venues",
+
+  "/ratings/elo": "cfbd_models",
+  "/ratings/srs": "cfbd_models",
+  "/ratings/srs/expanded": "cfbd_models",
+  "/ratings/core": "cfbd_models",
+  "/ppa/predicted": "cfbd_models",
+  "/ppa/teams": "cfbd_models",
+  "/ppa/games": "cfbd_models",
+  "/ppa/players/games": "cfbd_models",
+  "/ppa/players/season": "cfbd_models",
+  "/metrics/wp": "cfbd_models",
+  "/metrics/wp/pregame": "cfbd_models",
+  "/metrics/fg/ep": "cfbd_models",
+  "/wepa/team/season": "cfbd_models",
+  "/wepa/players/passing": "cfbd_models",
+  "/wepa/players/rushing": "cfbd_models",
+  "/wepa/players/kicking": "cfbd_models",
+
+  "/stats/season": "team_stats",
+  "/stats/categories": "team_stats",
+  "/stats/season/advanced": "team_stats",
+  "/stats/game/advanced": "team_stats",
+  "/stats/game/havoc": "team_stats",
+  "/game/box/advanced": "box_scores",
+
+  "/drives": "drives",
+
+  "/plays": "plays",
+  "/plays/types": "plays",
+  "/plays/stats": "plays",
+  "/plays/stats/types": "plays",
+  "/live/plays": "plays",
+  "/passing/plays": "plays",
+  "/rushing/plays": "plays",
+  "/passing/players/season": "player_stats",
+  "/passing/players/games": "player_stats",
+  "/passing/teams/season": "team_stats",
+  "/passing/teams/games": "team_stats",
+  "/rushing/players/season": "player_stats",
+  "/rushing/players/games": "player_stats",
+  "/rushing/teams/season": "team_stats",
+  "/rushing/teams/games": "team_stats",
+
+  "/stats/player/season": "player_stats",
+  "/stats/player/success": "player_stats",
+  "/stats/player/success/game": "player_stats",
+  "/player/season/overview": "player_stats",
+  "/player/search": "rosters",
+  "/player/usage": "player_usage",
+  "/player/returning": "player_usage",
+
+  "/roster": "rosters",
+
+  "/draft/picks": "draft_picks",
+  "/draft/teams": "draft_picks",
+  "/draft/positions": "draft_picks",
+
+  "/player/portal": "transfer_portal_movement"
+ },
+
+ "denied_endpoints": [
+  { "path": "/talent", "lane": "talent", "reason": "CFBD: \"Returns 247Sports Team Talent Composite ratings for a season.\"" },
+  { "path": "/recruiting/players", "lane": "recruiting", "reason": "247 Composite shape; 247/CBSi bar commercial use" },
+  { "path": "/recruiting/teams", "lane": "recruiting", "reason": "247 Composite shape" },
+  { "path": "/recruiting/groups", "lane": "recruiting", "reason": "247 Composite shape" },
+  { "path": "/ratings/sp", "lane": "sp_plus", "reason": "CFBD attributes SP+ to Bill Connelly (ESPN)" },
+  { "path": "/ratings/sp/conferences", "lane": "sp_plus", "reason": "CFBD attributes SP+ to Bill Connelly (ESPN)" },
+  { "path": "/ratings/fpi", "lane": "fpi", "reason": "CFBD: \"FPI is third-party data\"; its own client docs say ESPN's Football Power Index" },
+  { "path": "/lines", "lane": "betting_lines", "reason": "sportsbook-branded prices; no licence from the price owners" },
+  { "path": "/teams/ats", "lane": "betting_lines", "reason": "derived from the same betting lines" }
+ ],
+
+ "denied_endpoint_prefixes": [
+  { "prefix": "/recruiting/", "lane": "recruiting", "reason": "the whole recruiting family is refused" }
+ ],
+
+ "denied_fields": [
+  { "field": "preDraftGrade", "lane": "pre_draft_evaluation", "reason": "editorial scouting opinion, near-certainly an ESPN draft board" },
+  { "field": "preDraftRanking", "lane": "pre_draft_evaluation", "reason": "editorial scouting opinion" },
+  { "field": "preDraftPositionRanking", "lane": "pre_draft_evaluation", "reason": "editorial scouting opinion" },
+  { "field": "pre_draft_grade", "lane": "pre_draft_evaluation", "reason": "snake_case spelling of the same field" },
+  { "field": "pre_draft_ranking", "lane": "pre_draft_evaluation", "reason": "snake_case spelling of the same field" },
+  { "field": "pre_draft_position_ranking", "lane": "pre_draft_evaluation", "reason": "snake_case spelling of the same field" },
+  { "field": "talent", "lane": "talent", "reason": "247Sports Team Talent Composite" },
+  { "field": "spOverall", "lane": "sp_plus", "reason": "SP+ value" },
+  { "field": "fpi", "lane": "fpi", "reason": "ESPN Football Power Index" },
+  { "field": "spread", "lane": "betting_lines", "reason": "betting line" },
+  { "field": "overUnder", "lane": "betting_lines", "reason": "betting line" },
+  { "field": "over_under", "lane": "betting_lines", "reason": "betting line" },
+  { "field": "spreadOpen", "lane": "betting_lines", "reason": "betting line" },
+  { "field": "overUnderOpen", "lane": "betting_lines", "reason": "betting line" },
+  { "field": "homeMoneyline", "lane": "betting_lines", "reason": "betting line" },
+  { "field": "awayMoneyline", "lane": "betting_lines", "reason": "betting line" },
+  { "field": "formattedSpread", "lane": "betting_lines", "reason": "betting line" }
+ ],
+
+ "conditional_denied_fields": [
+  { "field": "rating", "lanes": ["transfer_portal_movement", "draft_picks", "rosters"], "lane_owner": "transfer_portal_ratings", "reason": "a 247/On3-family composite rating riding inside a movement payload" },
+  { "field": "stars", "lanes": ["transfer_portal_movement", "draft_picks", "rosters"], "lane_owner": "transfer_portal_ratings", "reason": "a 247/On3-family star rating riding inside a movement payload" },
+  { "field": "overallRank", "lanes": ["transfer_portal_movement", "draft_picks", "rosters"], "lane_owner": "recruiting", "reason": "third-party ranking" },
+  { "field": "positionRank", "lanes": ["transfer_portal_movement", "draft_picks", "rosters"], "lane_owner": "recruiting", "reason": "third-party ranking" },
+  { "field": "ranking", "lanes": ["transfer_portal_movement", "rosters"], "lane_owner": "recruiting", "reason": "third-party ranking" },
+  { "field": "recruitIds", "lanes": ["rosters"], "lane_owner": "identifier_crosswalk", "reason": "crosswalk identifier: internal only, and only through the crosswalk lane" },
+  { "field": "logos", "lanes": ["games", "venues", "coaches"], "lane_owner": null, "reason": "provider logo field; CFBD terms §8 grants no logo rights" },
+  { "field": "logo", "lanes": ["games", "venues", "coaches", "draft_picks"], "lane_owner": null, "reason": "provider logo field" },
+  { "field": "images", "lanes": ["games", "venues", "coaches", "rosters"], "lane_owner": null, "reason": "provider media field" },
+  { "field": "headshot", "lanes": ["rosters"], "lane_owner": null, "reason": "player likeness; the API contract does not settle likeness rights" },
+  { "field": "photo", "lanes": ["rosters"], "lane_owner": null, "reason": "player likeness" }
+ ],
+
+ "field_allowlist": {
+  "_comment": "Where a lane is listed, ONLY these fields survive normalisation. An allowlist is stronger than the denylist and is used on the lanes whose payloads are known to carry prohibited values: a field CFBD adds later cannot arrive unreviewed. A lane absent from this map is governed by the denylist alone.",
+  "draft_picks": ["year", "round", "pick", "overall", "name", "position", "height", "weight", "collegeTeam", "collegeConference", "nflTeam", "hometownInfo"],
+  "transfer_portal_movement": ["season", "firstName", "lastName", "position", "origin", "destination", "transferDate", "eligibility"],
+  "venues": ["id", "name", "city", "state", "zip", "countryCode", "timezone", "latitude", "longitude", "elevation", "capacity", "constructionYear", "grass", "dome"],
+  "coaches": ["firstName", "lastName", "seasons", "school", "year", "games", "wins", "losses", "ties"]
+ },
+
+ "internal_only_fields": [
+  { "field": "collegeAthleteId", "lane": "identifier_crosswalk" },
+  { "field": "nflAthleteId", "lane": "identifier_crosswalk" },
+  { "field": "recruitIds", "lane": "identifier_crosswalk" },
+  { "field": "athleteId", "lane": "identifier_crosswalk" },
+  { "field": "collegeId", "lane": "identifier_crosswalk" },
+  { "field": "nflTeamId", "lane": "identifier_crosswalk" }
+ ],
+
+ "retention": {
+  "raw_snapshot": "immutable copy keyed by content sha256; retained under CFBD terms §4 (\"retain API Data retrieved while your access was active in a private historical corpus\")",
+  "raw_snapshot_surface": "internal_only, always, regardless of lane",
+  "prohibited_values": "never written, so nothing to retain"
+ }
+}

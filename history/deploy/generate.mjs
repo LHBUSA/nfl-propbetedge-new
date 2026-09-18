@@ -38,6 +38,7 @@ export const RIGHTS_EXCEPTIONS = {
   // Our own rights registry and ontology. Readable on every surface: knowing
   // which sources exist and what we may do with them is not third-party data.
   'football_src.source': { rule: 'always' },
+  'football_src.source_lane_policy': { rule: 'always' },
   'football.stat_definition': { rule: 'always' },
   // The identity spine carries no snapshot; its evidence is entity_source_record.
   'football.person': { rule: 'entity', entityType: 'person' },

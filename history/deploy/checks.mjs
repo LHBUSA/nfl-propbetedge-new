@@ -68,6 +68,64 @@ export const CHECKS = [
     expect: r => ({ pass: r.n > 0 && r.undecided === 0, detail: `${r.n} sources, ${r.undecided} without a rights decision` }),
   },
   {
+    name: 'rights.lane_policy_present', severity: 'blocker', canary: true,
+    describe: 'a source that requires lanes has them, and no snapshot claims a lane we never decided',
+    sql: `select
+            (select count(*)::int from football_src.source src
+              where src.lane_policy_required
+                and not exists (select 1 from football_src.source_lane_policy lp where lp.source_id = src.source_id)
+            ) as requiring_without_lanes,
+            (select count(*)::int from football_src.source_snapshot s
+              where s.lane is not null
+                and not exists (select 1 from football_src.source_lane_policy lp
+                                 where lp.source_id = s.source_id and lp.lane = s.lane)
+            ) as snapshots_with_undecided_lane,
+            (select count(*)::int from football_src.source_snapshot s
+              join football_src.source src on src.source_id = s.source_id
+             where src.lane_policy_required and s.lane is null) as snapshots_missing_required_lane,
+            (select count(*)::int from football_src.source_lane_policy) as lanes`,
+    expect: r => ({
+      pass: r.requiring_without_lanes === 0 && r.snapshots_with_undecided_lane === 0
+        && r.snapshots_missing_required_lane === 0 && r.lanes > 0,
+      detail: `${r.lanes} lane policies; ${r.requiring_without_lanes} sources requiring lanes without any, `
+        + `${r.snapshots_with_undecided_lane} snapshots naming an undecided lane, `
+        + `${r.snapshots_missing_required_lane} snapshots missing a required lane`,
+    }),
+  },
+  {
+    name: 'rights.refused_lanes_cannot_be_ingested', severity: 'blocker', canary: true,
+    describe: 'no lane we refused is marked ingestible, and none has been ingested',
+    sql: `select
+            (select count(*)::int from football_src.source_lane_policy
+              where commercial_verdict in ('do_not_use','rejected') and ingest_allowed) as refused_but_ingestible,
+            (select count(*)::int from football_src.source_lane_policy
+              where commercial_verdict in ('do_not_use','rejected')
+                and (public_allowed or pro_allowed or internal_allowed or model_use_allowed)) as refused_but_permitted,
+            (select count(*)::int from football_src.source_snapshot s
+              join football_src.source_lane_policy lp
+                on lp.source_id = s.source_id and lp.lane = s.lane
+             where not lp.ingest_allowed) as snapshots_on_refused_lanes`,
+    expect: r => ({
+      pass: r.refused_but_ingestible === 0 && r.refused_but_permitted === 0 && r.snapshots_on_refused_lanes === 0,
+      detail: `${r.refused_but_ingestible} refused lanes marked ingestible, ${r.refused_but_permitted} refused lanes `
+        + `granting a surface or model use, ${r.snapshots_on_refused_lanes} snapshots stored on a refused lane`,
+    }),
+  },
+  {
+    name: 'rights.cfbd_not_ingested', severity: 'blocker', canary: true,
+    describe: 'CollegeFootballData ingestion is still disabled and nothing has been stored from it',
+    sql: `select
+            (select coalesce(bool_and(lane_policy_required), false) from football_src.source
+              where source_id = 'src_cfbd') as requires_lanes,
+            (select count(*)::int from football_src.source_snapshot where source_id = 'src_cfbd') as snapshots`,
+    expect: r => ({
+      pass: r.requires_lanes === true && r.snapshots === 0,
+      detail: r.requires_lanes
+        ? `src_cfbd requires a lane per snapshot; ${r.snapshots} CFBD snapshots stored`
+        : 'src_cfbd is NOT marked lane_policy_required — its source row would act as a single blanket permission',
+    }),
+  },
+  {
     name: 'provenance.every_row_cited', severity: 'blocker', canary: true,
     describe: 'no canonical row exists without the snapshot it came from',
     sql: `select coalesce(sum(missing), 0)::int missing, count(*)::int tables_checked from (

@@ -18,7 +18,10 @@ picks / prop-picks models. `history/` is excluded from the Vercel deployment.
 | `docs/LICENSED_FEED_REQUIREMENTS.md` | what a licensed feed would have to provide (D4) |
 | `docs/GAME_IDENTITY.md` | the durable game identity model and the Super Bowl week defect |
 | `docs/OPEN_METEO_DEPENDENCY.md` | every production use of Open-Meteo and the provider abstraction |
-| `registry/sources.v1.json` | machine-readable source registry (loads into `football_src.source`) |
+| `docs/RIGHTS_ENGINE.md` | how rights are enforced: lanes, the ingestion boundary, model-use guards |
+| `registry/sources.v2.json` | machine-readable source registry (loads into `football_src.source`). `sources.v1.json` is kept as the superseded 2026-09-15 record |
+| `registry/lanes.v2.json` | per-dataset lane policy (loads into `football_src.source_lane_policy`) |
+| `registry/cfbd_ingest_policy.v1.json` | CFBD endpoint classification, field allowlist and denylist |
 | `registry/nfl_team_crosswalk.v1.json` | our own abbreviation → franchise mapping |
 | `ontology/positions.v1.json` | position ontology, historical labels kept |
 | `schema/00*.sql` | canonical DDL (64 tables). Validated by applying to PGlite; **not applied anywhere** |
@@ -26,12 +29,19 @@ picks / prop-picks models. `history/` is excluded from the Vercel deployment.
 | `api/history-api.mjs` | API handler with rights filter + provenance envelope (storage-agnostic) |
 | `pipeline/` | Wikidata seeds, all-era skeleton builder, 2023 slice builder, loader + validator |
 | `deploy/` | generated migrations, roles and rights policy, apply / seed / validate / canary / rollback, connection contract |
-| `tests/` | `core.test.mjs` (policy), `skeleton.test.mjs` (bounds and lineage severity), `slice-api.test.mjs` (API contract), `deploy.test.mjs` (migrations applied to PGlite, rights gate proven) |
+| `ingest/cfbd-adapter.mjs` | the CFBD adapter: built, tested, **disabled**. No key, no request, no data |
+| `tests/` | `core.test.mjs` (policy), `skeleton.test.mjs` (bounds and lineage severity), `slice-api.test.mjs` (API contract), `deploy.test.mjs` (migrations + rights gate), `rights-lanes.test.mjs` (lane policy, ingestion refusals, model-use guards), `college-spine.test.mjs` (the built spine) |
 
 ```bash
 node --test history/tests/core.test.mjs        # 13 policy tests
 node --test history/tests/skeleton.test.mjs    # 9 tests: precision-aware bounds, lineage severity
 node --test history/tests/deploy.test.mjs      # 15 tests: migrations + rights gate, no server needed
+node --test history/tests/rights-lanes.test.mjs # 23 tests: lanes, refusals, model-use guards
+
+python history/pipeline/fetch_college_seed.py  # CC0 Wikidata college seed
+python history/pipeline/fetch_eada.py --years 2003 2025   # US Dept of Education football sponsorship
+python history/pipeline/build_college_spine.py # the rights-clean college->NFL spine
+node --test history/tests/college-spine.test.mjs
 
 python history/pipeline/fetch_skeleton_seed.py # CC0 Wikidata seed, with time precision
 python history/pipeline/build_skeleton.py      # all-era skeleton (1920-2026)

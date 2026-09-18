@@ -12,17 +12,24 @@
  *      from, whether it is derived, and the as-of pair it was resolved at.
  */
 
-const SURFACES = { public: ['public'], pro: ['public', 'pro'], internal: ['public', 'pro', 'internal_only', 'measurement_only'] };
+/* The surface travels as a NAME, not as a list of display policies, because a
+   source no longer has one policy. CollegeFootballData serves games, ESPN-shaped
+   play-by-play and relayed third-party ratings through one contract, and which
+   of those a row belongs to is the lane. Resolving the question in SQL
+   (football_rights.surface_allows) means this join filter and the row-level
+   policy in the database are the same rule, rather than two rules that have to
+   be kept in step by hand. */
+const SURFACE_NAMES = new Set(['public', 'pro', 'internal']);
+const surfaceName = s => (SURFACE_NAMES.has(s) ? s : 'public');
 
 export function createHistoryApi({ query, now = () => new Date().toISOString() }) {
   const q = async (sql, params = []) => (await query(sql, params)).rows;
 
   /* Every row-returning query goes through this: it joins the snapshot and the
-     source, keeps only rows whose source is allowed on this surface, and
-     collects the provenance actually used. */
+     source, keeps only rows whose source AND lane are allowed on this surface,
+     and collects the provenance actually used. */
   async function fetchWithRights(sql, params, surface) {
-    const allowed = SURFACES[surface] || SURFACES.public;
-    const rows = await q(sql, [...params, allowed]);
+    const rows = await q(sql, [...params, surfaceName(surface)]);
     const sources = new Map();
     for (const row of rows) {
       if (row.__source_id) sources.set(row.__source_id, { source_id: row.__source_id, snapshot_id: row.__snapshot_id, licence_class: row.__licence_class });
@@ -44,7 +51,7 @@ export function createHistoryApi({ query, now = () => new Date().toISOString() }
   const PROV = `s.source_id as "__source_id", s.source_snapshot_id as "__snapshot_id", src.licence_class as "__licence_class"`;
   const JOIN = t => `join football_src.source_snapshot s on s.source_snapshot_id = ${t}.source_snapshot_id
                      join football_src.source src using (source_id)`;
-  const GATE = `src.display_policy = any($__N__)`;
+  const GATE = `football_rights.surface_allows($__N__, s.source_id, s.lane)`;
 
   const routes = [
     // GET /v1/history/sources
@@ -219,7 +226,7 @@ export function createHistoryApi({ query, now = () => new Date().toISOString() }
     const url = new URL(request.url);
     if (request.method !== 'GET') return json({ error: 'method_not_allowed' }, 405);
     const surface = url.searchParams.get('surface') || 'public';
-    if (!SURFACES[surface]) return json({ error: 'unknown_surface' }, 400);
+    if (!SURFACE_NAMES.has(surface)) return json({ error: 'unknown_surface' }, 400);
     for (const route of routes) {
       const m = route.pattern.exec(url.pathname);
       if (!m) continue;
