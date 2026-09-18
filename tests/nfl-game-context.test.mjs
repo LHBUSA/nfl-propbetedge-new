@@ -157,7 +157,10 @@ test('card: indoor, retractable, neutral site, beyond horizon and unavailable ar
   const missing = { ...cardGame('2026_02_NO_BAL') };
   assert.equal(C.weatherModel(missing, view(), NOW).title, 'Weather unavailable', 'inside the horizon but not in the snapshot');
   assert.equal(C.weatherModel(cardGame('2026_01_DEN_KC'), { status: 'error', body: null }, NOW).title, 'Weather unavailable');
-  assert.equal(C.weatherModel(cardGame('2026_01_DEN_KC'), { status: 'ok', body: gameWeatherView(WX, NOW + 5 * 3600000) }, NOW).title, 'Weather unavailable', 'stale forecast');
+  const stale = C.weatherModel(cardGame('2026_01_DEN_KC'), { status: 'ok', body: gameWeatherView(WX, NOW + 5 * 3600000) }, NOW);
+  assert.equal(stale.kind, 'forecast', 'last verified local forecast remains visible while refresh is delayed');
+  assert.equal(stale.stale, true);
+  assert.ok(stale.lines.includes('Last verified forecast · refresh delayed'));
   assert.equal(C.weatherModel({ ...cardGame('2026_01_DEN_KC'), final: true }, view(), NOW).kind, 'final');
 });
 

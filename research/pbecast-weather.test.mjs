@@ -99,7 +99,8 @@ test('DEN @ KC selected in PBEcast: the hero renders the Arrowhead kickoff forec
   assert.match(e.text, new RegExp(`OUTDOOR · ${Math.round(w.temp_f)}°F`));
   assert.match(e.text, new RegExp(`Wind ${Math.round(w.wind_mph)} mph · Gusts ${Math.round(w.gust_mph)} mph · Rain ${Math.round(w.precip_probability_pct)}%`));
   s.cast.patchFreshness();
-  assert.ok(s.env(s.hero()), 'patching the live hero includes the environment row');
+  assert.match(s.hero(), /cast6-context-item is-weather/);
+  assert.match(s.hero(), new RegExp(`OUTDOOR · ${Math.round(w.temp_f)}°F`));
 });
 
 test('PBEcast renders useful environment states and hides non-actionable weather diagnostics', async () => {
@@ -130,8 +131,11 @@ test('a stale weather snapshot is hidden from the PBEcast hero instead of render
   const s = sandbox({ weather: stale, now: NOW + 3 * 3600000 });
   await s.ready();
   await s.select('401872932');
-  assert.equal(s.cast.envHtml(), '');
-  assert.doesNotMatch(s.hero(), /Weather unavailable|Latest forecast is out of date/i);
+  assert.equal(s.cast.envHtml(), '', 'legacy strip remains hidden');
+  const html = s.cast.heroHtml();
+  assert.match(html, /cast6-context-item is-weather is-stale/);
+  assert.match(html, /Last verified forecast · refresh delayed/);
+  assert.doesNotMatch(html, /Latest forecast is out of date/i);
 });
 
 test('PBEcast hero keeps stadium and verified TV channel in a dedicated game-context row', async () => {
@@ -148,6 +152,7 @@ test('PBEcast hero keeps stadium and verified TV channel in a dedicated game-con
   assert.match(html, /U\.S\. Bank Stadium/);
   assert.match(html, />WATCH</);
   assert.match(html, /CBS/);
+  assert.match(html, /LOCAL WEATHER/);
 });
 
 test('switching the selected game switches the weather; the previous game never lingers', async () => {

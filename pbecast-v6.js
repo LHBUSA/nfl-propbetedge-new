@@ -244,9 +244,10 @@
   }
 
   function gameContextHtml(g,a,h,sem){
-    const B=window.PBEBroadcast;
+    const B=window.PBEBroadcast,C=window.PBEGameContext;
     const id=g?.id?String(g.id):'';
-    const row=id&&B?.state?.games?.length?B.find({event:id}):null;
+    const loaded=Boolean(B?.state?.games?.length);
+    const row=id&&loaded?B.find({event:id}):null;
     const liveVenue=g?.venue||{};
     const schedVenue=row?.venue?.status==='VERIFIED'?row.venue:null;
     const venueName=clean(liveVenue?.name)||clean(schedVenue?.name);
@@ -262,7 +263,21 @@
       ? `<div class="cast6-context-item is-watch"><span>WATCH</span><b>${B?.slot?.({event:id,away:a?.display_name,home:h?.display_name,mode:'link'})||`<span class="pbe-tv-slot" data-tv-event="${esc(id)}"></span>`}</b></div>`
       : '';
 
-    return venue||watch?`<div class="cast6-contextbar">${venue}${watch}</div>`:'';
+    let weather='';
+    if(C&&row&&id){
+      const ctx=C.fromSchedule(row,{state:sem,away_name:a?.display_name,home_name:h?.display_name});
+      const model=C.environmentModel(ctx,C.state,{selectedEventId:id,scheduleLoading:!loaded&&!B?.state?.error&&!B?.state?.disabled});
+      if(model&&model.kind!=='final'&&!['unavailable','pending'].includes(model.kind)){
+        const detail=model.kind==='forecast'
+          ? (model.lines||[]).join(' · ')
+          : (model.detail||'');
+        weather=`<div class="cast6-context-item is-weather${model.stale?' is-stale':''}"><span>LOCAL WEATHER</span><b>${esc(model.title||'Weather')}</b>${detail?`<small>${esc(detail)}</small>`:''}</div>`;
+      }else if(model?.kind==='unavailable'){
+        weather=`<div class="cast6-context-item is-weather is-muted"><span>LOCAL WEATHER</span><b>Updating local forecast</b><small>${esc(model.detail||'Weather feed is refreshing')}</small></div>`;
+      }
+    }
+
+    return venue||watch||weather?`<div class="cast6-contextbar">${venue}${watch}${weather}</div>`:'';
   }
 
   /* Environment for the SELECTED game only: the schedule row is found by that
