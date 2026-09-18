@@ -45,7 +45,10 @@
 /* ---- metric tiles ------------------------------------------------------ */
 .pbe17m-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(122px,1fr));gap:6px;margin:0}
 .pbe17m-tile{position:relative;padding:9px 10px;border:1px solid rgba(255,255,255,.06);border-radius:8px;background:rgba(255,255,255,.025);min-width:0}
-.pbe17m-tile dt{font:700 9.5px/1.2 'JetBrains Mono',ui-monospace,monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--pbe-dim,#8b95a5);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pbe17m-tile dt{font:700 9.5px/1.2 'JetBrains Mono',ui-monospace,monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--pbe-dim,#8b95a5);
+  /* The percentile badge sits top-right; reserve its lane so a long label
+     wraps under it instead of running through it. */
+  padding-right:46px;overflow-wrap:anywhere}
 .pbe17m-tile dd{margin:5px 0 0;font:800 18px/1 'JetBrains Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
 .pbe17m-tile small{display:block;margin-top:3px;font:600 10px/1 'JetBrains Mono',ui-monospace,monospace;color:var(--pbe-faint,#5d6675)}
 .pbe17m-pct{position:absolute;top:8px;right:9px;font:800 9.5px/1 'JetBrains Mono',ui-monospace,monospace;color:#8ec5ff}
