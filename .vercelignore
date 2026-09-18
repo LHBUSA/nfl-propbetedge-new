@@ -1,6 +1,63 @@
+# What ships to nfl.propbetedge.ai.
+#
+# The deployment is a static root: anything not listed here is publicly
+# readable at its repository path. Internal engineering artefacts are excluded
+# from the DEPLOYMENT, which is the only reliable control — a rewrite runs
+# after the static filesystem and cannot shadow a file that is really there.
+#
+# tests/nfl-public-surface.test.mjs classifies every tracked file against these
+# rules and fails if an internal path would ship or a required asset would not.
+# scripts/public-surface-gate.mjs proves the same against production.
+
 # Stadium masters stay in the repo as sources but are not deployed. The product
 # ships stadiums/*-bg.webp, *-bgsm.webp and *-thumb.webp, generated from these.
 stadiums/*.jpg
 
 # Football history graph: design, schema and policy code. Source only, never served.
 history/
+
+# --- internal engineering artefacts -----------------------------------------
+docs/
+migrations/
+research/
+scripts/
+tests/
+.github/
+release/
+.css-ownership.json
+
+# Planning, design and audit notes, wherever they live.
+*.md
+
+# --- Cloudflare Worker source ------------------------------------------------
+# Worker code, wrangler.toml (which carries the Cloudflare account id) and
+# worker tests are operated from the repository, never from the web
+# deployment. The one exception is the shared engine library: api/home-market.js
+# and api/pbe-picks.js import it at build time, so that directory still ships
+# (minus its tests). Every other worker directory is named explicitly, and a
+# test fails if a new worker is added without a rule here.
+workers/nfl-auth/
+workers/nfl-billing/
+workers/nfl-current/
+workers/nfl-game-grader/
+workers/nfl-game-picks-orchestrator/
+workers/nfl-gateway/
+workers/nfl-intel/
+workers/nfl-odds/
+workers/nfl-odds-snapshot/
+workers/nfl-picks/
+workers/nfl-prop-picks-grader/
+workers/nfl-prop-picks-orchestrator/
+workers/nfl-prop-picks-shared/
+workers/nfl-prop-picks-tuner/
+workers/nfl-replay/
+workers/nfl-schedule/
+workers/nfl-weight-tuner/
+workers/nfl-picks-engine-shared/tests/
+
+# --- derived datasets the runtime never reads --------------------------------
+# api/* reads exactly six files from data/dist with readFileSync, so those stay.
+data/dist/active-*.json
+data/dist/media-coverage*.json
+data/dist/*-coverage-audit.json
+data/dist/qbdna-demo/
