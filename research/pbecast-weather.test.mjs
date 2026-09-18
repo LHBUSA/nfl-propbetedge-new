@@ -134,6 +134,22 @@ test('a stale weather snapshot is hidden from the PBEcast hero instead of render
   assert.doesNotMatch(s.hero(), /Weather unavailable|Latest forecast is out of date/i);
 });
 
+test('PBEcast hero keeps stadium and verified TV channel in a dedicated game-context row', async () => {
+  const s = sandbox();
+  await s.ready();
+  await s.select('401872927');
+
+  // Live detail can omit venue; the canonical schedule still owns this fact.
+  s.cast.state.detail.game.venue = null;
+  const html = s.cast.heroHtml();
+
+  assert.match(html, /cast6-contextbar/);
+  assert.match(html, />VENUE</);
+  assert.match(html, /U\.S\. Bank Stadium/);
+  assert.match(html, />WATCH</);
+  assert.match(html, /CBS/);
+});
+
 test('switching the selected game switches the weather; the previous game never lingers', async () => {
   const s = sandbox();
   await s.ready();
