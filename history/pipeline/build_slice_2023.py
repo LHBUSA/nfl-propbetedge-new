@@ -30,7 +30,21 @@ SEED = os.path.join(REPO, 'history', '.out', 'seed')
 PARSER = ('pbe-history-slice', '0.1.0')
 SEASON_YEAR = 2023
 LEAGUE_ID = 'glg_nfl'
-SEASON_ID = f'gss_nfl_{SEASON_YEAR}'
+
+# The all-era skeleton (build_skeleton.py) owns leagues, franchises, identities,
+# venues and seasons. One 2023 NFL season exists, so this slice adopts the
+# skeleton's season row rather than minting a second one that the
+# unique (league_id, season_year) constraint would rightly reject.
+SKELETON = os.path.join(REPO, 'history', '.out', 'skeleton')
+def read_skeleton_csv(name):
+    path = os.path.join(SKELETON, name)
+    if not os.path.exists(path): return []
+    with open(path, newline='', encoding='utf-8') as fh:
+        return list(csv.DictReader(fh))
+
+SKELETON_SEASON = next((r for r in read_skeleton_csv('football__season.csv')
+                        if r.get('league_id') == LEAGUE_ID and r.get('season_year') == str(SEASON_YEAR)), None)
+SEASON_ID = SKELETON_SEASON['season_id'] if SKELETON_SEASON else f'gss_nfl_{SEASON_YEAR}'
 NOW = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace('+00:00', 'Z')
 
 tables: dict[str, list[dict]] = defaultdict(list)
@@ -126,8 +140,12 @@ row('football.rules_profile', rules_profile_id='grp_nfl_2023', league_id=LEAGUE_
     two_point_conversion=None, pat_line_of_scrimmage_yards=None, kickoff_rule=None, sacks_official_stat=True,
     roster_limit=None, citation='regular_season_games and playoff_teams derived from the 2023 schedule and postseason bracket in this dataset',
     verification_status='unverified', source_snapshot_id=SNAP_PBP)
-row('football.season', season_id=SEASON_ID, league_id=LEAGUE_ID, season_year=SEASON_YEAR, label='2023',
-    rules_profile_id='grp_nfl_2023', starts_on=str(pbp.game_date.min()), ends_on=str(pbp.game_date.max()), source_snapshot_id=SNAP_PBP)
+# The rules profile is keyed by league and season range, so it stays resolvable
+# for the skeleton's season row without this slice rewriting that row.
+if not SKELETON_SEASON:
+    row('football.season', season_id=SEASON_ID, league_id=LEAGUE_ID, season_year=SEASON_YEAR, label='2023',
+        rules_profile_id='grp_nfl_2023', starts_on=str(pbp.game_date.min()), ends_on=str(pbp.game_date.max()),
+        source_snapshot_id=SNAP_PBP)
 
 COMPETITIONS = {
     'REG': ('gcm_nfl_2023_reg', 'regular_season', '2023 NFL regular season', 'regular'),
@@ -166,11 +184,67 @@ for abbr, d in divisions_wd.items():
         row('football.org_unit', org_unit_id=did, league_id=LEAGUE_ID, kind='division', parent_org_unit_id=conf_units.get(conf),
             name=div, effective_from_season=SEASON_YEAR, effective_to_season=SEASON_YEAR, source_snapshot_id=SNAP_WD)
 
+# The all-era skeleton (history/pipeline/build_skeleton.py) owns franchises and
+# their identities through time. When it is present this season attaches to it
+# instead of inventing a second franchise for the same club — which is the whole
+# point of separating franchise from time-bounded identity.
+skeleton_franchise_of_qid = {
+    r['id_value']: r['entity_id'] for r in read_skeleton_csv('football_src__external_id.csv')
+    if r.get('entity_type') == 'franchise' and r.get('id_system') == 'wikidata_qid'
+}
+skeleton_identities = {r['global_football_team_identity_id']: r for r in read_skeleton_csv('football__team_identity.csv')}
+skeleton_identities_of_qid: dict[str, list] = defaultdict(list)
+for x in read_skeleton_csv('football_src__external_id.csv'):
+    if x.get('entity_type') == 'team_identity' and x.get('id_system') == 'wikidata_qid':
+        identity = skeleton_identities.get(x['entity_id'])
+        if identity: skeleton_identities_of_qid[x['id_value']].append(identity)
+
+def skeleton_identity_for(qid, date):
+    """The skeleton identity this season's team is, resolved through the Wikidata
+    item the crosswalk names rather than through a date window: many historical
+    identities have no documented bounds, and a date window would silently pick
+    one of them. Ambiguity is returned, not resolved by guessing."""
+    candidates = skeleton_identities_of_qid.get(qid or '', [])
+    dated = [i for i in candidates
+             if (i.get('effective_from') and i['effective_from'] <= date)
+             and (not i.get('effective_to') or date < i['effective_to'])]
+    if len(dated) == 1: return dated[0], None
+    if len(dated) > 1: return None, f'{len(dated)} dated identities in force'
+    undated = [i for i in candidates if not i.get('effective_from')]
+    if len(undated) == 1: return undated[0], None
+    if not candidates: return None, 'no skeleton identity cites this item'
+    return None, f'{len(candidates)} candidate identities, none decidable'
+
+QID_OF_ABBR = {t['abbr']: t['qid'] for t in CROSSWALK['teams']}
+
 identity_of_team: dict[str, str] = {}
+unattached_reasons: list[str] = []
 lineage_report = []
 for abbr in teams_in_data:
     t = teams_wd.get(abbr)
     label = (t or {}).get('label') or abbr
+    qid = QID_OF_ABBR.get(abbr, '')
+    skeleton_franchise = skeleton_franchise_of_qid.get(qid)
+    attached, why_not = skeleton_identity_for(qid, season_first)
+    if attached:
+        identity_of_team[abbr] = attached['global_football_team_identity_id']
+        d = divisions_wd.get(abbr) or {}
+        row('football.team_alignment', global_football_team_identity_id=attached['global_football_team_identity_id'],
+            season_id=SEASON_ID, conference_org_unit_id=conf_units.get(d.get('conference')),
+            division_org_unit_id=div_units.get(d.get('division')), source_snapshot_id=SNAP_WD)
+        # The abbreviation is a provider's code for this identity, not a property
+        # of the club, so it is recorded as an external identifier from the file
+        # that uses it.
+        row('football_src.external_id', entity_type='team_identity',
+            entity_id=attached['global_football_team_identity_id'], id_system='nflverse_team_abbr',
+            id_value=abbr, source_snapshot_id=SNAP_PBP, confidence=1.0,
+            effective_from=season_first, effective_to=None, observed_at=NOW)
+        lineage_report.append({'team': abbr, 'identity_bounds': 'attached_to_skeleton',
+                               'documented_identities': 1, 'franchise_id': skeleton_franchise,
+                               'identity': attached['full_name']})
+        continue
+    if skeleton_identities and why_not:
+        unattached_reasons.append(f'{abbr}: {why_not}')
     franchise_id = f'gfr_{abbr.lower()}'
     row('football.franchise', global_football_franchise_id=franchise_id, canonical_label=f'{label} (franchise)',
         founded_on=(t or {}).get('inception'), terminated_on=None, source_snapshot_id=SNAP_WD)
@@ -587,6 +661,10 @@ for (game_id, player_id), (identity, roles) in best_appearance.items():
 
 # ---------------------------------------------------------------- write CSV
 os.makedirs(OUT, exist_ok=True)
+# A table that no longer produces rows must not leave last run's CSV behind for
+# the loader to pick up as if it were current.
+for stale in os.listdir(OUT):
+    if stale.endswith('.csv'): os.remove(os.path.join(OUT, stale))
 manifest = {}
 for table, rows in tables.items():
     if not rows: continue
@@ -604,5 +682,9 @@ json.dump({'built_at': NOW, 'season': SEASON_YEAR, 'mode': 'technical_validation
            'snapshots': {'pbp': SNAP_PBP, 'roster': SNAP_ROSTER, 'players_ids': SNAP_IDS, 'wikidata': SNAP_WD}},
           open(os.path.join(OUT, '_manifest.json'), 'w', encoding='utf-8'), indent=1)
 print(json.dumps({t: m['rows'] for t, m in sorted(manifest.items())}, indent=1))
+print('season:', SEASON_ID, '(skeleton)' if SKELETON_SEASON else '(slice-local, skeleton absent)')
+if unattached_reasons: print('NOT attached to the skeleton:', '; '.join(unattached_reasons))
+attached = sum(1 for r in lineage_report if r['identity_bounds'] == 'attached_to_skeleton')
+print(f'attached to the all-era skeleton: {attached}/{len(teams_in_data)} teams')
 print('appearance identity conflicts:', appearance_conflicts)
 print('identity bounds:', pd.Series([r['identity_bounds'] for r in lineage_report]).value_counts().to_dict())

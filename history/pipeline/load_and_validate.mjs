@@ -17,6 +17,7 @@ import { asOf } from '../lib/temporal.mjs';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = join(HERE, '..', '..');
 const SLICE = join(REPO, 'history', '.out', 'slice2023');
+const SKELETON = join(REPO, 'history', '.out', 'skeleton');
 const DB_DIR = join(REPO, 'history', '.out', 'pg');
 const SCHEMA_DIR = join(REPO, 'history', 'schema');
 
@@ -34,6 +35,7 @@ const ORDER = [
   'football.game', 'football.game_team_score', 'football.game_weather_observation',
   'football.drive', 'football.play', 'football.play_participant', 'football.play_penalty',
   'football.player_game_stat', 'football.team_game_stat', 'football.player_game_appearance',
+  'football.championship_result',
 ];
 
 if (process.argv.includes('--fresh') && existsSync(DB_DIR)) rmSync(DB_DIR, { recursive: true, force: true });
@@ -45,17 +47,32 @@ for (const f of readdirSync(SCHEMA_DIR).filter(f => f.endsWith('.sql')).sort()) 
   await db.exec(readFileSync(join(SCHEMA_DIR, f), 'utf8'));
 }
 
+/* The skeleton loads first and owns franchises, identities, venues, seasons and
+   leagues; the season slice attaches to it. Rows both datasets carry (a league,
+   a season, a source) are inserted once — hence the staging table. */
+async function load(dir, label) {
+  let total = 0;
+  for (const table of ORDER) {
+    const file = join(dir, table.replace('.', '__') + '.csv');
+    if (!existsSync(file)) continue;
+    const text = readFileSync(file, 'utf8');
+    const header = text.slice(0, text.indexOf('\n')).trim();
+    await db.exec(`create temp table _stage (like ${table})`);
+    await db.query(`COPY _stage (${header}) FROM '/dev/blob' WITH (FORMAT csv, HEADER true)`, [], { blob: new Blob([text]) });
+    const inserted = await db.query(`insert into ${table} select * from _stage on conflict do nothing`);
+    await db.exec('drop table _stage');
+    total += inserted.affectedRows ?? 0;
+  }
+  console.log(`  ${label.padEnd(12)} ${String(total).padStart(7)} rows`);
+  return total;
+}
+
 let loaded = 0;
+loaded += await load(SKELETON, 'skeleton');
+loaded += await load(SLICE, 'slice 2023');
 for (const table of ORDER) {
-  const file = join(SLICE, table.replace('.', '__') + '.csv');
-  if (!existsSync(file)) { console.log(`  (no file for ${table})`); continue; }
-  const text = readFileSync(file, 'utf8');
-  const header = text.slice(0, text.indexOf('\n')).trim();
-  await db.query(`COPY ${table} (${header}) FROM '/dev/blob' WITH (FORMAT csv, HEADER true)`,
-    [], { blob: new Blob([text]) });
   const { rows } = await db.query(`select count(*)::int n from ${table}`);
-  loaded += rows[0].n;
-  console.log(`  ${table.padEnd(42)} ${String(rows[0].n).padStart(7)}`);
+  if (rows[0].n) console.log(`  ${table.padEnd(42)} ${String(rows[0].n).padStart(7)}`);
 }
 console.log(`loaded ${loaded} rows in ${((Date.now() - started) / 1000).toFixed(1)}s\n`);
 
@@ -83,9 +100,10 @@ await check('games.count', 'blocker', 'one game row per scheduled 2023 game', as
   return { pass: r.total === 285 && r.reg === 272 && r.post === 13, detail: `total ${r.total} (reg ${r.reg}, post ${r.post})` };
 });
 await check('games.per_team', 'blocker', 'every team plays 17 regular-season games', async () => {
-  const r = await q(`select t.abbreviation, count(*)::int n from football.game g
+  const r = await q(`select x.id_value as abbreviation, count(*)::int n from football.game g
      join football.competition c using (competition_id)
-     join football.team_identity t on t.global_football_team_identity_id in (g.home_team_identity_id, g.away_team_identity_id)
+     join football_src.external_id x on x.entity_type='team_identity' and x.id_system='nflverse_team_abbr'
+      and x.entity_id in (g.home_team_identity_id, g.away_team_identity_id)
      where c.kind='regular_season' group by 1 order by 2`);
   const bad = r.filter(x => x.n !== 17);
   return { pass: bad.length === 0 && r.length === 32, detail: `${r.length} teams, off-count: ${bad.map(b => `${b.abbreviation}=${b.n}`).join(',') || 'none'}` };
@@ -198,10 +216,24 @@ await check('identity.no_name_merge', 'blocker', 'no two players share one canon
   return { pass: true, detail: `${r.length} names shared by different people, all kept distinct (e.g. ${r.slice(0, 3).map(x => `${x.normalized_key}×${x.n}`).join(', ') || 'none'})` };
 });
 await check('lineage.valid', 'blocker', 'franchise lineage passes structural validation', async () => {
-  const identities = await q(`select global_football_team_identity_id as team_identity_id, league_id, effective_from::text, effective_to::text, source_snapshot_id from football.team_identity`);
+  const identities = await q(`select global_football_team_identity_id as team_identity_id, league_id, effective_from::text, effective_to::text,
+     from_basis, to_basis, from_precision, to_precision, source_snapshot_id from football.team_identity`);
   const links = await q(`select global_football_team_identity_id as team_identity_id, global_football_franchise_id as franchise_id, effective_from::text, effective_to::text, source_snapshot_id from football.team_identity_franchise`);
   const problems = validateLineage({ team_identities: identities, identity_franchise: links });
-  return { pass: problems.length === 0, detail: `${identities.length} identities, ${problems.length} violations` };
+  const contradictions = problems.filter(p => p.severity === 'contradiction');
+  const conflicts = problems.filter(p => p.severity === 'source_conflict');
+  const gaps = problems.filter(p => p.severity === 'unknown');
+  return { pass: contradictions.length === 0,
+    detail: `${identities.length} identities, ${contradictions.length} contradictions, ${conflicts.length} conflicts stated by the source, ${gaps.length} bounds the source leaves unknown` };
+});
+await check('lineage.source_conflicts_named', 'warn', 'every conflict the source itself contains is named, not silently resolved', async () => {
+  const identities = await q(`select global_football_team_identity_id as team_identity_id, league_id, effective_from::text, effective_to::text,
+     from_basis, to_basis, from_precision, to_precision, full_name, source_snapshot_id from football.team_identity`);
+  const links = await q(`select global_football_team_identity_id as team_identity_id, global_football_franchise_id as franchise_id, effective_from::text, effective_to::text, source_snapshot_id from football.team_identity_franchise`);
+  const name = id => (identities.find(i => i.team_identity_id === id) || {}).full_name || id;
+  const conflicts = validateLineage({ team_identities: identities, identity_franchise: links }).filter(p => p.severity === 'source_conflict');
+  return { pass: true, detail: conflicts.length === 0 ? 'none'
+    : conflicts.map(c => `${name(c.a)} overlaps ${name(c.b)} by ${c.days}d`).join('; ') };
 });
 await check('lineage.identity_in_force', 'blocker', 'every game cites an identity in force on its date', async () => {
   const r = await one(`select count(*)::int n from football.game g
@@ -265,8 +297,9 @@ await check('temporal.as_of_roster', 'blocker', 'roster AS-OF returns different 
   const rows = await q(`select r.global_football_player_id as subject_id, r.status,
       r.effective_from::text as effective_from, r.effective_to::text as effective_to, r.observed_at
      from football.roster_status_period r
-     join football.team_identity t on t.global_football_team_identity_id=r.global_football_team_identity_id
-     where t.abbreviation='KC'`);
+     join football_src.external_id x on x.entity_type='team_identity' and x.id_system='nflverse_team_abbr'
+      and x.entity_id=r.global_football_team_identity_id
+     where x.id_value='KC'`);
   const inSeason = asOf(rows, { validAt: '2023-10-15', knownAt: '2030-01-01' });
   const beforeSeason = asOf(rows, { validAt: '2023-06-01', knownAt: '2030-01-01' });
   return { pass: inSeason.length > 40 && beforeSeason.length === 0,
@@ -287,6 +320,73 @@ await check('derived.leaderboard', 'warn', 'season leaderboards compute from can
      join football.game g using (global_football_game_id) join football.competition c using (competition_id)
      where s.stat_key='passing_yards' and c.kind='regular_season' group by 1 order by 2 desc limit 3`);
   return { pass: r.length === 3 && r[0].yards > 3000, detail: r.map(x => `${x.display_name} ${x.yards}`).join(' | ') };
+});
+
+/* ------------------------------------------------------------ skeleton */
+await check('skeleton.leagues', 'blocker', 'NFL, AFL and AAFC are separate leagues, never relabelled into each other', async () => {
+  const r = await q(`select short_name from football.league order by short_name`);
+  return { pass: r.length === 3 && r.map(x => x.short_name).join(',') === 'AAFC,AFL,NFL', detail: r.map(x => x.short_name).join(', ') };
+});
+await check('skeleton.seasons', 'blocker', 'league seasons span the full recorded era without duplicates', async () => {
+  const r = await one(`select count(*)::int n, min(season_year)::int lo, max(season_year)::int hi,
+     (select count(*) from (select league_id, season_year from football.season group by 1,2 having count(*)>1) x)::int dupes
+     from football.season`);
+  return { pass: r.lo <= 1920 && r.hi >= 2026 && r.dupes === 0, detail: `${r.n} seasons ${r.lo}-${r.hi}, ${r.dupes} duplicates` };
+});
+await check('skeleton.unknown_is_explicit', 'blocker', 'an unknown bound is null with a stated basis, never a guess', async () => {
+  const r = await one(`select
+     count(*) filter (where effective_from is null and from_basis <> 'unknown')::int lying,
+     count(*) filter (where from_basis = 'documented')::int documented,
+     count(*) filter (where from_basis = 'derived_from_inception')::int inception,
+     count(*) filter (where from_basis = 'unknown')::int unknown from football.team_identity`);
+  return { pass: r.lying === 0, detail: `documented ${r.documented}, from inception ${r.inception}, unknown ${r.unknown}, mislabelled ${r.lying}` };
+});
+await check('skeleton.relocations', 'warn', 'franchises that moved or were renamed carry more than one identity', async () => {
+  const r = await q(`select global_football_franchise_id f, count(*)::int n from football.team_identity_franchise group by 1 having count(*) > 1`);
+  return { pass: r.length >= 5, detail: `${r.length} franchises with multiple identities` };
+});
+await check('skeleton.championships', 'blocker', 'championship results carry a winner that resolves to a franchise', async () => {
+  const r = await one(`select count(*)::int n,
+     count(*) filter (where winning_franchise_id is not null)::int resolved,
+     count(*) filter (where winning_franchise_id is not null and winning_franchise_id not in (select global_football_franchise_id from football.franchise))::int dangling
+     from football.championship_result`);
+  return { pass: r.n >= 60 && r.dangling === 0 && r.resolved >= 55, detail: `${r.n} championships, ${r.resolved} with a resolved winner, ${r.dangling} dangling` };
+});
+await check('skeleton.no_game_without_participants', 'blocker', 'a championship with no known participants is a result, not a game', async () => {
+  const r = await one(`select count(*)::int n from football.championship_result where global_football_game_id is not null`);
+  return { pass: r.n === 0, detail: `${r.n} championship rows claim a game record (Wikidata names no participants for any Super Bowl)` };
+});
+await check('skeleton.venue_names', 'blocker', 'renaming a venue does not create a second venue', async () => {
+  const r = await one(`select (select count(*) from football.venue)::int venues, (select count(*) from football.venue_name)::int names,
+     (select count(*) from (select global_venue_id from football.venue_name group by 1 having count(*) > 1) x)::int renamed`);
+  return { pass: r.names >= r.venues && r.renamed > 0, detail: `${r.venues} venues, ${r.names} names, ${r.renamed} venues renamed over time` };
+});
+await check('skeleton.coaches', 'warn', 'coaching tenures are dated and attach to an identity', async () => {
+  const r = await one(`select count(*)::int n, count(*) filter (where effective_from is not null)::int dated,
+     count(*) filter (where global_football_team_identity_id is null)::int unattached from football.coaching_tenure`);
+  return { pass: r.unattached === 0 && r.dated >= r.n - 2, detail: `${r.n} tenures, ${r.dated} dated, ${r.unattached} unattached` };
+});
+await check('integration.season_attaches', 'blocker', 'the 2023 season attaches to skeleton franchises instead of duplicating them', async () => {
+  const r = await one(`with season_identities as (
+       select distinct home_team_identity_id id from football.game
+       union select distinct away_team_identity_id from football.game)
+     select count(*)::int teams,
+       count(*) filter (where exists (
+         select 1 from football.team_identity_franchise f
+         join football_src.external_id x on x.entity_type='franchise' and x.entity_id=f.global_football_franchise_id
+         where f.global_football_team_identity_id = season_identities.id))::int attached
+     from season_identities`);
+  return { pass: r.teams === 32 && r.attached === 32, detail: `${r.attached}/${r.teams} season teams resolve to a skeleton franchise` };
+});
+await check('integration.franchise_history', 'blocker', 'a 2023 team can be traced back through its earlier identities', async () => {
+  const r = await q(`with season_identities as (
+       select distinct home_team_identity_id id from football.game)
+     select ti.full_name, count(*)::int identities from season_identities
+     join football.team_identity_franchise f on f.global_football_team_identity_id = season_identities.id
+     join football.team_identity_franchise all_f on all_f.global_football_franchise_id = f.global_football_franchise_id
+     join football.team_identity ti on ti.global_football_team_identity_id = all_f.global_football_team_identity_id
+     group by 1 having count(*) > 1 order by 2 desc limit 5`);
+  return { pass: r.length > 0, detail: r.map(x => `${x.full_name} (${x.identities})`).join(', ') || 'none' };
 });
 
 const failures = results.filter(r => !r.pass && r.severity === 'blocker');

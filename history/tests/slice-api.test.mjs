@@ -103,7 +103,10 @@ t('player passport carries ids and the source position label', async () => {
 });
 
 t('roster AS-OF: knowledge time before ingestion returns nobody', async () => {
-  const team = await db.query(`select global_football_team_identity_id id from football.team_identity where abbreviation='KC' limit 1`);
+  // 'KC' is nflverse's code for this identity, not a property of the club, so
+  // it resolves through the external identifier that records whose code it is.
+  const team = await db.query(`select entity_id id from football_src.external_id
+     where entity_type='team_identity' and id_system='nflverse_team_abbr' and id_value='KC' limit 1`);
   const inSeason = await get(`/v1/history/rosters/${team.rows[0].id}?valid_at=2023-11-01&surface=internal`);
   assert.ok(inSeason.body.data.length > 40);
   assert.equal(inSeason.body.provenance.as_of.valid_at, '2023-11-01');

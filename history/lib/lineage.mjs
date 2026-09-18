@@ -68,6 +68,10 @@ export function validateLineage(graph) {
       id: link.team_identity_id,
       from: link.effective_from ?? t.effective_from,
       to: link.effective_to ?? t.effective_to,
+      fromPrecision: t.from_precision || 'unknown',
+      toPrecision: t.to_precision || 'unknown',
+      fromBasis: t.from_basis || 'unknown',
+      toBasis: t.to_basis || 'unknown',
     });
   }
   for (const t of identities.values()) {
@@ -75,15 +79,50 @@ export function validateLineage(graph) {
     if (!t.source_snapshot_id) problems.push({ rule: 'identity_without_provenance', team_identity_id: t.team_identity_id });
     if (t.effective_to && t.effective_from && t.effective_to <= t.effective_from) problems.push({ rule: 'identity_interval_inverted', team_identity_id: t.team_identity_id });
   }
-  /* A franchise uses one identity at a time: overlapping intervals are an error. */
+  /* A franchise uses one identity at a time. Two DATED intervals that overlap
+     contradict each other and are an error. An interval with an unknown bound
+     cannot be checked at all — that is a gap in what the sources say, not a
+     contradiction in what we hold, and it is reported as its own rule so that
+     neither one is mistaken for the other. */
   for (const [franchiseId, spans] of byFranchise) {
-    spans.sort((a, b) => String(a.from).localeCompare(String(b.from)));
-    for (let i = 1; i < spans.length; i++) {
-      const prev = spans[i - 1], cur = spans[i];
-      if (!prev.to || prev.to > cur.from) problems.push({ rule: 'franchise_identity_overlap', franchise_id: franchiseId, a: prev.id, b: cur.id });
+    const dated = spans.filter(s => s.from && s.to);
+    for (const s of spans) {
+      /* An identity still in force has no end and that is not a gap. The gaps
+         are the bounds that make the franchise's sequence uncheckable: an
+         identity with no start at all, and one left open although another
+         identity of the same franchise begins after it. */
+      const supersededButOpen = !s.to && spans.some(o => o !== s && o.from && (!s.from || o.from > s.from));
+      if (!s.from || supersededButOpen) {
+        problems.push({ rule: 'identity_bounds_unknown', severity: 'unknown', franchise_id: franchiseId, team_identity_id: s.id });
+      }
+    }
+    dated.sort((a, b) => String(a.from).localeCompare(String(b.from)));
+    for (let i = 1; i < dated.length; i++) {
+      const prev = dated[i - 1], cur = dated[i];
+      if (prev.to <= cur.from) continue;
+      const days = Math.round((Date.parse(prev.to) - Date.parse(cur.from)) / 86400000);
+      /* Two facts stated only to the year cannot be ordered inside that year:
+         a club renamed in mid-1933 yields "…through 1933" and "from 1933",
+         which overlap by construction of the source's precision, not by any
+         claim of ours. Beyond that granularity the two statements genuinely
+         disagree, and a disagreement the source itself contains is reported as
+         such — it is not ours to resolve by editing a date. */
+      const tolerance = { year: 366, month: 31, day: 0, unknown: 0 };
+      const slack = Math.max(tolerance[prev.toPrecision] ?? 0, tolerance[cur.fromPrecision] ?? 0);
+      const bothDocumented = prev.toBasis === 'documented' && cur.fromBasis === 'documented';
+      if (days <= slack) {
+        problems.push({ rule: 'overlap_within_stated_precision', severity: 'unknown', franchise_id: franchiseId, a: prev.id, b: cur.id, days });
+      } else if (bothDocumented) {
+        /* Both bounds are the source's own statements and they disagree. We
+           report it; resolving it would mean choosing a date no source gives. */
+        problems.push({ rule: 'source_states_overlapping_names', severity: 'source_conflict', franchise_id: franchiseId, a: prev.id, b: cur.id, days });
+      } else {
+        /* At least one bound is one WE derived, so the collision is ours. */
+        problems.push({ rule: 'franchise_identity_overlap', severity: 'contradiction', franchise_id: franchiseId, a: prev.id, b: cur.id, days });
+      }
     }
   }
-  return problems;
+  return problems.map(p => ({ severity: 'contradiction', ...p }));
 }
 
 /** A historical record must name the identity in force on its date for that franchise. */

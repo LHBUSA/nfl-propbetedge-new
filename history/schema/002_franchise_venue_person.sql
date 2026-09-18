@@ -18,18 +18,32 @@ create table football.team_identity (
   full_name            text not null,
   abbreviation         text,
   is_temporary_combined boolean not null default false, -- wartime merged teams
-  effective_from       date not null,
+  -- Bounds may be unknown. A null date with basis 'unknown' says so; an
+  -- 'evidence_window' bound is only "true at least within this window".
+  effective_from       date,
   effective_to         date,
+  from_basis           text not null default 'unknown'
+                         check (from_basis in ('documented','derived_from_inception','evidence_window','unknown')),
+  to_basis             text not null default 'unknown'
+                         check (to_basis in ('documented','derived_from_dissolution','evidence_window','unknown','still_in_force')),
+  -- How precisely the source stated each bound. A fact given only as a year is
+  -- stored as 1 January of that year and says so here, so nothing downstream
+  -- mistakes it for a known day. Ends are exclusive: a name used through 1996
+  -- ends 1997-01-01.
+  from_precision       text not null default 'unknown'
+                         check (from_precision in ('day','month','year','unknown')),
+  to_precision         text not null default 'unknown'
+                         check (to_precision in ('day','month','year','unknown')),
   source_snapshot_id   text not null references football_src.source_snapshot(source_snapshot_id)
 );
 
 create table football.team_identity_franchise (        -- m:n, time-bounded
   global_football_team_identity_id text not null references football.team_identity(global_football_team_identity_id),
   global_football_franchise_id     text not null references football.franchise(global_football_franchise_id),
-  effective_from       date not null,
+  effective_from       date,
   effective_to         date,
   source_snapshot_id   text not null references football_src.source_snapshot(source_snapshot_id),
-  primary key (global_football_team_identity_id, global_football_franchise_id, effective_from)
+  primary key (global_football_team_identity_id, global_football_franchise_id)
 );
 
 create table football.franchise_lineage_event (
@@ -70,10 +84,11 @@ create table football.venue (
 create table football.venue_name (
   global_venue_id      text not null references football.venue(global_venue_id),
   name                 text not null,
-  effective_from       date not null,
+  -- A name whose start the source does not give is null, not a made-up date.
+  effective_from       date,
   effective_to         date,
   source_snapshot_id   text not null references football_src.source_snapshot(source_snapshot_id),
-  primary key (global_venue_id, effective_from)
+  primary key (global_venue_id, name)
 );
 create table football.venue_attribute_period (
   global_venue_id      text not null references football.venue(global_venue_id),

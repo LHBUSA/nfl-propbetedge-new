@@ -152,7 +152,8 @@ create table football.coaching_tenure (
   role                 text not null,                  -- verbatim title
   role_class           text not null check (role_class in ('head_coach','interim_head_coach','offensive_coordinator','defensive_coordinator','special_teams_coordinator','position_coach','other_staff')),
   play_caller          boolean,                        -- only when a source establishes it
-  effective_from       date not null,
+  effective_from       date,                           -- unknown start stays unknown
+
   effective_to         date,
   source_snapshot_id   text not null references football_src.source_snapshot(source_snapshot_id),
   observed_at          timestamptz not null
