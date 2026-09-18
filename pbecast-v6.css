@@ -103,3 +103,71 @@
 @media(max-width:760px){.cast6-feed>header{flex-direction:row;align-items:center;flex-wrap:wrap}.cast6-feed-meta{width:100%;justify-content:space-between}.cast6-feed-toggle{min-height:44px}}
 @media(prefers-reduced-motion:reduce){.cast6-feed-toggle,.cast6-feed-toggle i{transition:none}}
 .cast6-feed-meta>small{color:var(--pbe-dim);font:700 11px/1.35 'JetBrains Mono',monospace;text-transform:uppercase}
+
+
+/* ---- PBEcast game context: stadium + where to watch ---------------------- */
+.cast6-contextbar{
+  display:grid;
+  grid-template-columns:minmax(0,1.35fr) minmax(230px,.65fr);
+  gap:8px;
+  max-width:980px;
+  margin:15px auto 0;
+}
+.cast6-context-item{
+  position:relative;
+  min-width:0;
+  padding:11px 13px 11px 15px;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.075);
+  border-radius:10px;
+  background:linear-gradient(135deg,rgba(255,255,255,.025),rgba(0,0,0,.20));
+}
+.cast6-context-item::before{
+  content:"";
+  position:absolute;
+  inset:0 auto 0 0;
+  width:2px;
+  background:rgba(216,183,91,.62);
+}
+.cast6-context-item.is-watch::before{background:rgba(98,220,150,.62)}
+.cast6-context-item>span{
+  display:block;
+  color:var(--pbe-dim);
+  font:800 9px/1 'JetBrains Mono',monospace;
+  letter-spacing:.11em;
+}
+.cast6-context-item>b{
+  display:block;
+  margin-top:5px;
+  color:var(--pbe-paper);
+  font:900 15px/1.2 'Inter',sans-serif;
+  white-space:normal;
+  overflow-wrap:anywhere;
+}
+.cast6-context-item>small{
+  display:block;
+  margin-top:4px;
+  color:var(--pbe-dim);
+  font-size:10px;
+  line-height:1.35;
+}
+.cast6-context-item.is-watch .pbe-tv,
+.cast6-context-item.is-watch .pbe-tv-slot{
+  display:inline-flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:4px;
+}
+.cast6-context-item.is-watch .pbe-tv-name,
+.cast6-context-item.is-watch .pbe-tv-link{
+  color:#efe1a0;
+  font:900 15px/1.2 'Inter',sans-serif;
+}
+.cast6-context-item.is-watch .pbe-tv-link{text-decoration:none}
+.cast6-context-item.is-watch .pbe-tv-link:hover{text-decoration:underline}
+.cast6-context-item.is-watch .pbe-tv-sep{color:var(--pbe-dim)}
+
+@media(max-width:760px){
+  .cast6-contextbar{grid-template-columns:1fr;margin-top:12px}
+  .cast6-context-item{padding:10px 11px 10px 13px}
+}
