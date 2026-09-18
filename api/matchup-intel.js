@@ -201,15 +201,8 @@ export default async function handler(req, res) {
   const home = event?.home || null;
   const season = Number(event?.season) || new Date().getUTCFullYear();
 
-  const [board, consensus, injuries, changes, news, ratings] = await Promise.all([
+  const [board, injuries, changes, news, ratings] = await Promise.all([
     soft('board', () => getJson(`${GATEWAY}/api/odds/board?event_id=${encodeURIComponent(eventId)}`)),
-    /* game-intel is a Vercel function in this repo, not a gateway route. Asking
-       the gateway for it returned 404 in production and quietly left spread,
-       total and moneyline null while the board still reported 18 books — the
-       market looked present and read empty. It is same-origin, and it needs the
-       team names as well as the id. */
-    soft('consensus', () => getJson(`${SELF}/api/game-intel?event_id=${encodeURIComponent(eventId)}`
-      + `${away ? `&away=${encodeURIComponent(away)}` : ''}${home ? `&home=${encodeURIComponent(home)}` : ''}`)),
     soft('injuries', () => getJson(`${GATEWAY}/api/injuries`)),
     soft('changes', () => getJson(`${GATEWAY}/api/changes?window_hours=72`)),
     soft('news', () => getJson(`${SELF}/api/news-feed?limit=100`)),
@@ -239,7 +232,7 @@ export default async function handler(req, res) {
     };
   };
 
-  const market = buildMarket(board, consensus);
+  const market = buildMarket(board, event);
 
   const pressurePoints = [
     ...collisions({
@@ -303,7 +296,7 @@ export default async function handler(req, res) {
         { input: 'red-zone detail', reason: 'no approved 2026 play-by-play path for this surface' },
         { input: 'pressure, blitz, coverage', reason: '2026 charting data is not licensed' },
       ],
-      upstream: [board, consensus, injuries, changes, news, ratings]
+      upstream: [board, injuries, changes, news, ratings]
         .map(r => ({ source: r.label, ok: r.ok, error: r.error })),
     },
   };
@@ -356,16 +349,45 @@ function dimensionsOf(side, which) {
   return { pass: null, rush: null, explosive: null, aggregate: base };
 }
 
-function buildMarket(board, consensus) {
-  const core = consensus.ok ? consensus.value?.core_market || consensus.value?.market || null : null;
+/**
+ * The market block.
+ *
+ * The consensus lines come from the SAME best-line payload the event was
+ * resolved from — it already carries a per-side consensus line, price, no-vig
+ * probability and book count. Two earlier attempts went elsewhere for this and
+ * both failed in production: the gateway has no game-intel route (404), and the
+ * same-origin one is entitlement-gated (401), which would have made the market
+ * Pro-only by accident. This needs no extra call at all.
+ */
+function buildMarket(board, event) {
+  const markets = event?.markets || null;
   const b = board.ok ? board.value : null;
-  if (!core && !b) return { state: STATE.NO_MARKET, reason: board.error || consensus.error || 'no_snapshot' };
+  if (!markets && !b) return { state: STATE.NO_MARKET, reason: board.error || 'no_snapshot' };
+
+  /* Each market is keyed by side name; the shape is {side: {consensus:{line,price,...}}}. */
+  const sideOf = (marketName, sideName) => {
+    const m = markets?.[marketName];
+    if (!m || !sideName) return null;
+    const entry = m[sideName];
+    if (!entry?.consensus) return null;
+    return {
+      line: entry.consensus.line ?? null,
+      price: entry.consensus.price ?? null,
+      no_vig_probability: entry.consensus.no_vig_probability ?? null,
+      books: entry.book_count ?? null,
+    };
+  };
+  const total = markets?.total || null;
+  const totalSide = total ? (total.Over || total.over || Object.values(total)[0]) : null;
+
   return {
-    state: STATE.OK,
-    spread: core?.spread ?? null,
-    total: core?.total ?? null,
-    moneyline: core?.moneyline ?? null,
-    books: core?.books ?? b?.market_summary?.length ?? null,
+    state: markets || b ? STATE.OK : STATE.NO_MARKET,
+    spread: { away: sideOf('spread', event?.away), home: sideOf('spread', event?.home) },
+    moneyline: { away: sideOf('moneyline', event?.away), home: sideOf('moneyline', event?.home) },
+    total: totalSide?.consensus
+      ? { line: totalSide.consensus.line ?? null, price: totalSide.consensus.price ?? null }
+      : null,
+    books: event?.books ?? b?.market_summary?.length ?? null,
     quote_count: b?.quote_count ?? null,
     player_market_count: b?.player_market_count ?? null,
     captured_at: b?.captured_at ?? b?.snapshot_captured_at ?? null,

@@ -111,3 +111,6 @@
   .pbe17m-market dd{font-size:17px}
   .pbe17m-fresh{margin-left:0;flex-basis:100%}
 }
+
+/* The consensus price under each line: present when the tape supplies it. */
+.pbe17m-market>div small{display:block;margin-top:2px;font:600 10px/1 'JetBrains Mono',ui-monospace,monospace;color:var(--pbe-faint,#5d6675)}

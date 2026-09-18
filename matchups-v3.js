@@ -58,7 +58,16 @@
     const n = num(v, digits);
     return n === null ? null : (Number(v) > 0 ? `+${n}` : n);
   };
-  const pct = v => (Number.isFinite(Number(v)) ? `${Math.round(Number(v))}` : null);
+  /* "31st", not "31th". These are read by people, not parsed. */
+  const ordinal = n => {
+    const v = Math.round(Number(n));
+    if (!Number.isFinite(v)) return null;
+    const mod100 = Math.abs(v) % 100;
+    if (mod100 >= 11 && mod100 <= 13) return `${v}th`;
+    return `${v}${({ 1: 'st', 2: 'nd', 3: 'rd' })[Math.abs(v) % 10] || 'th'}`;
+  };
+  const pct = v => (v === null || v === undefined || v === '' ? null
+    : (Number.isFinite(Number(v)) ? ordinal(v) : null));
 
   /* A metric is printed only when it has a value. UNAVAILABLE prints the word,
      never a zero, because 0.0 EPA/play is a real and different statement. */
@@ -70,7 +79,7 @@
     return `<div class="pbe17m-tile${m.limited ? ' is-limited' : ''}">
       <dt>${esc(title)}</dt>
       <dd>${esc(signed(m.value))}</dd>
-      ${p !== null ? `<span class="pbe17m-pct">${esc(p)}th pct</span>` : ''}
+      ${p !== null ? `<span class="pbe17m-pct">${esc(p)} pct</span>` : ''}
       ${m.plays !== null ? `<small>${esc(m.plays)} plays</small>` : ''}
       ${m.limited ? '<b class="pbe17m-limited">LIMITED SAMPLE</b>' : ''}
     </div>`;
@@ -103,12 +112,15 @@
       return `<div class="pbe17m-market is-none"><b>NO CURRENT MARKET</b>
         <span>No book snapshot is available for this game.</span></div>`;
     }
-    const cell = (label, value) => `<div><dt>${esc(label)}</dt><dd>${value === null || value === undefined ? '—' : esc(value)}</dd></div>`;
+    const cell = (label, value, sub) => `<div><dt>${esc(label)}</dt>
+      <dd>${value === null || value === undefined ? '—' : esc(value)}</dd>
+      ${sub ? `<small>${esc(sub)}</small>` : ''}</div>`;
     const age = Number.isFinite(Number(m.age_seconds)) ? `${Math.round(Number(m.age_seconds) / 60)}m ago` : null;
+    const priced = v => (v === null || v === undefined ? null : (Number(v) > 0 ? `+${v}` : `${v}`));
     return `<div class="pbe17m-market">
-      ${cell('SPREAD', m.spread?.home ?? m.spread?.away ?? null)}
-      ${cell('TOTAL', m.total?.line ?? null)}
-      ${cell('MONEYLINE', m.moneyline?.home ?? null)}
+      ${cell('SPREAD', m.spread?.home?.line ?? null, m.spread?.home?.price ? priced(m.spread.home.price) : null)}
+      ${cell('TOTAL', m.total?.line ?? null, m.total?.price ? priced(m.total.price) : null)}
+      ${cell('MONEYLINE', priced(m.moneyline?.home?.price ?? null), null)}
       ${cell('BOOKS', m.books ?? null)}
       <span class="pbe17m-fresh">${esc(age || 'snapshot time unknown')}${m.price_semantics ? ` · ${esc(m.price_semantics.replace(/_/g, ' ').toLowerCase())}` : ''}</span>
     </div>`;
