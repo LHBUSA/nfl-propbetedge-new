@@ -1,4 +1,5 @@
 import { getNflSession, verifiedEmail, supabaseAdminHeaders } from './_nfl-auth.js';
+import { teamLogoUrl } from './_playerdna/media.js';
 import {
   currentSeason, matchupFromGameId, engineRuntime, composeEngineState,
 } from './_pbe-engine-runtime.js';
@@ -688,6 +689,8 @@ async function freeSampleView(res, secret) {
       const matchup = rawMatchup ? {
         away_team: displayTeam(rawMatchup.away_team),
         home_team: displayTeam(rawMatchup.home_team),
+        away_logo_url: teamLogoUrl(displayTeam(rawMatchup.away_team)),
+        home_logo_url: teamLogoUrl(displayTeam(rawMatchup.home_team)),
       } : null;
       const scope = labelFor(row.publication_scope);
       const team = row.selection_team ? displayTeam(row.selection_team) : null;
@@ -705,6 +708,8 @@ async function freeSampleView(res, secret) {
         kickoff_ts: row.kickoff_ts,
         market: row.market,
         selection,
+        selected_team: team,
+        selected_team_logo_url: team ? teamLogoUrl(team) : null,
         odds: row.market_price,
         model_probability: row.model_prob,
         market_probability: row.market_prob,
