@@ -5,9 +5,9 @@ const ROOT = process.cwd();
 const SKIP_DIRS = new Set([
   '.git', '.github', '.vercel', 'node_modules', 'dist', 'build', 'coverage',
   'docs', 'api', 'workers', 'server', 'scripts', 'tests', 'test', 'research',
-  'history', 'supabase', 'migrations', 'data', 'fixtures'
+  'history', 'supabase', 'migrations', 'data', 'fixtures', 'shared', 'lib'
 ]);
-const EXTENSIONS = new Set(['.js', '.mjs', '.cjs', '.ts', '.tsx', '.jsx', '.html', '.vue', '.svelte']);
+const EXTENSIONS = new Set(['.js', '.mjs', '.cjs', '.ts', '.tsx', '.jsx', '.html', '.vue', '.svelte', '.css']);
 const FORBIDDEN = [
   /\bMLB Stats API\b/gi,
   /\bThe Odds API\b/gi,
@@ -55,8 +55,8 @@ for (const file of walk(ROOT)) {
 
 if (violations.length) {
   console.error('\nUpstream API brand leak detected in consumer-facing source.');
-  console.error('Public UI should promote PropSports / PropBetEdge, not implementation providers.');
-  console.error('If a provider name is legally required attribution, keep it in provenance/compliance surfaces outside consumer UI.\n');
+  console.error('Public UI should promote PropSports.PropTechUSA.ai / PropBetEdge, not implementation providers.');
+  console.error('Keep legally required attribution and source-rights records in provenance/compliance surfaces.\n');
   for (const v of violations) console.error(` - ${v}`);
   process.exit(1);
 }
