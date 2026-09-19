@@ -1,0 +1,17 @@
+name: Source Brand Guard
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  source-brand-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Block upstream API branding in consumer UI
+        run: node scripts/guard-source-brand.mjs
