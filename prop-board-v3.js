@@ -12,6 +12,9 @@
   function providerLabel(p){const raw=String(p||'').trim();if(!raw)return 'Provider';
     const known={THE_ODDS_API:'PropSports.PropTechUSA.ai Market Feed',ODDS_API:'PropSports.PropTechUSA.ai Market Feed'};if(known[raw.toUpperCase()])return known[raw.toUpperCase()];
     return raw.replace(/[_-]+/g,' ').toLowerCase().replace(/\b\w/g,c=>c.toUpperCase()).replace(/\bApi\b/g,'API');}
+  function providerHtml(p){const label=providerLabel(p);return label==='PropSports.PropTechUSA.ai Market Feed'
+    ? '<a href="https://propsports.proptechusa.ai/" target="_blank" rel="noopener noreferrer">'+esc(label)+'</a>'
+    : esc(label);}
 
   const API = typeof NFL_API_GATEWAY !== 'undefined' ? NFL_API_GATEWAY : 'https://nfl-api.propbetedge.ai';
   const DEFAULT_EVENT = '8c94552d022acec4a0458d70c19d3da9';
@@ -420,7 +423,7 @@
     const notOffered = MARKETS.filter(m => availability[m] && availability[m] !== 'IN_SNAPSHOT');
     return `<div class="pbe3-health-body">
       <div class="pbe3-health-row"><span>Market semantics</span><strong class="${semantics === 'LIVE' ? 'live' : ''}">${esc(semantics === 'MARKET_SNAPSHOT' ? 'SCHEDULED SNAPSHOT' : semantics)}</strong></div>${board?.captured_at_et?`<div class="pbe3-health-row"><span>Snapshot captured</span><strong>${esc(board.captured_at_et)}</strong></div>`:''}
-      <div class="pbe3-health-row"><span>Provider</span><strong>${esc(providerLabel(provider))}</strong></div>
+      <div class="pbe3-health-row"><span>Provider</span><strong>${providerHtml(provider)}</strong></div>
       <div class="pbe3-health-row"><span>Provider freshness</span><strong>${esc(age(board?.provider_last_update || board?.updated_at))}</strong></div>
       <div class="pbe3-health-row"><span>Requested markets</span><strong>${MARKETS.length}</strong></div>
       <div class="pbe3-health-row"><span>Markets in snapshot</span><strong class="${inSnapshot === MARKETS.length ? 'live' : 'partial'}">${inSnapshot} of ${MARKETS.length}</strong></div>
