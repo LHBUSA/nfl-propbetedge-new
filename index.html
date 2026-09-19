@@ -14,6 +14,7 @@
       window.dataLayer = window.dataLayer || [];
       window.gtag = window.gtag || function () { window.dataLayer.push(arguments); };
       window.gtag('js', new Date());
+      window.gtag('set', { pbe_surface: SURFACE });
       window.gtag('config', GA_ID, {
         cookie_domain: '.propbetedge.ai',
         cookie_flags: 'SameSite=Lax;Secure'
