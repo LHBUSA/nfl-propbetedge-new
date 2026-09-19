@@ -92,7 +92,9 @@
          the live product rather than under ARCHIVE; the verified 2025 finals
          keep their own entries below. */
       ['CURRENT',[
-        ['standings','Standings',''],['stats','Stats',''],['teams','Teams','']
+        ['standings','Standings',''],['stats','Stats',''],
+        ['leaders','League Leaders','ext:https://propbetedge.ai/leaders/nfl'],
+        ['teams','Teams','']
       ]],
       ['ARCHIVE',[
         ['seasonhistory','Seasons',''],['standings2025','2025 Standings',''],['stats2025','2025 Stats',''],
@@ -104,7 +106,13 @@
 
   function navGroup([label,items]){
     return `<span class="pbes-nav-group"><span class="pbes-nav-label">${esc(label)}</span>${
-      items.map(([r,l,c])=>`<button type="button" class="pbes-nav-btn ${c}" data-route="${r}">${esc(l)}${r==='pbecast'?'<span class="badge" id="pbes-cast-badge">CAST</span>':''}</button>`).join('')
+      items.map(([r,l,c])=>{
+        if(String(c||'').startsWith('ext:')){
+          const href=String(c).slice(4);
+          return `<a class="pbes-nav-btn pbes-nav-ext" href="${esc(href)}">${esc(l)} ↗</a>`;
+        }
+        return `<button type="button" class="pbes-nav-btn ${c}" data-route="${r}">${esc(l)}${r==='pbecast'?'<span class="badge" id="pbes-cast-badge">CAST</span>':''}</button>`;
+      }).join('')
     }</span>`;
   }
 
