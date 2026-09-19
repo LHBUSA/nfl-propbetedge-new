@@ -5,7 +5,7 @@ import {
 import {
   LABELS, displayMode, eligibleDecisions, verifyReceipt, lifecycleOf, attributionValid,
   proCard, lockedPreview, withdrawnEvent, marketSinceIssue, cardSummary, assertNoSelection, nflverseTeam,
-  lineageIndex, lineageOf, replacedEntry, lockViolations, displayTeam,
+  lineageIndex, lineageOf, replacedEntry, lockViolations, displayTeam, labelFor,
 } from '../workers/nfl-picks-engine-shared/publication.mjs';
 
 const DEFAULT_SUPABASE_URL = 'https://tkmlnhmylqnttmnsnief.supabase.co';
