@@ -1,6 +1,76 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <!-- PropBetEdge network analytics: GA4 nfl -->
+  <script>
+    (function () {
+      var GA_ID = 'G-BRS48R8PG9';
+      var SURFACE = 'nfl';
+      var host = String(location.hostname || '').toLowerCase();
+      var isProd = host === 'propbetedge.ai' || host.endsWith('.propbetedge.ai');
+      if (!isProd || host.endsWith('.vercel.app') || host.endsWith('.workers.dev') || host.endsWith('.pages.dev') || host === 'localhost' || host === '127.0.0.1') return;
+
+      window.dataLayer = window.dataLayer || [];
+      window.gtag = window.gtag || function () { window.dataLayer.push(arguments); };
+      window.gtag('js', new Date());
+      window.gtag('config', GA_ID, {
+        cookie_domain: '.propbetedge.ai',
+        cookie_flags: 'SameSite=Lax;Secure',
+        send_page_view: false
+      });
+
+      var tag = document.createElement('script');
+      tag.async = true;
+      tag.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(GA_ID);
+      document.head.appendChild(tag);
+
+      var lastLocation = '';
+      function pagePath() { return location.pathname + location.search + location.hash; }
+      function sendPageView() {
+        var current = location.href;
+        if (current === lastLocation) return;
+        lastLocation = current;
+        window.gtag('event', 'page_view', {
+          page_title: document.title,
+          page_location: current,
+          page_path: pagePath(),
+          pbe_surface: SURFACE
+        });
+      }
+
+      sendPageView();
+      ['pushState', 'replaceState'].forEach(function (method) {
+        var original = history[method];
+        if (!original || original.__pbeAnalyticsWrapped) return;
+        var wrapped = function () {
+          var result = original.apply(this, arguments);
+          setTimeout(sendPageView, 0);
+          return result;
+        };
+        wrapped.__pbeAnalyticsWrapped = true;
+        history[method] = wrapped;
+      });
+      addEventListener('popstate', function () { setTimeout(sendPageView, 0); });
+      addEventListener('hashchange', function () { setTimeout(sendPageView, 0); });
+
+      document.addEventListener('click', function (event) {
+        var target = event.target && event.target.closest ? event.target.closest('a[href]') : null;
+        if (!target) return;
+        try {
+          var url = new URL(target.href, location.href);
+          if (url.hostname !== host && (url.hostname === 'propbetedge.ai' || url.hostname.endsWith('.propbetedge.ai'))) {
+            window.gtag('event', 'pbe_network_click', {
+              pbe_surface: SURFACE,
+              source_host: host,
+              target_host: url.hostname,
+              link_url: url.href
+            });
+          }
+        } catch (_) {}
+      }, { capture: true });
+    })();
+  </script>
+
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#14110d">
