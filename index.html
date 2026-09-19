@@ -6,6 +6,7 @@
     (function () {
       var GA_ID = 'G-BRS48R8PG9';
       var SURFACE = 'nfl';
+      var HASH_ROUTES = true;
       var host = String(location.hostname || '').toLowerCase();
       var isProd = host === 'propbetedge.ai' || host.endsWith('.propbetedge.ai');
       if (!isProd || host.endsWith('.vercel.app') || host.endsWith('.workers.dev') || host.endsWith('.pages.dev') || host === 'localhost' || host === '127.0.0.1') return;
@@ -15,8 +16,7 @@
       window.gtag('js', new Date());
       window.gtag('config', GA_ID, {
         cookie_domain: '.propbetedge.ai',
-        cookie_flags: 'SameSite=Lax;Secure',
-        send_page_view: false
+        cookie_flags: 'SameSite=Lax;Secure'
       });
 
       var tag = document.createElement('script');
@@ -24,34 +24,28 @@
       tag.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(GA_ID);
       document.head.appendChild(tag);
 
-      var lastLocation = '';
-      function pagePath() { return location.pathname + location.search + location.hash; }
-      function sendPageView() {
-        var current = location.href;
-        if (current === lastLocation) return;
-        lastLocation = current;
-        window.gtag('event', 'page_view', {
-          page_title: document.title,
-          page_location: current,
-          page_path: pagePath(),
-          pbe_surface: SURFACE
+      // GA4 Enhanced Measurement owns normal page loads and browser-history
+      // page views. Hash-router surfaces need one supplement because their
+      // primary route changes do not necessarily call pushState/replaceState.
+      var lastManualHash = '';
+      var lastPopStateAt = 0;
+      addEventListener('popstate', function () { lastPopStateAt = Date.now(); });
+      if (HASH_ROUTES) {
+        addEventListener('hashchange', function () {
+          // Back/forward can emit popstate + hashchange. Let GA4 own popstate.
+          if (Date.now() - lastPopStateAt < 250) return;
+          var currentHash = location.hash || '#/';
+          if (currentHash === lastManualHash) return;
+          lastManualHash = currentHash;
+          window.gtag('event', 'page_view', {
+            page_title: document.title,
+            page_location: location.href,
+            page_path: location.pathname + location.search + currentHash,
+            pbe_surface: SURFACE,
+            pbe_route_type: 'hash'
+          });
         });
       }
-
-      sendPageView();
-      ['pushState', 'replaceState'].forEach(function (method) {
-        var original = history[method];
-        if (!original || original.__pbeAnalyticsWrapped) return;
-        var wrapped = function () {
-          var result = original.apply(this, arguments);
-          setTimeout(sendPageView, 0);
-          return result;
-        };
-        wrapped.__pbeAnalyticsWrapped = true;
-        history[method] = wrapped;
-      });
-      addEventListener('popstate', function () { setTimeout(sendPageView, 0); });
-      addEventListener('hashchange', function () { setTimeout(sendPageView, 0); });
 
       document.addEventListener('click', function (event) {
         var target = event.target && event.target.closest ? event.target.closest('a[href]') : null;
@@ -71,7 +65,7 @@
     })();
   </script>
 
-  <meta charset="UTF-8">
+<meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#14110d">
   <meta name="color-scheme" content="dark">
