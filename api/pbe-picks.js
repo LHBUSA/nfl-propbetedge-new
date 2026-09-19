@@ -680,7 +680,7 @@ async function previewView(res, secret) {
 async function freeSampleView(res, secret) {
   const ctx = await loadCard(secret, { withTape: false });
   const candidates = ctx.eligible.current
-    .filter(({ row, lifecycle }) => row.publication_scope === OFFICIAL && (lifecycle === 'ACTIVE' || lifecycle === 'LOCKED'))
+    .filter(({ lifecycle }) => lifecycle === 'ACTIVE' || lifecycle === 'LOCKED')
     .sort((a, b) => Number(b.row.edge_pct || 0) - Number(a.row.edge_pct || 0))
     .slice(0, 2)
     .map(({ row, lifecycle }) => {
@@ -689,6 +689,7 @@ async function freeSampleView(res, secret) {
         away_team: displayTeam(rawMatchup.away_team),
         home_team: displayTeam(rawMatchup.home_team),
       } : null;
+      const scope = labelFor(row.publication_scope);
       const team = row.selection_team ? displayTeam(row.selection_team) : null;
       const selection = row.market === 'total'
         ? `${row.selection_over_under} ${row.market_line}`
@@ -698,6 +699,8 @@ async function freeSampleView(res, secret) {
       return {
         sport: 'NFL',
         lifecycle,
+        publication_scope: row.publication_scope,
+        scope_label: scope?.label || null,
         matchup,
         kickoff_ts: row.kickoff_ts,
         market: row.market,
