@@ -5,7 +5,7 @@ import {
 import {
   LABELS, displayMode, eligibleDecisions, verifyReceipt, lifecycleOf, attributionValid,
   proCard, lockedPreview, withdrawnEvent, marketSinceIssue, cardSummary, assertNoSelection, nflverseTeam,
-  lineageIndex, lineageOf, replacedEntry, lockViolations,
+  lineageIndex, lineageOf, replacedEntry, lockViolations, displayTeam,
 } from '../workers/nfl-picks-engine-shared/publication.mjs';
 
 const DEFAULT_SUPABASE_URL = 'https://tkmlnhmylqnttmnsnief.supabase.co';
@@ -673,6 +673,58 @@ async function previewView(res, secret) {
   return send(res, 200, body, 'public, max-age=30, s-maxage=30, stale-while-revalidate=60');
 }
 
+/* Public top-of-funnel sample: intentionally exposes at most two ACTIVE/LOCKED
+ * OFFICIAL picks. This is a separate, tiny publication contract; it never
+ * returns tracking decisions, feature vectors, receipts, stake sizing, history,
+ * or the rest of the Pro card. */
+async function freeSampleView(res, secret) {
+  const ctx = await loadCard(secret, { withTape: false });
+  const candidates = ctx.eligible.current
+    .filter(({ row, lifecycle }) => row.publication_scope === OFFICIAL && (lifecycle === 'ACTIVE' || lifecycle === 'LOCKED'))
+    .sort((a, b) => Number(b.row.edge_pct || 0) - Number(a.row.edge_pct || 0))
+    .slice(0, 2)
+    .map(({ row, lifecycle }) => {
+      const rawMatchup = matchupFromGameId(row.game_id);
+      const matchup = rawMatchup ? {
+        away_team: displayTeam(rawMatchup.away_team),
+        home_team: displayTeam(rawMatchup.home_team),
+      } : null;
+      const team = row.selection_team ? displayTeam(row.selection_team) : null;
+      const selection = row.market === 'total'
+        ? `${row.selection_over_under} ${row.market_line}`
+        : row.market === 'spread'
+          ? `${team || 'TEAM'} ${Number(row.market_line) > 0 ? '+' : ''}${row.market_line}`
+          : `${team || 'TEAM'} ML`;
+      return {
+        sport: 'NFL',
+        lifecycle,
+        matchup,
+        kickoff_ts: row.kickoff_ts,
+        market: row.market,
+        selection,
+        odds: row.market_price,
+        model_probability: row.model_prob,
+        market_probability: row.market_prob,
+        edge_pct: row.edge_pct,
+        confidence: row.confidence_bucket,
+        issued_at: row.created_at,
+        model_version: row.model_version,
+      };
+    });
+
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  return send(res, 200, {
+    contract: 'pbe-free-sample-v1',
+    sport: 'NFL',
+    generated_at: new Date(ctx.nowMs).toISOString(),
+    season: ctx.season,
+    week: ctx.week,
+    count: candidates.length,
+    picks: candidates,
+    full_product_url: 'https://nfl.propbetedge.ai',
+  }, 'public, max-age=30, s-maxage=30, stale-while-revalidate=60');
+}
+
 /* Pro-only history of graded validation decisions. Separate from, and never
  * merged into, the Official Track Record. */
 async function validationHistoryView(req, res, secret) {
@@ -863,6 +915,7 @@ export default async function handler(req, res) {
     if (view === 'state') return await stateView(res, secret);
     if (view === 'current') return await currentView(req, res, secret);
     if (view === 'preview') return await previewView(res, secret);
+    if (view === 'free-sample') return await freeSampleView(res, secret);
     if (view === 'validation-history') return await validationHistoryView(req, res, secret);
     if (view === 'decision') return await decisionView(req, res, secret);
     if (view === 'trackrecord') return await trackRecordView(req, res, secret);
