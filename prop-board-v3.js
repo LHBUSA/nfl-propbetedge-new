@@ -5,12 +5,12 @@
 (() => {
   'use strict';
   /* A provider is named for a reader, not echoed as an environment constant:
-     Upstream provider codes are masked behind the PropSports Market Feed in public UI. Unknown providers get words, not underscores. */
+     Upstream provider codes are masked behind the PropSports.PropTechUSA.ai Market Feed in public UI. Unknown providers get words, not underscores. */
   /* The board is a scheduled market snapshot: name it and date it. Only a
      genuine live provider payload is ever labelled LIVE. */
   function marketLabel(board){const sem=board?.source?.semantics||'UNAVAILABLE';if(sem==='MARKET_SNAPSHOT')return `MARKET SNAPSHOT · UPDATED ${board?.captured_at_et||age(board?.captured_at)}`;if(sem==='LIVE'&&board?.captured_at)return `MARKET SNAPSHOT · UPDATED ${board?.captured_at_et||age(board?.captured_at)}`;return `MARKET ${sem}`}
   function providerLabel(p){const raw=String(p||'').trim();if(!raw)return 'Provider';
-    const known={THE_ODDS_API:'PropSports Market Feed',ODDS_API:'PropSports Market Feed'};if(known[raw.toUpperCase()])return known[raw.toUpperCase()];
+    const known={THE_ODDS_API:'PropSports.PropTechUSA.ai Market Feed',ODDS_API:'PropSports.PropTechUSA.ai Market Feed'};if(known[raw.toUpperCase()])return known[raw.toUpperCase()];
     return raw.replace(/[_-]+/g,' ').toLowerCase().replace(/\b\w/g,c=>c.toUpperCase()).replace(/\bApi\b/g,'API');}
 
   const API = typeof NFL_API_GATEWAY !== 'undefined' ? NFL_API_GATEWAY : 'https://nfl-api.propbetedge.ai';
