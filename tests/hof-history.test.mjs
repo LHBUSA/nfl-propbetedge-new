@@ -37,7 +37,7 @@ test('Hall bindings normalize identity and optional context without name joins',
   assert.equal(rows[0].qid, 'Q123');
   assert.equal(rows[0].hof_id, 'example-player');
   assert.deepEqual(rows[0].teams, ['Example Team', 'Second Team']);
-  assert.deepEqual(rows[0].positions, ['Quarterback', 'quarterback']);
+  assert.deepEqual(rows[0].positions, ['Quarterback']);
 });
 
 test('Hall normalization sorts people deterministically', () => {
