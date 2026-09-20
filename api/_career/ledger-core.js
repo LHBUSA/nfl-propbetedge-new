@@ -35,10 +35,10 @@ export const STAT_KEYS = ['cmp', 'att', 'pyd', 'ptd', 'int', 'sck', 'car', 'ryd'
 
 /* What each position leads with. Everything published is still in the rows. */
 export const POSITION_FIELDS = {
-  QB: ['games', 'starts', 'cmp', 'att', 'pyd', 'ptd', 'int', 'cmp_pct', 'ypa', 'car', 'ryd', 'rtd'],
-  RB: ['games', 'starts', 'car', 'ryd', 'rtd', 'rec', 'tgt', 'recyd', 'rectd'],
-  WR: ['games', 'starts', 'rec', 'tgt', 'recyd', 'rectd', 'car', 'ryd', 'rtd'],
-  TE: ['games', 'starts', 'rec', 'tgt', 'recyd', 'rectd', 'car', 'ryd', 'rtd']
+  QB: ['games', 'cmp', 'att', 'pyd', 'ptd', 'int', 'cmp_pct', 'ypa', 'car', 'ryd', 'rtd'],
+  RB: ['games', 'car', 'ryd', 'rtd', 'rec', 'tgt', 'recyd', 'rectd'],
+  WR: ['games', 'rec', 'tgt', 'recyd', 'rectd', 'car', 'ryd', 'rtd'],
+  TE: ['games', 'rec', 'tgt', 'recyd', 'rectd', 'car', 'ryd', 'rtd']
 };
 /* The provider's game logs do not publish games started. Unknown, never 0. */
 export const UNSUPPORTED = ['starts'];
