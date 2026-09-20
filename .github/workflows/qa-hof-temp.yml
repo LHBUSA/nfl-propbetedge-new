@@ -1,0 +1,46 @@
+name: Temporary Hall Source QA
+
+on:
+  push:
+    branches:
+      - fix/hof-provenanced-20260920
+
+permissions:
+  contents: read
+
+jobs:
+  hof:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Hall unit and provenance regressions
+        run: node --test tests/hof-history.test.mjs tests/nfl-history-provenance.test.mjs
+      - name: Live Hall source through production handler
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import handler from './api/hof-history.js';
+
+          let body = '';
+          const headers = {};
+          const res = {
+            statusCode: 200,
+            setHeader(k, v) { headers[String(k).toLowerCase()] = String(v); },
+            end(v='') { body += String(v); }
+          };
+
+          await handler({ method: 'GET', query: {} }, res);
+          const json = JSON.parse(body);
+          assert.equal(res.statusCode, 200, JSON.stringify(json));
+          assert.equal(json.ok, true);
+          assert.equal(json.contract, 'pbe-nfl-hof-v1');
+          assert.equal(json.source?.source_id, 'src_wikidata');
+          assert.equal(json.source?.property, 'P6930');
+          assert.ok(Number(json.count) >= 100, 'Hall source returned too few members');
+          assert.equal(json.members.length, json.count);
+          assert.ok(json.members.every(m => /^Q\d+$/.test(m.qid) && m.name && m.hof_id));
+          console.log('HOF LIVE SOURCE PASS', { count: json.count, source: json.source.name, property: json.source.property });
+          NODE
