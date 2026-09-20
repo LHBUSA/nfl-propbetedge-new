@@ -37,11 +37,11 @@
     standings:['Standings','Current-season division standings · live'],
     stats2025:['2025 Stats','Verified final statistical leaders · archive'],
     standings2025:['2025 Final Standings','Verified final playoff picture · archive'],
-    seasonhistory:['Season Archive','Champions · MVPs · awards · leaders'],
-    'season-history':['Season Archive','Champions · MVPs · awards · leaders'],
-    hof:['Hall of Fame','Canton induction archive'],
-    records:['Records & Milestones','NFL all-time record book'],
-    sb:['Super Bowl History','Championship archive'],
+    seasonhistory:['Season Archive','Sourced NFL seasons · championship results'],
+    'season-history':['Season Archive','Sourced NFL seasons · championship results'],
+    hof:['Hall of Fame','Sourced Canton member index'],
+    records:['Records & Milestones','Sourced championship record book'],
+    sb:['Super Bowl History','Sourced championship archive'],
     prospects:['Draft Research','Source review · no stale live board']
   };
 
