@@ -1,42 +1,245 @@
-/* PropBetEdge NFL — Season Archive v2 */
+/* PropBetEdge NFL — Season Archive v3
+ *
+ * Rights-clean consumer season archive backed only by /api/season-history.
+ * The endpoint serves a versioned Wikidata CC0 release snapshot. The legacy
+ * archive season encyclopedia has no authority over this route.
+ */
 (() => {
   'use strict';
-  const state={tab:'timeline',year:null};
-  const esc=v=>String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-  const seasons=()=>Array.isArray(window.NFL_SEASONS)?NFL_SEASONS:[];
-  const completed=()=>seasons().filter(s=>s&&s.champion&&s.champion!=='TBD');
-  const crest=(abbr,size=32)=>{try{if(typeof teamCrest==='function')return teamCrest(abbr,size)}catch(_){}return `<strong style="color:#fff;font:900 13px 'Inter',sans-serif">${esc(abbr)}</strong>`};
-  function latestYear(){const rows=completed();return rows.length?Math.max(...rows.map(s=>Number(s.year)||0)):null;}
-  function seasonByYear(year){return window.SEASON_BY_YEAR?.[year] || completed().find(s=>Number(s.year)===Number(year)) || null;}
-  function teamName(abbr){return window.NFL_TEAMS?.[abbr]?.name || abbr || 'Unknown';}
-  function clickPlayer(name){try{if(window.PlayerModal&&name)PlayerModal.show(name)}catch(_){}}
 
-  function tabs(){return [['timeline','Season Timeline'],['champions','Champions'],['mvps','MVP History'],['awards','Awards Ledger']].map(([id,label])=>`<button class="pbe8-tab ${state.tab===id?'active':''}" data-tab="${id}">${label}</button>`).join('');}
-  function yearRail(){return `<div class="pbe8-yearrail">${completed().slice().sort((a,b)=>b.year-a.year).map(s=>`<button class="pbe8-year ${Number(state.year)===Number(s.year)?'active':''}" data-year="${s.year}">${s.year}</button>`).join('')}</div>`;}
+  const state = {
+    loading: false,
+    loaded: false,
+    error: null,
+    data: null,
+    tab: 'timeline',
+    year: null,
+  };
 
-  function awardRows(s){const rows=[['League MVP',s.leagueMVP],['Offensive POY',s.opoy],['Defensive POY',s.dpoy],['Coach of Year',s.coach],['Rookie of Year',s.rookie]].filter(([,v])=>v&&v!=='TBD');return rows.map(([label,value])=>`<div class="pbe8-award-row"><div class="pbe8-award-label">${esc(label)}</div><div class="pbe8-award-value">${esc(value)}</div></div>`).join('')||'<div class="pbe8-empty" style="min-height:160px">No award data recorded for this season.</div>';}
-  function leaders(s){const rows=[['Passing',s.passLeader],['Rushing',s.rushLeader],['Receiving',s.recLeader]].filter(([,x])=>x&&x.player);if(!rows.length)return'';return `<div class="pbe8-leaders">${rows.map(([cat,l])=>`<article class="pbe8-leader" data-player="${esc(l.player)}"><div class="pbe8-leader-cat">${cat}</div><div class="pbe8-leader-name">${esc(l.player)}</div><div class="pbe8-leader-team">${esc(l.team||'')}</div><div class="pbe8-leader-stat">${l.yards?`${Number(l.yards).toLocaleString()} YDS`:''}${l.tds?` · ${esc(l.tds)} TD`:''}</div></article>`).join('')}</div>`;}
-  function timeline(){const s=seasonByYear(state.year);if(!s)return'<div class="pbe8-empty">No completed season is available for this selection.</div>';const champion=s.champion;const color=window.NFL_TEAMS?.[champion]?.color||'#55d68c';return `${yearRail()}<div class="pbe8-season-grid"><section class="pbe8-champ" style="--team-glow:${esc(color)}22"><div class="pbe8-sbnum">${esc(s.sbNum||'SB')}</div><div class="pbe8-champ-label">SUPER BOWL ${esc(s.sbNum||'')} · ${esc(s.year)} SEASON</div><div class="pbe8-champ-team"><div>${crest(champion,46)}</div><div><div class="pbe8-champ-name">${esc(s.sbWinner||teamName(champion))}</div><div class="pbe8-champ-meta">def. ${esc(s.sbLoser||'—')} · ${esc(s.sbVenue||'Venue unavailable')}</div></div></div><div class="pbe8-score">${esc(s.sbScore||'—')}</div><div class="pbe8-score-label">Final score</div><div class="pbe8-champ-cards"><div class="pbe8-mini"><span>Super Bowl MVP</span><b>${esc(s.sbMVP||'—')}</b></div><div class="pbe8-mini"><span>Champion franchise</span><b>${esc(teamName(champion))}</b></div></div></section><section class="pbe8-awards"><div class="pbe8-panel-head"><strong>${esc(s.year)} Season Awards</strong><span>Archive</span></div>${awardRows(s)}</section></div>${leaders(s)}${s.storyline?`<section class="pbe8-story"><strong>${esc(s.year)} Season Storyline</strong><p>${esc(s.storyline)}</p></section>`:''}`;}
+  const esc = v => String(v ?? '')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 
-  function champions(){const groups=new Map();completed().forEach(s=>{if(!groups.has(s.champion))groups.set(s.champion,{abbr:s.champion,wins:0,years:[]});const g=groups.get(s.champion);g.wins++;g.years.push(s.year)});const rows=[...groups.values()].sort((a,b)=>b.wins-a.wins||teamName(a.abbr).localeCompare(teamName(b.abbr)));return `<div class="pbe8-card-grid">${rows.map(g=>`<article class="pbe8-card" data-team="${esc(g.abbr)}"><div class="pbe8-card-top"><div>${crest(g.abbr,34)}</div><span class="pbe8-card-meta">Since ${Math.min(...g.years)}</span></div><div class="pbe8-card-title" style="margin-top:10px">${esc(teamName(g.abbr))}</div><div class="pbe8-card-big">${g.wins}</div><div class="pbe8-card-copy">Championship${g.wins===1?'':'s'} represented in this 2000–${latestYear()} archive window.</div><div class="pbe8-tags">${g.years.sort((a,b)=>b-a).map(y=>`<span class="pbe8-tag">${y}</span>`).join('')}</div></article>`).join('')}</div>`;}
+  const seasons = () => Array.isArray(state.data?.seasons) ? state.data.seasons : [];
+  const completed = () => seasons().filter(s => Number(s.year) < 2026 || s.championship);
+  const latestYear = () => {
+    const rows = completed();
+    return rows.length ? Math.max(...rows.map(s => Number(s.year) || 0)) : null;
+  };
+  const seasonByYear = year => completed().find(s => Number(s.year) === Number(year)) || null;
+  const championshipRows = () => completed().filter(s => s.championship?.winner);
 
-  function mvps(){const history=Array.isArray(window.MVP_HISTORY)?MVP_HISTORY:[];const groups=new Map();history.forEach(m=>{if(!groups.has(m.player))groups.set(m.player,{player:m.player,pos:m.pos,team:m.team,years:[]});groups.get(m.player).years.push(m.year)});const rows=[...groups.values()].sort((a,b)=>b.years.length-a.years.length||a.player.localeCompare(b.player));return rows.length?`<div class="pbe8-card-grid">${rows.map(m=>`<article class="pbe8-card" data-player="${esc(m.player)}"><div class="pbe8-card-top"><div class="pbe8-card-title">${esc(m.player)}</div><span class="pbe8-card-meta">${esc(m.pos||'')} · ${esc(m.team||'')}</span></div><div class="pbe8-card-big">${m.years.length}x</div><div class="pbe8-card-copy">League MVP awards in the retained history dataset.</div><div class="pbe8-tags">${m.years.sort((a,b)=>b-a).map(y=>`<span class="pbe8-tag">${y}</span>`).join('')}</div></article>`).join('')}</div>`:'<div class="pbe8-empty">MVP history data unavailable.</div>';}
+  function sourceAge() {
+    const at = Date.parse(state.data?.source?.retrieved_at || '');
+    if (!Number.isFinite(at)) return 'Release snapshot';
+    const hours = Math.max(0, Math.round((Date.now() - at) / 3600000));
+    if (hours < 1) return 'Release snapshot · refreshed <1h ago';
+    if (hours < 48) return `Release snapshot · ${hours}h ago`;
+    return `Release snapshot · ${Math.round(hours / 24)}d ago`;
+  }
 
-  function awards(){const rows=completed().slice().sort((a,b)=>b.year-a.year).filter(s=>s.leagueMVP&&s.leagueMVP!=='TBD');return `<div class="pbe8-table-wrap"><div class="pbe8-table-scroll"><table class="pbe8-table"><thead><tr><th>Year</th><th>Champion</th><th>Super Bowl</th><th>League MVP</th><th>Off. POY</th><th>Def. POY</th><th>Rookie</th></tr></thead><tbody>${rows.map(s=>`<tr><td class="year">${s.year}</td><td>${esc(s.sbWinner||teamName(s.champion))}</td><td>${esc(s.sbScore||'—')}</td><td class="mvp" data-player="${esc((s.leagueMVP||'').split(',')[0])}">${esc(s.leagueMVP||'—')}</td><td>${esc(s.opoy||'—')}</td><td>${esc(s.dpoy||'—')}</td><td>${esc(s.rookie||'—')}</td></tr>`).join('')}</tbody></table></div></div>`;}
+  function tabs() {
+    return [
+      ['timeline', 'Season Timeline'],
+      ['champions', 'Super Bowl Champions'],
+    ].map(([id,label]) =>
+      `<button class="pbe8-tab ${state.tab === id ? 'active' : ''}" data-tab="${id}">${label}</button>`
+    ).join('');
+  }
 
-  function body(){if(state.tab==='champions')return champions();if(state.tab==='mvps')return mvps();if(state.tab==='awards')return awards();return timeline();}
-  /* Public surfaces may only state history that carries provenance (see
-     history-provenance-v1.js). Fail closed: no guard, no publication. */
-  function provenanceSuppressed(vc){
-    const g=window.PBEHistoryProvenance;
-    if(g)return g.render(vc,{key:'seasons',root:'pbe8-archive',hero:'pbe8-hero',kicker:'pbe8-kicker',copy:'pbe8-copy',badge:'pbe8-badge',empty:'pbe8-empty',title:'The season-by-season archive is being re-sourced.',kickerText:'SEASON ARCHIVE \u00b7 PROVENANCE REVIEW'});
-    vc.innerHTML='<section class="pbe8-archive"><div class="pbe8-empty">This history is unpublished while PropBetEdge re-sources it from records that carry provenance and redistribution rights. The retained dataset had no source, no retrieval date and no rights classification, so it is not shown.</div></section>';
+  function yearRail() {
+    return `<div class="pbe8-yearrail">${completed().slice().sort((a,b)=>b.year-a.year).map(s =>
+      `<button class="pbe8-year ${Number(state.year) === Number(s.year) ? 'active' : ''}" data-year="${s.year}">${s.year}</button>`
+    ).join('')}</div>`;
+  }
+
+  function sourcePanel(s) {
+    const c = s?.championship || null;
+    return `<section class="pbe8-awards">
+      <div class="pbe8-panel-head"><strong>Source record</strong><span>Wikidata · CC0</span></div>
+      <div class="pbe8-award-row"><div class="pbe8-award-label">Season item</div><div class="pbe8-award-value">${esc(s?.qid || '—')}</div></div>
+      <div class="pbe8-award-row"><div class="pbe8-award-label">Season label</div><div class="pbe8-award-value">${esc(s?.label || '—')}</div></div>
+      <div class="pbe8-award-row"><div class="pbe8-award-label">Championship</div><div class="pbe8-award-value">${esc(c?.name || 'Not carried for this season')}</div></div>
+      <div class="pbe8-award-row"><div class="pbe8-award-label">Decided</div><div class="pbe8-award-value">${esc(c?.decided_on || '—')}</div></div>
+      <div class="pbe8-award-row"><div class="pbe8-award-label">Venue</div><div class="pbe8-award-value">${esc(c?.venue || 'Not carried')}</div></div>
+    </section>`;
+  }
+
+  function timeline() {
+    const s = seasonByYear(state.year);
+    if (!s) return '<div class="pbe8-empty">No sourced NFL season is available for this selection.</div>';
+    const c = s.championship || null;
+    return `${yearRail()}
+      <div class="pbe8-season-grid">
+        <section class="pbe8-champ">
+          <div class="pbe8-sbnum">${esc(c?.name?.replace(/^Super Bowl\s+/i, '') || s.year)}</div>
+          <div class="pbe8-champ-label">${esc(s.year)} NFL SEASON · SOURCED ARCHIVE</div>
+          <div class="pbe8-champ-team">
+            <div>
+              <div class="pbe8-champ-name">${esc(c?.winner || 'Season indexed')}</div>
+              <div class="pbe8-champ-meta">${c ? `${esc(c.name)} · ${esc(c.decided_on || 'date unavailable')}` : 'No Super Bowl result is attached to this season in the current source snapshot.'}</div>
+            </div>
+          </div>
+          <div class="pbe8-score">${c?.winner ? 'CHAMPION' : 'SEASON'}</div>
+          <div class="pbe8-score-label">${c?.winner ? 'Verified winner from source' : 'Verified season identity'}</div>
+          <div class="pbe8-champ-cards">
+            <div class="pbe8-mini"><span>Season QID</span><b>${esc(s.qid || '—')}</b></div>
+            <div class="pbe8-mini"><span>Championship QID</span><b>${esc(c?.qid || '—')}</b></div>
+          </div>
+        </section>
+        ${sourcePanel(s)}
+      </div>
+      <section class="pbe8-story">
+        <strong>What this release intentionally does not infer</strong>
+        <p>Scores, runner-up, Super Bowl MVP, league MVP, awards, statistical leaders and narrative storylines are not published here unless they arrive through a rights-clean sourced lane. Missing fields stay missing.</p>
+      </section>`;
+  }
+
+  function champions() {
+    const rows = championshipRows().slice().sort((a,b)=>b.year-a.year);
+    if (!rows.length) return '<div class="pbe8-empty">No sourced Super Bowl winners are available.</div>';
+    return `<div class="pbe8-card-grid">${rows.map(s => {
+      const c = s.championship;
+      return `<article class="pbe8-card" data-year="${s.year}">
+        <div class="pbe8-card-top">
+          <div class="pbe8-card-title">${esc(c.winner)}</div>
+          <span class="pbe8-card-meta">${esc(c.name || '')}</span>
+        </div>
+        <div class="pbe8-card-big">${esc(s.year)}</div>
+        <div class="pbe8-card-copy">${esc(c.decided_on || 'Date unavailable')}${c.venue ? ` · ${esc(c.venue)}` : ''}</div>
+        <div class="pbe8-tags"><span class="pbe8-tag">${esc(c.qid || 'SOURCE')}</span></div>
+      </article>`;
+    }).join('')}</div>`;
+  }
+
+  function body() {
+    return state.tab === 'champions' ? champions() : timeline();
+  }
+
+  function loadingMarkup() {
+    return `<section class="pbe8-archive">
+      <header class="pbe8-hero">
+        <div class="pbe8-kicker">NFL SEASON ARCHIVE · SOURCED RELEASE</div>
+        <h1 class="pbe8-title">Every season.<br><em>Only sourced facts.</em></h1>
+        <div class="pbe8-copy">Loading the rights-clean NFL season history release snapshot.</div>
+      </header>
+      <div class="pbe8-empty">Loading season history…</div>
+    </section>`;
+  }
+
+  function errorMarkup() {
+    return `<section class="pbe8-archive">
+      <header class="pbe8-hero">
+        <div class="pbe8-kicker">NFL SEASON ARCHIVE · SOURCED RELEASE</div>
+        <h1 class="pbe8-title">Season history<br><em>temporarily unavailable.</em></h1>
+        <div class="pbe8-copy">The sourced release snapshot could not be loaded. The retired legacy encyclopedia is intentionally not used as a fallback.</div>
+      </header>
+      <div class="pbe8-empty"><div><b>Season history source unavailable.</b><br><button class="pbe8-tab active" data-season-retry type="button">Retry</button></div></div>
+    </section>`;
+  }
+
+  function pageMarkup() {
+    const rows = completed();
+    const years = rows.map(s => Number(s.year)).filter(Number.isFinite);
+    const min = years.length ? Math.min(...years) : '—';
+    const max = years.length ? Math.max(...years) : '—';
+    return `<section class="pbe8-archive">
+      <header class="pbe8-hero">
+        <div class="pbe8-kicker">NFL SEASON ENCYCLOPEDIA · RIGHTS-CLEAN RELEASE</div>
+        <h1 class="pbe8-title">Every season tells<br><em>a sourced story.</em></h1>
+        <div class="pbe8-copy">Browse the verified NFL season spine and sourced Super Bowl winners from the PropBetEdge history graph. Every displayed fact comes from the versioned CC0 release snapshot; unsupported legacy fields are not guessed back into the page.</div>
+        <div class="pbe8-badges">
+          <span class="pbe8-badge gold">WIKIDATA · CC0</span>
+          <span class="pbe8-badge">${rows.length} NFL seasons</span>
+          <span class="pbe8-badge">${min}–${max}</span>
+          <span class="pbe8-badge">${esc(sourceAge())}</span>
+        </div>
+      </header>
+      <nav class="pbe8-tabs">${tabs()}</nav>
+      <div id="pbe8-body">${body()}</div>
+    </section>`;
+  }
+
+  function paint() {
+    const vc = document.getElementById('view-container');
+    if (!vc) return;
+    if (state.loading && !state.loaded) {
+      vc.innerHTML = loadingMarkup();
+      return;
+    }
+    if (state.error && !state.loaded) {
+      vc.innerHTML = errorMarkup();
+      document.querySelector('[data-season-retry]')?.addEventListener('click', () => load({ force: true }));
+      return;
+    }
+    vc.innerHTML = pageMarkup();
+    wire();
+  }
+
+  async function load({ force = false } = {}) {
+    if (state.loading) return;
+    if (state.loaded && !force) {
+      paint();
+      return;
+    }
+    state.loading = true;
+    state.error = null;
+    paint();
+    try {
+      const response = await fetch('/api/season-history', {
+        headers: { accept: 'application/json' },
+        cache: force ? 'reload' : 'default',
+      });
+      const body = await response.json().catch(() => null);
+      if (!response.ok || body?.ok !== true || !Array.isArray(body.seasons)) {
+        throw new Error(body?.error || `season_history_http_${response.status}`);
+      }
+      state.data = body;
+      state.loaded = true;
+      if (!state.year) state.year = latestYear();
+    } catch (error) {
+      state.error = String(error?.message || error);
+    } finally {
+      state.loading = false;
+      paint();
+    }
+  }
+
+  function refreshBody() {
+    const host = document.getElementById('pbe8-body');
+    if (host) host.innerHTML = body();
+    wireBody();
+  }
+
+  function wire() {
+    document.querySelectorAll('.pbe8-tab[data-tab]').forEach(b => b.addEventListener('click', () => {
+      state.tab = b.dataset.tab || 'timeline';
+      refreshBody();
+    }));
+    wireBody();
+  }
+
+  function wireBody() {
+    document.querySelectorAll('.pbe8-year').forEach(b => b.addEventListener('click', () => {
+      state.year = Number(b.dataset.year);
+      refreshBody();
+    }));
+    document.querySelectorAll('.pbe8-card[data-year]').forEach(card => card.addEventListener('click', () => {
+      state.year = Number(card.dataset.year);
+      state.tab = 'timeline';
+      paint();
+    }));
+  }
+
+  function render() { return load(); }
+  function install() {
+    if (!window.App?.VIEWS) return false;
+    App.VIEWS.seasonhistory = render;
+    App.VIEWS['season-history'] = render;
     return true;
   }
-  function render(){const vc=document.getElementById('view-container');if(!vc)return;if(provenanceSuppressed(vc))return;if(!state.year)state.year=latestYear();const years=completed().map(s=>s.year);vc.innerHTML=`<section class="pbe8-archive"><header class="pbe8-hero"><div class="pbe8-kicker">NFL SEASON ENCYCLOPEDIA · ARCHIVE MODE</div><h1 class="pbe8-title">Every season tells<br><em>a different story.</em></h1><div class="pbe8-copy">Browse completed seasons, Super Bowl champions, award winners, statistical leaders and the MVP ledger from the retained PropBetEdge NFL history dataset. Future/TBD seasons are excluded from completed-season analysis automatically.</div><div class="pbe8-badges"><span class="pbe8-badge gold">HISTORICAL</span><span class="pbe8-badge">${years.length} completed seasons</span><span class="pbe8-badge">${Math.min(...years)}–${Math.max(...years)}</span></div></header><nav class="pbe8-tabs">${tabs()}</nav><div id="pbe8-body">${body()}</div></section>`;wire();}
-  function refreshBody(){const host=document.getElementById('pbe8-body');if(host)host.innerHTML=body();wireBody();}
-  function wire(){document.querySelectorAll('.pbe8-tab').forEach(b=>b.addEventListener('click',()=>{state.tab=b.dataset.tab||'timeline';render()}));wireBody();}
-  function wireBody(){document.querySelectorAll('.pbe8-year').forEach(b=>b.addEventListener('click',()=>{state.year=Number(b.dataset.year);refreshBody()}));document.querySelectorAll('.pbe8-leader[data-player],.pbe8-card[data-player],.pbe8-table [data-player]').forEach(el=>el.addEventListener('click',()=>clickPlayer(el.dataset.player)));document.querySelectorAll('.pbe8-card[data-team]').forEach(el=>el.addEventListener('click',()=>{const a=el.dataset.team;try{if(window.PBETeamsV2)PBETeamsV2.openTeam(a);else if(window.TeamModal)TeamModal.show(a)}catch(_){}}));}
-  function install(){if(!window.App?.VIEWS)return false;App.VIEWS.seasonhistory=render;App.VIEWS['season-history']=render;return true;}
-  window.PBESeasonArchiveV2={render,state};install();document.addEventListener('DOMContentLoaded',install,{once:true});
+
+  window.PBESeasonArchiveV2 = { render, load, state };
+  install();
+  document.addEventListener('DOMContentLoaded', install, { once: true });
 })();
