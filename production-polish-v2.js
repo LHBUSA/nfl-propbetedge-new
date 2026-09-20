@@ -2,13 +2,14 @@
 (() => {
   'use strict';
 
+  const PUBLIC_DATA_LABEL='PropSports.PropTechUSA.ai';
   const LABELS=new Map([
-    ['ESPN_CDN_GAMEPACKAGE','ESPN LIVE'],
-    ['ESPN CDN GAMEPACKAGE','ESPN LIVE'],
-    ['ESPN_CDN_SCOREBOARD','ESPN SCOREBOARD'],
-    ['ESPN CDN SCOREBOARD','ESPN SCOREBOARD'],
-    ['espn_cdn_gamepackage','ESPN LIVE'],
-    ['espn_cdn_scoreboard','ESPN SCOREBOARD']
+    ['ESPN_CDN_GAMEPACKAGE',PUBLIC_DATA_LABEL],
+    ['ESPN CDN GAMEPACKAGE',PUBLIC_DATA_LABEL],
+    ['ESPN_CDN_SCOREBOARD',PUBLIC_DATA_LABEL],
+    ['ESPN CDN SCOREBOARD',PUBLIC_DATA_LABEL],
+    ['espn_cdn_gamepackage',PUBLIC_DATA_LABEL],
+    ['espn_cdn_scoreboard',PUBLIC_DATA_LABEL]
   ]);
 
   const PRO_MODULES=[
