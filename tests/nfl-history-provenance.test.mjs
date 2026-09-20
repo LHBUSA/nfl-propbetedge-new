@@ -61,7 +61,6 @@ function renderRoute(file, globalName, { withGuard = true } = {}) {
 
 const ROUTES = [
   ['super-bowls-v2.js', 'PBESuperBowlsV2', 'pbe11-sb'],
-  ['hof-v2.js', 'PBEHofV2', 'pbe9-hof'],
   ['records-v2.js', 'PBERecordsV2', 'pbe10-records'],
   ['season-archive-v2.js', 'PBESeasonArchiveV2', 'pbe8-archive'],
 ];
@@ -98,11 +97,22 @@ for (const [file, globalName, rootClass] of ROUTES) {
 test('the guard suppresses the unprovenanced keys and publishes the verified 2025 datasets', () => {
   const { ctx } = domContext();
   const guard = vm.runInContext('window.PBEHistoryProvenance', ctx);
-  for (const key of ['superbowls', 'hof', 'records', 'seasons', 'franchise_history', 'player_archive']) {
+  for (const key of ['superbowls', 'records', 'seasons', 'franchise_history', 'player_archive']) {
     assert.equal(guard.isSuppressed(key), true, key);
   }
-  for (const key of ['standings2025', 'stats2025']) assert.equal(guard.isSuppressed(key), false, key);
+  for (const key of ['hof', 'standings2025', 'stats2025']) assert.equal(guard.isSuppressed(key), false, key);
   assert.equal(guard.isSuppressed('a_key_nobody_registered'), true, 'unknown keys fail closed');
+});
+
+test('Hall of Fame is restored only through the rights-clean sourced endpoint', () => {
+  const hof = read('hof-v2.js');
+  const api = read('api/hof-history.js');
+  assert.match(hof, /\/api\/hof-history/, 'Hall UI reads the sourced endpoint');
+  assert.equal(hof.includes('HOF_MEMBERS'), false, 'legacy unprovenanced Hall data has no route authority');
+  assert.equal(hof.includes('archive\/hof.js'), false, 'renderer never reads the legacy archive');
+  assert.match(api, /P6930/, 'endpoint keys membership to the PFHOF identifier');
+  assert.match(api, /CC0-1\.0/, 'endpoint declares the approved Wikidata licence');
+  assert.equal(api.includes('archive/hof.js'), true, 'endpoint explicitly documents the rejected fallback');
 });
 
 test('the verified 2025 archives still carry their provenance block and are untouched', () => {
