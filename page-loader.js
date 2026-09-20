@@ -1,7 +1,7 @@
 /* PropBetEdge NFL - ordered page/product upgrade loader v45 recovery */
 (() => {
   'use strict';
-  const VERSION='20260920propsports1';
+  const VERSION='20260920propsports2';
   const upgrades=[
     /* Establish the final homepage authority first. v6 replaces the v5 DOM with
        .pbehome6; v7 historically registered itself after that without repainting
@@ -137,7 +137,7 @@
     /* PBEcast v6 is the sole route authority: #pbecast -> PBEcastV6.load ->
        .pbecast6. v7 is additive only — it decorates v6's DOM and state and
        never registers a route or renders the container itself. */
-    {css:'./pbecast-v6.css',js:'./pbecast-v6.js?v=20260920propsports1'},
+    {css:'./pbecast-v6.css?v=20260920propsports2',js:'./pbecast-v6.js?v=20260920propsports2'},
     {css:'./pbecast-v7-enhance.css',js:'./pbecast-v7-enhance.js'},
     /* Additive like v7: the Sunday board, around-the-league feed, key
        moments / replay v0 and before-kickoff context. No transport, no timer,
@@ -240,7 +240,7 @@
      the last registrant for it. Everything absent from this map behaves
      exactly as it always has. */
   const TERMINAL_AUTHORITIES=[
-    {route:'pbecast',js:'./pbecast-v6.js?v=20260920propsports1',installed:()=>typeof window.PBEcastV6?.load==='function'},
+    {route:'pbecast',js:'./pbecast-v6.js?v=20260920propsports2',installed:()=>typeof window.PBEcastV6?.load==='function'},
     /* ui-v2 registered a roadmap placeholder for propchain at parse time and
        again on DOMContentLoaded, and v2 replaced it only when its own script
        landed, so a cold #propchain deep link painted the placeholder first.
