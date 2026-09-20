@@ -1,29 +1,283 @@
-/* PropBetEdge NFL — Hall of Fame v2 */
+/* PropBetEdge NFL — Hall of Fame v3
+ *
+ * Consumer Hall of Fame research surface backed only by /api/hof-history.
+ * That endpoint reads Wikidata CC0 P6930 (Pro Football Hall of Fame ID), which
+ * is approved for public display in history/registry/sources.v2.json.
+ *
+ * The legacy archive/hof.js dataset is deliberately NOT read here. It remains
+ * loaded for rollback compatibility, but it has no authority over this route.
+ */
 (() => {
   'use strict';
-  const state={search:'',pos:'all',decade:'all',sort:'newest'};
-  const esc=v=>String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-  /* archive/hof.js is a classic script with a top-level const HOF_MEMBERS. That
-     binding is available to later classic scripts but is not a window property. */
-  const members=()=>typeof HOF_MEMBERS!=='undefined'&&Array.isArray(HOF_MEMBERS)?HOF_MEMBERS:(Array.isArray(window.HOF_MEMBERS)?window.HOF_MEMBERS:[]);
-  function positions(){return [...new Set(members().map(m=>m.pos).filter(Boolean))].sort();}
-  function decades(){return [...new Set(members().map(m=>Math.floor(Number(m.inducted)/10)*10).filter(Number.isFinite))].sort((a,b)=>b-a);}
-  function latestYear(){const years=members().map(m=>Number(m.inducted)).filter(Number.isFinite);return years.length?Math.max(...years):null;}
-  function filtered(){const q=state.search.trim().toLowerCase();const rows=members().filter(m=>{const posOk=state.pos==='all'||m.pos===state.pos;const decade=Number.isFinite(Number(m.inducted))?Math.floor(Number(m.inducted)/10)*10:null;const decadeOk=state.decade==='all'||String(decade)===String(state.decade);const qOk=!q||[m.name,m.teams,m.pos,m.era,m.note].some(v=>String(v||'').toLowerCase().includes(q));return posOk&&decadeOk&&qOk;});if(state.sort==='name')return rows.sort((a,b)=>a.name.localeCompare(b.name));if(state.sort==='oldest')return rows.sort((a,b)=>a.inducted-b.inducted||a.name.localeCompare(b.name));return rows.sort((a,b)=>b.inducted-a.inducted||a.name.localeCompare(b.name));}
-  function summary(){const rows=filtered();const latest=latestYear();const recent=members().filter(m=>Number(m.inducted)>=2020).length;const teams=new Set(members().flatMap(m=>String(m.teams||'').split(',').map(x=>x.trim()).filter(Boolean))).size;return `<div class="pbe9-summary"><div class="pbe9-stat"><b>${rows.length}</b><span>Members in current view</span></div><div class="pbe9-stat"><b class="gold">${latest||'—'}</b><span>Latest induction class</span></div><div class="pbe9-stat"><b>${recent}</b><span>Inducted since 2020</span></div><div class="pbe9-stat"><b>${teams}</b><span>Team abbreviations represented</span></div></div>`;}
-  function classes(){const rows=filtered();if(!rows.length)return'<div class="pbe9-empty">No Hall of Fame members match the current filters.</div>';const groups=new Map();rows.forEach(m=>{if(!groups.has(m.inducted))groups.set(m.inducted,[]);groups.get(m.inducted).push(m)});return [...groups.entries()].sort((a,b)=>state.sort==='oldest'?a[0]-b[0]:b[0]-a[0]).map(([year,list])=>`<section class="pbe9-class"><div class="pbe9-class-head"><div class="pbe9-year">${year}</div><span class="pbe9-class-count">${list.length} inducted</span><span class="pbe9-class-line"></span></div><div class="pbe9-member-grid">${list.map(m=>`<article class="pbe9-member" data-player="${esc(m.name)}"><div class="pbe9-member-top"><div><div class="pbe9-member-name">${esc(m.name)}</div><div class="pbe9-teams">${esc(m.teams||'Teams unavailable')}</div></div><span class="pbe9-position">${esc(m.pos||'HOF')}</span></div><div class="pbe9-era">${esc(m.era||'Era unavailable')}</div><div class="pbe9-note">${esc(m.note||'Hall of Fame profile note unavailable.')}</div></article>`).join('')}</div></section>`).join('');}
-  /* Public surfaces may only state history that carries provenance (see
-     history-provenance-v1.js). Fail closed: no guard, no publication. */
-  function provenanceSuppressed(vc){
-    const g=window.PBEHistoryProvenance;
-    if(g)return g.render(vc,{key:'hof',root:'pbe9-hof',hero:'pbe9-hero',kicker:'pbe9-kicker',copy:'pbe9-copy',badge:'',empty:'pbe9-empty',title:'Hall of Fame history is being re-sourced.',kickerText:'PRO FOOTBALL HALL OF FAME \u00b7 PROVENANCE REVIEW'});
-    vc.innerHTML='<section class="pbe9-hof"><div class="pbe9-empty">This history is unpublished while PropBetEdge re-sources it from records that carry provenance and redistribution rights. The retained dataset had no source, no retrieval date and no rights classification, so it is not shown.</div></section>';
+
+  const state = {
+    loading: false,
+    loaded: false,
+    error: null,
+    members: [],
+    source: null,
+    search: '',
+    pos: 'all',
+    sort: 'name',
+  };
+
+  const esc = v => String(v ?? '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+  const arr = v => Array.isArray(v) ? v : [];
+  const unique = values => [...new Set(values.filter(Boolean))];
+
+  function positions() {
+    return unique(state.members.flatMap(m => arr(m.positions))).sort((a, b) => a.localeCompare(b));
+  }
+
+  function filtered() {
+    const q = state.search.trim().toLowerCase();
+    const rows = state.members.filter(member => {
+      const posOk = state.pos === 'all' || arr(member.positions).includes(state.pos);
+      if (!posOk) return false;
+      if (!q) return true;
+      return [
+        member.name,
+        member.qid,
+        member.hof_id,
+        ...arr(member.positions),
+        ...arr(member.teams),
+      ].some(value => String(value || '').toLowerCase().includes(q));
+    });
+    rows.sort((a, b) => state.sort === 'name-desc'
+      ? b.name.localeCompare(a.name)
+      : a.name.localeCompare(b.name));
+    return rows;
+  }
+
+  function sourceAge() {
+    const at = Date.parse(state.source?.retrieved_at || '');
+    if (!Number.isFinite(at)) return 'Source snapshot';
+    const minutes = Math.max(0, Math.round((Date.now() - at) / 60000));
+    if (minutes < 2) return 'Source snapshot · just refreshed';
+    if (minutes < 120) return `Source snapshot · ${minutes}m ago`;
+    const hours = Math.round(minutes / 60);
+    if (hours < 48) return `Source snapshot · ${hours}h ago`;
+    return `Source snapshot · ${Math.round(hours / 24)}d ago`;
+  }
+
+  function summary() {
+    const rows = filtered();
+    const positionCount = unique(state.members.flatMap(m => arr(m.positions))).length;
+    const teamCount = unique(state.members.flatMap(m => arr(m.teams))).length;
+    return `<div class="pbe9-summary">
+      <div class="pbe9-stat"><b>${rows.length}</b><span>Members in current view</span></div>
+      <div class="pbe9-stat"><b class="gold">${state.members.length}</b><span>Sourced Hall members</span></div>
+      <div class="pbe9-stat"><b>${positionCount || '—'}</b><span>Positions represented</span></div>
+      <div class="pbe9-stat"><b>${teamCount || '—'}</b><span>Team affiliations carried</span></div>
+    </div>`;
+  }
+
+  function memberCard(member) {
+    const positionsText = arr(member.positions).join(' · ') || 'HOF';
+    const teamsText = arr(member.teams).join(' · ') || 'Team affiliations not carried by source';
+    return `<article class="pbe9-member" data-player="${esc(member.name)}">
+      <div class="pbe9-member-top">
+        <div>
+          <div class="pbe9-member-name">${esc(member.name)}</div>
+          <div class="pbe9-teams">${esc(teamsText)}</div>
+        </div>
+        <span class="pbe9-position">${esc(positionsText)}</span>
+      </div>
+      <div class="pbe9-era">Pro Football Hall of Fame member · source identity ${esc(member.qid || '—')}</div>
+      <div class="pbe9-note">Verified through Wikidata’s Pro Football Hall of Fame identifier. No induction year or career note is inferred when the source does not carry it.</div>
+    </article>`;
+  }
+
+  function groups() {
+    const rows = filtered();
+    if (!rows.length) return '<div class="pbe9-empty">No Hall of Fame members match the current filters.</div>';
+
+    const byLetter = new Map();
+    for (const member of rows) {
+      const letter = String(member.name || '#').trim().charAt(0).toUpperCase() || '#';
+      if (!byLetter.has(letter)) byLetter.set(letter, []);
+      byLetter.get(letter).push(member);
+    }
+
+    const letters = [...byLetter.keys()].sort((a, b) =>
+      state.sort === 'name-desc' ? b.localeCompare(a) : a.localeCompare(b));
+
+    return letters.map(letter => {
+      const list = byLetter.get(letter);
+      return `<section class="pbe9-class">
+        <div class="pbe9-class-head">
+          <div class="pbe9-year">${esc(letter)}</div>
+          <span class="pbe9-class-count">${list.length} member${list.length === 1 ? '' : 's'}</span>
+          <span class="pbe9-class-line"></span>
+        </div>
+        <div class="pbe9-member-grid">${list.map(memberCard).join('')}</div>
+      </section>`;
+    }).join('');
+  }
+
+  function errorMarkup() {
+    return `<section class="pbe9-hof">
+      <header class="pbe9-hero">
+        <div>
+          <div class="pbe9-kicker">PRO FOOTBALL HALL OF FAME · SOURCED ARCHIVE</div>
+          <h1 class="pbe9-title">Canton history.<br><em>Verified at the source.</em></h1>
+          <div class="pbe9-copy">The Hall archive is temporarily unavailable from its rights-cleared source. The old unprovenanced dataset is intentionally not used as a fallback.</div>
+        </div>
+      </header>
+      <div class="pbe9-empty"><div><b>Hall of Fame source unavailable.</b><br><button class="pbe9-pos active" data-hof-retry type="button">Retry source</button></div></div>
+    </section>`;
+  }
+
+  function loadingMarkup() {
+    return `<section class="pbe9-hof">
+      <header class="pbe9-hero">
+        <div>
+          <div class="pbe9-kicker">PRO FOOTBALL HALL OF FAME · SOURCED ARCHIVE</div>
+          <h1 class="pbe9-title">Canton history.<br><em>Loading the source.</em></h1>
+          <div class="pbe9-copy">Reading the rights-cleared Hall member index. No legacy archive claims are shown while the source is loading.</div>
+        </div>
+      </header>
+      <div class="pbe9-empty">Loading Hall of Fame members…</div>
+    </section>`;
+  }
+
+  function pageMarkup() {
+    return `<section class="pbe9-hof">
+      <header class="pbe9-hero">
+        <div>
+          <div class="pbe9-kicker">PRO FOOTBALL HALL OF FAME · SOURCED ARCHIVE</div>
+          <h1 class="pbe9-title">The legends.<br><em>The Canton index.</em></h1>
+          <div class="pbe9-copy">Search the sourced Pro Football Hall of Fame member index by name, position or team affiliation. Membership is read from Wikidata’s Pro Football Hall of Fame identifier (P6930), a CC0 source approved for public display by the PropBetEdge history rights registry.</div>
+          <div class="pbe9-copy pbe9-source-line"><b>${esc(state.source?.name || 'Wikidata')}</b> · CC0 · P6930 · ${esc(sourceAge())}</div>
+        </div>
+        <aside class="pbe9-hero-side">
+          <b>${state.members.length}</b>
+          <span>Hall members in the current sourced index · no unsourced induction years</span>
+        </aside>
+      </header>
+
+      <div id="pbe9-summary">${summary()}</div>
+
+      <section class="pbe9-controls">
+        <div class="pbe9-control-top">
+          <input id="pbe9-search" class="pbe9-input" type="search" placeholder="Search legend, team, position…" value="${esc(state.search)}">
+          <select id="pbe9-sort" class="pbe9-select">
+            <option value="name" ${state.sort === 'name' ? 'selected' : ''}>Name A–Z</option>
+            <option value="name-desc" ${state.sort === 'name-desc' ? 'selected' : ''}>Name Z–A</option>
+          </select>
+        </div>
+        <div class="pbe9-posbar">
+          <button class="pbe9-pos ${state.pos === 'all' ? 'active' : ''}" data-pos="all">All positions</button>
+          ${positions().map(p => `<button class="pbe9-pos ${state.pos === p ? 'active' : ''}" data-pos="${esc(p)}">${esc(p)}</button>`).join('')}
+        </div>
+      </section>
+
+      <div id="pbe9-classes">${groups()}</div>
+
+      <div class="pbe9-source-foot">
+        <span>Source: Wikidata structured data · CC0-1.0 · Pro Football Hall of Fame ID (P6930).</span>
+        <span>PropBetEdge does not use the retired archive/hof.js claims on this page.</span>
+      </div>
+    </section>`;
+  }
+
+  function paint() {
+    const vc = document.getElementById('view-container');
+    if (!vc) return;
+    if (state.loading && !state.loaded) {
+      vc.innerHTML = loadingMarkup();
+      return;
+    }
+    if (state.error && !state.loaded) {
+      vc.innerHTML = errorMarkup();
+      wireRetry();
+      return;
+    }
+    vc.innerHTML = pageMarkup();
+    wire();
+  }
+
+  async function load({ force = false } = {}) {
+    if (state.loading) return;
+    if (state.loaded && !force) {
+      paint();
+      return;
+    }
+    state.loading = true;
+    state.error = null;
+    paint();
+
+    try {
+      const response = await fetch('/api/hof-history', {
+        headers: { accept: 'application/json' },
+        cache: force ? 'reload' : 'default',
+      });
+      const body = await response.json().catch(() => null);
+      if (!response.ok || body?.ok !== true || !Array.isArray(body.members)) {
+        throw new Error(body?.error || `hof_http_${response.status}`);
+      }
+      state.members = body.members;
+      state.source = body.source || null;
+      state.loaded = true;
+      state.error = null;
+    } catch (error) {
+      state.error = String(error?.message || error);
+    } finally {
+      state.loading = false;
+      paint();
+    }
+  }
+
+  function refresh() {
+    const summaryHost = document.getElementById('pbe9-summary');
+    if (summaryHost) summaryHost.innerHTML = summary();
+    const classHost = document.getElementById('pbe9-classes');
+    if (classHost) classHost.innerHTML = groups();
+    wireMembers();
+  }
+
+  function wireRetry() {
+    document.querySelector('[data-hof-retry]')?.addEventListener('click', () => load({ force: true }));
+  }
+
+  function wire() {
+    document.getElementById('pbe9-search')?.addEventListener('input', event => {
+      state.search = event.currentTarget.value || '';
+      refresh();
+    });
+    document.getElementById('pbe9-sort')?.addEventListener('change', event => {
+      state.sort = event.currentTarget.value || 'name';
+      paint();
+    });
+    document.querySelectorAll('.pbe9-pos[data-pos]').forEach(button => button.addEventListener('click', () => {
+      state.pos = button.dataset.pos || 'all';
+      paint();
+    }));
+    wireMembers();
+  }
+
+  function wireMembers() {
+    document.querySelectorAll('.pbe9-member[data-player]').forEach(el => el.addEventListener('click', () => {
+      try {
+        if (window.PlayerModal) PlayerModal.show(el.dataset.player);
+      } catch (_) {}
+    }));
+  }
+
+  function render() {
+    return load();
+  }
+
+  function install() {
+    if (!window.App?.VIEWS) return false;
+    App.VIEWS.hof = render;
     return true;
   }
-  function render(){const vc=document.getElementById('view-container');if(!vc)return;if(provenanceSuppressed(vc))return;const all=members();if(!all.length){vc.innerHTML='<section class="pbe9-hof"><div class="pbe9-empty">Hall of Fame archive unavailable.</div></section>';return;}const latest=latestYear();vc.innerHTML=`<section class="pbe9-hof"><header class="pbe9-hero"><div><div class="pbe9-kicker">PRO FOOTBALL HALL OF FAME · CANTON ARCHIVE</div><h1 class="pbe9-title">The legends.<br><em>The classes. The eras.</em></h1><div class="pbe9-copy">Search the retained Hall of Fame member dataset by name, team, position, induction class or era. The latest class is determined from the dataset itself instead of being hardcoded into the UI.</div></div><aside class="pbe9-hero-side"><b>${all.length}</b><span>Hall of Fame members in this research dataset · latest class ${latest||'—'}</span></aside></header><div id="pbe9-summary">${summary()}</div><section class="pbe9-controls"><div class="pbe9-control-top"><input id="pbe9-search" class="pbe9-input" type="search" placeholder="Search legend, team, era…" value="${esc(state.search)}"><select id="pbe9-decade" class="pbe9-select"><option value="all">All decades</option>${decades().map(d=>`<option value="${d}" ${String(state.decade)===String(d)?'selected':''}>${d}s</option>`).join('')}</select><select id="pbe9-sort" class="pbe9-select"><option value="newest" ${state.sort==='newest'?'selected':''}>Newest classes</option><option value="oldest" ${state.sort==='oldest'?'selected':''}>Oldest classes</option><option value="name" ${state.sort==='name'?'selected':''}>Name A–Z</option></select></div><div class="pbe9-posbar"><button class="pbe9-pos ${state.pos==='all'?'active':''}" data-pos="all">All</button>${positions().map(p=>`<button class="pbe9-pos ${state.pos===p?'active':''}" data-pos="${esc(p)}">${esc(p)}</button>`).join('')}</div></section><div id="pbe9-classes">${classes()}</div></section>`;wire();}
-  function refresh(){const s=document.getElementById('pbe9-summary');if(s)s.innerHTML=summary();const c=document.getElementById('pbe9-classes');if(c)c.innerHTML=classes();wireMembers();}
-  function wire(){document.getElementById('pbe9-search')?.addEventListener('input',e=>{state.search=e.currentTarget.value||'';refresh()});document.getElementById('pbe9-decade')?.addEventListener('change',e=>{state.decade=e.currentTarget.value||'all';render()});document.getElementById('pbe9-sort')?.addEventListener('change',e=>{state.sort=e.currentTarget.value||'newest';render()});document.querySelectorAll('.pbe9-pos[data-pos]').forEach(b=>b.addEventListener('click',()=>{state.pos=b.dataset.pos||'all';render()}));wireMembers();}
-  function wireMembers(){document.querySelectorAll('.pbe9-member[data-player]').forEach(el=>el.addEventListener('click',()=>{try{if(window.PlayerModal)PlayerModal.show(el.dataset.player)}catch(_){}}));}
-  function install(){if(!window.App?.VIEWS)return false;App.VIEWS.hof=render;return true;}
-  window.PBEHofV2={render,state};install();document.addEventListener('DOMContentLoaded',install,{once:true});
+
+  window.PBEHofV2 = { render, load, state, filtered };
+  install();
+  document.addEventListener('DOMContentLoaded', install, { once: true });
 })();
