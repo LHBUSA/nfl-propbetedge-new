@@ -108,7 +108,7 @@
         ['teams','Teams','']
       ]],
       ['HISTORY',[
-        ['seasonhistory','History','']
+        ['seasonhistory','Browse','']
       ]]
     ]
   ];
