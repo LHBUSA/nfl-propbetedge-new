@@ -29,7 +29,7 @@ WHERE {
   FILTER(LANG(?personLabel) = "en")
 }
 ORDER BY ?personLabel
-
+`.trim();
 
 const ENDPOINT = 'https://query.wikidata.org/sparql';
 const UA = 'PropBetEdgeNFLHistory/1.0 (https://nfl.propbetedge.ai; sales@proptechusa.ai)';
