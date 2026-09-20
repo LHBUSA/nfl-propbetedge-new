@@ -149,7 +149,8 @@
   }
 
   function careerTab(p) {
-    const f = arr(p.stat_fields);
+    const unsupported = new Set(arr(p.unsupported_fields));
+    const f = arr(p.stat_fields).filter(k => !unsupported.has(k));
     const live = p.live;
     const reg = p.totals?.regular_season, post = p.totals?.postseason;
     const liveReg = live?.season_type === 'REG' ? live.totals?.regular_season : null;
@@ -184,7 +185,8 @@
   }
 
   function seasonsTab(p) {
-    const f = arr(p.stat_fields).filter(k => k !== 'starts');
+    const unsupported = new Set(arr(p.unsupported_fields));
+    const f = arr(p.stat_fields).filter(k => !unsupported.has(k));
     const rows = arr(p.seasons).filter(s => s.season_type === state.seasonType);
     const hasPost = arr(p.seasons).some(s => s.season_type === 'POST');
     return `<div class="pbe-car-controls">
@@ -226,7 +228,7 @@
       ${hs === 'ROOKIE_NO_PRIOR_HISTORY' ? `<p class="pbe-car-rookie"><b>Rookie · no prior NFL history.</b> No NFL season before ${esc(p.coverage?.current_season?.season ?? 'this season')}: the provider lists him as a rookie with no earlier season on record.${rookieGames ? ` ${esc(p.coverage?.current_season?.season ?? '')} games come from the current season; special-teams-only appearances can be missing from the provider's position game log.` : ''} This is not a proven career record.</p>`
         : tracked ? `<p class="pbe-car-why"><b>Tracked history, not a full career.</b> ${esc(arr(c.why_not_career).slice(0, 4).join(' · ') || 'Debut-to-today coverage is not proven.')}${arr(c.why_not_career).length > 4 ? ` · +${esc(arr(c.why_not_career).length - 4)} more` : ''}</p>`
         : `<p>Every regular-season game from ${esc(c.debut_season)} through ${p.player?.active ? 'today' : esc(p.career_span?.to ?? '')} is in the ledger, reconciled season by season against the provider.</p>`}
-      <p>ESPN game logs, joined on the ESPN athlete id. Totals are sums of the games below; games started is not published by the source and shows —. Pro Bowl games are not counted.</p>
+      <p>ESPN game logs, joined on the ESPN athlete id. Totals are sums of the games below; fields the source does not publish are omitted instead of shown as missing. Pro Bowl games are not counted.</p>
       ${notes.length ? `<details class="pbe-car-notes"><summary>Provider surfaces disagree on ${esc(notes.length)} figure${notes.length === 1 ? '' : 's'}</summary><ul>${notes.slice(0, 12).map(n => `<li>${esc(n.season)} ${esc(LONG[n.field] || n.field)}: game log ${esc(n.ledger)}, season row ${esc(n.provider)}</li>`).join('')}</ul></details>` : ''}
     </footer>`;
   }
