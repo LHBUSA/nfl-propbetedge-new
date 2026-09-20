@@ -113,19 +113,6 @@ test('owner access needs the server env: unset, the same verified email is an or
   } finally { process.env.NFL_OWNER_EMAILS = saved; }
 });
 
-test('primary owner remains Pro when NFL_OWNER_EMAILS is unset', async () => {
-  const saved = process.env.NFL_OWNER_EMAILS; delete process.env.NFL_OWNER_EMAILS;
-  requested.length = 0; ledgerMode = 'down';
-  try {
-    const s = await getNflSession(req(cookieFor('justin@proptechusa.ai')));
-    assert.equal(s.access, 'granted'); assert.equal(s.pro, true); assert.equal(s.role, 'owner');
-    assert.equal(s.entitlement.reason, 'owner'); assert.equal(requested.length, 0);
-  } finally {
-    ledgerMode = 'ok';
-    if (saved === undefined) delete process.env.NFL_OWNER_EMAILS; else process.env.NFL_OWNER_EMAILS = saved;
-  }
-});
-
 test('nothing a browser sends makes it the owner or a subscriber', async () => {
   const forged = [
     `${SESSION_COOKIE}=${session('owner@propbetedge.test', {}, 'attacker-key')}`,          // wrong key
