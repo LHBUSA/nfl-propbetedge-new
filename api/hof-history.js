@@ -11,9 +11,11 @@
  * We publish only what the source actually gives us:
  *   - person identity + QID
  *   - PFHOF identifier (the membership signal)
- *   - position/team affiliations when Wikidata carries them
  *
- * We do NOT synthesize an induction year, class, career note or ranking.
+ * Version 1 intentionally keeps the live query to identity + membership only.
+ * Optional position/team joins made the public SPARQL request exceed the
+ * production latency budget. We do NOT synthesize an induction year, class,
+ * position, team, career note or ranking.
  */
 export const CONTRACT = 'pbe-nfl-hof-v1';
 export const SOURCE_ID = 'src_wikidata';
@@ -21,26 +23,13 @@ export const SOURCE_PROPERTY = 'P6930';
 
 export const HOF_QUERY = `
 SELECT ?person ?personLabel ?hofId
-       (GROUP_CONCAT(DISTINCT ?positionLabel; separator="|") AS ?positions)
-       (GROUP_CONCAT(DISTINCT ?teamLabel; separator="|") AS ?teams)
 WHERE {
   ?person wdt:P6930 ?hofId .
   ?person rdfs:label ?personLabel .
   FILTER(LANG(?personLabel) = "en")
-  OPTIONAL {
-    ?person wdt:P413 ?position .
-    ?position rdfs:label ?positionLabel .
-    FILTER(LANG(?positionLabel) = "en")
-  }
-  OPTIONAL {
-    ?person wdt:P54 ?team .
-    ?team rdfs:label ?teamLabel .
-    FILTER(LANG(?teamLabel) = "en")
-  }
 }
-GROUP BY ?person ?personLabel ?hofId
 ORDER BY ?personLabel
-`.trim();
+
 
 const ENDPOINT = 'https://query.wikidata.org/sparql';
 const UA = 'PropBetEdgeNFLHistory/1.0 (https://nfl.propbetedge.ai; sales@proptechusa.ai)';
@@ -138,7 +127,7 @@ export default async function handler(req, res) {
         property: SOURCE_PROPERTY,
         endpoint: ENDPOINT,
         retrieved_at: retrievedAt,
-        note: 'Membership is represented by the Wikidata Pro Football Hall of Fame identifier (P6930). Position and team affiliations appear only when present in the source.',
+        note: 'Membership is represented by the Wikidata Pro Football Hall of Fame identifier (P6930). Version 1 publishes identity and membership only; no induction class or career context is inferred.',
       },
     }, 'public, s-maxage=86400, stale-while-revalidate=604800');
   } catch (error) {
