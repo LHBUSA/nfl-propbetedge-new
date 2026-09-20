@@ -388,7 +388,7 @@
         time: c.observed_at, status: c.status, transition: null,
         title: game?.matchup || c.headline, event_label: `Game ${String(c.status || '').toLowerCase()}`,
         game,
-        source: { label: c.source?.label || 'ESPN scoreboard', provider: c.source?.provider || null, at: c.observed_at, basis: c.observed_basis, note: c.detail || null },
+        source: { label: c.source?.label || 'PropSports.PropTechUSA.ai', provider: c.source?.provider || null, at: c.observed_at, basis: c.observed_basis, note: c.detail || null },
         entity: { type: 'GAME', name: game?.matchup, link: 'ESPN event id on the scoreboard' },
         tape: tapeFor(data, game?.id, c.observed_at), tape_scope: 'GAME',
         market: line ? { kind: 'GAME_LINE', line, snapshot: bestlineSnapshot(game, c.observed_at) } : { kind: 'NONE', reason: 'game_not_in_market_snapshot' },

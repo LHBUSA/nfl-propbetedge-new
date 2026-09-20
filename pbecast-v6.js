@@ -37,6 +37,7 @@
 
   const LIVE_API='/api/nfl-live';
   const NFL_API=typeof NFL_API_GATEWAY!=='undefined'?NFL_API_GATEWAY:'https://nfl-api.propbetedge.ai';
+  const PUBLIC_DATA_LABEL='PropSports.PropTechUSA.ai';
   const MARKETS=['player_pass_yds','player_rush_yds','player_reception_yds','player_receptions'];
   const SOUND_KEY='pbe_nfl_cast_sound_v6';
   const ACTIVE_KEY='pbe_nfl_cast_active_v6';
@@ -67,9 +68,9 @@
   function semantics(d=state.detail){return String(d?.source?.semantics||d?.game?.status?.semantics||'UNAVAILABLE').toUpperCase()}
   function isLive(d=state.detail){return semantics(d)==='LIVE'}
   function fmtDate(v){if(!v)return'';const d=new Date(v);if(Number.isNaN(d.getTime()))return'';return d.toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit',timeZone:'America/New_York'})+' ET'}
-  /* LIVE is a claim about the game, not the provider: a scheduled or final
-     game read from ESPN is labelled ESPN, never ESPN LIVE. */
-  function sourceLabel(d){const provider=String(d?.source?.provider||'').toLowerCase();const live=isLive(d);return provider.includes('espn')?(live?'ESPN LIVE':'ESPN'):clean(d?.source?.provider)||(live?'LIVE SOURCE':'SOURCE')}
+  /* Public attribution is the PropSports product surface. Raw upstream
+     provider identity remains in the response metadata for provenance/debugging. */
+  function sourceLabel(){return PUBLIC_DATA_LABEL}
   function statusLabel(g){const s=g?.status||{};if(s.semantics==='LIVE')return clean(s.short_detail)||clean(s.detail)||`Q${s.period||''} ${s.clock||''}`.trim();if(s.semantics==='FINAL')return clean(s.short_detail)||'FINAL';return clean(s.short_detail)||fmtDate(g?.date)||'SCHEDULED'}
   /* A game that has not kicked off has no score. A dash in a 84px score slot
      read as a broken feed; the slot is empty and the kickoff carries the fact. */
