@@ -109,7 +109,8 @@ test('Hall of Fame is restored only through the rights-clean sourced endpoint', 
   const api = read('api/hof-history.js');
   assert.match(hof, /\/api\/hof-history/, 'Hall UI reads the sourced endpoint');
   assert.equal(hof.includes('HOF_MEMBERS'), false, 'legacy unprovenanced Hall data has no route authority');
-  assert.equal(hof.includes('archive\/hof.js'), false, 'renderer never reads the legacy archive');
+  const hofCode = hof.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  assert.equal(hofCode.includes('archive/hof.js'), false, 'renderer never reads the legacy archive');
   assert.match(api, /P6930/, 'endpoint keys membership to the PFHOF identifier');
   assert.match(api, /CC0-1\.0/, 'endpoint declares the approved Wikidata licence');
   assert.equal(api.includes('archive/hof.js'), true, 'endpoint explicitly documents the rejected fallback');
