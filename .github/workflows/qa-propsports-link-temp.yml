@@ -1,0 +1,24 @@
+name: Temporary NFL PropSports Link QA
+
+on:
+  push:
+    branches:
+      - fix/nfl-propsports-link-20260920
+
+permissions:
+  contents: read
+
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: PropSports link regression
+        run: node --test tests/nfl-public-attribution.test.mjs
+      - name: Syntax checks
+        run: |
+          node --check pbecast-v6.js
+          node --check page-loader.js
