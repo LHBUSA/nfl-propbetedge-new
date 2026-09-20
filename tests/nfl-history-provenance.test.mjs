@@ -59,49 +59,42 @@ function renderRoute(file, globalName, { withGuard = true } = {}) {
   return view.innerHTML;
 }
 
-const ROUTES = [
-  ['super-bowls-v2.js', 'PBESuperBowlsV2', 'pbe11-sb'],
-  ['records-v2.js', 'PBERecordsV2', 'pbe10-records'],
-  ['season-archive-v2.js', 'PBESeasonArchiveV2', 'pbe8-archive'],
+const RESTORED_HISTORY = [
+  ['super-bowls-v2.js', 'SUPER_BOWLS'],
+  ['records-v2.js', 'NFL_RECORDS'],
+  ['season-archive-v2.js', 'NFL_SEASONS'],
 ];
 
-/* Claims measured in the archive datasets that must not reach a public page.
-   The Hall of Fame row is provably false: Wikidata records no Pro Football Hall
-   of Fame induction for that player, and the file files him under a class
-   header for a different year. */
-const MUST_NOT_APPEAR = [
-  'Kenneth Walker III',          // unverified Super Bowl LX MVP/score/notes
-  'Dark Side defense',           // narrative prose stored as a record
-  'Bill Belichick will likely',  // speculation stored as a record annotation
-  'LATEST ARCHIVED CHAMPIONSHIP',
-  'Dynasty Board',
-  'Latest induction class',
-];
-
-for (const [file, globalName, rootClass] of ROUTES) {
-  test(`${file}: publishes a provenance notice instead of the unprovenanced archive`, () => {
-    const html = renderRoute(file, globalName);
-    assert.match(html, new RegExp(rootClass), 'keeps the route shell and its CSS classes');
-    assert.match(html, /re-sourc/i, 'says why it is empty');
-    assert.ok(html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().length >= 120, 'route gates require >= 120 characters of copy');
-    for (const claim of MUST_NOT_APPEAR) assert.equal(html.includes(claim), false, `${file} leaked: ${claim}`);
-  });
-
-  test(`${file}: fails closed when the guard is absent`, () => {
-    const html = renderRoute(file, globalName, { withGuard: false });
-    for (const claim of MUST_NOT_APPEAR) assert.equal(html.includes(claim), false, `${file} published ${claim} without the guard`);
-    assert.match(html, /provenance/i);
-  });
-}
-
-test('the guard suppresses the unprovenanced keys and publishes the verified 2025 datasets', () => {
+test('the provenance guard publishes every restored top-level NFL history route', () => {
   const { ctx } = domContext();
   const guard = vm.runInContext('window.PBEHistoryProvenance', ctx);
-  for (const key of ['superbowls', 'records', 'seasons', 'franchise_history', 'player_archive']) {
+  for (const key of ['superbowls', 'records', 'seasons', 'hof', 'standings2025', 'stats2025']) {
+    assert.equal(guard.isSuppressed(key), false, key);
+  }
+  for (const key of ['franchise_history', 'player_archive']) {
     assert.equal(guard.isSuppressed(key), true, key);
   }
-  for (const key of ['hof', 'standings2025', 'stats2025']) assert.equal(guard.isSuppressed(key), false, key);
   assert.equal(guard.isSuppressed('a_key_nobody_registered'), true, 'unknown keys fail closed');
+});
+
+test('restored top-level history renderers use the sourced APIs and never the legacy globals', () => {
+  const legacy = ['NFL_SEASONS', 'MVP_HISTORY', 'SUPER_BOWLS', 'NFL_RECORDS', 'NFL_MILESTONES'];
+  for (const [file] of RESTORED_HISTORY) {
+    const src = read(file);
+    assert.match(src, /\/api\/season-history/, `${file} reads the sourced season-history contract`);
+    assert.equal(/being re-sourced|PROVENANCE REVIEW/i.test(src), false, `${file} no longer renders the dead-end notice`);
+    const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    for (const symbol of legacy) {
+      assert.equal(new RegExp(`\\b${symbol}\\b`).test(code), false, `${file} must not read ${symbol}`);
+    }
+  }
+});
+
+test('dashboard and command metadata no longer advertise provenance-review placeholders', () => {
+  for (const file of ['ui-v2.js', 'global-polish-v5.js']) {
+    const src = read(file);
+    assert.equal(/PROVENANCE REVIEW|being re-sourced/i.test(src), false, file);
+  }
 });
 
 test('Hall of Fame is restored only through the rights-clean sourced endpoint', () => {
