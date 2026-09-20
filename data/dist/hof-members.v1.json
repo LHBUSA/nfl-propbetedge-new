@@ -1,0 +1,2349 @@
+{
+  "contract": "pbe-nfl-hof-v1",
+  "version": "1.0.0",
+  "count": 333,
+  "content_sha256": "485315b16940643b6d45296cb762c2dff828f7176c7c82b1df36480dfaf2d3d4",
+  "source": {
+    "source_id": "src_wikidata",
+    "name": "Wikidata",
+    "licence": "CC0-1.0",
+    "property": "P6930",
+    "endpoint": "https://query.wikidata.org/sparql",
+    "retrieved_at": "2026-09-20T17:22:00.529Z",
+    "query": "SELECT ?person ?personLabel ?hofId\nWHERE {\n  ?person wdt:P6930 ?hofId .\n  ?person rdfs:label ?personLabel .\n  FILTER(LANG(?personLabel) = \"en\")\n}\nORDER BY ?personLabel",
+    "note": "Membership is represented by the Wikidata Pro Football Hall of Fame identifier (P6930). Identity and membership only; no induction class or career context is inferred."
+  },
+  "members": [
+    {
+      "qid": "Q340024",
+      "name": "Ace Parker",
+      "hof_id": "clarence-ace-parker",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q2825544",
+      "name": "Aeneas Williams",
+      "hof_id": "aeneas-williams",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1389376",
+      "name": "Al Davis",
+      "hof_id": "al-davis",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q3607766",
+      "name": "Alan Page",
+      "hof_id": "alan-page",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1495049",
+      "name": "Alex Wojciechowicz",
+      "hof_id": "alex-wojciechowicz",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q245629",
+      "name": "Andre Reed",
+      "hof_id": "andre-reed",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q493244",
+      "name": "Andre Tippett",
+      "hof_id": "andre-tippett",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q527218",
+      "name": "Andy Robustelli",
+      "hof_id": "andy-robustelli",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q504859",
+      "name": "Anthony Muñoz",
+      "hof_id": "anthony-munoz",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q693828",
+      "name": "Arnie Herber",
+      "hof_id": "arnie-herber",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q693873",
+      "name": "Arnie Weinmeister",
+      "hof_id": "arnie-weinmeister",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q705517",
+      "name": "Art Donovan",
+      "hof_id": "art-donovan",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q2560416",
+      "name": "Art Monk",
+      "hof_id": "art-monk",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q2745557",
+      "name": "Art Rooney",
+      "hof_id": "art-rooney",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q638456",
+      "name": "Art Shell",
+      "hof_id": "art-shell",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q809097",
+      "name": "Barry Sanders",
+      "hof_id": "barry-sanders",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q809211",
+      "name": "Bart Starr",
+      "hof_id": "bart-starr",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q818053",
+      "name": "Benny Friedman",
+      "hof_id": "benny-friedman",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q4894971",
+      "name": "Bert Bell",
+      "hof_id": "bert-bell",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q454521",
+      "name": "Bill Dudley",
+      "hof_id": "bill-dudley",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q862123",
+      "name": "Bill George",
+      "hof_id": "bill-george",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q357382",
+      "name": "Bill Hewitt",
+      "hof_id": "bill-hewitt",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q364415",
+      "name": "Bill Parcells",
+      "hof_id": "bill-parcells",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q4910520",
+      "name": "Bill Polian",
+      "hof_id": "bill-polian",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q2365047",
+      "name": "Bill Walsh",
+      "hof_id": "bill-walsh",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q862659",
+      "name": "Bill Willis",
+      "hof_id": "bill-willis",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q863213",
+      "name": "Billy Shaw",
+      "hof_id": "billy-shaw",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q503457",
+      "name": "Bob Brown",
+      "hof_id": "bob-boomer-brown",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q429424",
+      "name": "Bob Griese",
+      "hof_id": "bob-griese",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q505289",
+      "name": "Bob Hayes",
+      "hof_id": "bob-hayes",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q250725",
+      "name": "Bob Lilly",
+      "hof_id": "bob-lilly",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q888265",
+      "name": "Bob St. Clair",
+      "hof_id": "bob-st-clair",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q888305",
+      "name": "Bob Waterfield",
+      "hof_id": "bob-waterfield",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q4934754",
+      "name": "Bobby Beathard",
+      "hof_id": "bobby-beathard",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q549873",
+      "name": "Bobby Bell",
+      "hof_id": "bobby-bell",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q888604",
+      "name": "Bobby Layne",
+      "hof_id": "bobby-layne",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q4935375",
+      "name": "Bobby Mitchell",
+      "hof_id": "bobby-mitchell",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q267088",
+      "name": "Brett Favre",
+      "hof_id": "brett-favre",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q641601",
+      "name": "Brian Dawkins",
+      "hof_id": "brian-dawkins",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q471841",
+      "name": "Brian Urlacher",
+      "hof_id": "brian-urlacher",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q927663",
+      "name": "Bronko Nagurski",
+      "hof_id": "bronko-nagurski",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q25514",
+      "name": "Bruce Matthews",
+      "hof_id": "bruce-matthews",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q952956",
+      "name": "Bruce Smith",
+      "hof_id": "bruce-smith",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1185425",
+      "name": "Buck Buchanan",
+      "hof_id": "junious-buck-buchanan",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q970476",
+      "name": "Bud Grant",
+      "hof_id": "bud-grant",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q731677",
+      "name": "Bulldog Turner",
+      "hof_id": "clyde-bulldog-turner",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q202212",
+      "name": "Cal Hubbard",
+      "hof_id": "robert-cal-hubbard",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q3658753",
+      "name": "Carl Eller",
+      "hof_id": "carl-eller",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1061040",
+      "name": "Champ Bailey",
+      "hof_id": "champ-bailey",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q474538",
+      "name": "Charles Bidwill",
+      "hof_id": "charles-w-bidwill-sr",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q551136",
+      "name": "Charles Haley",
+      "hof_id": "charles-haley",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1066501",
+      "name": "Charles Woodson",
+      "hof_id": "charles-woodson",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q549008",
+      "name": "Charley Taylor",
+      "hof_id": "charley-taylor",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1066758",
+      "name": "Charley Trippi",
+      "hof_id": "charley-trippi",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1065095",
+      "name": "Charlie Joiner",
+      "hof_id": "charlie-joiner",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1066982",
+      "name": "Charlie Sanders",
+      "hof_id": "charlie-sanders",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q3675476",
+      "name": "Chris Doleman",
+      "hof_id": "chris-doleman",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1077269",
+      "name": "Chris Hanburger",
+      "hof_id": "chris-hanburger",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1089096",
+      "name": "Chuck Bednarik",
+      "hof_id": "chuck-bednarik",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q952108",
+      "name": "Chuck Noll",
+      "hof_id": "chuck-noll",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1095810",
+      "name": "Clarke Hinkle",
+      "hof_id": "clarke-hinkle",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q5128898",
+      "name": "Claude Humphrey",
+      "hof_id": "claude-humphrey",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q953453",
+      "name": "Cliff Battles",
+      "hof_id": "cliff-battles",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q726104",
+      "name": "Cortez Kennedy",
+      "hof_id": "cortez-kennedy",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1140141",
+      "name": "Cris Carter",
+      "hof_id": "cris-carter",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q4121417",
+      "name": "Curley Culp",
+      "hof_id": "curley-culp",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1144803",
+      "name": "Curly Lambeau",
+      "hof_id": "earl-curly-lambeau",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q952539",
+      "name": "Curtis Martin",
+      "hof_id": "curtis-martin",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q508211",
+      "name": "Dan Dierdorf",
+      "hof_id": "dan-dierdorf",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1159064",
+      "name": "Dan Fortmann",
+      "hof_id": "dan-fortmann",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1159065",
+      "name": "Dan Fouts",
+      "hof_id": "dan-fouts",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q4874497",
+      "name": "Dan Hampton",
+      "hof_id": "dan-hampton",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q195367",
+      "name": "Dan Marino",
+      "hof_id": "dan-marino",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q5214266",
+      "name": "Dan Reeves",
+      "hof_id": "dan-reeves",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q5214310",
+      "name": "Dan Rooney",
+      "hof_id": "dan-rooney",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q458128",
+      "name": "Dante Lavelli",
+      "hof_id": "dante-lavelli",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1166586",
+      "name": "Darrell Green",
+      "hof_id": "darrell-green",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1166605",
+      "name": "Darrelle Revis",
+      "hof_id": "darrelle-revis",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1421900",
+      "name": "Dave Casper",
+      "hof_id": "dave-casper",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1173329",
+      "name": "Dave Robinson",
+      "hof_id": "dave-robinson",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q5230104",
+      "name": "Dave Wilcox",
+      "hof_id": "dave-wilcox",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q505641",
+      "name": "Deacon Jones",
+      "hof_id": "david-deacon-jones",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q954184",
+      "name": "Deion Sanders",
+      "hof_id": "deion-sanders",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q522199",
+      "name": "Dermontti Dawson",
+      "hof_id": "dermontti-dawson",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q93843",
+      "name": "Derrick Brooks",
+      "hof_id": "derrick-brooks",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q3023998",
+      "name": "Derrick Thomas",
+      "hof_id": "derrick-thomas",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q715511",
+      "name": "Dick Butkus",
+      "hof_id": "dick-butkus",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q732588",
+      "name": "Dick LeBeau",
+      "hof_id": "dick-lebeau",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1209792",
+      "name": "Dick Stanfel",
+      "hof_id": "dick-stanfel",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1233083",
+      "name": "Doak Walker",
+      "hof_id": "doak-walker",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q950311",
+      "name": "Don Hutson",
+      "hof_id": "don-hutson",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1239314",
+      "name": "Don Maynard",
+      "hof_id": "don-maynard",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1239512",
+      "name": "Don Shula",
+      "hof_id": "don-shula",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q205171",
+      "name": "Doug Atkins",
+      "hof_id": "doug-atkins",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q25758",
+      "name": "Dutch Clark",
+      "hof_id": "earl-dutch-clark",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1151194",
+      "name": "Dwight Freeney",
+      "hof_id": "dwight-freeney",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1268501",
+      "name": "Dwight Stephenson",
+      "hof_id": "dwight-stephenson",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q522372",
+      "name": "Earl Campbell",
+      "hof_id": "earl-campbell",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1282367",
+      "name": "Ed Healey",
+      "hof_id": "ed-healey",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q604393",
+      "name": "Ed Reed",
+      "hof_id": "ed-reed",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q2081617",
+      "name": "Edgerrin James",
+      "hof_id": "edgerrin-james",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q5343636",
+      "name": "Edward J. DeBartolo, Jr.",
+      "hof_id": "edward-debartolo-jr",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q440433",
+      "name": "Elroy Hirsch",
+      "hof_id": "elroy-crazylegs-hirsch",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q144389",
+      "name": "Elvin Bethea",
+      "hof_id": "elvin-bethea",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q542424",
+      "name": "Emlen Tunnell",
+      "hof_id": "emlen-tunnell",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1338802",
+      "name": "Emmitt Smith",
+      "hof_id": "emmitt-smith",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q2679339",
+      "name": "Emmitt Thomas",
+      "hof_id": "emmitt-thomas",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1351228",
+      "name": "Eric Dickerson",
+      "hof_id": "eric-dickerson",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1356935",
+      "name": "Ernie Nevers",
+      "hof_id": "ernie-nevers",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q327793",
+      "name": "Ernie Stautner",
+      "hof_id": "ernie-stautner",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1430369",
+      "name": "Floyd Little",
+      "hof_id": "floyd-little",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1379886",
+      "name": "Forrest Gregg",
+      "hof_id": "forrest-gregg",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1285539",
+      "name": "Fran Tarkenton",
+      "hof_id": "fran-tarkenton",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1333547",
+      "name": "Franco Harris",
+      "hof_id": "franco-harris",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1397215",
+      "name": "Frank Gatski",
+      "hof_id": "frank-gatski",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1261570",
+      "name": "Frank Gifford",
+      "hof_id": "frank-gifford",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1240857",
+      "name": "Frank Kinard",
+      "hof_id": "frank-bruiser-kinard",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q3752602",
+      "name": "Fred Biletnikoff",
+      "hof_id": "fred-biletnikoff",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q778094",
+      "name": "Fred Dean",
+      "hof_id": "fred-dean",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q920035",
+      "name": "Fritz Pollard",
+      "hof_id": "fritz-pollard",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q503760",
+      "name": "Gale Sayers",
+      "hof_id": "gale-sayers",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q454718",
+      "name": "Gary Zimmerman",
+      "hof_id": "gary-zimmerman",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1468216",
+      "name": "Gene Hickerson",
+      "hof_id": "gene-hickerson",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q970447",
+      "name": "Gene Upshaw",
+      "hof_id": "gene-upshaw",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q5536190",
+      "name": "George Allen",
+      "hof_id": "george-allen",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q980691",
+      "name": "George Blanda",
+      "hof_id": "george-blanda",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1507138",
+      "name": "George Connor",
+      "hof_id": "george-connor",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q163908",
+      "name": "George Halas",
+      "hof_id": "george-halas",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q952451",
+      "name": "George McAfee",
+      "hof_id": "george-mcafee",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1507970",
+      "name": "George Musso",
+      "hof_id": "george-musso",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q3032368",
+      "name": "George Preston Marshall",
+      "hof_id": "george-preston-marshall",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q921724",
+      "name": "George Trafton",
+      "hof_id": "george-trafton",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q5560475",
+      "name": "Gil Brandt",
+      "hof_id": "gil-brandt",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q957946",
+      "name": "Gino Marchetti",
+      "hof_id": "gino-marchetti",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1544191",
+      "name": "Greasy Neale",
+      "hof_id": "earle-greasy-neale",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q359619",
+      "name": "Guy Chamberlin",
+      "hof_id": "guy-chamberlin",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1575579",
+      "name": "Hank Stram",
+      "hof_id": "hank-stram",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q553489",
+      "name": "Harold Carmichael",
+      "hof_id": "harold-carmichael",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q504237",
+      "name": "Harry Carson",
+      "hof_id": "harry-carson",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q265280",
+      "name": "Henry Jordan",
+      "hof_id": "henry-jordan",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1566936",
+      "name": "Herb Adderley",
+      "hof_id": "herb-adderley",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q962794",
+      "name": "Howie Long",
+      "hof_id": "howie-long",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q15998875",
+      "name": "Hugh \"Shorty\" Ray",
+      "hof_id": "hugh-shorty-ray",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q457791",
+      "name": "Hugh McElhenny",
+      "hof_id": "hugh-mcelhenny",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q456566",
+      "name": "Jack Butler",
+      "hof_id": "jack-butler",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1676999",
+      "name": "Jack Christiansen",
+      "hof_id": "jack-christiansen",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q507024",
+      "name": "Jack Ham",
+      "hof_id": "jack-ham",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q941280",
+      "name": "Jack Lambert",
+      "hof_id": "jack-lambert",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q3805676",
+      "name": "Jack Youngblood",
+      "hof_id": "jack-youngblood",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1304479",
+      "name": "Jackie Slater",
+      "hof_id": "jackie-slater",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1677297",
+      "name": "Jackie Smith",
+      "hof_id": "jackie-smith",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1680714",
+      "name": "James Lofton",
+      "hof_id": "james-lofton",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q80404",
+      "name": "Jan Stenerud",
+      "hof_id": "jan-stenerud",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q2786087",
+      "name": "Jason Taylor",
+      "hof_id": "jason-taylor",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q548453",
+      "name": "Jerome Bettis",
+      "hof_id": "jerome-bettis",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1280022",
+      "name": "Jerry Jones",
+      "hof_id": "jerry-jones",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q547622",
+      "name": "Jerry Kramer",
+      "hof_id": "jerry-kramer",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q505423",
+      "name": "Jerry Rice",
+      "hof_id": "jerry-rice",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q927916",
+      "name": "Jim Brown",
+      "hof_id": "jim-brown",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q6194975",
+      "name": "Jim Finks",
+      "hof_id": "jim-finks",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q127819",
+      "name": "Jim Kelly",
+      "hof_id": "jim-kelly",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q734106",
+      "name": "Jim Langer",
+      "hof_id": "jim-langer",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q275290",
+      "name": "Jim Otto",
+      "hof_id": "jim-otto",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1689186",
+      "name": "Jim Parker",
+      "hof_id": "jim-parker",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1689200",
+      "name": "Jim Ringo",
+      "hof_id": "jim-ringo",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q363440",
+      "name": "Jim Taylor",
+      "hof_id": "jim-taylor",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q221482",
+      "name": "Jim Thorpe",
+      "hof_id": "jim-thorpe",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1400321",
+      "name": "Jimmy Conzelman",
+      "hof_id": "jimmy-conzelman",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1689378",
+      "name": "Jimmy Johnson",
+      "hof_id": "jimmy-johnson",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q555065",
+      "name": "Joe DeLamielleure",
+      "hof_id": "joe-delamielleure",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1254455",
+      "name": "Joe Gibbs",
+      "hof_id": "joe-gibbs",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q505256",
+      "name": "Joe Greene",
+      "hof_id": "joe-greene",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q950246",
+      "name": "Joe Guyon",
+      "hof_id": "joe-guyon",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q348011",
+      "name": "Joe Montana",
+      "hof_id": "joe-montana",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q720558",
+      "name": "Joe Namath",
+      "hof_id": "joe-namath",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q377430",
+      "name": "Joe Perry",
+      "hof_id": "joe-perry",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q284169",
+      "name": "Joe Schmidt",
+      "hof_id": "joe-schmidt",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1651817",
+      "name": "Joe Stydahar",
+      "hof_id": "joe-stydahar",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q432931",
+      "name": "John Elway",
+      "hof_id": "john-elway",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1377462",
+      "name": "John Hannah",
+      "hof_id": "john-hannah",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1700426",
+      "name": "John Henry Johnson",
+      "hof_id": "john-henry-johnson",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q359663",
+      "name": "John Lynch",
+      "hof_id": "john-lynch",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q208947",
+      "name": "John Mackey",
+      "hof_id": "john-mackey",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1345694",
+      "name": "John Madden",
+      "hof_id": "john-madden",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q449559",
+      "name": "John McNally",
+      "hof_id": "john-blood-mcnally",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1680136",
+      "name": "John Randle",
+      "hof_id": "john-randle",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q260045",
+      "name": "John Riggins",
+      "hof_id": "john-riggins",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1640614",
+      "name": "John Stallworth",
+      "hof_id": "john-stallworth",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q716029",
+      "name": "Johnny Unitas",
+      "hof_id": "johnny-unitas",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q25676",
+      "name": "Jonathan Ogden",
+      "hof_id": "jonathan-ogden",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q6282006",
+      "name": "Joseph Carr",
+      "hof_id": "joe-carr",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1124532",
+      "name": "Junior Seau",
+      "hof_id": "junior-seau",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q449472",
+      "name": "Kellen Winslow",
+      "hof_id": "kellen-winslow",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q972614",
+      "name": "Ken Houston",
+      "hof_id": "ken-houston",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q289923",
+      "name": "Ken Stabler",
+      "hof_id": "ken-stabler",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q446070",
+      "name": "Ken Strong",
+      "hof_id": "ken-strong",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q354910",
+      "name": "Kenny Easley",
+      "hof_id": "kenny-easley",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q4453921",
+      "name": "Kevin Greene",
+      "hof_id": "kevin-greene",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q945750",
+      "name": "Kurt Warner",
+      "hof_id": "kurt-warner",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q537463",
+      "name": "LaDainian Tomlinson",
+      "hof_id": "ladainian-tomlinson",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q187912",
+      "name": "Lamar Hunt",
+      "hof_id": "lamar-hunt",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q303197",
+      "name": "Lance Alworth",
+      "hof_id": "lance-alworth",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q25464",
+      "name": "Larry Allen",
+      "hof_id": "larry-allen",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q322663",
+      "name": "Larry Csonka",
+      "hof_id": "larry-csonka",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q944199",
+      "name": "Larry Fitzgerald",
+      "hof_id": "larry-fitzgerald",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1806086",
+      "name": "Larry Little",
+      "hof_id": "larry-little",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1806134",
+      "name": "Larry Wilson",
+      "hof_id": "larry-wilson",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q963129",
+      "name": "Lawrence Taylor",
+      "hof_id": "lawrence-taylor",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q3228929",
+      "name": "Lee Roy Selmon",
+      "hof_id": "lee-roy-selmon",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1816747",
+      "name": "Lem Barney",
+      "hof_id": "lem-barney",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q726229",
+      "name": "Len Dawson",
+      "hof_id": "len-dawson",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1709747",
+      "name": "Len Ford",
+      "hof_id": "len-ford",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q784928",
+      "name": "Lenny Moore",
+      "hof_id": "lenny-moore",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q185975",
+      "name": "Leo Nomellini",
+      "hof_id": "leo-nomellini",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1820385",
+      "name": "Leroy Kelly",
+      "hof_id": "leroy-kelly",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1820572",
+      "name": "Les Richter",
+      "hof_id": "les-richter",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1439314",
+      "name": "Lou Creekmur",
+      "hof_id": "lou-creekmur",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q461719",
+      "name": "Lou Groza",
+      "hof_id": "lou-groza",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q441528",
+      "name": "Lynn Swann",
+      "hof_id": "lynn-swann",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q379491",
+      "name": "Marcus Allen",
+      "hof_id": "marcus-allen",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q456268",
+      "name": "Marion Motley",
+      "hof_id": "marion-motley",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q600273",
+      "name": "Marshall Faulk",
+      "hof_id": "marshall-faulk",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q6778088",
+      "name": "Marv Levy",
+      "hof_id": "marv-levy",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1380003",
+      "name": "Marvin Harrison",
+      "hof_id": "marvin-harrison",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q970406",
+      "name": "Mel Blount",
+      "hof_id": "mel-blount",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q732248",
+      "name": "Mel Hein",
+      "hof_id": "mel-hein",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q357349",
+      "name": "Mel Renfro",
+      "hof_id": "mel-renfro",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q952127",
+      "name": "Merlin Olsen",
+      "hof_id": "merlin-olsen",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q952676",
+      "name": "Michael Irvin",
+      "hof_id": "michael-irvin",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q573258",
+      "name": "Michael Strahan",
+      "hof_id": "michael-strahan",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q3311739",
+      "name": "Mick Tingelhoff",
+      "hof_id": "mick-tingelhoff",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1355840",
+      "name": "Mike Ditka",
+      "hof_id": "mike-ditka",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q967730",
+      "name": "Mike Haynes",
+      "hof_id": "mike-haynes",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1933320",
+      "name": "Mike McCormack",
+      "hof_id": "mike-mccormack",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1933350",
+      "name": "Mike Michalske",
+      "hof_id": "mike-michalske",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q504333",
+      "name": "Mike Munchak",
+      "hof_id": "mike-munchak",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1777632",
+      "name": "Mike Singletary",
+      "hof_id": "mike-singletary",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q970489",
+      "name": "Mike Webster",
+      "hof_id": "mike-webster",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q718303",
+      "name": "Morten Andersen",
+      "hof_id": "morten-andersen",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q132135",
+      "name": "Nick Buoniconti",
+      "hof_id": "nick-buoniconti",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q440636",
+      "name": "Night Train Lane",
+      "hof_id": "dick-night-train-lane",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q362360",
+      "name": "Norm Van Brocklin",
+      "hof_id": "norm-van-brocklin",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q44473",
+      "name": "O. J. Simpson",
+      "hof_id": "oj-simpson",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q2021033",
+      "name": "Ollie Matson",
+      "hof_id": "ollie-matson",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q25478",
+      "name": "Orlando Pace",
+      "hof_id": "orlando-pace",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q960594",
+      "name": "Otto Graham",
+      "hof_id": "otto-graham",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q555608",
+      "name": "Ozzie Newsome",
+      "hof_id": "ozzie-newsome",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q448462",
+      "name": "Paddy Driscoll",
+      "hof_id": "john-paddy-driscoll",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q7143232",
+      "name": "Pat Bowlen",
+      "hof_id": "pat-bowlen",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q968798",
+      "name": "Paul Brown",
+      "hof_id": "paul-brown",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q363509",
+      "name": "Paul Hornung",
+      "hof_id": "paul-hornung",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q580193",
+      "name": "Paul Krause",
+      "hof_id": "paul-krause",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q935259",
+      "name": "Paul Tagliabue",
+      "hof_id": "34928",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q275129",
+      "name": "Paul Warfield",
+      "hof_id": "paul-warfield",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q453362",
+      "name": "Pete Henry",
+      "hof_id": "wilbur-pete-henry",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1368526",
+      "name": "Pete Pihos",
+      "hof_id": "pete-pihos",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1745380",
+      "name": "Pete Rozelle",
+      "hof_id": "pete-rozelle",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q7539",
+      "name": "Peyton Manning",
+      "hof_id": "peyton-manning",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q7288281",
+      "name": "Ralph Wilson",
+      "hof_id": "ralph-wilson-jr",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q524826",
+      "name": "Randall McDaniel",
+      "hof_id": "randall-mcdaniel",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q462925",
+      "name": "Randy Moss",
+      "hof_id": "randy-moss",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1849885",
+      "name": "Randy White",
+      "hof_id": "randy-white",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q955206",
+      "name": "Ray Flaherty",
+      "hof_id": "ray-flaherty",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1857411",
+      "name": "Ray Guy",
+      "hof_id": "ray-guy",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q44428",
+      "name": "Ray Lewis",
+      "hof_id": "ray-lewis",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q726208",
+      "name": "Ray Nitschke",
+      "hof_id": "ray-nitschke",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q2134032",
+      "name": "Rayfield Wright",
+      "hof_id": "rayfield-wright",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q459051",
+      "name": "Raymond Berry",
+      "hof_id": "raymond-berry",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q261620",
+      "name": "Red Badgro",
+      "hof_id": "morris-red-badgro",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1399654",
+      "name": "Red Grange",
+      "hof_id": "harold-red-grange",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q946034",
+      "name": "Reggie White",
+      "hof_id": "reggie-white",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q3934792",
+      "name": "Richard Dent",
+      "hof_id": "richard-dent",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q2645323",
+      "name": "Rickey Jackson",
+      "hof_id": "rickey-jackson",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q2156617",
+      "name": "Robert Brazile",
+      "hof_id": "robert-brazile",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1579598",
+      "name": "Rod Woodson",
+      "hof_id": "rod-woodson",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q736932",
+      "name": "Roger Staubach",
+      "hof_id": "roger-staubach",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q2161936",
+      "name": "Roger Wehrli",
+      "hof_id": "roger-wehrli",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q278663",
+      "name": "Ron Mix",
+      "hof_id": "ron-mix",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q7364555",
+      "name": "Ron Wolf",
+      "hof_id": "ron-wolf",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1706854",
+      "name": "Ron Yary",
+      "hof_id": "ron-yary",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q726226",
+      "name": "Ronnie Lott",
+      "hof_id": "ronnie-lott",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q503606",
+      "name": "Rosey Brown",
+      "hof_id": "roosevelt-brown",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q2915957",
+      "name": "Russ Grimm",
+      "hof_id": "russ-grimm",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q472434",
+      "name": "Sam Huff",
+      "hof_id": "sam-huff",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q372640",
+      "name": "Sammy Baugh",
+      "hof_id": "sammy-baugh",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1378223",
+      "name": "Shannon Sharpe",
+      "hof_id": "shannon-sharpe",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q2281626",
+      "name": "Sid Gillman",
+      "hof_id": "sid-gillman",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q456194",
+      "name": "Sid Luckman",
+      "hof_id": "sid-luckman",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1486717",
+      "name": "Sonny Jurgensen",
+      "hof_id": "sonny-jurgensen",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q2330061",
+      "name": "Stan Jones",
+      "hof_id": "stan-jones",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q332247",
+      "name": "Steve Largent",
+      "hof_id": "steve-largent",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q474496",
+      "name": "Steve Owen",
+      "hof_id": "steve-owen",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1849062",
+      "name": "Steve Van Buren",
+      "hof_id": "steve-van-buren",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q740086",
+      "name": "Steve Young",
+      "hof_id": "steve-young",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1857458",
+      "name": "Ted Hendricks",
+      "hof_id": "ted-hendricks",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q732266",
+      "name": "Terrell Davis",
+      "hof_id": "terrell-davis",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1395269",
+      "name": "Terrell Owens",
+      "hof_id": "terrell-owens",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q633263",
+      "name": "Terry Bradshaw",
+      "hof_id": "terry-bradshaw",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q2407557",
+      "name": "Tex Schramm",
+      "hof_id": "tex-schramm",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1379562",
+      "name": "Thurman Thomas",
+      "hof_id": "thurman-thomas",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q245633",
+      "name": "Tim Brown",
+      "hof_id": "tim-brown",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q2434138",
+      "name": "Tim Mara",
+      "hof_id": "tim-mara",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1409449",
+      "name": "Tom Fears",
+      "hof_id": "tom-fears",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1374361",
+      "name": "Tom Landry",
+      "hof_id": "tom-landry",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q2439852",
+      "name": "Tom Mack",
+      "hof_id": "tom-mack",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q2441031",
+      "name": "Tommy McDonald",
+      "hof_id": "tommy-mcdonald",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q458149",
+      "name": "Tony Canadeo",
+      "hof_id": "tony-canadeo",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1380819",
+      "name": "Tony Dorsett",
+      "hof_id": "tony-dorsett",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q719098",
+      "name": "Tony Dungy",
+      "hof_id": "tony-dungy",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q729462",
+      "name": "Tony Gonzalez",
+      "hof_id": "tony-gonzalez",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q525002",
+      "name": "Troy Aikman",
+      "hof_id": "troy-aikman",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q715572",
+      "name": "Troy Polamalu",
+      "hof_id": "troy-polamalu",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q445999",
+      "name": "Tuffy Leemans",
+      "hof_id": "alphonse-tuffy-leemans",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q949018",
+      "name": "Turk Edwards",
+      "hof_id": "albert-glen-turk-edwards",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q206632",
+      "name": "Ty Law",
+      "hof_id": "ty-law",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q553321",
+      "name": "Vince Lombardi",
+      "hof_id": "vince-lombardi",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1390474",
+      "name": "Walt Kiesling",
+      "hof_id": "walt-kiesling",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q2063058",
+      "name": "Walter Jones",
+      "hof_id": "walter-jones",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q963117",
+      "name": "Walter Payton",
+      "hof_id": "walter-payton",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q126710",
+      "name": "Warren Moon",
+      "hof_id": "warren-moon",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q180342",
+      "name": "Warren Sapp",
+      "hof_id": "warren-sapp",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1634272",
+      "name": "Wayne Millner",
+      "hof_id": "wayne-millner",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1777333",
+      "name": "Weeb Ewbank",
+      "hof_id": "weeb-ewbank",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q2557801",
+      "name": "Wellington Mara",
+      "hof_id": "wellington-mara",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q8003096",
+      "name": "Will Shields",
+      "hof_id": "will-shields",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q2580326",
+      "name": "William R. Lyman",
+      "hof_id": "william-roy-link-lyman",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q2581425",
+      "name": "Willie Brown",
+      "hof_id": "willie-brown",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1438986",
+      "name": "Willie Davis",
+      "hof_id": "willie-davis",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q969357",
+      "name": "Willie Lanier",
+      "hof_id": "willie-lanier",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q970588",
+      "name": "Willie Roaf",
+      "hof_id": "willie-roaf",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1322973",
+      "name": "Willie Wood",
+      "hof_id": "willie-wood",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q354741",
+      "name": "Y. A. Tittle",
+      "hof_id": "ya-tittle",
+      "positions": [],
+      "teams": []
+    },
+    {
+      "qid": "Q1787557",
+      "name": "Yale Lary",
+      "hof_id": "yale-lary",
+      "positions": [],
+      "teams": []
+    }
+  ]
+}
