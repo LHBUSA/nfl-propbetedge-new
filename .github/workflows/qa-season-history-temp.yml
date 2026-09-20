@@ -1,0 +1,84 @@
+name: Temporary NFL History Restore QA
+
+on:
+  push:
+    branches:
+      - fix/season-history-provenanced-20260920
+
+permissions:
+  contents: write
+
+jobs:
+  history:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/season-history-provenanced-20260920
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Build sourced season release snapshot when absent
+        run: |
+          if [ ! -s data/dist/nfl-season-history.v1.json ]; then
+            node scripts/build-season-history-snapshot.mjs
+          else
+            echo "NFL season history release snapshot already present."
+          fi
+
+      - name: Sourced history contract and provenance regressions
+        run: node --test tests/season-history.test.mjs tests/nfl-history-provenance.test.mjs
+
+      - name: Syntax-check restored consumer renderers
+        run: |
+          node --check season-archive-v2.js
+          node --check super-bowls-v2.js
+          node --check records-v2.js
+          node --check api/season-history.js
+
+      - name: Validate production handler against release snapshot
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import handler from './api/season-history.js';
+
+          let body = '';
+          const headers = {};
+          const res = {
+            statusCode: 200,
+            setHeader(k, v) { headers[String(k).toLowerCase()] = String(v); },
+            end(v='') { body += String(v); }
+          };
+
+          handler({ method: 'GET', query: {} }, res);
+          const json = JSON.parse(body);
+          assert.equal(res.statusCode, 200, JSON.stringify(json));
+          assert.equal(json.ok, true);
+          assert.equal(json.contract, 'pbe-nfl-season-history-v1');
+          assert.equal(json.semantics, 'RELEASE_SNAPSHOT');
+          assert.equal(json.source?.source_id, 'src_wikidata');
+          assert.equal(json.source?.licence, 'CC0-1.0');
+          assert.ok(Number(json.season_count) >= 100, 'too few NFL seasons');
+          assert.ok(Number(json.championship_result_count) >= 50, 'too few championship results');
+          assert.equal(json.seasons.length, json.season_count);
+          console.log('NFL HISTORY RELEASE HANDLER PASS', {
+            seasons: json.season_count,
+            championship_results: json.championship_result_count,
+            championships_with_winner: json.championships_with_winner,
+            retrieved_at: json.source.retrieved_at,
+            sha256: json.content_sha256
+          });
+          NODE
+
+      - name: Commit generated season history snapshot
+        run: |
+          if git status --porcelain -- data/dist/nfl-season-history.v1.json | grep -q .; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add data/dist/nfl-season-history.v1.json
+            git commit -m "Add sourced NFL season history release snapshot"
+            git push origin HEAD:fix/season-history-provenanced-20260920
+          else
+            echo "No NFL season history snapshot change to commit."
+          fi
