@@ -200,7 +200,7 @@ export function gameStatusChanges(games, fetchedAt) {
     severity: 'HIGH',
     observed_at: fetchedAt,
     observed_basis: 'OBSERVED_BY_PBE',
-    source: { provider: 'espn_site_scoreboard', label: 'ESPN scoreboard' },
+    source: { provider: 'espn_site_scoreboard', label: 'PropSports.PropTechUSA.ai' },
     headline: `${g.matchup} — ${g.disrupted}`,
     detail: g.detail || null,
     player: null,
