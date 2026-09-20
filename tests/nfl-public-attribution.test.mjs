@@ -39,6 +39,6 @@ test('loader version-busts both attribution authorities', async () => {
   const loader = await read('page-loader.js');
   const index = await read('index.html');
   assert.match(loader, /pbecast-v6\.js\?v=20260920propsports2/);
-  assert.match(loader, /production-polish-v2\.js\?v=20260920propsports2/);
+  assert.match(loader, /production-polish-v2\.js\?v=20260920propsports1/);
   assert.match(index, /page-loader\.js\?v=20260920propsports2/);
 });
