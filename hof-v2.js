@@ -179,7 +179,7 @@
 
       <div class="pbe9-source-foot">
         <span>Source: Wikidata structured data · CC0-1.0 · Pro Football Hall of Fame ID (P6930).</span>
-        <span>PropBetEdge does not use the retired archive/hof.js claims on this page.</span>
+        <span>PropBetEdge does not use the retired legacy Hall dataset on this page.</span>
       </div>
     </section>`;
   }
