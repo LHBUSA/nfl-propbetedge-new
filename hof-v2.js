@@ -87,7 +87,7 @@
         <span class="pbe9-position">${esc(positionsText)}</span>
       </div>
       <div class="pbe9-era">Pro Football Hall of Fame member · source identity ${esc(member.qid || '—')}</div>
-      <div class="pbe9-note">Verified through Wikidata’s Pro Football Hall of Fame identifier. No induction year or career note is inferred when the source does not carry it.</div>
+      <div class="pbe9-note">Verified through Wikidata’s Pro Football Hall of Fame identifier. No induction year, class, team, position or career note is inferred in this release.</div>
     </article>`;
   }
 
@@ -150,12 +150,12 @@
         <div>
           <div class="pbe9-kicker">PRO FOOTBALL HALL OF FAME · SOURCED ARCHIVE</div>
           <h1 class="pbe9-title">The legends.<br><em>The Canton index.</em></h1>
-          <div class="pbe9-copy">Search the sourced Pro Football Hall of Fame member index by name, position or team affiliation. Membership is read from Wikidata’s Pro Football Hall of Fame identifier (P6930), a CC0 source approved for public display by the PropBetEdge history rights registry.</div>
+          <div class="pbe9-copy">Search the sourced Pro Football Hall of Fame member index by name or Hall identity. Membership is read from Wikidata’s Pro Football Hall of Fame identifier (P6930), a CC0 source approved for public display by the PropBetEdge history rights registry.</div>
           <div class="pbe9-copy pbe9-source-line"><b>${esc(state.source?.name || 'Wikidata')}</b> · CC0 · P6930 · ${esc(sourceAge())}</div>
         </div>
         <aside class="pbe9-hero-side">
           <b>${state.members.length}</b>
-          <span>Hall members in the current sourced index · no unsourced induction years</span>
+          <span>Hall members in the current sourced index · identity + membership only</span>
         </aside>
       </header>
 
@@ -163,7 +163,7 @@
 
       <section class="pbe9-controls">
         <div class="pbe9-control-top">
-          <input id="pbe9-search" class="pbe9-input" type="search" placeholder="Search legend, team, position…" value="${esc(state.search)}">
+          <input id="pbe9-search" class="pbe9-input" type="search" placeholder="Search Hall member or source identity…" value="${esc(state.search)}">
           <select id="pbe9-sort" class="pbe9-select">
             <option value="name" ${state.sort === 'name' ? 'selected' : ''}>Name A–Z</option>
             <option value="name-desc" ${state.sort === 'name-desc' ? 'selected' : ''}>Name Z–A</option>
