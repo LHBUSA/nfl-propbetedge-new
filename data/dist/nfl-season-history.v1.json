@@ -1,0 +1,1540 @@
+{
+  "contract": "pbe-nfl-season-history-v1",
+  "version": "1.0.0",
+  "season_count": 107,
+  "championship_result_count": 61,
+  "championships_with_winner": 60,
+  "content_sha256": "8b42516d25df9c3c6f497f76d4d77923beba31382c255835dad64f2efee3ac2f",
+  "source": {
+    "source_id": "src_wikidata",
+    "name": "Wikidata",
+    "licence": "CC0-1.0",
+    "endpoint": "https://query.wikidata.org/sparql",
+    "retrieved_at": "2026-09-20T17:47:41.102Z",
+    "snapshots": {
+      "league_seasons": {
+        "content_sha256": "7454d353917df1d3aa4a6361961bb9736fb65c4e2dabc91e81dfa86f88907288",
+        "query": "SELECT ?season ?seasonLabel ?league ?date ?start ?end WHERE {\n  VALUES ?league { wd:Q1215884 wd:Q464508 wd:Q389307 }\n  ?season wdt:P3450 ?league .\n  OPTIONAL { ?season wdt:P585 ?date }\n  OPTIONAL { ?season wdt:P580 ?start }\n  OPTIONAL { ?season wdt:P582 ?end }\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?date"
+      },
+      "super_bowls": {
+        "content_sha256": "0203742689be0454c39b04f73a3fe3c35a6bb401f2dbc4277ec9a9cfea44eb14",
+        "query": "SELECT ?game ?gameLabel ?class ?date ?winner ?winnerLabel ?venue ?venueLabel WHERE {\n  ?game wdt:P31 ?class .\n  VALUES ?class { wd:Q32096 }\n  OPTIONAL { ?game wdt:P585 ?date }\n  OPTIONAL { ?game wdt:P1346 ?winner }\n  OPTIONAL { ?game wdt:P276 ?venue }\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?date"
+      }
+    },
+    "note": "Season identity uses Wikidata P3450. Championship context uses Super Bowl items and only the winner/date/venue fields the source actually carries. No score, runner-up, MVP, award, statistical leader or narrative is inferred."
+  },
+  "seasons": [
+    {
+      "year": 1920,
+      "qid": "Q285217",
+      "label": "1920 APFA season",
+      "date": "1920-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": null
+    },
+    {
+      "year": 1921,
+      "qid": "Q622711",
+      "label": "1921 APFA season",
+      "date": "1921-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": null
+    },
+    {
+      "year": 1922,
+      "qid": "Q281223",
+      "label": "1922 NFL season",
+      "date": "1922-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": null
+    },
+    {
+      "year": 1923,
+      "qid": "Q773697",
+      "label": "1923 NFL season",
+      "date": "1923-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": null
+    },
+    {
+      "year": 1924,
+      "qid": "Q622709",
+      "label": "1924 NFL season",
+      "date": "1924-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": null
+    },
+    {
+      "year": 1925,
+      "qid": "Q178620",
+      "label": "1925 NFL season",
+      "date": "1925-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": null
+    },
+    {
+      "year": 1926,
+      "qid": "Q1425347",
+      "label": "1926 NFL season",
+      "date": "1926-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": null
+    },
+    {
+      "year": 1927,
+      "qid": "Q1458994",
+      "label": "1927 NFL season",
+      "date": "1927-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": null
+    },
+    {
+      "year": 1928,
+      "qid": "Q980952",
+      "label": "1928 NFL season",
+      "date": "1928-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": null
+    },
+    {
+      "year": 1929,
+      "qid": "Q1817125",
+      "label": "1929 NFL season",
+      "date": "1929-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": null
+    },
+    {
+      "year": 1930,
+      "qid": "Q167127",
+      "label": "1930 NFL season",
+      "date": "1930-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": null
+    },
+    {
+      "year": 1931,
+      "qid": "Q1246566",
+      "label": "1931 NFL season",
+      "date": "1931-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": null
+    },
+    {
+      "year": 1932,
+      "qid": "Q1296550",
+      "label": "1932 NFL season",
+      "date": "1932-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": null
+    },
+    {
+      "year": 1933,
+      "qid": "Q1548326",
+      "label": "1933 NFL season",
+      "date": "1933-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": null
+    },
+    {
+      "year": 1934,
+      "qid": "Q1460944",
+      "label": "1934 NFL season",
+      "date": "1934-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": null
+    },
+    {
+      "year": 1935,
+      "qid": "Q266047",
+      "label": "1935 NFL season",
+      "date": "1935-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": null
+    },
+    {
+      "year": 1936,
+      "qid": "Q1311809",
+      "label": "1936 NFL season",
+      "date": "1936-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": null
+    },
+    {
+      "year": 1937,
+      "qid": "Q1816207",
+      "label": "1937 NFL season",
+      "date": "1937-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": null
+    },
+    {
+      "year": 1938,
+      "qid": "Q1547901",
+      "label": "1938 NFL season",
+      "date": "1938-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": null
+    },
+    {
+      "year": 1939,
+      "qid": "Q1984133",
+      "label": "1939 NFL season",
+      "date": "1939-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": null
+    },
+    {
+      "year": 1940,
+      "qid": "Q1984110",
+      "label": "1940 NFL season",
+      "date": "1940-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": null
+    },
+    {
+      "year": 1941,
+      "qid": "Q1984308",
+      "label": "1941 NFL season",
+      "date": "1941-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": null
+    },
+    {
+      "year": 1942,
+      "qid": "Q2390077",
+      "label": "1942 NFL season",
+      "date": "1942-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": null
+    },
+    {
+      "year": 1943,
+      "qid": "Q730519",
+      "label": "1943 NFL season",
+      "date": "1943-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": null
+    },
+    {
+      "year": 1944,
+      "qid": "Q1984099",
+      "label": "1944 NFL season",
+      "date": "1944-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": null
+    },
+    {
+      "year": 1945,
+      "qid": "Q764351",
+      "label": "1945 NFL season",
+      "date": "1945-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": null
+    },
+    {
+      "year": 1946,
+      "qid": "Q1774160",
+      "label": "1946 NFL season",
+      "date": "1946-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": null
+    },
+    {
+      "year": 1947,
+      "qid": "Q1774156",
+      "label": "1947 NFL season",
+      "date": "1947-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": null
+    },
+    {
+      "year": 1948,
+      "qid": "Q1774043",
+      "label": "1948 NFL season",
+      "date": "1948-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": null
+    },
+    {
+      "year": 1949,
+      "qid": "Q1774055",
+      "label": "1949 NFL season",
+      "date": "1949-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": null
+    },
+    {
+      "year": 1950,
+      "qid": "Q1757208",
+      "label": "1950 NFL season",
+      "date": "1950-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": null
+    },
+    {
+      "year": 1951,
+      "qid": "Q1755663",
+      "label": "1951 NFL season",
+      "date": "1951-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": null
+    },
+    {
+      "year": 1952,
+      "qid": "Q1754805",
+      "label": "1952 NFL season",
+      "date": "1952-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": null
+    },
+    {
+      "year": 1953,
+      "qid": "Q1755624",
+      "label": "1953 NFL season",
+      "date": "1953-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": null
+    },
+    {
+      "year": 1954,
+      "qid": "Q1754800",
+      "label": "1954 NFL season",
+      "date": "1954-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": null
+    },
+    {
+      "year": 1955,
+      "qid": "Q781328",
+      "label": "1955 NFL season",
+      "date": "1955-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": null
+    },
+    {
+      "year": 1956,
+      "qid": "Q1754279",
+      "label": "1956 NFL season",
+      "date": "1956-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": null
+    },
+    {
+      "year": 1957,
+      "qid": "Q1753955",
+      "label": "1957 NFL season",
+      "date": "1957-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": null
+    },
+    {
+      "year": 1958,
+      "qid": "Q936314",
+      "label": "1958 NFL season",
+      "date": "1958-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": null
+    },
+    {
+      "year": 1959,
+      "qid": "Q662721",
+      "label": "1959 NFL season",
+      "date": "1959-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": null
+    },
+    {
+      "year": 1960,
+      "qid": "Q1753753",
+      "label": "1960 NFL season",
+      "date": "1960-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": null
+    },
+    {
+      "year": 1961,
+      "qid": "Q1753763",
+      "label": "1961 NFL season",
+      "date": "1961-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": null
+    },
+    {
+      "year": 1962,
+      "qid": "Q1753742",
+      "label": "1962 NFL season",
+      "date": "1962-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": null
+    },
+    {
+      "year": 1963,
+      "qid": "Q1753757",
+      "label": "1963 NFL season",
+      "date": "1963-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": null
+    },
+    {
+      "year": 1964,
+      "qid": "Q1754067",
+      "label": "1964 NFL season",
+      "date": "1964-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": null
+    },
+    {
+      "year": 1965,
+      "qid": "Q1753767",
+      "label": "1965 NFL season",
+      "date": "1965-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": null
+    },
+    {
+      "year": 1966,
+      "qid": "Q1753746",
+      "label": "1966 NFL season",
+      "date": "1966-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": {
+        "qid": "Q847827",
+        "name": "Super Bowl I",
+        "decided_on": "1967-01-15",
+        "season_year": 1966,
+        "winner_qid": "Q213837",
+        "winner": "Green Bay Packers",
+        "venue_qid": "Q849784",
+        "venue": "Los Angeles Memorial Coliseum"
+      }
+    },
+    {
+      "year": 1967,
+      "qid": "Q1752978",
+      "label": "1967 NFL season",
+      "date": "1967-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": {
+        "qid": "Q617167",
+        "name": "Super Bowl II",
+        "decided_on": "1968-01-14",
+        "season_year": 1967,
+        "winner_qid": "Q213837",
+        "winner": "Green Bay Packers",
+        "venue_qid": "Q619512",
+        "venue": "Miami Orange Bowl"
+      }
+    },
+    {
+      "year": 1968,
+      "qid": "Q1752984",
+      "label": "1968 NFL season",
+      "date": "1968-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": {
+        "qid": "Q939846",
+        "name": "Super Bowl III",
+        "decided_on": "1969-01-12",
+        "season_year": 1968,
+        "winner_qid": "Q219602",
+        "winner": "New York Jets",
+        "venue_qid": "Q619512",
+        "venue": "Miami Orange Bowl"
+      }
+    },
+    {
+      "year": 1969,
+      "qid": "Q1858235",
+      "label": "1969 NFL season",
+      "date": "1969-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": {
+        "qid": "Q376026",
+        "name": "Super Bowl IV",
+        "decided_on": "1970-01-11",
+        "season_year": 1969,
+        "winner_qid": "Q223522",
+        "winner": "Kansas City Chiefs",
+        "venue_qid": "Q1536237",
+        "venue": "Tulane Stadium"
+      }
+    },
+    {
+      "year": 1970,
+      "qid": "Q1668843",
+      "label": "1970 NFL season",
+      "date": "1970-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": {
+        "qid": "Q168380",
+        "name": "Super Bowl V",
+        "decided_on": "1971-01-17",
+        "season_year": 1970,
+        "winner_qid": "Q614724",
+        "winner": "Baltimore Colts",
+        "venue_qid": "Q619512",
+        "venue": "Miami Orange Bowl"
+      }
+    },
+    {
+      "year": 1971,
+      "qid": "Q764670",
+      "label": "1971 NFL season",
+      "date": "1971-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": {
+        "qid": "Q1064741",
+        "name": "Super Bowl VI",
+        "decided_on": "1972-01-16",
+        "season_year": 1971,
+        "winner_qid": "Q204862",
+        "winner": "Dallas Cowboys",
+        "venue_qid": "Q1536237",
+        "venue": "Tulane Stadium"
+      }
+    },
+    {
+      "year": 1972,
+      "qid": "Q1960082",
+      "label": "1972 NFL season",
+      "date": "1972-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": {
+        "qid": "Q378744",
+        "name": "Super Bowl VII",
+        "decided_on": "1973-01-14",
+        "season_year": 1972,
+        "winner_qid": "Q212654",
+        "winner": "Washington Commanders",
+        "venue_qid": "Q849784",
+        "venue": "Los Angeles Memorial Coliseum"
+      }
+    },
+    {
+      "year": 1973,
+      "qid": "Q1548189",
+      "label": "1973 NFL season",
+      "date": "1973-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": {
+        "qid": "Q1188158",
+        "name": "Super Bowl VIII",
+        "decided_on": "1974-01-13",
+        "season_year": 1973,
+        "winner_qid": "Q223243",
+        "winner": "Miami Dolphins",
+        "venue_qid": "Q1857419",
+        "venue": "Rice Stadium"
+      }
+    },
+    {
+      "year": 1974,
+      "qid": "Q1479692",
+      "label": "1974 NFL season",
+      "date": "1974-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": {
+        "qid": "Q1188005",
+        "name": "Super Bowl IX",
+        "decided_on": "1975-01-12",
+        "season_year": 1974,
+        "winner_qid": "Q191477",
+        "winner": "Pittsburgh Steelers",
+        "venue_qid": "Q1536237",
+        "venue": "Tulane Stadium"
+      }
+    },
+    {
+      "year": 1975,
+      "qid": "Q1559002",
+      "label": "1975 NFL season",
+      "date": "1975-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": {
+        "qid": "Q620277",
+        "name": "Super Bowl X",
+        "decided_on": "1976-01-18",
+        "season_year": 1975,
+        "winner_qid": "Q191477",
+        "winner": "Pittsburgh Steelers",
+        "venue_qid": "Q619512",
+        "venue": "Miami Orange Bowl"
+      }
+    },
+    {
+      "year": 1976,
+      "qid": "Q1960089",
+      "label": "1976 NFL season",
+      "date": "1976-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": {
+        "qid": "Q389690",
+        "name": "Super Bowl XI",
+        "decided_on": "1977-01-09",
+        "season_year": 1976,
+        "winner_qid": "Q324523",
+        "winner": "Las Vegas Raiders",
+        "venue_qid": "Q582280",
+        "venue": "Rose Bowl"
+      }
+    },
+    {
+      "year": 1977,
+      "qid": "Q1960085",
+      "label": "1977 NFL season",
+      "date": "1977-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": {
+        "qid": "Q632774",
+        "name": "Super Bowl XII",
+        "decided_on": "1978-01-15",
+        "season_year": 1977,
+        "winner_qid": "Q204862",
+        "winner": "Dallas Cowboys",
+        "venue_qid": "Q756452",
+        "venue": "Caesars Superdome"
+      }
+    },
+    {
+      "year": 1978,
+      "qid": "Q677607",
+      "label": "1978 NFL season",
+      "date": "1978-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": {
+        "qid": "Q632786",
+        "name": "Super Bowl XIII",
+        "decided_on": "1979-01-21",
+        "season_year": 1978,
+        "winner_qid": "Q191477",
+        "winner": "Pittsburgh Steelers",
+        "venue_qid": "Q619512",
+        "venue": "Miami Orange Bowl"
+      }
+    },
+    {
+      "year": 1979,
+      "qid": "Q1960091",
+      "label": "1979 NFL season",
+      "date": "1979-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": {
+        "qid": "Q585801",
+        "name": "Super Bowl XIV",
+        "decided_on": "1980-01-20",
+        "season_year": 1979,
+        "winner_qid": "Q191477",
+        "winner": "Pittsburgh Steelers",
+        "venue_qid": "Q582280",
+        "venue": "Rose Bowl"
+      }
+    },
+    {
+      "year": 1980,
+      "qid": "Q984961",
+      "label": "1980 NFL season",
+      "date": "1980-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": {
+        "qid": "Q766921",
+        "name": "Super Bowl XV",
+        "decided_on": "1981-01-25",
+        "season_year": 1980,
+        "winner_qid": "Q324523",
+        "winner": "Las Vegas Raiders",
+        "venue_qid": "Q756452",
+        "venue": "Caesars Superdome"
+      }
+    },
+    {
+      "year": 1981,
+      "qid": "Q1960101",
+      "label": "1981 NFL season",
+      "date": "1981-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": {
+        "qid": "Q912929",
+        "name": "Super Bowl XVI",
+        "decided_on": "1982-01-24",
+        "season_year": 1981,
+        "winner_qid": "Q337758",
+        "winner": "San Francisco 49ers",
+        "venue_qid": "Q211662",
+        "venue": "Pontiac Silverdome"
+      }
+    },
+    {
+      "year": 1982,
+      "qid": "Q681691",
+      "label": "1982 NFL season",
+      "date": "1982-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": {
+        "qid": "Q1770746",
+        "name": "Super Bowl XVII",
+        "decided_on": "1983-01-30",
+        "season_year": 1982,
+        "winner_qid": "Q212654",
+        "winner": "Washington Commanders",
+        "venue_qid": "Q582280",
+        "venue": "Rose Bowl"
+      }
+    },
+    {
+      "year": 1983,
+      "qid": "Q622670",
+      "label": "1983 NFL season",
+      "date": "1983-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": {
+        "qid": "Q1848392",
+        "name": "Super Bowl XVIII",
+        "decided_on": "1984-01-22",
+        "season_year": 1983,
+        "winner_qid": "Q3417643",
+        "winner": "Los Angeles Raiders",
+        "venue_qid": "Q2095984",
+        "venue": "Tampa Stadium"
+      }
+    },
+    {
+      "year": 1984,
+      "qid": "Q2611422",
+      "label": "1984 NFL season",
+      "date": "1984-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": {
+        "qid": "Q1965838",
+        "name": "Super Bowl XIX",
+        "decided_on": "1985-01-20",
+        "season_year": 1984,
+        "winner_qid": "Q337758",
+        "winner": "San Francisco 49ers",
+        "venue_qid": "Q692470",
+        "venue": "Stanford Stadium"
+      }
+    },
+    {
+      "year": 1985,
+      "qid": "Q2611428",
+      "label": "1985 NFL season",
+      "date": "1985-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": {
+        "qid": "Q1073454",
+        "name": "Super Bowl XX",
+        "decided_on": "1986-01-26",
+        "season_year": 1985,
+        "winner_qid": "Q205033",
+        "winner": "Chicago Bears",
+        "venue_qid": "Q756452",
+        "venue": "Caesars Superdome"
+      }
+    },
+    {
+      "year": 1986,
+      "qid": "Q2610125",
+      "label": "1986 NFL season",
+      "date": "1986-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": {
+        "qid": "Q1808572",
+        "name": "Super Bowl XXI",
+        "decided_on": "1987-01-25",
+        "season_year": 1986,
+        "winner_qid": "Q190618",
+        "winner": "New York Giants",
+        "venue_qid": "Q582280",
+        "venue": "Rose Bowl"
+      }
+    },
+    {
+      "year": 1987,
+      "qid": "Q2406048",
+      "label": "1987 NFL season",
+      "date": "1987-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": {
+        "qid": "Q474760",
+        "name": "Super Bowl XXII",
+        "decided_on": "1988-01-31",
+        "season_year": 1987,
+        "winner_qid": "Q212654",
+        "winner": "Washington Commanders",
+        "venue_qid": "Q956072",
+        "venue": "San Diego Stadium"
+      }
+    },
+    {
+      "year": 1988,
+      "qid": "Q2610119",
+      "label": "1988 NFL season",
+      "date": "1988-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": {
+        "qid": "Q1307150",
+        "name": "Super Bowl XXIII",
+        "decided_on": "1989-01-22",
+        "season_year": 1988,
+        "winner_qid": "Q337758",
+        "winner": "San Francisco 49ers",
+        "venue_qid": "Q864339",
+        "venue": "Hard Rock Stadium"
+      }
+    },
+    {
+      "year": 1989,
+      "qid": "Q582711",
+      "label": "1989 NFL season",
+      "date": "1989-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": {
+        "qid": "Q1064807",
+        "name": "Super Bowl XXIV",
+        "decided_on": "1990-01-28",
+        "season_year": 1989,
+        "winner_qid": "Q337758",
+        "winner": "San Francisco 49ers",
+        "venue_qid": "Q756452",
+        "venue": "Caesars Superdome"
+      }
+    },
+    {
+      "year": 1990,
+      "qid": "Q2610137",
+      "label": "1990 NFL season",
+      "date": "1990-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": {
+        "qid": "Q1512351",
+        "name": "Super Bowl XXV",
+        "decided_on": "1991-01-27",
+        "season_year": 1990,
+        "winner_qid": "Q190618",
+        "winner": "New York Giants",
+        "venue_qid": "Q2095984",
+        "venue": "Tampa Stadium"
+      }
+    },
+    {
+      "year": 1991,
+      "qid": "Q690475",
+      "label": "1991 NFL season",
+      "date": "1991-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": {
+        "qid": "Q1576569",
+        "name": "Super Bowl XXVI",
+        "decided_on": "1992-01-26",
+        "season_year": 1991,
+        "winner_qid": "Q212654",
+        "winner": "Washington Commanders",
+        "venue_qid": "Q1072186",
+        "venue": "Hubert H. Humphrey Metrodome"
+      }
+    },
+    {
+      "year": 1992,
+      "qid": "Q534345",
+      "label": "1992 NFL season",
+      "date": "1992-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": {
+        "qid": "Q1463422",
+        "name": "Super Bowl XXVII",
+        "decided_on": "1993-01-31",
+        "season_year": 1992,
+        "winner_qid": "Q204862",
+        "winner": "Dallas Cowboys",
+        "venue_qid": "Q582280",
+        "venue": "Rose Bowl"
+      }
+    },
+    {
+      "year": 1993,
+      "qid": "Q2609409",
+      "label": "1993 NFL season",
+      "date": "1993-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": {
+        "qid": "Q621500",
+        "name": "Super Bowl XXVIII",
+        "decided_on": "1994-01-30",
+        "season_year": 1993,
+        "winner_qid": "Q204862",
+        "winner": "Dallas Cowboys",
+        "venue_qid": "Q1058931",
+        "venue": "Georgia Dome"
+      }
+    },
+    {
+      "year": 1994,
+      "qid": "Q2609406",
+      "label": "1994 NFL season",
+      "date": "1994-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": {
+        "qid": "Q1064815",
+        "name": "Super Bowl XXIX",
+        "decided_on": "1995-01-29",
+        "season_year": 1994,
+        "winner_qid": "Q337758",
+        "winner": "San Francisco 49ers",
+        "venue_qid": "Q864339",
+        "venue": "Hard Rock Stadium"
+      }
+    },
+    {
+      "year": 1995,
+      "qid": "Q2609413",
+      "label": "1995 NFL season",
+      "date": "1995-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": {
+        "qid": "Q1065229",
+        "name": "Super Bowl XXX",
+        "decided_on": "1996-01-28",
+        "season_year": 1995,
+        "winner_qid": "Q204862",
+        "winner": "Dallas Cowboys",
+        "venue_qid": "Q1849318",
+        "venue": "Mountain America Stadium"
+      }
+    },
+    {
+      "year": 1996,
+      "qid": "Q979803",
+      "label": "1996 NFL season",
+      "date": "1996-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": {
+        "qid": "Q598389",
+        "name": "Super Bowl XXXI",
+        "decided_on": "1997-01-26",
+        "season_year": 1996,
+        "winner_qid": "Q213837",
+        "winner": "Green Bay Packers",
+        "venue_qid": "Q756452",
+        "venue": "Caesars Superdome"
+      }
+    },
+    {
+      "year": 1997,
+      "qid": "Q385181",
+      "label": "1997 NFL season",
+      "date": "1997-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": {
+        "qid": "Q648144",
+        "name": "Super Bowl XXXII",
+        "decided_on": "1998-01-25",
+        "season_year": 1997,
+        "winner_qid": "Q223507",
+        "winner": "Denver Broncos",
+        "venue_qid": "Q956072",
+        "venue": "San Diego Stadium"
+      }
+    },
+    {
+      "year": 1998,
+      "qid": "Q507929",
+      "label": "1998 NFL season",
+      "date": "1998-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": {
+        "qid": "Q508448",
+        "name": "Super Bowl XXXIII",
+        "decided_on": "1999-01-31",
+        "season_year": 1998,
+        "winner_qid": "Q223507",
+        "winner": "Denver Broncos",
+        "venue_qid": "Q864339",
+        "venue": "Hard Rock Stadium"
+      }
+    },
+    {
+      "year": 1999,
+      "qid": "Q1423491",
+      "label": "1999 NFL season",
+      "date": "1999-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": {
+        "qid": "Q176843",
+        "name": "Super Bowl XXXIV",
+        "decided_on": "2000-01-30",
+        "season_year": 1999,
+        "winner_qid": "Q337377",
+        "winner": "Los Angeles Rams",
+        "venue_qid": "Q1058931",
+        "venue": "Georgia Dome"
+      }
+    },
+    {
+      "year": 2000,
+      "qid": "Q1960108",
+      "label": "2000 NFL season",
+      "date": "2000-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": {
+        "qid": "Q625210",
+        "name": "Super Bowl XXXV",
+        "decided_on": "2001-01-28",
+        "season_year": 2000,
+        "winner_qid": "Q276539",
+        "winner": "Baltimore Ravens",
+        "venue_qid": "Q1141343",
+        "venue": "Raymond James Stadium"
+      }
+    },
+    {
+      "year": 2001,
+      "qid": "Q1960112",
+      "label": "2001 NFL season",
+      "date": "2001-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": {
+        "qid": "Q1073479",
+        "name": "Super Bowl XXXVI",
+        "decided_on": "2002-02-03",
+        "season_year": 2001,
+        "winner_qid": "Q193390",
+        "winner": "New England Patriots",
+        "venue_qid": "Q756452",
+        "venue": "Caesars Superdome"
+      }
+    },
+    {
+      "year": 2002,
+      "qid": "Q1960114",
+      "label": "2002 NFL season",
+      "date": "2002-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": {
+        "qid": "Q939802",
+        "name": "Super Bowl XXXVII",
+        "decided_on": "2003-01-26",
+        "season_year": 2002,
+        "winner_qid": "Q320476",
+        "winner": "Tampa Bay Buccaneers",
+        "venue_qid": "Q956072",
+        "venue": "San Diego Stadium"
+      }
+    },
+    {
+      "year": 2003,
+      "qid": "Q1960118",
+      "label": "2003 NFL season",
+      "date": "2003-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": {
+        "qid": "Q1049630",
+        "name": "Super Bowl XXXVIII",
+        "decided_on": "2004-02-01",
+        "season_year": 2003,
+        "winner_qid": "Q193390",
+        "winner": "New England Patriots",
+        "venue_qid": "Q1058864",
+        "venue": "Reliant Stadium"
+      }
+    },
+    {
+      "year": 2004,
+      "qid": "Q1432035",
+      "label": "2004 NFL season",
+      "date": "2004-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": {
+        "qid": "Q926745",
+        "name": "Super Bowl XXXIX",
+        "decided_on": "2005-02-06",
+        "season_year": 2004,
+        "winner_qid": "Q193390",
+        "winner": "New England Patriots",
+        "venue_qid": "Q635117",
+        "venue": "EverBank Field"
+      }
+    },
+    {
+      "year": 2005,
+      "qid": "Q1325351",
+      "label": "2005 NFL season",
+      "date": "2005-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": {
+        "qid": "Q904928",
+        "name": "Super Bowl XL",
+        "decided_on": "2006-02-05",
+        "season_year": 2005,
+        "winner_qid": "Q191477",
+        "winner": "Pittsburgh Steelers",
+        "venue_qid": "Q1142586",
+        "venue": "Ford Field"
+      }
+    },
+    {
+      "year": 2006,
+      "qid": "Q385964",
+      "label": "2006 NFL season",
+      "date": "2006-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": {
+        "qid": "Q597607",
+        "name": "Super Bowl XLI",
+        "decided_on": "2007-02-04",
+        "season_year": 2006,
+        "winner_qid": "Q193753",
+        "winner": "Indianapolis Colts",
+        "venue_qid": "Q864339",
+        "venue": "Hard Rock Stadium"
+      }
+    },
+    {
+      "year": 2007,
+      "qid": "Q254029",
+      "label": "2007 NFL season",
+      "date": "2007-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": {
+        "qid": "Q597314",
+        "name": "Super Bowl XLII",
+        "decided_on": "2008-02-03",
+        "season_year": 2007,
+        "winner_qid": "Q190618",
+        "winner": "New York Giants",
+        "venue_qid": "Q756433",
+        "venue": "State Farm Stadium"
+      }
+    },
+    {
+      "year": 2008,
+      "qid": "Q1706523",
+      "label": "2008 NFL season",
+      "date": "2008-01-01",
+      "starts_on": "2008-08-03",
+      "ends_on": "2009-02-08",
+      "championship": {
+        "qid": "Q853768",
+        "name": "Super Bowl XLIII",
+        "decided_on": "2009-02-01",
+        "season_year": 2008,
+        "winner_qid": "Q191477",
+        "winner": "Pittsburgh Steelers",
+        "venue_qid": "Q1141343",
+        "venue": "Raymond James Stadium"
+      }
+    },
+    {
+      "year": 2009,
+      "qid": "Q622672",
+      "label": "2009 NFL season",
+      "date": "2009-01-01",
+      "starts_on": "2009-09-10",
+      "ends_on": "2010-02-07",
+      "championship": {
+        "qid": "Q268882",
+        "name": "Super Bowl XLIV",
+        "decided_on": "2010-02-07",
+        "season_year": 2009,
+        "winner_qid": "Q172435",
+        "winner": "New Orleans Saints",
+        "venue_qid": "Q864339",
+        "venue": "Hard Rock Stadium"
+      }
+    },
+    {
+      "year": 2010,
+      "qid": "Q622675",
+      "label": "2010 NFL season",
+      "date": "2010-01-01",
+      "starts_on": "2010-08-08",
+      "ends_on": "2011-02-06",
+      "championship": {
+        "qid": "Q371433",
+        "name": "Super Bowl XLV",
+        "decided_on": "2011-02-06",
+        "season_year": 2010,
+        "winner_qid": "Q213837",
+        "winner": "Green Bay Packers",
+        "venue_qid": "Q838284",
+        "venue": "AT&T Stadium"
+      }
+    },
+    {
+      "year": 2011,
+      "qid": "Q622681",
+      "label": "2011 NFL season",
+      "date": "2011-01-01",
+      "starts_on": "2011-08-11",
+      "ends_on": "2012-02-05",
+      "championship": {
+        "qid": "Q849079",
+        "name": "Super Bowl XLVI",
+        "decided_on": "2012-02-05",
+        "season_year": 2011,
+        "winner_qid": "Q190618",
+        "winner": "New York Giants",
+        "venue_qid": "Q867160",
+        "venue": "Lucas Oil Stadium"
+      }
+    },
+    {
+      "year": 2012,
+      "qid": "Q1395918",
+      "label": "2012 NFL season",
+      "date": "2012-01-01",
+      "starts_on": "2012-08-01",
+      "ends_on": "2013-02-03",
+      "championship": {
+        "qid": "Q126291",
+        "name": "Super Bowl XLVII",
+        "decided_on": "2013-02-03",
+        "season_year": 2012,
+        "winner_qid": "Q276539",
+        "winner": "Baltimore Ravens",
+        "venue_qid": "Q756452",
+        "venue": "Caesars Superdome"
+      }
+    },
+    {
+      "year": 2013,
+      "qid": "Q2190688",
+      "label": "2013 NFL season",
+      "date": "2013-01-01",
+      "starts_on": "2013-09-05",
+      "ends_on": "2014-02-02",
+      "championship": {
+        "qid": "Q1190093",
+        "name": "Super Bowl XLVIII",
+        "decided_on": "2014-02-02",
+        "season_year": 2013,
+        "winner_qid": "Q221878",
+        "winner": "Seattle Seahawks",
+        "venue_qid": "Q10862290",
+        "venue": "MetLife Stadium"
+      }
+    },
+    {
+      "year": 2014,
+      "qid": "Q4630246",
+      "label": "2014 NFL season",
+      "date": "2014-01-01",
+      "starts_on": "2014-08-03",
+      "ends_on": "2015-02-01",
+      "championship": {
+        "qid": "Q1710023",
+        "name": "Super Bowl XLIX",
+        "decided_on": "2015-02-01",
+        "season_year": 2014,
+        "winner_qid": "Q193390",
+        "winner": "New England Patriots",
+        "venue_qid": "Q756433",
+        "venue": "State Farm Stadium"
+      }
+    },
+    {
+      "year": 2015,
+      "qid": "Q18698858",
+      "label": "2015 NFL season",
+      "date": "2015-01-01",
+      "starts_on": null,
+      "ends_on": null,
+      "championship": {
+        "qid": "Q7642193",
+        "name": "Super Bowl 50",
+        "decided_on": "2016-02-07",
+        "season_year": 2015,
+        "winner_qid": "Q223507",
+        "winner": "Denver Broncos",
+        "venue_qid": "Q7419343",
+        "venue": "Levi's Stadium"
+      }
+    },
+    {
+      "year": 2016,
+      "qid": "Q21993818",
+      "label": "2016 NFL season",
+      "date": "2016-01-01",
+      "starts_on": "2016-09-08",
+      "ends_on": "2017-02-05",
+      "championship": {
+        "qid": "Q7642194",
+        "name": "Super Bowl LI",
+        "decided_on": "2017-02-05",
+        "season_year": 2016,
+        "winner_qid": "Q193390",
+        "winner": "New England Patriots",
+        "venue_qid": "Q1058864",
+        "venue": "Reliant Stadium"
+      }
+    },
+    {
+      "year": 2017,
+      "qid": "Q28127991",
+      "label": "2017 NFL season",
+      "date": "2017-01-01",
+      "starts_on": "2017-09-07",
+      "ends_on": "2018-02-04",
+      "championship": {
+        "qid": "Q15633579",
+        "name": "Super Bowl LII",
+        "decided_on": "2018-02-04",
+        "season_year": 2017,
+        "winner_qid": "Q219714",
+        "winner": "Philadelphia Eagles",
+        "venue_qid": "Q7929512",
+        "venue": "U.S. Bank Stadium"
+      }
+    },
+    {
+      "year": 2018,
+      "qid": "Q47090681",
+      "label": "2018 NFL season",
+      "date": "2018-01-01",
+      "starts_on": "2018-09-06",
+      "ends_on": "2019-02-03",
+      "championship": {
+        "qid": "Q20204362",
+        "name": "Super Bowl LIII",
+        "decided_on": "2019-02-03",
+        "season_year": 2018,
+        "winner_qid": "Q193390",
+        "winner": "New England Patriots",
+        "venue_qid": "Q7007552",
+        "venue": "Mercedes-Benz Stadium"
+      }
+    },
+    {
+      "year": 2019,
+      "qid": "Q60526042",
+      "label": "2019 NFL season",
+      "date": "2019-01-01",
+      "starts_on": "2019-09-05",
+      "ends_on": "2020-02-02",
+      "championship": {
+        "qid": "Q20204363",
+        "name": "Super Bowl LIV",
+        "decided_on": "2020-02-02",
+        "season_year": 2019,
+        "winner_qid": "Q223522",
+        "winner": "Kansas City Chiefs",
+        "venue_qid": "Q864339",
+        "venue": "Hard Rock Stadium"
+      }
+    },
+    {
+      "year": 2020,
+      "qid": "Q74108831",
+      "label": "2020 NFL season",
+      "date": "2020-01-01",
+      "starts_on": "2020-09-10",
+      "ends_on": "2021-02-07",
+      "championship": {
+        "qid": "Q24233824",
+        "name": "Super Bowl LV",
+        "decided_on": "2021-02-07",
+        "season_year": 2020,
+        "winner_qid": "Q320476",
+        "winner": "Tampa Bay Buccaneers",
+        "venue_qid": "Q1141343",
+        "venue": "Raymond James Stadium"
+      }
+    },
+    {
+      "year": 2021,
+      "qid": "Q104765108",
+      "label": "2021 NFL season",
+      "date": "2021-01-01",
+      "starts_on": "2021-09-09",
+      "ends_on": "2022-02-13",
+      "championship": {
+        "qid": "Q30114464",
+        "name": "Super Bowl LVI",
+        "decided_on": "2022-02-13",
+        "season_year": 2021,
+        "winner_qid": "Q337377",
+        "winner": "Los Angeles Rams",
+        "venue_qid": "Q19520501",
+        "venue": "SoFi Stadium"
+      }
+    },
+    {
+      "year": 2022,
+      "qid": "Q110223483",
+      "label": "2022 NFL season",
+      "date": "2022-01-01",
+      "starts_on": "2022-09-08",
+      "ends_on": "2023-02-12",
+      "championship": {
+        "qid": "Q54196526",
+        "name": "Super Bowl LVII",
+        "decided_on": "2023-02-12",
+        "season_year": 2022,
+        "winner_qid": "Q223522",
+        "winner": "Kansas City Chiefs",
+        "venue_qid": "Q756433",
+        "venue": "State Farm Stadium"
+      }
+    },
+    {
+      "year": 2023,
+      "qid": "Q115918004",
+      "label": "2023 NFL season",
+      "date": "2023-01-01",
+      "starts_on": "2023-08-03",
+      "ends_on": "2024-02-11",
+      "championship": {
+        "qid": "Q54196525",
+        "name": "Super Bowl LVIII",
+        "decided_on": "2024-02-11",
+        "season_year": 2023,
+        "winner_qid": "Q223522",
+        "winner": "Kansas City Chiefs",
+        "venue_qid": "Q27768421",
+        "venue": "Allegiant Stadium"
+      }
+    },
+    {
+      "year": 2024,
+      "qid": "Q123998147",
+      "label": "2024 NFL season",
+      "date": "2024-01-01",
+      "starts_on": "2024-08-01",
+      "ends_on": "2025-02-09",
+      "championship": {
+        "qid": "Q91157899",
+        "name": "Super Bowl LIX",
+        "decided_on": "2025-02-09",
+        "season_year": 2024,
+        "winner_qid": "Q219714",
+        "winner": "Philadelphia Eagles",
+        "venue_qid": "Q756452",
+        "venue": "Caesars Superdome"
+      }
+    },
+    {
+      "year": 2025,
+      "qid": "Q131470855",
+      "label": "2025 NFL season",
+      "date": "2025-01-01",
+      "starts_on": "2025-07-31",
+      "ends_on": "2026-02-08",
+      "championship": {
+        "qid": "Q118876146",
+        "name": "Super Bowl LX",
+        "decided_on": "2026-02-08",
+        "season_year": 2025,
+        "winner_qid": "Q221878",
+        "winner": "Seattle Seahawks",
+        "venue_qid": "Q7419343",
+        "venue": "Levi's Stadium"
+      }
+    },
+    {
+      "year": 2026,
+      "qid": "Q137355073",
+      "label": "2026 NFL season",
+      "date": "2026-01-01",
+      "starts_on": "2026-09-09",
+      "ends_on": "2027-02-14",
+      "championship": {
+        "qid": "Q123819436",
+        "name": "Super Bowl LXI",
+        "decided_on": "2027-02-14",
+        "season_year": 2026,
+        "winner_qid": null,
+        "winner": null,
+        "venue_qid": "Q19520501",
+        "venue": "SoFi Stadium"
+      }
+    }
+  ]
+}
