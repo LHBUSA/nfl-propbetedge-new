@@ -13,9 +13,10 @@
  * stand behind. They are suppressed, never replaced with guessed data, and the
  * route, nav entry and layout stay exactly where they are.
  *
- * The two provenanced datasets (archive/stats-2025.js, archive/standings-2025.js
- * — provider NFL.com, verifiedAt 2026-08-29, semantics VERIFIED_FINAL) are NOT
- * suppressed.
+ * Provenanced public surfaces are NOT suppressed: archive/stats-2025.js and
+ * archive/standings-2025.js retain their verified NFL.com provenance, while
+ * Hall of Fame now reads /api/hof-history from Wikidata CC0 P6930 and never
+ * reads archive/hof.js.
  *
  * Fail closed: a renderer that cannot see this guard suppresses itself.
  */
@@ -25,7 +26,7 @@
   /* key -> suppressed. An unknown key is suppressed. */
   const STATE = {
     superbowls: true,
-    hof: true,
+    hof: false,               // /api/hof-history · Wikidata CC0 P6930
     records: true,
     seasons: true,
     franchise_history: true,   // founding year, franchise championship counts
@@ -67,5 +68,5 @@
     return true;
   }
 
-  window.PBEHistoryProvenance = { version: '1.0.0', isSuppressed, render, noticeHtml, REASON, NEXT };
+  window.PBEHistoryProvenance = { version: '1.1.0', isSuppressed, render, noticeHtml, REASON, NEXT };
 })();
