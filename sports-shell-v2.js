@@ -53,12 +53,23 @@
   }
 
   /* One authoritative desktop product map. PBE Picks / Track Record are native
-     here so late product modules never have to create a second navigation model. */
-  /* Twenty-three destinations in two undifferentiated rows read as breadth
-     without a model. The same items, grouped by what the user came to do:
-     TODAY (what is happening), INTELLIGENCE (what it means), TOOLS (what I can
-     build), ARCHIVE (what happened before). Density is unchanged; the mental
-     model is not. */
+     here so late product modules never have to create a second navigation model.
+
+     History is intentionally ONE global destination. Its deeper destinations
+     only appear as contextual tabs after the user enters History, which keeps
+     the live NFL workspace from carrying an eight-link archive rail all day. */
+  const HISTORY_ITEMS=[
+    ['seasonhistory','Seasons'],
+    ['standings2025','2025 Standings'],
+    ['stats2025','2025 Stats'],
+    ['records','Records'],
+    ['hof','Hall of Fame'],
+    ['sb','Super Bowls'],
+    ['prospects','Draft'],
+    ['trades','Transactions']
+  ];
+  const HISTORY_ROUTES=new Set(HISTORY_ITEMS.map(([route])=>route));
+
   const NAV_ROWS=[
     [
       ['TODAY',[
@@ -96,10 +107,8 @@
         ['leaders','League Leaders','ext:https://propbetedge.ai/leaders/nfl'],
         ['teams','Teams','']
       ]],
-      ['ARCHIVE',[
-        ['seasonhistory','Seasons',''],['standings2025','2025 Standings',''],['stats2025','2025 Stats',''],
-        ['records','Records',''],['hof','Hall of Fame',''],
-        ['sb','Super Bowls',''],['prospects','Draft',''],['trades','Transactions','']
+      ['HISTORY',[
+        ['seasonhistory','History','']
       ]]
     ]
   ];
@@ -114,6 +123,13 @@
         return `<button type="button" class="pbes-nav-btn ${c}" data-route="${r}">${esc(l)}${r==='pbecast'?'<span class="badge" id="pbes-cast-badge">CAST</span>':''}</button>`;
       }).join('')
     }</span>`;
+  }
+
+  function historyNavHtml(){
+    return `<nav class="pbes-history-nav" id="pbes-history-nav" aria-label="NFL history" hidden>
+      <span class="pbes-history-label">NFL HISTORY</span>
+      ${HISTORY_ITEMS.map(([route,label])=>`<button type="button" class="pbes-nav-btn" data-route="${route}">${esc(label)}</button>`).join('')}
+    </nav>`;
   }
 
   function shellHtml(){
@@ -145,7 +161,8 @@
         </div>
       </div>
       <nav class="pbes-primary" aria-label="Today and intelligence">${NAV_ROWS[0].map(navGroup).join('')}</nav>
-      <nav class="pbes-research" aria-label="Tools and archive">${NAV_ROWS[1].map(navGroup).join('')}<a class="pbes-nav-btn pbes-nav-ext" href="https://propbetedge.ai/news/nfl">PropBetEdge News ↗</a></nav>
+      <nav class="pbes-research" aria-label="Tools, current season and history">${NAV_ROWS[1].map(navGroup).join('')}<a class="pbes-nav-btn pbes-nav-ext" href="https://propbetedge.ai/news/nfl">PropBetEdge News ↗</a></nav>
+      ${historyNavHtml()}
     </div>`;
   }
 
@@ -198,11 +215,15 @@
   }
   function syncActive(){
     const route=activeRoute();
+    const inHistory=HISTORY_ROUTES.has(route);
     document.querySelectorAll('#pbe-sports-shell [data-route]:not(.pbes-brand)')
       .forEach(el=>{
         const own=typeof window.App?.normalize==='function'?window.App.normalize(el.dataset.route):el.dataset.route;
-        el.classList.toggle('active',own===route);
+        const isHistoryEntry=own==='seasonhistory'&&el.closest('.pbes-research');
+        el.classList.toggle('active',own===route||(isHistoryEntry&&inHistory));
       });
+    const historyNav=document.getElementById('pbes-history-nav');
+    if(historyNav)historyNav.hidden=!inHistory;
     document.querySelector('#pbe-sports-shell .pbes-brand')?.classList.remove('active');
   }
   window.addEventListener('hashchange',syncActive);
