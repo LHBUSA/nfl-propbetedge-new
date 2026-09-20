@@ -674,15 +674,26 @@ async function previewView(res, secret) {
   return send(res, 200, body, 'public, max-age=30, s-maxage=30, stale-while-revalidate=60');
 }
 
-/* Public top-of-funnel sample: intentionally exposes at most two ACTIVE/LOCKED
- * OFFICIAL picks. This is a separate, tiny publication contract; it never
+/* Public top-of-funnel sample: intentionally exposes at most two OFFICIAL
+ * picks for the current week and keeps those same two through FINAL. This is a
+ * separate, tiny publication contract; it never
  * returns tracking decisions, feature vectors, receipts, stake sizing, history,
  * or the rest of the Pro card. */
 async function freeSampleView(res, secret) {
   const ctx = await loadCard(secret, { withTape: false });
+  // The weekly free pair is deliberately stable: first two verified OFFICIAL
+  // decisions issued for the current NFL week. They stay on this public contract
+  // through FINAL so the free tracker cannot erase a loss or rotate a new pick
+  // into an already-started week.
   const candidates = ctx.eligible.current
-    .filter(({ lifecycle }) => lifecycle === 'ACTIVE' || lifecycle === 'LOCKED')
-    .sort((a, b) => Number(b.row.edge_pct || 0) - Number(a.row.edge_pct || 0))
+    .filter(({ row, lifecycle }) =>
+      row.publication_scope === OFFICIAL
+      && ['ACTIVE', 'LOCKED', 'FINAL'].includes(lifecycle)
+    )
+    .sort((a, b) =>
+      Date.parse(a.row.created_at || 0) - Date.parse(b.row.created_at || 0)
+      || String(a.row.id).localeCompare(String(b.row.id))
+    )
     .slice(0, 2)
     .map(({ row, lifecycle }) => {
       const rawMatchup = matchupFromGameId(row.game_id);
@@ -717,6 +728,13 @@ async function freeSampleView(res, secret) {
         confidence: row.confidence_bucket,
         issued_at: row.created_at,
         model_version: row.model_version,
+        grade: lifecycle === 'FINAL' && ctx.grades.get(row.id)
+          ? {
+              result: ctx.grades.get(row.id).result ?? null,
+              graded_at: ctx.grades.get(row.id).graded_at ?? null,
+              units_delta: ctx.grades.get(row.id).units_delta ?? null
+            }
+          : null,
       };
     });
 
