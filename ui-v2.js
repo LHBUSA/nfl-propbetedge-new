@@ -187,9 +187,9 @@
       ['🏈','Teams','32 CLUBS','Team profiles, rosters and franchise research.','teams'],
       ['📊','Stats Leaders','ARCHIVE','Season leaders and player statistical research.','stats'],
       ['🏆','Standings','ARCHIVE','Season standings and conference context.','standings'],
-      ['📚','Season Archive','PROVENANCE REVIEW','Season history is being re-sourced from records that carry provenance.','seasonhistory'],
-      ['📈','Records','ALL TIME','League records, milestones and historical leaders.','records'],
-      ['🏅','Hall of Fame','HISTORY','Hall of Fame player research and classes.','hof']
+      ['📚','Season Archive','CC0 HISTORY','Sourced NFL seasons and championship results.','seasonhistory'],
+      ['📈','Records','SOURCED','Verified championship records and historical timeline.','records'],
+      ['🏅','Hall of Fame','CC0 HISTORY','Sourced Pro Football Hall of Fame member index.','hof']
     ];
     return modules.map(m => `<article class="pbe-v2-module" onclick="App.nav('${m[4]}')">
       <span class="pbe-v2-module-tag">${esc(m[2])}</span>
