@@ -51,8 +51,20 @@ function bindingValue(binding, key) {
   return value == null ? null : String(value);
 }
 
+function mergeLabels(...groups) {
+  const labels = new Map();
+  for (const value of groups.flat()) {
+    const clean = String(value || '').trim();
+    if (!clean) continue;
+    const key = clean.toLocaleLowerCase('en-US');
+    const existing = labels.get(key);
+    if (!existing || (/^[a-z]/.test(existing) && /^[A-Z]/.test(clean))) labels.set(key, clean);
+  }
+  return [...labels.values()].sort((a, b) => a.localeCompare(b));
+}
+
 function list(value) {
-  return [...new Set(String(value || '').split('|').map(v => v.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  return mergeLabels(String(value || '').split('|'));
 }
 
 export function normalizeBindings(bindings = []) {
@@ -65,8 +77,8 @@ export function normalizeBindings(bindings = []) {
     if (!qid || !hofId || !name) continue;
     const key = `${qid}:${hofId}`;
     const current = byId.get(key) || { qid, name, hof_id: hofId, positions: [], teams: [] };
-    current.positions = [...new Set([...current.positions, ...list(bindingValue(binding, 'positions'))])].sort((a, b) => a.localeCompare(b));
-    current.teams = [...new Set([...current.teams, ...list(bindingValue(binding, 'teams'))])].sort((a, b) => a.localeCompare(b));
+    current.positions = mergeLabels(current.positions, list(bindingValue(binding, 'positions')));
+    current.teams = mergeLabels(current.teams, list(bindingValue(binding, 'teams')));
     byId.set(key, current);
   }
   return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
