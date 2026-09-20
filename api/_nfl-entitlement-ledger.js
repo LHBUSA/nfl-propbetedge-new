@@ -17,6 +17,7 @@
 import { selectNflEntitlement, ilikeLiteral, normalizeEmail } from './_nfl-entitlement.js';
 
 export const DEFAULT_NFL_SUPABASE_URL = 'https://tkmlnhmylqnttmnsnief.supabase.co';
+export const BUILTIN_OWNER_EMAILS = Object.freeze(['justin@proptechusa.ai']);
 
 /* A slow ledger must never hold an answer open: past this it is unavailable,
    never granted and never "no subscription". */
@@ -33,9 +34,14 @@ export function supabaseAdminHeaders(secret) {
   return headers;
 }
 
-/* Owners are named only in server configuration (NFL_OWNER_EMAILS). */
+/* The primary owner is built in so access cannot disappear because one
+   deployment forgot NFL_OWNER_EMAILS. Extra owner identities remain server-only
+   configuration; the browser still cannot assert an owner role. */
 export function parseOwnerEmails(value) {
-  return String(value || '').split(',').map(normalizeEmail).filter(Boolean);
+  return [...new Set([
+    ...BUILTIN_OWNER_EMAILS,
+    ...String(value || '').split(',').map(normalizeEmail).filter(Boolean),
+  ])];
 }
 
 /** Every nfl_subscriptions row for the email, judged by the strict predicate.
