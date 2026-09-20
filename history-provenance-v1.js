@@ -14,9 +14,10 @@
  * route, nav entry and layout stay exactly where they are.
  *
  * Provenanced public surfaces are NOT suppressed: archive/stats-2025.js and
- * archive/standings-2025.js retain their verified NFL.com provenance, while
- * Hall of Fame now reads /api/hof-history from Wikidata CC0 P6930 and never
- * reads archive/hof.js.
+ * archive/standings-2025.js retain their verified NFL.com provenance; Hall of
+ * Fame reads /api/hof-history; Seasons, Super Bowls and Records read the
+ * versioned /api/season-history CC0 release. The legacy archive globals have
+ * no authority over those restored pages.
  *
  * Fail closed: a renderer that cannot see this guard suppresses itself.
  */
@@ -25,10 +26,10 @@
 
   /* key -> suppressed. An unknown key is suppressed. */
   const STATE = {
-    superbowls: true,
+    superbowls: false,        // /api/season-history · Wikidata CC0 release
     hof: false,               // /api/hof-history · Wikidata CC0 P6930
-    records: true,
-    seasons: true,
+    records: false,           // derived from /api/season-history
+    seasons: false,           // /api/season-history · Wikidata CC0 release
     franchise_history: true,   // founding year, franchise championship counts
     player_archive: true,      // HOF / MVP / record / SB-MVP rows in the player drawer
     /* provenanced, published */
@@ -68,5 +69,5 @@
     return true;
   }
 
-  window.PBEHistoryProvenance = { version: '1.1.0', isSuppressed, render, noticeHtml, REASON, NEXT };
+  window.PBEHistoryProvenance = { version: '1.2.0', isSuppressed, render, noticeHtml, REASON, NEXT };
 })();
