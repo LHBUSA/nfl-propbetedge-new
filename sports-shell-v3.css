@@ -592,6 +592,50 @@
 #pbe-sports-shell .pbes-research .pbes-nav-label{opacity:.55!important;font-size:9px!important}
 #pbe-sports-shell .pbes-research .pbes-nav-group{border-right-color:var(--pbe-line-faint)!important}
 
+/* History is a single destination in the global shell. Once entered, the
+   historical sub-products get their own contextual rail instead of occupying
+   the always-visible navigation on every live/game-day page. */
+#pbe-sports-shell .pbes-history-nav{
+  min-height:34px;
+  display:flex;
+  align-items:center;
+  gap:2px;
+  padding:0 clamp(16px,2vw,28px);
+  border-bottom:1px solid var(--pbe-line-faint);
+  background:rgba(216,183,91,.025);
+  overflow-x:auto;
+  scrollbar-width:none;
+}
+#pbe-sports-shell .pbes-history-nav[hidden]{display:none!important}
+#pbe-sports-shell .pbes-history-nav::-webkit-scrollbar{display:none}
+#pbe-sports-shell .pbes-history-label{
+  flex:0 0 auto;
+  margin-right:8px;
+  padding-right:12px;
+  border-right:1px solid var(--pbe-line-faint);
+  font-family:var(--pbe-font-data);
+  font-size:9px;
+  font-weight:800;
+  letter-spacing:.15em;
+  text-transform:uppercase;
+  color:var(--pbe-gold);
+  white-space:nowrap;
+}
+#pbe-sports-shell .pbes-history-nav .pbes-nav-btn{
+  padding:6px 9px;
+  font-size:var(--fs-micro);
+  color:var(--pbe-faint);
+}
+#pbe-sports-shell .pbes-history-nav .pbes-nav-btn:hover,
+#pbe-sports-shell .pbes-history-nav .pbes-nav-btn.active{color:var(--pbe-paper)}
+#pbe-sports-shell .pbes-history-nav .pbes-nav-btn.active::after{
+  left:9px;right:9px;bottom:1px;
+}
+
+@media(max-width:900px){
+  #pbe-sports-shell .pbes-history-nav{display:none!important}
+}
+
 /* ---- band 5 · view context -------------------------------------------- */
 /* Reduced to the one thing nothing else on the page states -- which view you
    are in -- plus the event selector that event-selector-v2.js appends. */
