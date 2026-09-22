@@ -867,7 +867,15 @@
   function takeFocus(){
     let f=null;
     try{
+      // Same-origin handoffs remain first priority. For cross-product links
+      // (for example propbetedge.ai/games -> nfl.propbetedge.ai), sessionStorage
+      // cannot cross the subdomain boundary, so ?event=<ESPN id>#pbecast is the
+      // canonical explicit-game handoff.
       f=window.PBEGameHandoff?.take?.()||null;
+      if(!f){
+        const eventId=String(window.App?.params?.event||new URLSearchParams(location.search).get('event')||'').trim();
+        if(/^\d{6,12}$/.test(eventId))f={game_id:eventId,source:'url-deep-link'};
+      }
       if(!f){const raw=sessionStorage.getItem(FOCUS_KEY);if(raw){sessionStorage.removeItem(FOCUS_KEY);f=JSON.parse(raw)}}
     }catch(_){f=null}
     if(!f||!/^\d+$/.test(String(f.game_id||'')))return null;
