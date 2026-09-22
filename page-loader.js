@@ -1,7 +1,7 @@
-/* PropBetEdge NFL - ordered page/product upgrade loader v45 recovery */
+/* PropBetEdge NFL - ordered page/product upgrade loader v46 route-priority */
 (() => {
   'use strict';
-  const VERSION='20260920propsports2';
+  const VERSION='20260922pbecastfast1';
   const upgrades=[
     /* Establish the final homepage authority first. v6 replaces the v5 DOM with
        .pbehome6; v7 historically registered itself after that without repainting
@@ -137,7 +137,7 @@
     /* PBEcast v6 is the sole route authority: #pbecast -> PBEcastV6.load ->
        .pbecast6. v7 is additive only — it decorates v6's DOM and state and
        never registers a route or renders the container itself. */
-    {css:'./pbecast-v6.css?v=20260920propsports2',js:'./pbecast-v6.js?v=20260920propsports2'},
+    {css:'./pbecast-v6.css',js:'./pbecast-v6.js'},
     {css:'./pbecast-v7-enhance.css',js:'./pbecast-v7-enhance.js'},
     /* Additive like v7: the Sunday board, around-the-league feed, key
        moments / replay v0 and before-kickoff context. No transport, no timer,
@@ -150,7 +150,7 @@
     {css:'./pbecast-preview-v1.css',js:'./pbecast-preview-v1.js'},
     {css:'./pbecast-command-v1.css',js:'./pbecast-command-v1.js'},
     {css:'./stadium-selector-v1.css',js:'./stadium-selector-v1.js'},
-    {css:'./production-polish-v2.css',js:'./production-polish-v2.js?v=20260920propsports1'},
+    {css:'./production-polish-v2.css',js:'./production-polish-v2.js'},
 
     /* Injury Editorial terminal authority. It converts the factual newsroom
        injury feed into a canonical PropBetEdge article desk with story art and
@@ -247,7 +247,7 @@
      the last registrant for it. Everything absent from this map behaves
      exactly as it always has. */
   const TERMINAL_AUTHORITIES=[
-    {route:'pbecast',js:'./pbecast-v6.js?v=20260920propsports2',installed:()=>typeof window.PBEcastV6?.load==='function'},
+    {route:'pbecast',js:'./pbecast-v6.js',installed:()=>typeof window.PBEcastV6?.load==='function'},
     /* ui-v2 registered a roadmap placeholder for propchain at parse time and
        again on DOMContentLoaded, and v2 replaced it only when its own script
        landed, so a cold #propchain deep link painted the placeholder first.
@@ -384,6 +384,51 @@
     try{window.App.nav(route,{history:false});return true}catch(error){console.error('[pbe-route-replay]',route,error?.message||error);return false}
   }
 
+  /* ---- Opened-route priority ------------------------------------------------
+     A cold deep link must not wait for unrelated product modules.
+
+     Before this pass #pbecast sat behind 50 sequential JS module loads. The
+     terminal-authority guard correctly prevented stale v4/v5 UI from painting,
+     but that also meant the reader stared at the loading shell until v6 was
+     finally reached. On an external game handoff that looked exactly like the
+     site was trying to boot an old generation.
+
+     PBEcast's core dependencies are small and explicit. Load those first when
+     the document was opened on #pbecast, settle the v6 authority immediately,
+     and let the rest of the product continue hydrating afterward. addScript()
+     de-dupes by data-pbe-upgrade, so the normal manifest loop later skips every
+     module already loaded here rather than executing it twice. */
+  const ROUTE_PRIORITY={
+    pbecast:[
+      './team-globals-v1.js',
+      './pbe-game-handoff-v1.js',
+      './nfl-broadcast-v1.js',
+      './nfl-game-context-v1.js',
+      './season-state-v1.js',
+      './nfl-slate-core-v1.js',
+      './pbecast-v6.js'
+    ]
+  };
+
+  function openedRoute(){
+    return window.App?.normalize
+      ? window.App.normalize(String(location.hash||'').replace(/^#/,''))
+      : String(location.hash||'').replace(/^#/,'').split('?')[0].trim().toLowerCase()||'home';
+  }
+
+  async function loadPriorityRoute(route){
+    const wanted=ROUTE_PRIORITY[route]||[];
+    if(!wanted.length)return;
+    for(const js of wanted){
+      const item=upgrades.find(x=>x.js===js);
+      if(!item)throw new Error(`priority_module_missing:${js}`);
+      if(item.css)addCss(item.css);
+      await addScript(item.js);
+      settleAuthorities(item.js);
+    }
+    replayPendingRoute();
+  }
+
   function forceVisibleProRender(){
     const runId=++proSyncRun;let attempt=0;
     const run=()=>{
@@ -410,6 +455,7 @@
     upgrades.forEach(item=>{if(item.css&&(!item.lazy||item.cssEager))addCss(item.css)});
     installLazyRoutes();
     try{
+      await loadPriorityRoute(openedRoute());
       for(const item of upgrades){
         if(item.lazy)continue;
         await addScript(item.js);
