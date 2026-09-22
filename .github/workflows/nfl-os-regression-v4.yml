@@ -58,7 +58,7 @@ jobs:
             nfl-command-center-v1.js what-changed-v1.js best-line-v1.js pbecast-command-v1.js
             sports-shell-v2.js sports-shell-auth-state.js
             games-v2.js games-command-v4.js games-intel-v5.js
-            prop-board-v3.js prop-board-v5.js market-watch-v3.js matchups-v2.js
+            prop-board-v3.js prop-board-v5.js market-watch-v3.js matchups-v3.js
             model-lab.js model-lab-v2-enhance.js simulator-v2.js simulator-v3-enhance.js
             sgp-lab-v2.js usage-v2.js propchain-v3.js
             pbecast-v6.js pbecast-v7-enhance.js
