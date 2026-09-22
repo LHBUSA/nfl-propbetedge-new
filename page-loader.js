@@ -1,7 +1,7 @@
-/* PropBetEdge NFL - ordered page/product upgrade loader v46 route-priority */
+/* PropBetEdge NFL - ordered page/product upgrade loader v47 route-first */
 (() => {
   'use strict';
-  const VERSION='20260922pbecastfast1';
+  const VERSION='20260922pbecastfast2';
   const upgrades=[
     /* Establish the final homepage authority first. v6 replaces the v5 DOM with
        .pbehome6; v7 historically registered itself after that without repainting
@@ -399,15 +399,12 @@
      de-dupes by data-pbe-upgrade, so the normal manifest loop later skips every
      module already loaded here rather than executing it twice. */
   const ROUTE_PRIORITY={
-    pbecast:[
-      './team-globals-v1.js',
-      './pbe-game-handoff-v1.js',
-      './nfl-broadcast-v1.js',
-      './nfl-game-context-v1.js',
-      './season-state-v1.js',
-      './nfl-slate-core-v1.js',
-      './pbecast-v6.js'
-    ]
+    /* v6 is intentionally the only cold-deep-link prerequisite. Its selected
+       game transport is self-contained; broadcast, weather, season and slate
+       context are guarded optional layers that repaint through their existing
+       readiness events after the cast is already usable. Same-origin focus
+       requests also have a direct sessionStorage fallback in v6. */
+    pbecast:['./pbecast-v6.js']
   };
 
   function openedRoute(){
@@ -453,15 +450,14 @@
 
   async function load(){
     const route=openedRoute();
+    /* Preserve the exact production cascade on every entry path. CSS links are
+       still inserted in manifest order; only JavaScript route authority is
+       prioritized. This prevents a cold #pbecast deep link from having a
+       different cascade than navigating there from the dashboard. */
+    upgrades.forEach(item=>{if(item.css&&(!item.lazy||item.cssEager))addCss(item.css)});
     installLazyRoutes();
     try{
-      /* On a priority route, do not flood the browser with every product
-         stylesheet before its authority can paint. The document already owns
-         the shared shell/base CSS; load only this route's dependency styles,
-         install the route, then fan out the remaining eager CSS in the
-         background as normal. */
       if(ROUTE_PRIORITY[route])await loadPriorityRoute(route);
-      upgrades.forEach(item=>{if(item.css&&(!item.lazy||item.cssEager))addCss(item.css)});
       for(const item of upgrades){
         if(item.lazy)continue;
         await addScript(item.js);
