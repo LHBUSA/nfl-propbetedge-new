@@ -874,7 +874,10 @@
       f=window.PBEGameHandoff?.take?.()||null;
       if(!f){
         const eventId=String(window.App?.params?.event||new URLSearchParams(location.search).get('event')||'').trim();
-        if(/^\d{6,12}$/.test(eventId))f={game_id:eventId,source:'url-deep-link'};
+        if(/^\d{6,12}$/.test(eventId)){
+          f={game_id:eventId,source:'url-deep-link'};
+          try{const u=new URL(location.href);u.searchParams.delete('event');history.replaceState(history.state,'',u.href)}catch(_){}
+        }
       }
       if(!f){const raw=sessionStorage.getItem(FOCUS_KEY);if(raw){sessionStorage.removeItem(FOCUS_KEY);f=JSON.parse(raw)}}
     }catch(_){f=null}
