@@ -71,12 +71,35 @@ function laneSummary(lane) {
   };
 }
 
-/* lanesWanted: which engine lanes this contract reports on. */
+/* lanesWanted: which engine lanes this contract reports on. An entry may be a
+ * lane name, or `{ lane, critical }` when the contract knows a lane's weight
+ * before the ledger does — which is the case for a lane that has not been
+ * deployed yet.
+ *
+ * A LANE THIS CONTRACT ASKED FOR AND COULD NOT FIND IS NOT HEALTH. The filter
+ * used to drop an absent lane silently, so a contract whose own engine had
+ * never run once reported HEALTHY on the strength of the lanes it shares with
+ * another product. A missing lane is now reported as UNKNOWN, with the reason,
+ * and counts against the verdict exactly as a stale one would. */
 export async function engineRuntime(lanesWanted) {
+  const wanted = (Array.isArray(lanesWanted) ? lanesWanted : []).map(entry => (
+    typeof entry === 'string' ? { lane: entry, critical: true } : { lane: entry.lane, critical: entry.critical !== false }
+  ));
   const url = `${String(process.env.PICKS_ENGINE_URL || DEFAULT_ENGINE_URL).replace(/\/$/, '')}/v1/engine/runs`;
   try {
     const body = await fetchJson(url);
-    const lanes = (Array.isArray(body?.lanes) ? body.lanes : []).filter(l => lanesWanted.includes(l.lane));
+    const reported = new Map((Array.isArray(body?.lanes) ? body.lanes : []).map(l => [l.lane, l]));
+    const lanes = wanted.map(entry => reported.get(entry.lane) || {
+      lane: entry.lane,
+      label: entry.lane,
+      critical: entry.critical,
+      state: 'UNKNOWN',
+      reason: 'lane_not_in_run_ledger',
+      last_tick: null,
+      last_work: null,
+      last_ok_at: null,
+      last_error: null,
+    });
     const critical = lanes.filter(l => l.critical);
     let health = 'HEALTHY';
     if (!critical.length) health = 'UNKNOWN';

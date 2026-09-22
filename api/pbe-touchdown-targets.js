@@ -32,11 +32,16 @@ const MODEL_VERSION = 'pbe-td-hazard-v1';
 const RESULT_DEFINITION = 'pbe_offensive_td_from_final_box_score';
 const MIN_FINALIZED = 100;
 const MIN_WEEKS = 4;
+/* The lanes this contract reports on, with their weight declared here rather
+ * than taken from the ledger — a lane that has not been deployed yet is
+ * missing from the ledger, and a missing critical lane must count against the
+ * verdict rather than vanish from it. A closed learning gate is a healthy
+ * state, so the weekly tuner is not critical. */
 const TD_LANES = [
-  'nfl-touchdown-targets-orchestrator',
-  'nfl-odds-snapshot',
-  'nfl-touchdown-targets-grader',
-  'nfl-touchdown-targets-tuner',
+  { lane: 'nfl-touchdown-targets-orchestrator', critical: true },
+  { lane: 'nfl-odds-snapshot', critical: true },
+  { lane: 'nfl-touchdown-targets-grader', critical: true },
+  { lane: 'nfl-touchdown-targets-tuner', critical: false },
 ];
 
 /* Fields a Pro reader may see on a live target. `model_snapshot` is never in

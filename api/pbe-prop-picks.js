@@ -6,7 +6,15 @@ const OFFICIAL = 'official';
 const MARKET = 'player_pass_yds';
 const MIN_FINALIZED = 100;
 const MIN_WEEKS = 4;
-const PROP_LANES = ['nfl-prop-picks-orchestrator', 'nfl-odds-snapshot', 'nfl-prop-picks-grader', 'nfl-prop-picks-tuner'];
+/* Criticality matches LANES in the run ledger: the weekly selector challenger
+ * is not critical, so a week in which it had nothing to do is not a degraded
+ * engine. See api/_pbe-engine-runtime.js. */
+const PROP_LANES = [
+  { lane: 'nfl-prop-picks-orchestrator', critical: true },
+  { lane: 'nfl-odds-snapshot', critical: true },
+  { lane: 'nfl-prop-picks-grader', critical: true },
+  { lane: 'nfl-prop-picks-tuner', critical: false },
+];
 
 function send(res, status, body, cacheControl = 'private, no-store, max-age=0') {
   res.statusCode = status;

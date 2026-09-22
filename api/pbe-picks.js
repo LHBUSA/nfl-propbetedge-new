@@ -13,7 +13,15 @@ const DEFAULT_SUPABASE_URL = 'https://tkmlnhmylqnttmnsnief.supabase.co';
 const OFFICIAL = 'official';
 const UNTRAINED_STATE = 'ENGINE GATED — MODEL VALIDATION IN PROGRESS';
 /* The lanes that make the game engine a closed loop. */
-const GAME_LANES = ['nfl-game-picks-orchestrator', 'nfl-odds-snapshot', 'nfl-game-grader', 'nfl-weight-tuner'];
+/* Criticality is declared here, matching LANES in the run ledger, because a
+ * lane missing from the ledger is reported as UNKNOWN rather than dropped: a
+ * weekly challenger that has not run is a healthy state, a dead grader is not. */
+const GAME_LANES = [
+  { lane: 'nfl-game-picks-orchestrator', critical: true },
+  { lane: 'nfl-odds-snapshot', critical: true },
+  { lane: 'nfl-game-grader', critical: true },
+  { lane: 'nfl-weight-tuner', critical: false },
+];
 
 const DIVISION = Object.freeze({
   BUF:'AFC East',MIA:'AFC East',NE:'AFC East',NYJ:'AFC East',
