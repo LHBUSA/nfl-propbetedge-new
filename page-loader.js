@@ -452,10 +452,16 @@
   }
 
   async function load(){
-    upgrades.forEach(item=>{if(item.css&&(!item.lazy||item.cssEager))addCss(item.css)});
+    const route=openedRoute();
     installLazyRoutes();
     try{
-      await loadPriorityRoute(openedRoute());
+      /* On a priority route, do not flood the browser with every product
+         stylesheet before its authority can paint. The document already owns
+         the shared shell/base CSS; load only this route's dependency styles,
+         install the route, then fan out the remaining eager CSS in the
+         background as normal. */
+      if(ROUTE_PRIORITY[route])await loadPriorityRoute(route);
+      upgrades.forEach(item=>{if(item.css&&(!item.lazy||item.cssEager))addCss(item.css)});
       for(const item of upgrades){
         if(item.lazy)continue;
         await addScript(item.js);
