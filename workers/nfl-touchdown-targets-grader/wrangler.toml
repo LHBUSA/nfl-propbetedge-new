@@ -1,0 +1,41 @@
+# nfl-touchdown-targets-grader — settles PBE Touchdown Targets.
+#
+# Every read is filtered to player_anytime_td, so this lane cannot reach a
+# passing-yards pick, a game pick, or either of their records.
+#
+# Deploy from a clean export of a pushed commit, never from a local directory.
+name = "nfl-touchdown-targets-grader"
+main = "src/index.js"
+compatibility_date = "2026-09-20"
+account_id = "fd3a233edadd0a60916413c1199f71ee"
+workers_dev = true
+preview_urls = false
+
+[vars]
+SUPABASE_URL = "https://tkmlnhmylqnttmnsnief.supabase.co"
+NFL_SITE_URL = "https://nfl.propbetedge.ai"
+
+# Every 15 min: grade targets whose game nfl-current calls FINAL.
+[triggers]
+crons = ["*/15 * * * *"]
+
+# Required secret:
+# SUPABASE_SERVICE_ROLE_KEY
+#
+# No manual grading route exists, and none should: a route that could be asked
+# to grade is a route that could be asked to grade early.
+
+# Durable run ledger (run:tick|work|ok|err:<lane>). Isolate memory is not
+# evidence that a cron ran; this namespace is.
+[[kv_namespaces]]
+binding = "PICKS_KV"
+id = "0e7c77bc62fa477ea8d1a1608fb69a62"
+
+# nfl-current is the only authority for season, week, kickoff and FINAL state.
+[[services]]
+binding = "NFL_CURRENT"
+service = "nfl-current"
+
+[observability]
+enabled = true
+head_sampling_rate = 1

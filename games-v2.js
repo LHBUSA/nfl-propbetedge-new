@@ -310,6 +310,8 @@
   function wireCast(){
     if(castWired)return;castWired=true;
     document.addEventListener('click',e=>{
+      const td=e.target.closest?.('.pbe25-td-target');
+      if(td){e.preventDefault();window.App?.nav?.('tdtargets');return}
       const btn=e.target.closest?.('.pbe25-card [data-cast-event],.pbe25-feature [data-cast-event]');
       if(!btn)return;
       e.preventDefault();e.stopPropagation();

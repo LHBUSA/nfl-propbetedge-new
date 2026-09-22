@@ -1,0 +1,61 @@
+# nfl-touchdown-targets-orchestrator — PBE Touchdown Targets decision lane.
+#
+# A separate lane from nfl-prop-picks-orchestrator on purpose: the passing-yards
+# engine is in production, and a binary market has a different decision shape
+# and a different failure surface. Market-neutral code is shared, never copied
+# (nfl-picks-engine-shared, nfl-td-targets-shared).
+#
+# Deploy from a clean export of a pushed commit, never from a local directory.
+name = "nfl-touchdown-targets-orchestrator"
+main = "src/index.js"
+compatibility_date = "2026-09-20"
+account_id = "fd3a233edadd0a60916413c1199f71ee"
+workers_dev = true
+preview_urls = false
+
+[vars]
+SUPABASE_URL = "https://tkmlnhmylqnttmnsnief.supabase.co"
+
+# One quarter-hour trigger. The Worker decides from nfl-current game state
+# whether a tick does work: every 15 min inside three hours of a kickoff,
+# hourly on game day, every six hours otherwise, and always when a new market
+# batch lands. No tick contacts the odds provider.
+[triggers]
+crons = ["*/15 * * * *"]
+
+# Required secret:
+# SUPABASE_SERVICE_ROLE_KEY
+#
+# Deliberately absent:
+# ODDS_API_KEY        — every market read is nfl-odds' persisted KV snapshot.
+# NFL_GATEWAY_TOKEN   — this lane needs no gateway: nfl-current, nfl-odds and
+#                       nfl-intel are reached by service binding, and the
+#                       probability model is bundled, not fetched.
+
+# Durable run ledger (run:tick|work|ok|err:<lane>). Isolate memory is not
+# evidence that a cron ran; this namespace is.
+[[kv_namespaces]]
+binding = "PICKS_KV"
+id = "0e7c77bc62fa477ea8d1a1608fb69a62"
+
+# nfl-current is the only authority for season, week, kickoff and FINAL state,
+# and it also serves the current-season touchdown leader boards this lane reads
+# once per tick.
+[[services]]
+binding = "NFL_CURRENT"
+service = "nfl-current"
+
+# Market reads go through nfl-odds' persisted KV snapshot. Zero provider spend.
+[[services]]
+binding = "NFL_ODDS"
+service = "nfl-odds"
+
+# Kickoff-window forecast and the reported availability board, both from
+# nfl-intel's own scheduled snapshots.
+[[services]]
+binding = "NFL_INTEL"
+service = "nfl-intel"
+
+[observability]
+enabled = true
+head_sampling_rate = 1

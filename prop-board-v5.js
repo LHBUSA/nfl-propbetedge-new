@@ -230,8 +230,23 @@
     return `<div class="pbe5-player">
       <button type="button" class="pbe5-pin ${pinned ? 'on' : ''}" data-pbe5-pin="${esc(row.key)}" aria-pressed="${pinned ? 'true' : 'false'}" aria-label="${pinned ? 'Unpin' : 'Pin'} ${esc(row.player)} ${esc(m.label)}">${pinned ? '★' : '☆'}</button>
       <span class="pbe5-avatar ${photo ? 'has-photo' : 'is-fallback'}" aria-hidden="true"><span>${esc(initials)}</span>${photo}</span>
-      <div class="pbe5-player-copy"><a href="javascript:void(0)" class="pbe5-name" data-pbe5-player="${esc(row.player)}">${esc(row.player)}</a><small>${id ? `${esc(id.team)} · ${esc(id.position)} · ` : ''}${esc(m.label)}</small></div>
+      <div class="pbe5-player-copy"><a href="javascript:void(0)" class="pbe5-name" data-pbe5-player="${esc(row.player)}">${esc(row.player)}</a><small>${id ? `${esc(id.team)} · ${esc(id.position)} · ` : ''}${esc(m.label)}</small>${tdTargetBadge(row)}</div>
     </div>`;
+  }
+
+  /* PBE PRIMARY / SECONDARY TARGET.
+     Rendered from the touchdown store's published payload — never computed
+     here — and only for the anytime-touchdown market, only for the event
+     currently on the board, and only once a target has actually been issued
+     for it. The store is populated for an entitled reader only, so a free
+     board carries no badge rather than a teaser derived from a live
+     prediction. */
+  function tdTargetBadge(row) {
+    if (String(row?.market || '') !== 'player_anytime_td') return '';
+    const api = window.PBETouchdownTargets;
+    if (!api?.rankForPlayer) return '';
+    const rank = api.rankForPlayer(eventId(), row.player);
+    return rank ? api.badgeHtml(rank) : '';
   }
 
   function tableRowHtml(row, pinned) {
@@ -325,6 +340,10 @@
     if (want && want !== s.eventId) { s.eventId = want; ui.expanded.clear(); }
   }
 
+  window.addEventListener('pbe:td-targets-ready', () => {
+    if (document.getElementById('pbe5-board')) paintBoard();
+  });
+
   async function render() {
     if (ui.loading) return;
     const vc = document.getElementById('view-container'); if (!vc || !v3()?.load) return;
@@ -334,6 +353,10 @@
     try {
       await Promise.all([v3().load(), loadRoster()]);
       paint();
+      /* The touchdown store is read AFTER the board is on screen and is never
+         awaited: the badge is additive, and the board must not wait on it or
+         fail with it. The repaint arrives on pbe:td-targets-ready. */
+      window.PBETouchdownTargets?.load?.().catch(() => null);
     } catch (error) {
       ui.error = error; vc.innerHTML = errorHtml(error);
     } finally { ui.loading = false; }

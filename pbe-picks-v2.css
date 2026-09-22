@@ -408,3 +408,55 @@
   .pbetr-detail-row,.pbetr-detail-row td{display:block}
   .pbetr-official-zero{padding:18px 16px}
 }
+
+/* ---------------------------------------------------------------------------
+   TRACK RECORD — product categories.
+
+   Three records, never merged: game picks, touchdown targets, player props.
+   The switcher is above the existing validation/official tabs, which continue
+   to belong to the game-pick record alone.
+   --------------------------------------------------------------------------- */
+.pbetr-categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin-bottom: var(--s-2);
+}
+.pbetr-categories button {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1 1 160px;
+  border: 1px solid var(--pbe-line);
+  border-radius: var(--r-md);
+  background: var(--pbe-ink-2);
+  padding: var(--s-3) var(--s-4);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--t-fast), background var(--t-fast);
+}
+.pbetr-categories button b {
+  font: 600 var(--fs-label)/1.1 var(--pbe-font-data);
+  letter-spacing: var(--ls-label);
+  color: var(--pbe-dim);
+}
+.pbetr-categories button span {
+  font: 400 var(--fs-micro)/1.3 var(--pbe-font-ui);
+  color: var(--pbe-faint-text);
+}
+.pbetr-categories button:hover { border-color: var(--pbe-line-strong); }
+.pbetr-categories button:focus-visible { outline: 2px solid var(--pbe-gold); outline-offset: 2px; }
+.pbetr-categories button.active {
+  border-color: var(--pbe-gold);
+  background: var(--pbe-gold-soft);
+}
+.pbetr-categories button.active b { color: var(--pbe-gold-bright); }
+.pbetr-categories-note {
+  margin: 0 0 var(--s-4);
+  font: 400 var(--fs-micro)/1.55 var(--pbe-font-ui);
+  color: var(--pbe-faint-text);
+}
+
+@media (max-width: 620px) {
+  .pbetr-categories button { flex: 1 1 100%; }
+}

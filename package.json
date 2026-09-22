@@ -14,6 +14,11 @@
     "test:research": "node --test research/*.test.mjs",
     "verify-deploy-target": "node scripts/verify-deploy-target.mjs",
     "deploy:preview": "node scripts/verify-deploy-target.mjs && vercel deploy --scope justins-projects-ad4f4bb7",
-    "matchup:build": "node scripts/build-matchup-2026.mjs"
+    "matchup:build": "node scripts/build-matchup-2026.mjs",
+    "test:nfl": "node --test \"tests/*.test.mjs\"",
+    "test:engine": "node --test \"workers/nfl-picks-engine-shared/tests/*.test.mjs\"",
+    "test:td": "node --test tests/nfl-td-targets.test.mjs",
+    "td:build": "node scripts/build-td-model-v1.mjs",
+    "td:verify": "node scripts/build-td-model-v1.mjs --check"
   }
 }

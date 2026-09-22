@@ -158,28 +158,54 @@
     for(const entry of entries){if(!entry.isIntersecting)continue;io.unobserve(entry.target);const meta=cardMeta(entry.target);queueMeta(meta)}
   },{rootMargin:'700px 0px'}):null;
 
+  /* PBE TOUCHDOWN TARGET.
+     The badge is rendered from the touchdown store's own payload and appears
+     only when a target actually exists for this ESPN event. The store is only
+     populated for an entitled reader, so a free card shows nothing rather than
+     a teaser built from a real prediction. Idempotent: re-running replaces the
+     badge in place and never stacks. */
+  function tdBadge(root){
+    const espn=root?.dataset?.espnEvent;
+    const api=window.PBETouchdownTargets;
+    if(!espn||!api?.primaryForGame)return;
+    const target=api.primaryForGame(espn);
+    const existing=root.querySelector(':scope > .pbe25-td-target');
+    if(!target){existing?.remove();return}
+    const probability=Number(target.model?.probability);
+    const label=`PBE TD TARGET · ${target.player?.name||''}`;
+    const html=`<button type="button" class="pbe25-td-target" data-route="tdtargets" title="${esc(label)}">`
+      +`<span class="pbetd-badge">PBE TD TARGET</span><b>${esc(target.player?.name||'')}</b>`
+      +`${Number.isFinite(probability)?`<i>${(probability*100).toFixed(0)}%</i>`:''}</button>`;
+    if(existing){if(existing.outerHTML!==html)existing.outerHTML=html;return}
+    const anchor=root.querySelector('.pbe25-actions')||root.querySelector('.pbe25-feature-actions');
+    anchor?.insertAdjacentHTML('beforebegin',html);
+  }
+
   function hydrateCards(){
     document.querySelectorAll('.pbe25-card').forEach(card=>{
       const meta=cardMeta(card);
       if(!card.querySelector(':scope > .pbe25-game-intel'))insertIntel(meta,null);
+      tdBadge(card);
       card.dataset.pbePrime=isPrime(card)?'1':'0';
       if(meta.id&&!cache.has(meta.id)&&!queued.has(meta.id)){if(io)io.observe(card);else queueMeta(meta)}
     });
     const feature=document.querySelector('.pbe25-feature');
-    if(feature){const meta=featureMeta(feature);if(!feature.querySelector(':scope > .pbe25-game-intel'))insertIntel(meta,null);if(meta.id)queueMeta(meta,true)}
+    if(feature){const meta=featureMeta(feature);if(!feature.querySelector(':scope > .pbe25-game-intel'))insertIntel(meta,null);tdBadge(feature);if(meta.id)queueMeta(meta,true)}
   }
   function forceHydrate(){document.querySelectorAll('.pbe25-card').forEach(card=>{const meta=cardMeta(card);if(meta.id)queueMeta(meta,true)})}
 
   function enhance(){
     if(!document.querySelector('.pbe25-games'))return;
     controls();hydrateCards();applyFilter();
+    /* One read for the whole route; the store answers from memory after that. */
+    window.PBETouchdownTargets?.load?.().then(()=>{document.querySelectorAll('.pbe25-card').forEach(tdBadge);const f=document.querySelector('.pbe25-feature');if(f)tdBadge(f)}).catch(()=>{});
   }
   function schedule(){clearTimeout(timer);timer=setTimeout(enhance,45)}
   function burst(){[0,100,320,900].forEach(delay=>setTimeout(enhance,delay))}
 
   restore();
   new MutationObserver(schedule).observe(document.getElementById('view-container')||document.documentElement,{childList:true,subtree:true});
-  ['pbe:route-changed','pbe:event-changed','pbe:events-loaded','pbe:upgrades-ready'].forEach(name=>window.addEventListener(name,burst));
+  ['pbe:route-changed','pbe:event-changed','pbe:events-loaded','pbe:upgrades-ready','pbe:td-targets-ready'].forEach(name=>window.addEventListener(name,burst));
   document.addEventListener('DOMContentLoaded',burst,{once:true});
   window.PBEGamesIntelV5={enhance:burst,filter:()=>filter,cache};
   burst();

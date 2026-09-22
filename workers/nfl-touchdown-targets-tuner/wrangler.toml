@@ -1,0 +1,38 @@
+# nfl-touchdown-targets-tuner — the touchdown learning loop.
+#
+# Weekly. There is deliberately no HTTP train route and no HTTP promote route:
+# promotion happens inside a scheduled invocation, through an RPC that demotes
+# the incumbent and promotes one already-trained candidate under an advisory
+# lock. Every read and write is filtered to player_anytime_td, so this lane
+# cannot reach the passing-yards or game-picks champions.
+#
+# Deploy from a clean export of a pushed commit, never from a local directory.
+name = "nfl-touchdown-targets-tuner"
+main = "src/index.js"
+compatibility_date = "2026-09-20"
+account_id = "fd3a233edadd0a60916413c1199f71ee"
+workers_dev = true
+preview_urls = false
+
+[vars]
+SUPABASE_URL = "https://tkmlnhmylqnttmnsnief.supabase.co"
+
+# Tuesday 09:20 UTC: after Monday night has been graded, before the next slate
+# is priced. The day is NAMED, not numbered: Cloudflare counts 1 = Sunday, so
+# a numeric 2 here would fire on Monday. Offset from the passing-yards tuner so
+# two learning loops never contend for the same Supabase connection budget.
+[triggers]
+crons = ["20 9 * * TUE"]
+
+# Required secret:
+# SUPABASE_SERVICE_ROLE_KEY
+
+# Durable run ledger. A weekly job's liveness has to be provable in the six
+# days it does nothing, so a gate-closed exit is recorded too.
+[[kv_namespaces]]
+binding = "PICKS_KV"
+id = "0e7c77bc62fa477ea8d1a1608fb69a62"
+
+[observability]
+enabled = true
+head_sampling_rate = 1

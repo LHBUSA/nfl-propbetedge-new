@@ -96,11 +96,20 @@ export default {
      * only — no pick, side, edge or feature ever appears here. */
     if (url.pathname === '/v1/engine/runs' && req.method === 'GET') {
       const lanes = await readAllLanes(env);
+      /* One health verdict per ENGINE, never one verdict across all of them.
+       * A brand-new touchdown lane that has never ticked must not make the
+       * game-picks engine report DEGRADED, and a dead passing-yards grader
+       * must not be hidden behind two healthy engines. `overall` therefore
+       * covers the game lanes only, and each product engine gets its own. */
+      const engineOf = lane => (lane.startsWith('nfl-touchdown-targets') ? 'touchdown'
+        : lane.startsWith('nfl-prop') ? 'props' : 'game');
+      const of = engine => lanes.filter(l => engineOf(l.lane) === engine);
       return json({
         service: SERVICE, version: VERSION,
         generated_at: new Date().toISOString(),
-        overall: overallHealth(lanes.filter(l => !l.lane.startsWith('nfl-prop'))),
-        overall_props: overallHealth(lanes.filter(l => l.lane.startsWith('nfl-prop'))),
+        overall: overallHealth(of('game')),
+        overall_props: overallHealth(of('props')),
+        overall_touchdown: overallHealth(of('touchdown')),
         lanes: lanes.map(publicLane),
       }, 200, origin, env);
     }

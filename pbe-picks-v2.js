@@ -38,6 +38,11 @@
     loadId: 0,
     /* Track Record V3 */
     trackTab: null,
+    /* Which PRODUCT'S record is on screen. The three categories are separate
+       records with separate endpoints; nothing here ever merges them, and
+       switching category cannot change another category's numbers. */
+    trackCategory: 'game',
+    trackCategoryHtml: {},
     trackBundle: null,
     v3Chart: 'equity',
     valFilter: { season: 'all', week: 'all', market: 'all', model: 'all', confidence: 'all', result: 'all' },
@@ -95,7 +100,12 @@
     return d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York', timeZoneName: 'short' });
   }
   function marketLabel(market) {
-    return ({ spread: 'Spread', moneyline: 'Moneyline', total: 'Total' }[market] || String(market || 'Market'));
+    /* Game markets, plus the player markets the PLAYER PROPS category shows.
+       An unmapped key returns itself rather than a guessed label. */
+    return ({
+      spread: 'Spread', moneyline: 'Moneyline', total: 'Total',
+      player_pass_yds: 'Passing yards', player_anytime_td: 'Anytime TD',
+    }[market] || String(market || 'Market'));
   }
   function selection(row) {
     if (row?.market === 'total') return `${String(row.selection_over_under || row.side || 'TOTAL').toUpperCase()} ${line(row.market_line)}`;
@@ -446,6 +456,19 @@
     return `<div class="pbetr-tabs" role="tablist" aria-label="Track Record views">${tab('validation', 'Validation Record', counts.validation)}${tab('official', 'Official Record', counts.official)}</div>`;
   }
 
+  const TRACK_CATEGORIES = [
+    ['game', 'GAME PICKS', 'spread \u00b7 moneyline \u00b7 total'],
+    ['touchdown', 'TOUCHDOWN TARGETS', 'one primary target per game'],
+    ['props', 'PLAYER PROPS', 'passing yards'],
+  ];
+
+  function categorySwitch(active) {
+    return `<div class="pbetr-categories" role="tablist" aria-label="Track Record categories">${
+      TRACK_CATEGORIES.map(([key, label, note]) => `<button type="button" role="tab" aria-selected="${active === key}" class="${active === key ? 'active' : ''}" data-pbetr-category="${key}"><b>${esc(label)}</b><span>${esc(note)}</span></button>`).join('')
+    }</div><p class="pbetr-categories-note">Three separate records. A touchdown or player-prop result never enters the
+    game-pick numerator or denominator, and no category is ever merged into another.</p>`;
+  }
+
   function trackHeader(bundle, active) {
     const gov = bundle.gov;
     const mode = trackMode(gov);
@@ -675,11 +698,78 @@
   }
 
   function trackPage(bundle) {
+    const category = state.trackCategory || 'game';
+    if (category !== 'game') {
+      const held = state.trackCategoryHtml[category];
+      return `${categorySwitch(category)}${held || `<section class="pbe2-panel"><div class="pbetr-none">Loading the ${
+        esc(category === 'touchdown' ? 'Touchdown Targets' : 'Player Props')} record\u2026</div></section>`}`;
+    }
     const C = CORE();
     const officialCount = (bundle.official.body?.picks || []).filter(row => C.selectScope([C.fromOfficial(row, bundle.official.body?.publication_scope)], 'official').length).length;
     const active = state.trackTab || (officialCount ? 'official' : 'validation');
     const body = active === 'official' ? officialView(bundle) : validationView(bundle);
-    return `${trackHeader(bundle, active)}<div class="pbetr-body" data-view="${active}">${body}</div>`;
+    return `${categorySwitch('game')}${trackHeader(bundle, active)}<div class="pbetr-body" data-view="${active}">${body}</div>`;
+  }
+
+  /* A category's markup is produced by the module that owns that record, once,
+     and held so switching back is instant. A category that cannot be read says
+     so; it never renders as an empty record. */
+  async function loadCategory(category) {
+    if (state.trackCategoryHtml[category]) return;
+    try {
+      if (category === 'touchdown') {
+        state.trackCategoryHtml.touchdown = await window.PBETouchdownTargets?.recordSection?.()
+          || '<section class="pbe2-panel"><div class="pbetr-none">The Touchdown Targets record module is not loaded.</div></section>';
+      } else if (category === 'props') {
+        state.trackCategoryHtml.props = await propRecordHtml();
+      }
+    } catch (error) {
+      state.trackCategoryHtml[category] = `<section class="pbe2-panel"><div class="pbetr-none">This record could not be read (${
+        esc(error instanceof Error ? error.message : String(error))}). A failed read is never shown as an empty record.</div></section>`;
+    }
+    if (window.App?.current === 'trackrecord' && state.trackCategory === category) paintTrack();
+  }
+
+  /* PLAYER PROPS. Its own endpoint, its own rows, its own arithmetic \u2014 units
+     at the price frozen at issuance, and no default price anywhere. */
+  async function propRecordHtml() {
+    const body = await json('/api/pbe-prop-picks?view=trackrecord');
+    const rows = Array.isArray(body?.picks) ? body.picks : [];
+    const graded = rows.filter(row => ['win', 'loss', 'push'].includes(String(row?.grade?.result || '')));
+    const wins = graded.filter(row => row.grade.result === 'win').length;
+    const losses = graded.filter(row => row.grade.result === 'loss').length;
+    const pushes = graded.filter(row => row.grade.result === 'push').length;
+    const priced = graded.every(row => num(row.grade?.units_delta) !== null);
+    const profit = graded.length && priced ? graded.reduce((sum, row) => sum + num(row.grade.units_delta), 0) : null;
+    const kpi = (label, value, note) => `<div class="pbe2-kpi"><span>${esc(label)}</span><strong>${esc(value)}</strong>${note ? `<small>${esc(note)}</small>` : ''}</div>`;
+    const table = rows.length ? rows.map(row => {
+      const grade = row.grade || null;
+      const unitsValue = num(grade?.units_delta);
+      return `<tr>
+        <td>${esc(row.week ?? '\u2014')}</td>
+        <td>${esc(row.player_name || '\u2014')}</td>
+        <td>${esc(marketLabel(row.market))}</td>
+        <td>${esc(String(row.side || '').toUpperCase())} ${esc(line(row.market_line))}</td>
+        <td>${esc(american(row.market_price))}</td>
+        <td>${esc(probability(row.model_prob))}</td>
+        <td>${grade ? esc(String(grade.result).toUpperCase()) : 'PENDING'}</td>
+        <td>${unitsValue === null ? '\u2014' : `${unitsValue > 0 ? '+' : ''}${unitsValue.toFixed(2)}u`}</td>
+        <td>v${esc(row.selector_version ?? '\u2014')}</td>
+      </tr>`;
+    }).join('') : '<tr><td colspan="9" class="pbetr-none">No graded player-prop decisions have been published yet.</td></tr>';
+    return `<section class="pbe2-panel">
+      <div class="pbe2-panel-head"><div><span>${esc(body?.scope_note || 'Verified live track record')}</span><strong>${esc(body?.market_label || 'Player Props')}</strong></div></div>
+      <div class="pbe2-track-kpis" style="padding:16px">
+        ${kpi('W-L-P', `${wins}-${losses}-${pushes}`, `${graded.length} graded`)}
+        ${kpi('Flat 1u profit', profit === null ? '\u2014' : `${profit > 0 ? '+' : ''}${profit.toFixed(2)}u`, 'at the issued price')}
+        ${kpi('Publication', String(body?.publication || '\u2014'), String(body?.issuance_mode || ''))}
+        ${kpi('Graded sample', String(graded.length), `${body?.finalized_sample ?? 0} finalized observations`)}
+      </div>
+      <div class="pbetr-table-wrap"><table class="pbetr-ledger-table"><thead><tr>
+        <th scope="col">Wk</th><th scope="col">Player</th><th scope="col">Market</th><th scope="col">Selection</th>
+        <th scope="col">Issued odds</th><th scope="col">Model</th><th scope="col">Result</th><th scope="col">Flat 1u</th><th scope="col">Selector</th>
+      </tr></thead><tbody>${table}</tbody></table></div>
+    </section>`;
   }
 
   async function readValidation() {
@@ -737,6 +827,12 @@
     document.querySelectorAll('[data-pbe2-expand]').forEach(row => row.addEventListener('click', event => {
       if (event.target.closest('[data-pbe2-copy]')) return;
       const id = row.dataset.pbe2Expand; state.expanded = state.expanded === id ? null : id; rerenderTrackLocal();
+    }));
+    document.querySelectorAll('[data-pbetr-category]').forEach(button => button.addEventListener('click', () => {
+      state.trackCategory = button.dataset.pbetrCategory;
+      paintTrack();
+      window.scrollTo?.({ top: 0 });
+      if (state.trackCategory !== 'game') loadCategory(state.trackCategory);
     }));
     document.querySelectorAll('[data-pbetr-tab]').forEach(button => button.addEventListener('click', () => { state.trackTab = button.dataset.pbetrTab; paintTrack(); window.scrollTo?.({ top: 0 }); }));
     document.querySelectorAll('[data-pbetr-chart]').forEach(button => button.addEventListener('click', () => { state.v3Chart = button.dataset.pbetrChart || 'equity'; paintTrack(); }));

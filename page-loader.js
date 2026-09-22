@@ -184,6 +184,13 @@
     {js:'./pbe-track-record-core-v1.js'},
     {css:'./pbe-picks-v2.css',js:'./pbe-picks-v2.js'},
 
+    /* PBE TOUCHDOWN TARGETS. Sole registrant of #tdtargets and the ONE client
+       owner of /api/pbe-touchdown-targets: the dashboard rail, the Games card
+       badge and the Prop Board row badge all read its published store, so four
+       surfaces cost one request. Loaded after pbe-picks-v2 so its navigation
+       entry can anchor beside Track Record whichever module installed that. */
+    {css:'./touchdown-targets-v1.css',js:'./touchdown-targets-v1.js'},
+
     /* Gated validation telemetry is aggregate/public-safe. */
     {css:'./pbe-validation-v1.css',js:'./pbe-validation-v1.js'},
 

@@ -25,6 +25,13 @@ export const LANES = Object.freeze({
   'nfl-prop-picks-orchestrator': { label: 'Prop decisions (pass yds)', tick_sla_s: 1800, work_sla_s: 13 * 3600, critical: true },
   'nfl-prop-picks-grader': { label: 'Prop grading', tick_sla_s: 1800, work_sla_s: 26 * 3600, critical: true },
   'nfl-prop-picks-tuner': { label: 'Prop selector challenger (weekly)', tick_sla_s: 8 * 86400, work_sla_s: 8 * 86400, critical: false },
+  /* PBE Touchdown Targets. The orchestrator and grader are critical: a game
+   * that is never evaluated is a game missing from the record, and a final
+   * that is never graded is a result the record is waiting on. The weekly
+   * challenger is not critical — a closed learning gate is a healthy state. */
+  'nfl-touchdown-targets-orchestrator': { label: 'Touchdown target decisions', tick_sla_s: 1800, work_sla_s: 13 * 3600, critical: true },
+  'nfl-touchdown-targets-grader': { label: 'Touchdown target grading', tick_sla_s: 1800, work_sla_s: 26 * 3600, critical: true },
+  'nfl-touchdown-targets-tuner': { label: 'Touchdown selector challenger (weekly)', tick_sla_s: 8 * 86400, work_sla_s: 8 * 86400, critical: false },
 });
 
 const key = (kind, lane) => `run:${kind}:${lane}`;

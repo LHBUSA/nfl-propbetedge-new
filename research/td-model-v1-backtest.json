@@ -1,0 +1,643 @@
+{
+  "version": "pbe-td-hazard-v1",
+  "scope": "HISTORICAL BACKTEST",
+  "warning": "This is not the PBE Touchdown Targets verified live track record. It is what the model would have estimated for historical player-games, scored out of sample. No target was published, locked or graded from these rows.",
+  "built_at": "2026-09-22T00:53:14.934Z",
+  "validation_season": 2024,
+  "holdout_season": 2025,
+  "weights": {
+    "role": 0.15,
+    "team": 0,
+    "opponent": 0,
+    "script": 1,
+    "weather": 1,
+    "shrink_prior_games": 6
+  },
+  "calibration": {
+    "method": "logistic recalibration of logit(1 - exp(-lambda)), Newton-fitted on the training seasons",
+    "a": -0.513984,
+    "b": 0.648859,
+    "split": {
+      "method": "weights selected on the validation season; the holdout season scored once with the weights fixed",
+      "fit_seasons": "< 2025",
+      "validation_season": 2024,
+      "holdout_season": 2025
+    },
+    "train": {
+      "n": 21095,
+      "base_rate": 0.225788,
+      "brier": 0.163149,
+      "log_loss": 0.502804
+    },
+    "holdout": {
+      "n": 4353,
+      "base_rate": 0.219159,
+      "brier": 0.157909,
+      "log_loss": 0.489904
+    },
+    "holdout_uncalibrated": {
+      "n": 4353,
+      "base_rate": 0.219159,
+      "brier": 0.161724,
+      "log_loss": 0.501064
+    },
+    "holdout_base_rate_reference": {
+      "strategy": "predict the training base rate for every player-game",
+      "predicted": 0.225788,
+      "n": 4353,
+      "brier": 0.171172,
+      "log_loss": 0.525968
+    },
+    "holdout_by_position": {
+      "QB": {
+        "n": 473,
+        "base_rate": 0.147992,
+        "brier": 0.119859,
+        "log_loss": 0.398735
+      },
+      "RB": {
+        "n": 1133,
+        "base_rate": 0.293027,
+        "brier": 0.185413,
+        "log_loss": 0.550966
+      },
+      "TE": {
+        "n": 979,
+        "base_rate": 0.18284,
+        "brier": 0.142229,
+        "log_loss": 0.456274
+      },
+      "WR": {
+        "n": 1768,
+        "base_rate": 0.210973,
+        "brier": 0.159147,
+        "log_loss": 0.493788
+      }
+    },
+    "reliability_holdout": [
+      {
+        "from": 0,
+        "to": 0.05,
+        "n": 91,
+        "predicted": 0.038191,
+        "observed": 0.10989
+      },
+      {
+        "from": 0.05,
+        "to": 0.1,
+        "n": 429,
+        "predicted": 0.076108,
+        "observed": 0.090909
+      },
+      {
+        "from": 0.1,
+        "to": 0.15,
+        "n": 672,
+        "predicted": 0.126625,
+        "observed": 0.102679
+      },
+      {
+        "from": 0.15,
+        "to": 0.2,
+        "n": 783,
+        "predicted": 0.175427,
+        "observed": 0.153257
+      },
+      {
+        "from": 0.2,
+        "to": 0.3,
+        "n": 1369,
+        "predicted": 0.248368,
+        "observed": 0.245435
+      },
+      {
+        "from": 0.3,
+        "to": 0.4,
+        "n": 717,
+        "predicted": 0.33833,
+        "observed": 0.324965
+      },
+      {
+        "from": 0.4,
+        "to": 0.55,
+        "n": 258,
+        "predicted": 0.456967,
+        "observed": 0.488372
+      },
+      {
+        "from": 0.55,
+        "to": 1,
+        "n": 34,
+        "predicted": 0.581453,
+        "observed": 0.617647
+      }
+    ],
+    "walk_forward": "player baselines use only earlier games; team and opponent profiles use only earlier seasons",
+    "scope": "HISTORICAL BACKTEST — never a verified live record"
+  },
+  "weight_search": [
+    {
+      "sweep": 0,
+      "key": "role",
+      "value": 0,
+      "validation_log_loss": 0.501709,
+      "validation_brier": 0.163181
+    },
+    {
+      "sweep": 0,
+      "key": "role",
+      "value": 0.15,
+      "validation_log_loss": 0.501404,
+      "validation_brier": 0.163058
+    },
+    {
+      "sweep": 0,
+      "key": "role",
+      "value": 0.3,
+      "validation_log_loss": 0.501529,
+      "validation_brier": 0.163109
+    },
+    {
+      "sweep": 0,
+      "key": "role",
+      "value": 0.45,
+      "validation_log_loss": 0.501874,
+      "validation_brier": 0.16324
+    },
+    {
+      "sweep": 0,
+      "key": "role",
+      "value": 0.6,
+      "validation_log_loss": 0.50234,
+      "validation_brier": 0.163403
+    },
+    {
+      "sweep": 0,
+      "key": "role",
+      "value": 0.8,
+      "validation_log_loss": 0.503002,
+      "validation_brier": 0.163598
+    },
+    {
+      "sweep": 0,
+      "key": "role",
+      "value": 1,
+      "validation_log_loss": 0.504246,
+      "validation_brier": 0.163972
+    },
+    {
+      "sweep": 0,
+      "key": "team",
+      "value": 0,
+      "validation_log_loss": 0.501521,
+      "validation_brier": 0.163133
+    },
+    {
+      "sweep": 0,
+      "key": "team",
+      "value": 0.15,
+      "validation_log_loss": 0.501402,
+      "validation_brier": 0.16307
+    },
+    {
+      "sweep": 0,
+      "key": "team",
+      "value": 0.3,
+      "validation_log_loss": 0.501404,
+      "validation_brier": 0.163058
+    },
+    {
+      "sweep": 0,
+      "key": "team",
+      "value": 0.45,
+      "validation_log_loss": 0.501523,
+      "validation_brier": 0.163096
+    },
+    {
+      "sweep": 0,
+      "key": "team",
+      "value": 0.6,
+      "validation_log_loss": 0.501752,
+      "validation_brier": 0.163179
+    },
+    {
+      "sweep": 0,
+      "key": "team",
+      "value": 0.8,
+      "validation_log_loss": 0.502224,
+      "validation_brier": 0.163354
+    },
+    {
+      "sweep": 0,
+      "key": "team",
+      "value": 1,
+      "validation_log_loss": 0.50288,
+      "validation_brier": 0.163596
+    },
+    {
+      "sweep": 0,
+      "key": "opponent",
+      "value": 0,
+      "validation_log_loss": 0.500996,
+      "validation_brier": 0.162927
+    },
+    {
+      "sweep": 0,
+      "key": "opponent",
+      "value": 0.15,
+      "validation_log_loss": 0.501157,
+      "validation_brier": 0.162978
+    },
+    {
+      "sweep": 0,
+      "key": "opponent",
+      "value": 0.3,
+      "validation_log_loss": 0.501402,
+      "validation_brier": 0.16307
+    },
+    {
+      "sweep": 0,
+      "key": "opponent",
+      "value": 0.45,
+      "validation_log_loss": 0.501727,
+      "validation_brier": 0.163201
+    },
+    {
+      "sweep": 0,
+      "key": "opponent",
+      "value": 0.6,
+      "validation_log_loss": 0.50213,
+      "validation_brier": 0.163369
+    },
+    {
+      "sweep": 0,
+      "key": "opponent",
+      "value": 0.8,
+      "validation_log_loss": 0.502784,
+      "validation_brier": 0.163646
+    },
+    {
+      "sweep": 0,
+      "key": "opponent",
+      "value": 1,
+      "validation_log_loss": 0.503556,
+      "validation_brier": 0.163973
+    },
+    {
+      "sweep": 0,
+      "key": "script",
+      "value": 0,
+      "validation_log_loss": 0.50195,
+      "validation_brier": 0.163298
+    },
+    {
+      "sweep": 0,
+      "key": "script",
+      "value": 0.15,
+      "validation_log_loss": 0.501425,
+      "validation_brier": 0.163091
+    },
+    {
+      "sweep": 0,
+      "key": "script",
+      "value": 0.3,
+      "validation_log_loss": 0.500996,
+      "validation_brier": 0.162927
+    },
+    {
+      "sweep": 0,
+      "key": "script",
+      "value": 0.45,
+      "validation_log_loss": 0.500662,
+      "validation_brier": 0.162805
+    },
+    {
+      "sweep": 0,
+      "key": "script",
+      "value": 0.6,
+      "validation_log_loss": 0.50042,
+      "validation_brier": 0.162722
+    },
+    {
+      "sweep": 0,
+      "key": "script",
+      "value": 0.8,
+      "validation_log_loss": 0.500232,
+      "validation_brier": 0.16267
+    },
+    {
+      "sweep": 0,
+      "key": "script",
+      "value": 1,
+      "validation_log_loss": 0.500191,
+      "validation_brier": 0.162679
+    },
+    {
+      "sweep": 0,
+      "key": "weather",
+      "value": 0,
+      "validation_log_loss": 0.500208,
+      "validation_brier": 0.162685
+    },
+    {
+      "sweep": 0,
+      "key": "weather",
+      "value": 0.15,
+      "validation_log_loss": 0.500199,
+      "validation_brier": 0.162682
+    },
+    {
+      "sweep": 0,
+      "key": "weather",
+      "value": 0.3,
+      "validation_log_loss": 0.500191,
+      "validation_brier": 0.162679
+    },
+    {
+      "sweep": 0,
+      "key": "weather",
+      "value": 0.45,
+      "validation_log_loss": 0.500184,
+      "validation_brier": 0.162676
+    },
+    {
+      "sweep": 0,
+      "key": "weather",
+      "value": 0.6,
+      "validation_log_loss": 0.500178,
+      "validation_brier": 0.162674
+    },
+    {
+      "sweep": 0,
+      "key": "weather",
+      "value": 0.8,
+      "validation_log_loss": 0.500171,
+      "validation_brier": 0.162671
+    },
+    {
+      "sweep": 0,
+      "key": "weather",
+      "value": 1,
+      "validation_log_loss": 0.500165,
+      "validation_brier": 0.162669
+    },
+    {
+      "sweep": 1,
+      "key": "role",
+      "value": 0,
+      "validation_log_loss": 0.500485,
+      "validation_brier": 0.162812
+    },
+    {
+      "sweep": 1,
+      "key": "role",
+      "value": 0.15,
+      "validation_log_loss": 0.500165,
+      "validation_brier": 0.162669
+    },
+    {
+      "sweep": 1,
+      "key": "role",
+      "value": 0.3,
+      "validation_log_loss": 0.500285,
+      "validation_brier": 0.162706
+    },
+    {
+      "sweep": 1,
+      "key": "role",
+      "value": 0.45,
+      "validation_log_loss": 0.500635,
+      "validation_brier": 0.162829
+    },
+    {
+      "sweep": 1,
+      "key": "role",
+      "value": 0.6,
+      "validation_log_loss": 0.501135,
+      "validation_brier": 0.163005
+    },
+    {
+      "sweep": 1,
+      "key": "role",
+      "value": 0.8,
+      "validation_log_loss": 0.501805,
+      "validation_brier": 0.163198
+    },
+    {
+      "sweep": 1,
+      "key": "role",
+      "value": 1,
+      "validation_log_loss": 0.502861,
+      "validation_brier": 0.163477
+    },
+    {
+      "sweep": 1,
+      "key": "team",
+      "value": 0,
+      "validation_log_loss": 0.500145,
+      "validation_brier": 0.162678
+    },
+    {
+      "sweep": 1,
+      "key": "team",
+      "value": 0.15,
+      "validation_log_loss": 0.500165,
+      "validation_brier": 0.162669
+    },
+    {
+      "sweep": 1,
+      "key": "team",
+      "value": 0.3,
+      "validation_log_loss": 0.500295,
+      "validation_brier": 0.162706
+    },
+    {
+      "sweep": 1,
+      "key": "team",
+      "value": 0.45,
+      "validation_log_loss": 0.500529,
+      "validation_brier": 0.162786
+    },
+    {
+      "sweep": 1,
+      "key": "team",
+      "value": 0.6,
+      "validation_log_loss": 0.500861,
+      "validation_brier": 0.162904
+    },
+    {
+      "sweep": 1,
+      "key": "team",
+      "value": 0.8,
+      "validation_log_loss": 0.501449,
+      "validation_brier": 0.163117
+    },
+    {
+      "sweep": 1,
+      "key": "team",
+      "value": 1,
+      "validation_log_loss": 0.502195,
+      "validation_brier": 0.163385
+    },
+    {
+      "sweep": 1,
+      "key": "opponent",
+      "value": 0,
+      "validation_log_loss": 0.500145,
+      "validation_brier": 0.162678
+    },
+    {
+      "sweep": 1,
+      "key": "opponent",
+      "value": 0.15,
+      "validation_log_loss": 0.500318,
+      "validation_brier": 0.16274
+    },
+    {
+      "sweep": 1,
+      "key": "opponent",
+      "value": 0.3,
+      "validation_log_loss": 0.500571,
+      "validation_brier": 0.162839
+    },
+    {
+      "sweep": 1,
+      "key": "opponent",
+      "value": 0.45,
+      "validation_log_loss": 0.500903,
+      "validation_brier": 0.162975
+    },
+    {
+      "sweep": 1,
+      "key": "opponent",
+      "value": 0.6,
+      "validation_log_loss": 0.501311,
+      "validation_brier": 0.163144
+    },
+    {
+      "sweep": 1,
+      "key": "opponent",
+      "value": 0.8,
+      "validation_log_loss": 0.501953,
+      "validation_brier": 0.16341
+    },
+    {
+      "sweep": 1,
+      "key": "opponent",
+      "value": 1,
+      "validation_log_loss": 0.502742,
+      "validation_brier": 0.16374
+    },
+    {
+      "sweep": 1,
+      "key": "script",
+      "value": 0,
+      "validation_log_loss": 0.50211,
+      "validation_brier": 0.163381
+    },
+    {
+      "sweep": 1,
+      "key": "script",
+      "value": 0.15,
+      "validation_log_loss": 0.501549,
+      "validation_brier": 0.163159
+    },
+    {
+      "sweep": 1,
+      "key": "script",
+      "value": 0.3,
+      "validation_log_loss": 0.501086,
+      "validation_brier": 0.162981
+    },
+    {
+      "sweep": 1,
+      "key": "script",
+      "value": 0.45,
+      "validation_log_loss": 0.500719,
+      "validation_brier": 0.162845
+    },
+    {
+      "sweep": 1,
+      "key": "script",
+      "value": 0.6,
+      "validation_log_loss": 0.500446,
+      "validation_brier": 0.16275
+    },
+    {
+      "sweep": 1,
+      "key": "script",
+      "value": 0.8,
+      "validation_log_loss": 0.50022,
+      "validation_brier": 0.162683
+    },
+    {
+      "sweep": 1,
+      "key": "script",
+      "value": 1,
+      "validation_log_loss": 0.500145,
+      "validation_brier": 0.162678
+    },
+    {
+      "sweep": 1,
+      "key": "weather",
+      "value": 0,
+      "validation_log_loss": 0.500188,
+      "validation_brier": 0.162695
+    },
+    {
+      "sweep": 1,
+      "key": "weather",
+      "value": 0.15,
+      "validation_log_loss": 0.500179,
+      "validation_brier": 0.162691
+    },
+    {
+      "sweep": 1,
+      "key": "weather",
+      "value": 0.3,
+      "validation_log_loss": 0.500171,
+      "validation_brier": 0.162688
+    },
+    {
+      "sweep": 1,
+      "key": "weather",
+      "value": 0.45,
+      "validation_log_loss": 0.500164,
+      "validation_brier": 0.162685
+    },
+    {
+      "sweep": 1,
+      "key": "weather",
+      "value": 0.6,
+      "validation_log_loss": 0.500158,
+      "validation_brier": 0.162683
+    },
+    {
+      "sweep": 1,
+      "key": "weather",
+      "value": 0.8,
+      "validation_log_loss": 0.500151,
+      "validation_brier": 0.16268
+    },
+    {
+      "sweep": 1,
+      "key": "weather",
+      "value": 1,
+      "validation_log_loss": 0.500145,
+      "validation_brier": 0.162678
+    }
+  ],
+  "counts": {
+    "reg_rows": 34412,
+    "players_in_artefact": 890,
+    "players_skipped_thin_sample": 313,
+    "ambiguous_names": 0,
+    "train_samples": 21095,
+    "holdout_samples": 4353,
+    "skipped": {
+      "no_baseline": 7456,
+      "no_profiles": 1508,
+      "no_lambda": 0
+    }
+  }
+}

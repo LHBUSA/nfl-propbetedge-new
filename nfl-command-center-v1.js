@@ -386,7 +386,12 @@
     const top = slot('top'), intel = slot('intel');
     if (!top && !intel) return;
     write(top, `<div class="pbecc">${slateHtml()}${window.PBECard?.dashboardHtml?.() || ''}</div>`);
-    write(intel, `<div class="pbecc pbecc-intel">${loopHtml()}<div class="pbecc-cols">${changesHtml()}<div class="pbecc-stack">${picksHtml()}${bestLineHtml()}</div></div></div>`);
+    /* Touchdown Targets renders its own rail. It is asked for the markup
+       rather than reimplemented here, so the dashboard and the full page can
+       never disagree about a target, and an absent module simply contributes
+       nothing. */
+    const tdRail = window.PBETouchdownTargets?.railHtml?.({ limit: 4, heading: 'This week’s TD targets' }) || '';
+    write(intel, `<div class="pbecc pbecc-intel">${loopHtml()}<div class="pbecc-cols">${changesHtml()}<div class="pbecc-stack">${picksHtml()}${bestLineHtml()}${tdRail}</div></div></div>`);
   }
 
   /* Called by dashboard-v7 after it paints. Paints from what is already held
@@ -394,12 +399,17 @@
   function mount() {
     paint();
     tick();
+    /* One read, on first mount. The store answers from memory afterwards. */
+    window.PBETouchdownTargets?.load?.().then(paint).catch(() => {});
   }
   function tick() {
     if (!slot('top') && !slot('intel')) return;
     if (document.visibilityState === 'hidden') return;
     ['changes', 'picks', 'bestline'].forEach(k => refresh(k));
   }
+
+  /* Entitlement and the touchdown read both resolve after the first paint. */
+  window.addEventListener('pbe:td-targets-ready', () => { if (slot('intel')) paint(); });
 
   /* Routing from inside the slots. PBEcast focus uses the one-shot session
      handoff PBEcast v6 consumes on mount, so the chosen game opens — not
