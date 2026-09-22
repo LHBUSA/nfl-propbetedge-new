@@ -40,5 +40,5 @@ test('loader version-busts both attribution authorities', async () => {
   const index = await read('index.html');
   assert.match(loader, /pbecast-v6\.js/);
   assert.match(loader, /production-polish-v2\.js/);
-  assert.match(index, /page-loader\.js\?v=20260922pbecastfast1/);
+  assert.match(index, /page-loader\.js\?v=20260922pbecastfast2/);
 });
