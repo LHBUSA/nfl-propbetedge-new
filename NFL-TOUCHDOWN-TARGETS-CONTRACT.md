@@ -369,3 +369,69 @@ decision.
 
 `node --test tests/nfl-td-targets.test.mjs` — 44 tests covering the thirty
 numbered requirements plus the behaviour the spec describes around them.
+
+## Bring-up runbook
+
+Source is on `main`. The frontend and `/api/pbe-touchdown-targets` are live and
+degrade honestly until the steps below are done: `view=state` reports
+`engine_health: STALE` with its three lanes `UNKNOWN`, and `view=trackrecord`
+returns 503 because `target_rank` does not exist yet.
+
+**Order matters.** Do not deploy the Workers before the migration: the
+orchestrator fails closed on a missing promoted selector and would write failed
+runs into the durable ledger.
+
+```bash
+REPO=D:/Workers/nfl-data-harvest
+EXPORT=$(mktemp -d) && git -C "$REPO" archive HEAD | tar -x -C "$EXPORT"
+
+# 1 ── schema. Supabase project tkmlnhmylqnttmnsnief (NFL + UFC share it).
+#      Rollback: migrations/nfl_td_targets_binary_market_v1_rollback.sql
+#      It refuses once any touchdown target has been published.
+psql "$NFL_SUPABASE_DB_URL" -v ON_ERROR_STOP=1 \
+  -f "$REPO/migrations/nfl_td_targets_binary_market_v1.sql"
+
+# verify: one promoted, untrained touchdown selector and an empty ledger
+psql "$NFL_SUPABASE_DB_URL" -c "
+  select version, market, projection_model, promoted, trained
+    from nfl_prop_selector_models where market = 'player_anytime_td';
+  select count(*) from nfl_td_slate_evaluations;
+  select count(*) from nfl_prop_picks where target_rank is not null;"
+
+# 2 ── the three lanes. Each needs the service-role key and nothing else.
+for w in nfl-touchdown-targets-orchestrator \
+         nfl-touchdown-targets-grader \
+         nfl-touchdown-targets-tuner; do
+  (cd "$EXPORT/workers/$w" \
+    && wrangler secret put SUPABASE_SERVICE_ROLE_KEY \
+    && wrangler deploy)
+done
+
+# 3 ── canaries
+for w in nfl-touchdown-targets-orchestrator \
+         nfl-touchdown-targets-grader \
+         nfl-touchdown-targets-tuner; do
+  curl -s "https://$w.sales-fd3.workers.dev/health" | jq '{service,version,health,requirements}'
+done
+curl -s https://nfl-touchdown-targets-orchestrator.sales-fd3.workers.dev/v1/engine/state | jq
+curl -s https://nfl-touchdown-targets-orchestrator.sales-fd3.workers.dev/v1/engine/model | jq '.calibration.holdout'
+curl -s https://nfl-game-picks-orchestrator.sales-fd3.workers.dev/v1/engine/runs \
+  | jq '{overall, overall_props, overall_touchdown}'
+curl -s "https://nfl.propbetedge.ai/api/pbe-touchdown-targets?view=state" | jq '{engine_health, publication, coverage}'
+```
+
+What a healthy first slate looks like, after one cron tick inside the horizon:
+
+* every lane `/health` reports `HEALTHY` with all `requirements` true;
+* `overall` and `overall_props` are unchanged at `HEALTHY`, `overall_touchdown`
+  becomes `HEALTHY`;
+* the orchestrator's last work record carries
+  `counts.games_evaluated == counts.targets_issued + counts.abstained + counts.degraded`,
+  with `abstained` small and every reason named;
+* `view=state` reports `coverage.games_evaluated` equal to the number of games
+  in the window and an `abstention_rate` computed only over decidable games;
+* `view=current` still refuses without an NFL Pro session, and returns game
+  cards with one primary target each for a Pro session.
+
+`nfl-game-picks-orchestrator` was redeployed for the per-engine health verdict.
+Rollback version: `15345e9d-6144-4d41-8b35-c58035481adb`.
