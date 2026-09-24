@@ -142,6 +142,10 @@ html.pbe-pro-open,html.pbe-pro-open body{overflow:hidden!important;overscroll-be
 #pbe-funnel-refresh{min-height:42px!important}
 
 /* ---- member states (sport_pro / all_access / owner) -------------------- */
+/* paywall-polish-v1.js words the member head at 31-43px; same specificity
+   here, later in the cascade, so the member surface fits like the free one. */
+.pbe-funnel-member .pbe-funnel-head>strong{max-width:460px!important;font-size:clamp(19px,1.8vw,24px)!important;line-height:1.04!important;letter-spacing:-.025em!important}
+.pbe-funnel-member .pbe-funnel-head>p{font-size:11px!important;line-height:1.45!important}
 .pbe-pro-modal .pbe-member-status-card{margin-top:10px!important;padding:10px 12px!important;gap:10px!important}
 .pbe-pro-modal .pbe-member-seal{width:48px!important;height:48px!important}
 .pbe-pro-modal .pbe-member-access-grid{margin-top:8px!important;gap:6px!important}
