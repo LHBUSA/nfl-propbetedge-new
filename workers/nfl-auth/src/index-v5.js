@@ -3,12 +3,14 @@
    session ONLY after the same check passes again. Identity is not entitlement:
    an MLB/NBA/NHL/UFC subscription, a known customer or an existing session
    grants nothing here. The check is the one Vercel uses
-   (api/_nfl-entitlement-ledger.js -> api/_nfl-entitlement.js). */
-import { resolveNflAccess, parseOwnerEmails } from '../../../api/_nfl-entitlement-ledger.js';
+   (api/_nfl-entitlement-ledger.js -> api/_nfl-entitlement.js), including the
+   additive PropBetEdge All Access bridge: when NFL denies, the shared billing
+   ledger is asked for an active pbe_all_access subscription (fail closed). */
+import { resolveNflAccess, parseOwnerEmails, ALL_ACCESS_PRODUCT_KEY, DEFAULT_PBE_BILLING_URL } from '../../../api/_nfl-entitlement-ledger.js';
 import { normalizeEmail } from '../../../api/_nfl-entitlement.js';
 
 const SERVICE='propbetedge-nfl-auth';
-const VERSION='v7.1';
+const VERSION='v7.2';
 /* One answer for every accepted request, entitled or not, so the response
    never reveals whether an email owns NFL Pro. The decision and any email run
    after the response (ctx.waitUntil), so timing reveals nothing either. */
@@ -41,7 +43,7 @@ export default{async fetch(req,env,ctx){
   if(req.method==='OPTIONS')return new Response(null,{status:204,headers:cors(origin,app)});
   if(url.pathname==='/health'){
     const signing=signingSecrets(env);
-    return out({ok:Boolean(env.RESEND_API_KEY&&signing.primary),service:SERVICE,version:VERSION,auth_issuer:'propbetedge',session:'vercel_first_party_cookie',session_authority:'vercel:/api/auth-session',exchange:'signed_magic_to_session',entitlement_store:'supabase:nfl_subscriptions',entitlement_gate:{request:true,exchange:true,owner_configured:parseOwnerEmails(env.NFL_OWNER_EMAILS).length>0,internal_delivery_configured:internalToken(env).length>=32},email_transport:'resend',sender:FROM_EMAIL,fallback:false,requirements:{RESEND_API_KEY:Boolean(env.RESEND_API_KEY),SESSION_SIGNING_SECRET:Boolean(signing.primary),SUPABASE_SERVICE_ROLE_KEY:Boolean(env.SUPABASE_SERVICE_ROLE_KEY)},signing:{mode:signing.mode,dedicated_configured:signing.dedicatedConfigured,legacy_verify_fallback:Boolean(signing.fallback)}},200,origin,app);
+    return out({ok:Boolean(env.RESEND_API_KEY&&signing.primary),service:SERVICE,version:VERSION,auth_issuer:'propbetedge',session:'vercel_first_party_cookie',session_authority:'vercel:/api/auth-session',exchange:'signed_magic_to_session',entitlement_store:'supabase:nfl_subscriptions',entitlement_gate:{request:true,exchange:true,owner_configured:parseOwnerEmails(env.NFL_OWNER_EMAILS).length>0,internal_delivery_configured:internalToken(env).length>=32},all_access_bridge:{configured:allAccessConfig(env).readToken.length>0,transport:allAccessConfig(env).transport,product_key:ALL_ACCESS_PRODUCT_KEY,additive:true,fail_closed:true},email_transport:'resend',sender:FROM_EMAIL,fallback:false,requirements:{RESEND_API_KEY:Boolean(env.RESEND_API_KEY),SESSION_SIGNING_SECRET:Boolean(signing.primary),SUPABASE_SERVICE_ROLE_KEY:Boolean(env.SUPABASE_SERVICE_ROLE_KEY)},signing:{mode:signing.mode,dedicated_configured:signing.dedicatedConfigured,legacy_verify_fallback:Boolean(signing.fallback)}},200,origin,app);
   }
   if((url.pathname==='/v1/auth/request'||url.pathname==='/v1/auth/email')&&req.method==='POST')return requestLink(req,env,origin,app,ctx);
   if(url.pathname==='/v1/auth/exchange'&&req.method==='POST')return exchangeLink(req,env,origin,app);
@@ -88,11 +90,24 @@ export async function issueLinkIfEntitled(env,app,signing,email,purpose,{sleep=m
 
 async function checkAccess(env,email){
   try{
-    const a=await resolveNflAccess(email,{ownerEmails:parseOwnerEmails(env.NFL_OWNER_EMAILS),supabaseUrl:env.SUPABASE_URL,serviceKey:env.SUPABASE_SERVICE_ROLE_KEY});
+    const a=await resolveNflAccess(email,{ownerEmails:parseOwnerEmails(env.NFL_OWNER_EMAILS),supabaseUrl:env.SUPABASE_URL,serviceKey:env.SUPABASE_SERVICE_ROLE_KEY,allAccess:allAccessConfig(env)});
     return{allowed:a.allowed,role:a.role,reason:a.allowed?a.role:(a.verdict?.reason||'not_entitled')};
   }catch(e){
     console.error(`[nfl-auth] entitlement stage=unavailable error=${e?.message||e}`);
     return{allowed:false,role:null,reason:'entitlement_unavailable'};
+  }
+}
+
+/* PropBetEdge All Access bridge: server secret only; absent = bridge off, NFL decides as before.
+   Transport is the BILLING Service Binding when present (a Worker cannot fetch another
+   Worker's workers.dev URL in the same account, Cloudflare error 1042), else plain fetch. */
+function allAccessConfig(env){
+  const binding=env.BILLING&&typeof env.BILLING.fetch==='function'?env.BILLING:null;
+  return{
+    billingUrl:binding?'https://propbetedge-sports-billing':(env.PBE_BILLING_URL||DEFAULT_PBE_BILLING_URL),
+    readToken:String(env.PBE_ENTITLEMENT_READ_TOKEN||'').trim(),
+    transport:binding?'service_binding':'fetch',
+    ...(binding?{fetchImpl:(u,init)=>binding.fetch(u,init)}:{})
   }
 }
 

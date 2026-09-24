@@ -5,8 +5,10 @@
  * Every session answer carries an `access` verdict for the NFL Pro layer:
  *   anonymous       no verified session
  *   no_entitlement  verified email, no qualifying NFL purchase
- *   granted         a qualifying NFL purchase (_nfl-entitlement.js), or the
- *                   verified owner (NFL_OWNER_EMAILS, server env only)
+ *   granted         a qualifying NFL purchase (_nfl-entitlement.js), an active
+ *                   PropBetEdge All Access subscription (shared billing ledger,
+ *                   additive, fail closed), or the verified owner
+ *                   (NFL_OWNER_EMAILS, server env only)
  *   unavailable     the check could not be completed; never read as granted
  *
  * Access is additive: the public NFL site never waits on this answer. Only
@@ -16,7 +18,7 @@
 
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { normalizeEmail } from './_nfl-entitlement.js';
-import { lookupNflEntitlement, parseOwnerEmails, supabaseAdminHeaders, ENTITLEMENT_TIMEOUT_MS, DEFAULT_NFL_SUPABASE_URL } from './_nfl-entitlement-ledger.js';
+import { lookupNflAccessVerdict, parseOwnerEmails, supabaseAdminHeaders, ENTITLEMENT_TIMEOUT_MS, DEFAULT_NFL_SUPABASE_URL, DEFAULT_PBE_BILLING_URL } from './_nfl-entitlement-ledger.js';
 
 export { supabaseAdminHeaders, ENTITLEMENT_TIMEOUT_MS };
 
@@ -115,13 +117,24 @@ export function verifyWorkerJwtWithSecrets(token, secrets, expectedType = 'sessi
   throw new Error(reason);
 }
 
+/* PropBetEdge All Access bridge configuration: server env only. Without the
+   read token the bridge is off and NFL decides exactly as before. */
+export function allAccessConfig() {
+  return {
+    billingUrl: process.env.PBE_BILLING_URL || DEFAULT_PBE_BILLING_URL,
+    readToken: String(process.env.PBE_ENTITLEMENT_READ_TOKEN || '').trim(),
+  };
+}
+
 /* Every nfl_subscriptions row for the email, judged by the pure predicate in
    _nfl-entitlement.js through the lookup the auth Worker shares
-   (_nfl-entitlement-ledger.js). Throws when the ledger cannot answer. */
+   (_nfl-entitlement-ledger.js); when NFL denies, the shared All Access ledger
+   is asked (additive, fail closed). Throws when the NFL ledger cannot answer. */
 function entitlementByEmail(email, secret) {
-  return lookupNflEntitlement(email, {
+  return lookupNflAccessVerdict(email, {
     supabaseUrl: process.env.SUPABASE_URL || DEFAULT_NFL_SUPABASE_URL,
     serviceKey: secret,
+    allAccess: allAccessConfig(),
   });
 }
 
@@ -213,7 +226,7 @@ export async function getNflSession(req) {
   if (verdict.entitled) {
     return {
       valid: true, pro: true, access: 'granted', role: 'subscriber',
-      entitlement: { reason: 'entitled', plan: verdict.plan, billing: verdict.billing },
+      entitlement: { reason: 'entitled', plan: verdict.plan, billing: verdict.billing, source: verdict.source || 'nfl' },
       user,
       subscription: {
         status: verdict.status,
@@ -221,6 +234,7 @@ export async function getNflSession(req) {
         current_period_end: verdict.current_period_end,
         cancel_at_period_end: verdict.cancel_at_period_end,
         stripe_price_id: verdict.stripe_price_id,
+        source: verdict.source || 'nfl',
       },
       authority: 'vercel-local', stage: 'entitlement_active', cookies, degraded: false, signing: signingInfo,
     };
@@ -228,7 +242,7 @@ export async function getNflSession(req) {
 
   return {
     valid: true, pro: false, access: 'no_entitlement', role: null,
-    entitlement: { reason: verdict.reason, plan: verdict.plan || null, status: verdict.status || null },
+    entitlement: { reason: verdict.reason, plan: verdict.plan || null, status: verdict.status || null, all_access: verdict.all_access || null },
     user, subscription: null, authority: 'vercel-local', stage: 'entitlement_missing', cookies,
     degraded: false, signing: signingInfo,
   };

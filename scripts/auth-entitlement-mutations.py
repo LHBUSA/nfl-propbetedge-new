@@ -9,9 +9,21 @@ import pathlib, subprocess, sys
 
 sys.stdout.reconfigure(encoding='utf-8')
 REPO = pathlib.Path(__file__).resolve().parent.parent
-TESTS = ['tests/nfl-auth-entitlement-gate.test.mjs', 'tests/nfl-auth-access-v2.test.mjs', 'tests/nfl-auth-magic-link-single-use.test.mjs', 'tests/nfl-purchase-delivery.test.mjs', 'tests/nfl-billing-worker.test.mjs']
+TESTS = ['tests/nfl-all-access-bridge.test.mjs', 'tests/nfl-auth-entitlement-gate.test.mjs', 'tests/nfl-auth-access-v2.test.mjs', 'tests/nfl-auth-magic-link-single-use.test.mjs', 'tests/nfl-purchase-delivery.test.mjs', 'tests/nfl-billing-worker.test.mjs']
 
 MUTATIONS = [
+    ('All Access outage treated as entitled', 'api/_nfl-entitlement-ledger.js',
+     "    return { ...verdict, all_access: 'unavailable', all_access_error: String(error?.message || 'all_access_unavailable') };",
+     "    return { entitled: true, reason: 'all_access', product: 'nfl', plan: 'all_access', billing: 'recurring', source: ALL_ACCESS_PRODUCT_KEY, status: 'active', current_period_end: new Date(Date.now() + 864e5).toISOString(), cancel_at_period_end: false, stripe_price_id: null };"),
+    ('All Access bridge accepts the billing owner identity exception / any product', 'api/_nfl-entitlement-ledger.js',
+     "  if (body.access_source === 'owner' || !sub || sub.product_key !== ALL_ACCESS_PRODUCT_KEY) {",
+     "  if (false) {"),
+    ('All Access bridge ignores status and period end', 'api/_nfl-entitlement-ledger.js',
+     "  if (!ALL_ACCESS_GRANTING_STATUS.has(status)) return { entitled: false, reason: 'all_access_inactive', status, plan: 'all_access' };",
+     "  if (false) return { entitled: false, reason: 'all_access_inactive', status, plan: 'all_access' };\n  if (!Number.isFinite(end) || end <= now) return { entitled: true, reason: 'all_access', product: 'nfl', plan: 'all_access', billing: 'recurring', source: ALL_ACCESS_PRODUCT_KEY, status, current_period_end: null, cancel_at_period_end: false, stripe_price_id: null };"),
+    ('All Access consulted even when the NFL ledger cannot answer', 'api/_nfl-entitlement-ledger.js',
+     "  const verdict = await lookupNflEntitlement(email, ledger);",
+     "  const verdict = await lookupNflEntitlement(email, ledger).catch(() => ({ entitled: false, reason: 'no_subscription', status: null, plan: null }));"),
     ('lookup degrades to "any active subscription"', 'api/_nfl-entitlement-ledger.js',
      "  return selectNflEntitlement(rows, verified, nowMs ?? Date.now());",
      "  if (rows.some(r => String(r?.status).toLowerCase() === 'active')) return { entitled: true, reason: 'entitled', plan: 'any', billing: 'recurring', status: 'active', current_period_end: new Date(Date.now() + 864e5).toISOString() };\n  return selectNflEntitlement(rows, verified, nowMs ?? Date.now());"),
@@ -68,6 +80,9 @@ for name, rel, old, new in MUTATIONS:
     path = REPO / rel
     original = path.read_bytes()
     text = original.decode('utf-8')
+    # Anchors are written with \n; a CRLF checkout (Windows, core.autocrlf) must still match.
+    if '\r\n' in text:
+        old, new = old.replace('\n', '\r\n'), new.replace('\n', '\r\n')
     assert text.count(old) == 1, f'{name}: anchor not unique in {rel}'
     try:
         path.write_bytes(text.replace(old, new).encode('utf-8'))

@@ -3,9 +3,18 @@ main = "src/index-v5.js"
 compatibility_date = "2026-08-29"
 workers_dev = true
 
+# Shared billing Worker, reached through a Service Binding: a Worker cannot
+# fetch another Worker's workers.dev URL in the same account (error 1042).
+[[services]]
+binding = "BILLING"
+service = "propbetedge-sports-billing"
+
 [vars]
 APP_ORIGIN = "https://nfl.propbetedge.ai"
 SUPABASE_URL = "https://tkmlnhmylqnttmnsnief.supabase.co"
+# PropBetEdge All Access bridge (additive, fail closed). The bearer read token
+# is a Worker secret: wrangler secret put PBE_ENTITLEMENT_READ_TOKEN
+PBE_BILLING_URL = "https://propbetedge-sports-billing.sales-fd3.workers.dev"
 
 # Magic links are single use: one Durable Object per link jti records its first
 # exchange; a reused or replayed link is refused (index-v5.js consumeMagicLink).

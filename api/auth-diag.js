@@ -46,6 +46,13 @@ export default async function handler(req, res) {
       legacy_fallback_configured: Boolean(signing.fallback),
     },
     worker: { base: workerBase, reachable: false, version: null, status: null },
+    /* PropBetEdge All Access bridge (additive, fail closed): configured means the
+       server read token is present; the Worker's /health reports its own side. */
+    all_access_bridge: {
+      configured: Boolean(String(process.env.PBE_ENTITLEMENT_READ_TOKEN || '').trim()),
+      product_key: 'pbe_all_access',
+      billing_url: String(process.env.PBE_BILLING_URL || 'https://propbetedge-sports-billing.sales-fd3.workers.dev'),
+    },
     secret_parity: null,
     entitlement_store: { reachable: false, status: null },
     cookies: {
