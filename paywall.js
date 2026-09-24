@@ -22,7 +22,7 @@
    * the funnel, the modules and the shell read window.PBEPricing instead of
    * restating a price. No free trial exists; none is offered. */
   const PRICING = Object.freeze({
-    monthly: Object.freeze({ key: 'monthly', label: 'Monthly', badge: 'Best value', price: '$9.99', amount: '9.99', cadence: 'month', detail: '/ month', short: '$9.99/mo',
+    monthly: Object.freeze({ key: 'monthly', label: 'Monthly', badge: 'Popular', price: '$9.99', amount: '9.99', cadence: 'month', detail: '/ month', short: '$9.99/mo',
       priceId: 'price_1UEWAXF3CaVzg4ORGlsgboLq', url: 'https://buy.stripe.com/eVqeVd1rUcyG5tz2gb7wA0y', term: 'Founding Season rate · Renews monthly · Cancel anytime' }),
     weekly: Object.freeze({ key: 'weekly', label: 'Weekly', badge: 'Flexible', price: '$3.99', amount: '3.99', cadence: 'week', detail: '/ week', short: '$3.99/wk',
       priceId: 'price_1UEWAOF3CaVzg4ORjkWpwOz9', url: 'https://buy.stripe.com/9B628rb2udCK5tzf2X7wA0x', term: 'Founding Season rate · Renews weekly · Cancel anytime' }),
