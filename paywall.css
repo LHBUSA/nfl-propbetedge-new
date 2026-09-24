@@ -49,8 +49,10 @@
 .pbe-pro-backdrop.open { display:grid; }
 .pbe-pro-modal {
   width:min(940px,100%);
-  max-height:min(830px,calc(100vh - 36px));
-  overflow:auto;
+  /* No max-height and no internal scrollbar: the surface is sized to fit the
+     viewport (nfl-all-access-hero-v1.css owns the geometry); the backdrop is
+     the only scroll context if a state ever outgrows it. */
+  overflow:visible;
   position:relative;
   border:1px solid rgba(255,255,255,.10);
   border-radius:20px;
@@ -363,7 +365,7 @@ body:not(.pbe-has-pro) .pbe2-table td:nth-child(8):after {
   .pbe-pro-account { margin-left:0; height:31px; padding:0 8px; }
   .pbe-pro-account .pbe-pro-account-label { display:none; }
   .pbe-pro-backdrop { padding:8px; }
-  .pbe-pro-modal { border-radius:14px; max-height:calc(100vh - 16px); }
+  .pbe-pro-modal { border-radius:14px; }
   .pbe-pro-pitch { padding:26px 17px 22px; }
   .pbe-pro-checkout { padding:22px 17px 24px; }
   .pbe-pro-pitch h2 { font-size:43px; }

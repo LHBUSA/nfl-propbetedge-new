@@ -22,7 +22,7 @@
   function isPro() { return Boolean(proState().pro); }
 
   /* Shared membership contract (pbe-membership.js via window.PBEMembership).
-     free      NFL plans + the All Access card beneath them
+     free      the ALL ACCESS hero first, then ONLY WANT NFL? and the NFL plans
      sport_pro the member surface (You have NFL PropBetEdge Pro)
      all_access / owner  no sales surface at all: nothing to sell */
   const MEMBERSHIP_STATES = ['free', 'sport_pro', 'all_access', 'owner'];
@@ -36,7 +36,20 @@
     if (m?.entitled) return m.state;
     return s.role === 'owner' ? 'owner' : 'sport_pro';
   }
-  function allAccessCard(m = membership()) { return window.PBEMembership?.allAccessCardHtml?.(m, { compact: true }) || ''; }
+  /* The ALL ACCESS hero (nfl-all-access-hero-v1.js) is the primary offer and
+     renders ABOVE the NFL plans; the shared contract card is only the fallback
+     if the hero module never loaded. Never rendered for all_access / owner. */
+  function allAccessHero(m = membership()) {
+    const hero = window.NFLAllAccessHero;
+    if (hero?.heroHtml) {
+      const html = hero.heroHtml(m, { variant: 'home' });
+      if (!html) return '';
+      const price = esc(hero.offer?.().price || '$29/month');
+      return html.replace('</aside>', `<div class="nfl-aa-home-price"><strong>${price.split('/')[0]}</strong><small>per month · every Pro sport</small></div></aside>`) + (hero.dividerHtml?.() || '');
+    }
+    return window.PBEMembership?.allAccessCardHtml?.(m, { compact: true }) || '';
+  }
+  function allAccessMini(m = membership()) { return window.NFLAllAccessHero?.miniHtml?.(m) || ''; }
   function isHome() { return window.App?.current === 'home' && Boolean(document.querySelector('.pbehome7')); }
 
   function planLabel(plan, fallback) {
@@ -62,6 +75,7 @@
     const monthly = planLabel(p?.monthly, 'Monthly');
     const weekly = planLabel(p?.weekly, 'Weekly');
     return `<section class="pbeprosell" data-nfl-pro-sales="free" aria-labelledby="pbeprosell-title">
+      ${allAccessHero()}
       <div class="pbeprosell-grid">
         <div class="pbeprosell-copy">
           <div class="pbeprosell-kicker"><span>NFL PRO · AUTOMATED LEARNING PICKER</span><i>FOUNDING SEASON</i></div>
@@ -82,7 +96,6 @@
             <button type="button" class="pbeprosell-link" data-pro-route="trackrecord">Audit every graded call →</button>
           </div>
           <div class="pbeprosell-fine">Automated learning is governed, not reckless: only finalized observations can train challengers, and the production champion never silently replaces itself. New NFL Pro releases and in-product add-ons are included while your subscription is active. One verified account · Stripe checkout · Cancel anytime.</div>
-          ${allAccessCard()}
         </div>
 
         <div class="pbeprosell-preview" aria-label="Locked NFL Pro decision preview">
@@ -157,6 +170,7 @@
     const monthly = planLabel(p?.monthly, 'Monthly');
     const weekly = planLabel(p?.weekly, 'Weekly');
     return `<aside class="pbeprosell-mini" data-nfl-pro-mini="1" aria-label="NFL Pro">
+      ${allAccessMini()}
       <div class="pbeprosell-mini-top"><span>NFL PRO</span><b>LEARNING PICKER</b></div>
       <strong>A picker built to learn.</strong>
       <p>Official PBE Picks + locked grading + a governed learning system + new NFL Pro features and add-ons as they ship.</p>
@@ -188,16 +202,24 @@
     const root = document.querySelector('.pbe-funnel-root');
     if (!root) return;
     const state = root.dataset.funnelState || '';
-    let note = root.querySelector('[data-pro-release-value]');
+    /* The note lives in the pitch column (after the feature list), where it
+       has room; in the checkout column it sat between the reader and the
+       purchase decision and pushed the surface past short viewports. */
+    const modal = root.closest('.pbe-pro-modal') || document.querySelector('.pbe-pro-modal');
+    let note = modal?.querySelector('[data-pro-release-value]') || root.querySelector('[data-pro-release-value]');
     if (!note) {
       note = document.createElement('div');
       note.className = 'pbe-pro-today';
       note.setAttribute('data-pro-release-value', '1');
+      const features = modal?.querySelector('.pbe-pro-pitch .pbe-pro-feature-list');
       const plans = root.querySelector('.pbe-funnel-plans');
       const status = root.querySelector('.pbe-member-status-card,.pbe-funnel-user');
-      const anchor = plans || status || root.querySelector('.pbe-funnel-head');
-      if (anchor) anchor.insertAdjacentElement('beforebegin', note);
-      else root.prepend(note);
+      if (features) features.insertAdjacentElement('afterend', note);
+      else {
+        const anchor = plans || status || root.querySelector('.pbe-funnel-head');
+        if (anchor) anchor.insertAdjacentElement('afterend', note);
+        else root.append(note);
+      }
     }
     if (state === 'active-pro' || state === 'active-owner') {
       note.innerHTML = '<b>YOUR PRO KEEPS EVOLVING</b><span>New NFL Pro feature releases, product upgrades and in-product add-ons are included while your Pro access is active.</span>';

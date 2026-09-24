@@ -10,8 +10,10 @@
  *            owner · canceled / expired / past_due NFL  -> the right state, label
  *            and UI flags; no email on a paywalled answer; no grant changed
  *   client   the funnel, header, footer and home sales builders render each
- *            state with no purchase CTA for all_access/owner and both NFL plans
- *            plus the All Access card for free readers; never "Stripe" as a state
+ *            state with no purchase CTA for all_access/owner; free readers get
+ *            the ALL ACCESS hero FIRST, then both NFL plans (nfl-all-access-
+ *            hero-v1.js is the NFL layer; the contract card is its fallback);
+ *            never "Stripe" as a state
  *   copies   api/_pbe-membership.js and pbe-membership.js are byte-identical
  *
  *   node --test tests/nfl-membership-state.test.mjs
@@ -228,37 +230,41 @@ function run(file, proState) {
   const window = { PBEPricing: PRICING, PBEMembership: M, PBEPro: { state: proState, open() {}, close() {}, paintNotice() {}, refreshAccess: async () => false, denialNote() { return ''; } }, App: {}, location: { href: 'https://nfl.propbetedge.ai/', search: '' }, addEventListener() {}, dispatchEvent() {} };
   window.window = window;
   const ctx = vm.createContext({ window, document, console, URL, setTimeout() { return 0; }, clearTimeout() {}, requestAnimationFrame() { return 0; }, queueMicrotask() {}, MutationObserver: class { observe() {} }, CustomEvent: class {}, KeyboardEvent: class {}, localStorage: { getItem() { return null; }, setItem() {} }, fetch: async () => ({}), location: window.location });
+  /* page-loader.js loads the NFL All Access hero before the funnel and the
+     sales layer; the DOM-less page does the same. */
+  vm.runInContext(read('nfl-all-access-hero-v1.js'), ctx, { filename: 'nfl-all-access-hero-v1.js' });
   vm.runInContext(read(file), ctx, { filename: file });
   return window;
 }
 const member = (state, over = {}) => M.deriveMembership({ sport: 'nfl', entitled: state !== 'free', accessSource: state === 'free' ? null : state === 'sport_pro' ? 'sport' : state, productKey: state === 'all_access' ? 'pbe_all_access' : 'nfl_pro', plan: state === 'sport_pro' ? 'founding_monthly' : state === 'all_access' ? 'all_access' : state === 'owner' ? 'owner' : null, email: state === 'free' ? null : `${state}@membership.test`, currentPeriodEnd: state === 'free' ? null : END, ...over });
 const proStateFor = state => ({ loading: false, pro: state !== 'free', access: state === 'free' ? 'anonymous' : 'granted', role: state === 'owner' ? 'owner' : state === 'free' ? null : 'subscriber', user: state === 'free' ? null : { email: `${state}@membership.test` }, subscription: state === 'free' ? null : { current_period_end: END, cancel_at_period_end: false }, membership: member(state), entitlement: null });
 
-const PURCHASE_CTA = /data-funnel-plan=|buy\.stripe\.com|Unlock NFL Pro|pbe-mbr-aa|Get All Access|pbe-funnel-checkout/;
+const PURCHASE_CTA = /data-funnel-plan=|buy\.stripe\.com|Unlock NFL Pro|pbe-mbr-aa|Get All Access|GET ALL ACCESS|nfl-aa-hero|data-nfl-all-access|pbe-funnel-checkout/;
 const visibleText = html => html.replace(/\s(?:href|src)="[^"]*"/g, '');
 
-test('funnel: free readers (signed out and signed in) see both NFL plans and the All Access card beneath them', () => {
+test('funnel: free readers (signed out and signed in) see the ALL ACCESS hero FIRST, then ONLY WANT NFL?, then both NFL plans', () => {
   const w = run('paywall-funnel-v2.js', proStateFor('free'));
   const F = w.PBECheckoutFunnel.markup;
   for (const html of [F.signedOut(), F.signedInFree('reader@membership.test')]) {
     assert.match(html, /data-funnel-plan="monthly"/); assert.match(html, /data-funnel-plan="weekly"/);
     assert.ok(html.includes(PRICING.monthly.price) && html.includes(PRICING.weekly.price), 'the NFL prices come from window.PBEPricing');
-    const plans = html.indexOf('data-funnel-plan="weekly"'); const card = html.indexOf('class="pbe-mbr-aa');
-    assert.ok(card > plans, 'the All Access card sits beneath the NFL plans');
-    assert.match(html, /Get All Access/); assert.ok(html.includes(M.ALL_ACCESS_OFFER.checkoutUrl)); assert.ok(html.includes(M.ALL_ACCESS_OFFER.price));
+    const hero = html.indexOf('data-nfl-all-access="hero"'); const divider = html.indexOf('data-nfl-all-access="divider"'); const plans = html.indexOf('data-funnel-plan="monthly"');
+    assert.ok(hero > -1 && divider > hero && plans > divider, 'ALL ACCESS hero, then ONLY WANT NFL?, then the NFL plans');
+    assert.match(html, /GET ALL ACCESS/); assert.ok(html.includes(M.ALL_ACCESS_OFFER.checkoutUrl)); assert.ok(html.includes(M.ALL_ACCESS_OFFER.promoCode));
+    assert.doesNotMatch(html, /class="pbe-mbr-aa/, 'the shared card is only the fallback when the NFL hero module is absent');
     assert.match(html, /data-membership="free"/);
-    assert.doesNotMatch(html, /Upgrade to All Access/);
+    assert.doesNotMatch(html, /UPGRADE TO ALL ACCESS|Upgrade to All Access/);
   }
   assert.equal(F.memberState(proStateFor('free')), 'free');
 });
 
-test('funnel: sport_pro -> NFL PRO ACTIVE, plan text, manage link, All Access upgrade card, no NFL plan cards', () => {
+test('funnel: sport_pro -> NFL PRO ACTIVE, plan text, manage link, UPGRADE TO ALL ACCESS hero, no NFL plan cards', () => {
   const w = run('paywall-funnel-v2.js', proStateFor('sport_pro'));
   const html = w.PBECheckoutFunnel.markup.active('sport_pro@membership.test', { current_period_end: END }, false);
   assert.match(html, /data-funnel-state="active-pro" data-membership="sport_pro"/);
   assert.match(html, /NFL PRO ACTIVE/); assert.match(html, /NFL Pro · founding monthly/);
   assert.ok(html.includes(`class="pbe-mbr-manage" href="${M.MANAGE_URL}"`), 'manage link');
-  assert.match(html, /Upgrade to All Access/); assert.match(html, /class="pbe-mbr-aa"/);
+  assert.match(html, /UPGRADE TO ALL ACCESS/); assert.match(html, /class="nfl-aa-hero is-modal is-upgrade"/); assert.ok(html.includes(M.ALL_ACCESS_OFFER.checkoutUrl));
   assert.doesNotMatch(html, /data-funnel-plan=|pbe-funnel-checkout|Unlock NFL Pro/);
   assert.doesNotMatch(html, /pbe-mbr-network/, 'the network row is the All Access member\'s');
   assert.doesNotMatch(visibleText(html), /Stripe/);
@@ -311,15 +317,18 @@ test('header: members show the contract label; free readers keep Sign In / Upgra
   assert.doesNotMatch(read('sports-shell-v2.js'), /pbes-head-btn pro/);
 });
 
-test('home sales: free readers get both NFL plans + the All Access card; All Access and owner get no sales surface', () => {
+test('home sales: free readers get the ALL ACCESS hero first, then ONLY WANT NFL? and both NFL plans; All Access and owner get no sales surface', () => {
   const w = run('nfl-pro-sales-v1.js', proStateFor('free'));
   const S = w.NFLProSalesV1.markup;
   const free = S.sales();
   assert.match(free, /data-pro-plan="monthly"/); assert.match(free, /data-pro-plan="weekly">Weekly · /); assert.doesNotMatch(free, /Fight Week/);
-  assert.match(free, /class="pbe-mbr-aa is-compact"/); assert.ok(free.includes(M.ALL_ACCESS_OFFER.checkoutUrl));
+  assert.match(free, /class="nfl-aa-hero is-home"/); assert.ok(free.includes(M.ALL_ACCESS_OFFER.checkoutUrl));
+  const hero = free.indexOf('data-nfl-all-access="hero"'); const divider = free.indexOf('data-nfl-all-access="divider"'); const plans = free.indexOf('data-pro-plan="monthly"');
+  assert.ok(hero > -1 && divider > hero && plans > divider, 'hero, then ONLY WANT NFL?, then the NFL plans');
+  assert.doesNotMatch(free, /class="pbe-mbr-aa/);
   const active = S.active();
   assert.match(active, /You have NFL/); assert.match(active, /NFL PRO ACTIVE/); assert.ok(active.includes(M.MANAGE_URL));
-  assert.doesNotMatch(active, /pbe-mbr-aa|data-pro-plan/);
+  assert.doesNotMatch(active, /pbe-mbr-aa|nfl-aa-hero|data-pro-plan/);
   assert.equal(S.memberState(proStateFor('all_access')), 'all_access'); assert.equal(S.memberState(proStateFor('owner')), 'owner');
   assert.equal(S.memberState(proStateFor('sport_pro')), 'sport_pro'); assert.equal(S.memberState(proStateFor('free')), 'free');
 });

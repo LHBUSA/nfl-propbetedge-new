@@ -1,0 +1,276 @@
+/* PropBetEdge NFL — All Access hero + purchase-surface geometry v1
+ *
+ * Terminal authority for the purchase surface. Loaded after every other
+ * paywall/funnel/polish sheet on purpose:
+ *
+ *   1. ALL ACCESS is the primary offer. The hero sits ABOVE the NFL plans in
+ *      the funnel, on the homepage sales band and in the sidebar mini card.
+ *   2. ZERO internal scrollbars. `.pbe-pro-modal` is overflow:visible at every
+ *      width and has no max-height; the surface is sized to fit a desktop
+ *      viewport (1280x720 and up) with the two NFL plans side by side. If a
+ *      state ever grows past the viewport, the backdrop (one fixed, full-
+ *      viewport scroll context with the page locked behind it) scrolls, so
+ *      there is never a scrollbar inside the card.
+ *   3. Under 901px the purchase surface is a full-screen sheet: the backdrop
+ *      IS the page (100dvw x 100dvh, no padding), the card fills it, and that
+ *      single sheet is the only vertical scroll container. No scroll-within-
+ *      scroll.
+ */
+
+/* ---- one scroll context while the purchase surface is open ------------- */
+html.pbe-pro-open,html.pbe-pro-open body{overflow:hidden!important;overscroll-behavior:none}
+
+/* ---- modal shell (desktop) --------------------------------------------- */
+.pbe-pro-backdrop{padding:16px!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.pbe-pro-backdrop.open{display:flex!important;flex-direction:column;align-items:center;justify-content:flex-start}
+.pbe-pro-modal{
+  margin:auto!important;
+  width:min(1040px,100%)!important;
+  max-width:1040px!important;
+  height:auto!important;
+  max-height:none!important;
+  overflow:visible!important;
+  flex:0 0 auto;
+}
+.pbe-pro-modal-grid{
+  grid-template-columns:minmax(0,1fr) minmax(400px,.95fr)!important;
+  min-height:0!important;
+  overflow:visible!important;
+  align-items:stretch!important;
+}
+.pbe-pro-pitch{padding:24px 26px 22px!important;overflow:hidden!important}
+.pbe-pro-checkout{padding:20px 24px 18px!important;margin:0!important;overflow:visible!important;justify-content:flex-start!important;align-self:stretch!important}
+.pbe-pro-close{top:12px!important;right:12px!important;z-index:9!important}
+
+/* ---- pitch column: compact, everything readable, nothing clipped -------- */
+.pbe-pro-pitch h2{margin-top:10px!important;max-width:560px!important;font-size:clamp(28px,2.9vw,40px)!important;line-height:.92!important;letter-spacing:-.04em!important}
+.pbe-pro-pitch>p{margin-top:10px!important;max-width:560px!important;font-size:12px!important;line-height:1.5!important}
+.pbe-pro-pitch .pbe-pro-today{margin-top:12px!important;padding:9px 11px!important}
+.pbe-pro-pitch .pbe-pro-today b{font-size:10px!important}
+.pbe-pro-pitch .pbe-pro-today span{margin-top:4px!important;font-size:11px!important;line-height:1.42!important}
+.pbe-pro-feature-list{margin-top:12px!important;gap:6px!important;grid-template-columns:1fr 1fr!important}
+.pbe-pro-feature{min-height:0!important;padding:8px 10px!important;grid-template-columns:24px minmax(0,1fr)!important;gap:8px!important}
+.pbe-pro-feature-icon{width:24px!important;height:24px!important;font-size:11px!important}
+.pbe-pro-feature strong{font-size:11px!important;line-height:1.25!important}
+.pbe-pro-feature span{font-size:10px!important;line-height:1.38!important}
+/* nfl-pro-sales-v1.js parks its "new releases included" note in the pitch
+   column, where there is room; in the checkout column it competed with the
+   purchase decision. */
+.pbe-pro-pitch .pbe-pro-today[data-pro-release-value]{margin-top:10px!important;padding:8px 11px!important;border-color:rgba(216,183,91,.22)!important;background:rgba(216,183,91,.06)!important}
+.pbe-pro-pitch .pbe-pro-today[data-pro-release-value] b{display:inline!important;color:var(--pbe-gold-bright,#e9c75a)!important;font-size:9px!important;letter-spacing:.1em!important}
+.pbe-pro-pitch .pbe-pro-today[data-pro-release-value] span{display:inline!important;margin:0 0 0 6px!important;font-size:10px!important;line-height:1.4!important;color:var(--pbe-paper-2,#d8d2c6)!important}
+
+/* ---- checkout column hierarchy ------------------------------------------ */
+.pbe-funnel-head{margin:0 0 12px!important;padding-right:34px}
+.pbe-funnel-head>span{font-size:9px!important;letter-spacing:.16em!important}
+.pbe-funnel-head>strong{margin-top:6px!important;max-width:460px!important;font-size:clamp(17px,1.5vw,21px)!important;line-height:1.05!important;letter-spacing:-.02em!important}
+.pbe-funnel-head>p{margin-top:6px!important;max-width:470px!important;font-size:11px!important;line-height:1.45!important}
+
+/* ---- THE HERO ----------------------------------------------------------- */
+.nfl-aa-hero{
+  position:relative;display:grid;gap:5px;padding:13px 15px 13px;border-radius:14px;
+  color:var(--pbe-paper,#f5f1eb);font-family:var(--pbe-font-ui,Inter,system-ui,sans-serif);
+  border:1px solid rgba(233,199,90,.62);
+  background:radial-gradient(120% 140% at 100% 0%,rgba(212,175,55,.26),rgba(212,175,55,.04) 60%),linear-gradient(160deg,rgba(38,31,17,.98),rgba(18,15,10,.98));
+  box-shadow:0 18px 44px rgba(212,175,55,.14),inset 0 1px 0 rgba(255,236,180,.18);
+}
+.nfl-aa-hero::before{content:'';position:absolute;inset:0 0 auto;height:2px;border-radius:14px 14px 0 0;background:linear-gradient(90deg,transparent,var(--pbe-gold-bright,#e9c75a),transparent);pointer-events:none}
+.nfl-aa-hero *{box-sizing:border-box;min-width:0}
+.nfl-aa-top{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.nfl-aa-eyebrow{font:800 9px/1 var(--pbe-font-data,'JetBrains Mono',ui-monospace,monospace);letter-spacing:.2em;text-transform:uppercase;color:var(--pbe-gold-bright,#e9c75a)}
+.nfl-aa-badge{
+  display:inline-flex;align-items:center;gap:5px;padding:4px 8px;border-radius:999px;
+  background:linear-gradient(135deg,var(--pbe-gold-bright,#e9c75a),var(--pbe-gold,#d4af37));color:#17120a;
+  font:900 8px/1 var(--pbe-font-data,'JetBrains Mono',ui-monospace,monospace);letter-spacing:.12em;text-transform:uppercase;white-space:nowrap;
+  box-shadow:0 6px 16px rgba(212,175,55,.28);
+}
+.nfl-aa-badge::before{content:'★';font-size:9px}
+.nfl-aa-title-row{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.nfl-aa-title{margin:0;color:#fff;font:900 26px/1 var(--pbe-font-display,'Playfair Display',Georgia,serif);letter-spacing:-.01em;text-transform:uppercase}
+.nfl-aa-price{display:inline-flex;align-items:baseline;gap:1px;color:var(--pbe-gold-bright,#e9c75a);font:800 12px/1 var(--pbe-font-data,'JetBrains Mono',ui-monospace,monospace);letter-spacing:.04em;white-space:nowrap}
+.nfl-aa-price strong{color:#fff;font:900 24px/1 var(--pbe-font-ui,Inter,system-ui,sans-serif);letter-spacing:-.04em}
+.nfl-aa-tagline{margin:0;color:var(--pbe-paper,#f5f1eb);font:600 12px/1.35 var(--pbe-font-ui,Inter,system-ui,sans-serif)}
+.nfl-aa-sports{margin:0;color:var(--pbe-paper-2,#d8d2c6);font:500 11px/1.4 var(--pbe-font-ui,Inter,system-ui,sans-serif)}
+.nfl-aa-sports b{color:#fff;font:800 11px/1.4 var(--pbe-font-data,'JetBrains Mono',ui-monospace,monospace);letter-spacing:.06em}
+.nfl-aa-promo{margin:0;color:var(--pbe-gold-bright,#e9c75a);font:700 11px/1.4 var(--pbe-font-ui,Inter,system-ui,sans-serif)}
+.nfl-aa-code{padding:1px 6px;border:1px solid rgba(233,199,90,.55);border-radius:6px;background:rgba(233,199,90,.12);color:#fff;font:800 10px/1.4 var(--pbe-font-data,'JetBrains Mono',ui-monospace,monospace);letter-spacing:.1em}
+.nfl-aa-actions{display:flex;align-items:center;gap:8px 14px;flex-wrap:wrap;margin-top:3px}
+.nfl-aa-cta{
+  display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 18px;border-radius:9px;text-decoration:none;
+  background:linear-gradient(135deg,var(--pbe-gold-bright,#e9c75a),var(--pbe-gold,#d4af37));color:#17120a;
+  font:900 11px/1 var(--pbe-font-data,'JetBrains Mono',ui-monospace,monospace);letter-spacing:.1em;text-transform:uppercase;
+  box-shadow:0 12px 30px rgba(212,175,55,.24);transition:transform .15s ease,filter .15s ease;
+}
+.nfl-aa-cta:hover{transform:translateY(-1px);filter:brightness(1.06)}
+.nfl-aa-learn{color:#fff;font:700 10px/1 var(--pbe-font-data,'JetBrains Mono',ui-monospace,monospace);letter-spacing:.1em;text-transform:uppercase;text-decoration:underline;text-underline-offset:4px;text-decoration-color:rgba(233,199,90,.6);min-height:40px;display:inline-flex;align-items:center}
+.nfl-aa-learn:hover{color:var(--pbe-gold-bright,#e9c75a)}
+
+/* the seam between the umbrella and the single-sport alternative */
+.nfl-aa-divider{display:flex;align-items:center;gap:10px;margin:10px 0 8px;color:var(--pbe-dim,#b8b3a8);font:800 9px/1 var(--pbe-font-data,'JetBrains Mono',ui-monospace,monospace);letter-spacing:.16em;text-transform:uppercase;text-align:center}
+.nfl-aa-divider::before,.nfl-aa-divider::after{content:'';flex:1;height:1px;background:rgba(255,245,220,.12)}
+.nfl-aa-divider span{padding:0 2px;white-space:nowrap}
+
+/* ---- the two NFL plans: one compact row ---------------------------------- */
+.pbe-funnel-plans{grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;gap:8px!important;margin:0!important}
+.pbe-funnel-plan{min-height:0!important;padding:11px 12px!important;border-radius:11px!important}
+.pbe-funnel-plan-top{align-items:center;gap:6px}
+.pbe-funnel-plan-top>div{display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0}
+.pbe-funnel-plan .pbe-pro-plan-label{font-size:8.5px!important;letter-spacing:.1em!important;white-space:nowrap}
+.pbe-funnel-plan-badge{margin-top:0!important;padding:3px 6px!important;font-size:8px!important}
+.pbe-funnel-check{width:20px!important;height:20px!important;font-size:10px}
+.pbe-funnel-plan .pbe-pro-price{margin-top:8px!important;gap:3px!important}
+.pbe-funnel-plan .pbe-pro-price strong{font-size:27px!important;line-height:.9!important;letter-spacing:-.04em!important}
+.pbe-funnel-plan .pbe-pro-price span{padding-bottom:2px!important;font-size:8.5px!important}
+.pbe-funnel-plan .pbe-pro-renew{min-height:0!important;margin-top:6px!important;font-size:9.5px!important;line-height:1.35!important}
+.pbe-funnel-select-copy{margin-top:7px!important;font-size:8.5px!important}
+
+/* ---- email + NFL checkout: one row ------------------------------------- */
+.pbe-funnel-email-label{margin-top:12px!important;padding-top:10px!important}
+.pbe-funnel-email-label b{font-size:11px!important}
+.pbe-funnel-email-label span{margin-top:2px!important;font-size:10px!important;line-height:1.35!important}
+.pbe-funnel-auth{margin-top:8px!important}
+.pbe-funnel-checkout-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:stretch}
+.pbe-funnel-checkout-row .pbe-pro-email{height:44px!important;margin:0!important;font-size:13px!important}
+.pbe-funnel-checkout-row #pbe-funnel-checkout{min-height:44px!important;margin:0!important;padding:0 16px!important;font-size:10px!important;white-space:nowrap;width:auto!important}
+.pbe-funnel-charge{margin-top:7px!important;font-size:8.5px!important}
+.pbe-funnel-signin-row{display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;min-height:32px;margin-top:4px;color:var(--pbe-dim,#b8b3a8);font:600 10px/1 var(--pbe-font-ui,Inter,system-ui,sans-serif)}
+.pbe-funnel-signin-link{appearance:none;border:0;background:transparent;cursor:pointer;min-height:32px;padding:0 6px;color:var(--pbe-gold-bright,#e9c75a);font:800 10px/1 var(--pbe-font-ui,Inter,system-ui,sans-serif);letter-spacing:.02em;text-decoration:underline;text-underline-offset:3px}
+.pbe-funnel-signin-link:hover{color:#fff}
+.pbe-funnel-signin-link:disabled{opacity:.55;cursor:wait}
+.pbe-funnel-root .pbe-pro-message{min-height:16px!important;margin-top:4px!important;font-size:10.5px!important}
+.pbe-funnel-root .pbe-pro-secure{margin-top:8px!important;font-size:8.5px!important}
+#pbe-funnel-refresh{min-height:42px!important}
+
+/* ---- member states (sport_pro / all_access / owner) -------------------- */
+.pbe-pro-modal .pbe-member-status-card{margin-top:10px!important;padding:10px 12px!important;gap:10px!important}
+.pbe-pro-modal .pbe-member-seal{width:48px!important;height:48px!important}
+.pbe-pro-modal .pbe-member-access-grid{margin-top:8px!important;gap:6px!important}
+.pbe-pro-modal .pbe-member-access-grid>div{padding:8px 10px!important}
+.pbe-funnel-active .pbe-funnel-auth{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:stretch}
+.pbe-funnel-active .pbe-funnel-auth>*{margin:0!important}
+.pbe-funnel-active .pbe-funnel-auth #pbe-funnel-open-board,.pbe-funnel-active .pbe-funnel-auth .pbe-pro-message{grid-column:1/-1}
+.pbe-funnel-active .pbe-funnel-auth .pbe-mbr-manage,.pbe-funnel-active .pbe-funnel-auth .pbe-member-manage{min-height:42px!important}
+.pbe-funnel-root .pbe-mbr-network{margin-top:10px!important;padding-top:8px!important}
+.pbe-funnel-root .nfl-aa-hero.is-upgrade{margin-top:10px}
+.pbe-funnel-root .nfl-aa-hero.is-upgrade .nfl-aa-title{font-size:19px}
+
+/* ---- short desktop viewports (1366x768, 1280x720, 1024x768) ------------- */
+@media (min-width:901px) and (max-height:800px){
+  .pbe-pro-backdrop{padding:12px!important}
+  .pbe-pro-pitch{padding:20px 22px 18px!important}
+  .pbe-pro-pitch h2{font-size:clamp(26px,2.6vw,34px)!important}
+  .pbe-pro-pitch>p{font-size:11.5px!important;line-height:1.45!important}
+  .pbe-pro-checkout{padding:16px 20px 14px!important}
+  .pbe-funnel-head{margin-bottom:8px!important}
+  /* the hero and the plans carry the message; the lede repeats the pitch */
+  .pbe-funnel-root[data-membership="free"] .pbe-funnel-head>p,
+  .pbe-funnel-root .pbe-funnel-email-label span,
+  .pbe-funnel-select-copy{display:none!important}
+  .nfl-aa-hero.is-modal{padding:11px 13px;gap:4px}
+  .nfl-aa-title{font-size:24px}
+  .nfl-aa-cta{min-height:38px}
+  .nfl-aa-learn{min-height:38px}
+  .nfl-aa-divider{margin:8px 0 6px}
+  .pbe-funnel-plan{padding:9px 11px!important}
+  .pbe-funnel-plan .pbe-pro-price{margin-top:6px!important}
+  .pbe-funnel-plan .pbe-pro-renew{margin-top:4px!important;font-size:9px!important}
+  .pbe-funnel-email-label{margin-top:9px!important;padding-top:8px!important}
+  .pbe-funnel-active .pbe-funnel-head>p{display:none!important}
+  .pbe-pro-modal .pbe-member-access-grid{display:none!important}
+}
+
+/* ---- tablet / phone: full-screen sheet, ONE scroll context --------------- */
+@media (max-width:900px){
+  .pbe-pro-backdrop{padding:0!important;place-items:stretch!important}
+  .pbe-pro-backdrop.open{display:block!important}
+  .pbe-pro-modal{
+    width:100%!important;max-width:none!important;min-height:100%!important;margin:0!important;
+    border:0!important;border-radius:0!important;box-shadow:none!important;
+  }
+  .pbe-pro-modal-grid{grid-template-columns:1fr!important}
+  /* the offer first: hero, plans, checkout; the pitch reads after it */
+  .pbe-pro-checkout{order:-1;padding:18px 16px 16px!important;border-bottom:1px solid rgba(255,255,255,.08)}
+  .pbe-pro-pitch{padding:20px 16px 24px!important;border-right:0!important;border-bottom:0!important}
+  /* the close control stays reachable while the sheet scrolls (sticky inside
+     the one scroll container, overlapping the content below it) */
+  .pbe-pro-close{
+    position:sticky!important;top:calc(8px + env(safe-area-inset-top,0px))!important;right:auto!important;
+    width:44px!important;height:44px!important;margin:8px 8px -52px auto!important;
+    background:rgba(20,17,13,.92)!important;border-color:rgba(255,245,220,.22)!important;color:#fff!important;
+  }
+  .pbe-funnel-head{padding-right:48px}
+  .pbe-funnel-plans,.pbe-pro-checkout>.pbe-pro-plans{grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important}
+  .pbe-funnel-active .pbe-funnel-auth{grid-template-columns:1fr}
+}
+@media (max-width:620px){
+  .nfl-aa-hero.is-modal{padding:14px 14px 14px}
+  .nfl-aa-title{font-size:24px}
+  .nfl-aa-actions{flex-direction:column;align-items:stretch}
+  .nfl-aa-cta{min-height:46px;justify-content:center}
+  .nfl-aa-learn{justify-content:center;min-height:44px}
+  .pbe-funnel-plans,.pbe-pro-checkout>.pbe-pro-plans{grid-template-columns:1fr!important}
+  .pbe-funnel-checkout-row{grid-template-columns:1fr}
+  .pbe-funnel-checkout-row #pbe-funnel-checkout{min-height:46px!important;width:100%!important}
+  .pbe-funnel-signin-row{min-height:44px}
+  .pbe-funnel-signin-link{min-height:44px}
+  .pbe-pro-feature:nth-child(n+4){display:grid!important}
+}
+@media (max-width:360px){
+  .nfl-aa-title-row{flex-direction:column;align-items:flex-start;gap:4px}
+  .nfl-aa-top{flex-direction:column;align-items:flex-start}
+}
+
+/* ---- homepage sales band: hero first, then ONLY WANT NFL?, then NFL ------ */
+.pbeprosell .nfl-aa-hero.is-home{margin:0;border-radius:0;border:0;border-bottom:1px solid rgba(233,199,90,.32);box-shadow:none;padding:24px 30px 22px;gap:8px;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:'top top' 'title price' 'tag price' 'sports price' 'promo price' 'actions price';column-gap:24px}
+.pbeprosell .nfl-aa-hero.is-home::before{border-radius:0}
+.pbeprosell .nfl-aa-hero.is-home .nfl-aa-top{grid-area:top;justify-content:flex-start;gap:12px}
+.pbeprosell .nfl-aa-hero.is-home .nfl-aa-title-row{grid-area:title}
+.pbeprosell .nfl-aa-hero.is-home .nfl-aa-title{font-size:clamp(30px,3.6vw,46px)}
+.pbeprosell .nfl-aa-hero.is-home .nfl-aa-title-row .nfl-aa-price{display:none}
+.pbeprosell .nfl-aa-hero.is-home .nfl-aa-tagline{grid-area:tag;font-size:14px}
+.pbeprosell .nfl-aa-hero.is-home .nfl-aa-sports{grid-area:sports;font-size:12px}
+.pbeprosell .nfl-aa-hero.is-home .nfl-aa-promo{grid-area:promo;font-size:12px}
+.pbeprosell .nfl-aa-hero.is-home .nfl-aa-actions{grid-area:actions;margin-top:6px}
+.pbeprosell .nfl-aa-hero.is-home .nfl-aa-cta{min-height:46px;padding:0 22px;font-size:12px}
+.pbeprosell .nfl-aa-hero.is-home .nfl-aa-home-price{grid-area:price;display:grid;align-content:center;justify-items:end;text-align:right;padding-left:22px;border-left:1px solid rgba(233,199,90,.22)}
+.pbeprosell .nfl-aa-home-price strong{color:#fff;font:900 clamp(38px,4vw,56px)/.9 var(--pbe-font-ui,Inter,system-ui,sans-serif);letter-spacing:-.05em}
+.pbeprosell .nfl-aa-home-price small{margin-top:6px;color:var(--pbe-gold-bright,#e9c75a);font:800 10px/1 var(--pbe-font-data,'JetBrains Mono',ui-monospace,monospace);letter-spacing:.14em;text-transform:uppercase}
+.pbeprosell .nfl-aa-divider{margin:0;padding:10px 30px;background:rgba(0,0,0,.18);border-bottom:1px solid var(--pbe-line,rgba(255,245,220,.1))}
+@media(max-width:720px){
+  .pbeprosell .nfl-aa-hero.is-home{padding:18px 17px 18px;grid-template-columns:1fr;grid-template-areas:'top' 'title' 'price' 'tag' 'sports' 'promo' 'actions'}
+  .pbeprosell .nfl-aa-hero.is-home .nfl-aa-home-price{justify-items:start;text-align:left;padding:0;border:0}
+  .pbeprosell .nfl-aa-divider{padding:9px 17px}
+}
+
+/* sidebar mini card: the umbrella first, NFL beneath it */
+.nfl-aa-mini{display:grid;grid-template-columns:auto auto;gap:2px 8px;align-items:center;margin:0 0 10px;padding:9px 10px;border:1px solid rgba(233,199,90,.5);border-radius:8px;background:linear-gradient(135deg,rgba(233,199,90,.18),rgba(233,199,90,.05));text-decoration:none;color:var(--pbe-paper,#f5f1eb)}
+.nfl-aa-mini span{color:var(--pbe-gold-bright,#e9c75a);font:900 9px/1 var(--pbe-font-data,'JetBrains Mono',ui-monospace,monospace);letter-spacing:.14em}
+.nfl-aa-mini b{justify-self:end;color:#fff;font:900 12px/1 var(--pbe-font-ui,Inter,system-ui,sans-serif)}
+.nfl-aa-mini i{grid-column:1/-1;color:var(--pbe-dim,#b8b3a8);font:600 8.5px/1.2 var(--pbe-font-ui,Inter,system-ui,sans-serif);font-style:normal}
+.pbeprosell-mini>.nfl-aa-mini+strong{margin-top:0}
+
+/* ---- navigation: first-class ALL ACCESS ----------------------------------- */
+#pbe-sports-shell .pbes-head-btn.pbes-head-aa{
+  display:inline-flex!important;align-items:center!important;gap:6px!important;text-decoration:none!important;
+  color:#17120a!important;border-color:var(--pbe-gold,#d4af37)!important;
+  background:linear-gradient(135deg,var(--pbe-gold-bright,#e9c75a),var(--pbe-gold,#d4af37))!important;
+  font-weight:900!important;letter-spacing:.12em!important;white-space:nowrap;
+  box-shadow:0 8px 22px rgba(212,175,55,.22)!important;
+}
+#pbe-sports-shell .pbes-head-btn.pbes-head-aa::before{content:'★';font-size:10px}
+#pbe-sports-shell .pbes-head-btn.pbes-head-aa:hover{filter:brightness(1.06);color:#17120a!important}
+/* phones navigate with the bottom tab bar: the umbrella is a tab there */
+@media (max-width:900px){#pbe-sports-shell .pbes-head-btn.pbes-head-aa{display:none!important}}
+.mobile-bottom-nav-inner{grid-template-columns:repeat(6,1fr)!important}
+.mbn-allaccess{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:44px;min-width:44px;text-decoration:none;color:var(--pbe-gold-bright,#e9c75a)!important;font:900 9px/1 var(--pbe-font-data,'JetBrains Mono',ui-monospace,monospace);letter-spacing:.04em;text-transform:uppercase;background:linear-gradient(180deg,rgba(212,175,55,.14),rgba(212,175,55,.04))}
+.mbn-allaccess .mbn-icon{font-size:15px;color:var(--pbe-gold-bright,#e9c75a)}
+.mbn-allaccess span{white-space:nowrap}
+.mobile-bottom-nav .mbn-item span{font-size:10px}
+.sidebar-nav .nav-item.nav-item-aa{color:var(--pbe-gold-bright,#e9c75a);font-weight:800;letter-spacing:.06em}
+.sidebar-nav .nav-item.nav-item-aa .nav-badge{color:#17120a;background:var(--pbe-gold,#d4af37)}
+
+/* ---- footer: ALL ACCESS + WHAT'S INCLUDED --------------------------------- */
+.pbe-network-footer a.pbe-footer-aa-link{color:var(--pbe-gold-bright,#e9c75a)!important;font-weight:800;letter-spacing:.06em}
+.pbe-network-footer a.pbe-footer-aa-link:hover{color:#fff!important}
+
+@media(prefers-reduced-motion:reduce){.nfl-aa-cta{transition:none}.nfl-aa-cta:hover{transform:none}}

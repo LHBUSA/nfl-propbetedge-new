@@ -141,7 +141,7 @@
           <div class="pbes-brand-copy"><div class="pbes-brand-name">NFL Intelligence</div><div class="pbes-brand-sub">Football intelligence · live market context</div></div>
         </div>
         <div class="pbes-center"><div id="pbes-live-pill" class="pbes-live-pill">Connecting to NFL slate…</div></div>
-        <div class="pbes-right"><div class="pbes-date"><strong>${d.day}</strong><span>${d.date} · ET</span></div><button class="pbes-head-btn" type="button" id="pbes-search">⌘ K · Search</button><button class="pbes-head-btn" type="button" id="pbes-account">Account</button></div>
+        <div class="pbes-right"><div class="pbes-date"><strong>${d.day}</strong><span>${d.date} · ET</span></div><a class="pbes-head-btn pbes-head-aa" id="pbes-all-access" href="https://propbetedge.ai/pro" rel="noopener" aria-label="PropBetEdge All Access · every Pro sport">ALL ACCESS</a><button class="pbes-head-btn" type="button" id="pbes-search">⌘ K · Search</button><button class="pbes-head-btn" type="button" id="pbes-account">Account</button></div>
       </div>
       <!-- PBE BREAKING. The shell owns the MOUNT POINT and nothing else: the
            breaking module owns qualification, priority, dedupe, the queue,

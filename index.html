@@ -184,7 +184,10 @@
       .view-container{max-width:100%!important;overflow-x:hidden!important}
       .mobile-header{padding-top:env(safe-area-inset-top)}
       .mobile-bottom-nav{padding-bottom:env(safe-area-inset-bottom)!important}
-      .pbe-pro-modal{width:min(94vw,680px)!important;max-height:calc(100dvh - 24px)!important;overflow:auto!important;-webkit-overflow-scrolling:touch}
+      /* The purchase surface never scrolls inside itself: on phones it is a
+         full-screen sheet whose backdrop is the one scroll context
+         (nfl-all-access-hero-v1.css). */
+      .pbe-pro-modal{width:100%!important;max-height:none!important;overflow:visible!important}
       .pbe-pro-close{width:44px!important;height:44px!important}
     }
   </style>
@@ -255,6 +258,7 @@
         </div>
         <div class="nav-group">
           <div class="nav-group-label">Network</div>
+          <a class="nav-item ext nav-item-aa" href="https://propbetedge.ai/pro" rel="noopener"><span class="ni-icon">★</span> ALL ACCESS <span class="nav-badge">$29/MO</span></a>
           <a class="nav-item ext" href="https://propbetedge.ai"><span class="ni-icon">⌂</span> PropBetEdge</a>
           <a class="nav-item ext" href="https://mlb.propbetedge.ai"><span class="ni-icon">●</span> MLB Intelligence</a>
           <a class="nav-item ext" href="https://ufc.propbetedge.ai"><span class="ni-icon">◉</span> UFC Fight Intelligence <span class="nav-badge">New</span></a>
@@ -269,7 +273,7 @@
   <main class="main-content" id="main-content"><div class="view-container" id="view-container"><div class="view-loading"><div><div class="loading-mark"></div><div class="loading-text">Loading NFL Intelligence OS…</div></div></div></div></main>
 </div>
 <div class="mobile-overlay" id="mobile-overlay" onclick="App.toggleMobile()"></div>
-<div class="mobile-bottom-nav" id="mobile-bottom-nav"><div class="mobile-bottom-nav-inner"><div class="mbn-item active" id="mbn-home" onclick="App.nav('home');pbeMbnActive('home')"><div class="mbn-icon">⌂</div><span>Home</span></div><div class="mbn-item" id="mbn-propboard" onclick="App.nav('propboard');pbeMbnActive('propboard')"><div class="mbn-icon">↗</div><span>Props</span></div><div class="mbn-item" id="mbn-matchups" onclick="App.nav('matchups');pbeMbnActive('matchups')"><div class="mbn-icon">◫</div><span>Matchup</span></div><div class="mbn-item" id="mbn-game" onclick="App.nav('pbecast');pbeMbnActive('game')"><div class="mbn-icon">◉</div><span>Game</span></div><div class="mbn-item" id="mbn-menu" onclick="pbeToggleSidebar()"><div class="mbn-icon">☰</div><span>Menu</span></div></div></div>
+<div class="mobile-bottom-nav" id="mobile-bottom-nav"><div class="mobile-bottom-nav-inner"><div class="mbn-item active" id="mbn-home" onclick="App.nav('home');pbeMbnActive('home')"><div class="mbn-icon">⌂</div><span>Home</span></div><div class="mbn-item" id="mbn-propboard" onclick="App.nav('propboard');pbeMbnActive('propboard')"><div class="mbn-icon">↗</div><span>Props</span></div><div class="mbn-item" id="mbn-matchups" onclick="App.nav('matchups');pbeMbnActive('matchups')"><div class="mbn-icon">◫</div><span>Matchup</span></div><div class="mbn-item" id="mbn-game" onclick="App.nav('pbecast');pbeMbnActive('game')"><div class="mbn-icon">◉</div><span>Game</span></div><div class="mbn-item" id="mbn-menu" onclick="pbeToggleSidebar()"><div class="mbn-icon">☰</div><span>Menu</span></div><a class="mbn-allaccess" id="mbn-allaccess" href="https://propbetedge.ai/pro" rel="noopener" aria-label="PropBetEdge All Access"><div class="mbn-icon">★</div><span>ALL ACCESS</span></a></div></div>
 <script>
   const NFL_API_GATEWAY='https://nfl-api.propbetedge.ai';
   const BUILD_VERSION='nfl-intelligence-os-production-20260922-pbecastfast2';

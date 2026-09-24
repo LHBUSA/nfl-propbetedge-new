@@ -131,9 +131,15 @@
     {css:'./network-footer-v1.css',js:'./network-footer-v1.js'},
 
     /* Production authorities. */
+    /* ALL ACCESS hero: the primary offer, rendered above the NFL plans by the
+       funnel and the sales layer below. Loads first so both find it. */
+    {js:'./nfl-all-access-hero-v1.js'},
     {css:'./paywall-funnel-v2.css',js:'./paywall-funnel-v2.js'},
     /* PBE Picks-first NFL Pro conversion layer. Presentation only; reads no premium decisions. */
     {css:'./nfl-pro-sales-v1.css',js:'./nfl-pro-sales-v1.js'},
+    /* Terminal purchase-surface geometry: hero, compact plan row, zero
+       internal scrollbars, full-screen sheet on phones, ALL ACCESS nav/footer. */
+    {css:'./nfl-all-access-hero-v1.css'},
     /* PBEcast v6 is the sole route authority: #pbecast -> PBEcastV6.load ->
        .pbecast6. v7 is additive only — it decorates v6's DOM and state and
        never registers a route or renders the container itself. */

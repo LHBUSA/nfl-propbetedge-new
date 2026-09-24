@@ -46,7 +46,12 @@
     if (m?.entitled) return m.state;
     return s.role === 'owner' ? 'owner' : 'sport_pro';
   }
-  function allAccessCard(m, opts) { return lib()?.allAccessCardHtml?.(m, opts) || ''; }
+  /* ALL ACCESS is the PRIMARY offer (nfl-all-access-hero-v1.js). The hero is
+     rendered ABOVE the NFL plans for free readers and as the upgrade for NFL
+     Pro members; never for All Access members or the owner. The shared
+     contract card is only the fallback if the NFL hero module never loaded. */
+  function allAccessCard(m, opts) { return window.NFLAllAccessHero?.heroHtml?.(m, opts) || lib()?.allAccessCardHtml?.(m, opts) || ''; }
+  function allAccessDivider() { return window.NFLAllAccessHero?.dividerHtml?.() || '<div class="nfl-aa-divider" role="separator" aria-label="Only want NFL?"><span>ONLY WANT NFL?</span></div>'; }
   function planKey(ref) {
     if (PLANS[ref]) return ref;
     return Object.keys(PLANS).find(key => PLANS[key].priceId === ref || PLANS[key].url === ref) || null;
@@ -84,27 +89,29 @@
     const selected = selectedKey();
     return `<div class="pbe-funnel-root" data-funnel-state="signed-out" data-membership="free">
       <div class="pbe-funnel-head">
-        <span>FOUNDING SEASON · NFL PRO</span>
-        <strong>Unlock the decisions, not just the dashboard.</strong>
-        <p>NFL Pro unlocks official PBE Picks, the decision receipt behind each qualified call, and the premium model + market desk under one verified account.</p>
+        <span>PROPBETEDGE PRO ACCESS</span>
+        <strong>Pick your access.</strong>
+        <p>All Access covers every PropBetEdge Pro sport under one membership. Only want NFL? Choose an NFL Pro plan below.</p>
       </div>
+      ${allAccessCard(membership())}
+      ${allAccessDivider()}
       <div class="pbe-pro-plans pbe-funnel-plans" role="radiogroup" aria-label="NFL Pro plans">
         ${planCard('monthly', selected)}
         ${planCard('weekly', selected)}
       </div>
       <div class="pbe-funnel-email-label">
         <b>Your access email</b>
-        <span>We tie this email to checkout so your Pro access unlocks automatically.</span>
+        <span>We tie this email to checkout so your NFL Pro access unlocks automatically.</span>
       </div>
       <div class="pbe-pro-auth-state pbe-funnel-auth">
-        <input class="pbe-pro-email" id="pbe-funnel-email" type="email" autocomplete="email" inputmode="email" placeholder="you@example.com" aria-label="Email address">
-        <button class="pbe-pro-cta" id="pbe-funnel-checkout" type="button"></button>
+        <div class="pbe-funnel-checkout-row">
+          <input class="pbe-pro-email" id="pbe-funnel-email" type="email" autocomplete="email" inputmode="email" placeholder="you@example.com" aria-label="Email address">
+          <button class="pbe-pro-cta" id="pbe-funnel-checkout" type="button"></button>
+        </div>
         <div class="pbe-funnel-charge">${escapeHtml(PRICING.charge)}</div>
-        <div class="pbe-funnel-divider"><span>Already have NFL Pro?</span></div>
-        <button class="pbe-pro-cta secondary" id="pbe-funnel-signin" type="button">Sign in to NFL Pro</button>
+        <div class="pbe-funnel-signin-row"><span>Already have NFL Pro?</span><button class="pbe-funnel-signin-link" id="pbe-funnel-signin" type="button">Sign in to NFL Pro</button></div>
         <div class="pbe-pro-message" id="pbe-funnel-message"></div>
       </div>
-      ${allAccessCard(membership())}
       <div class="pbe-pro-secure">◆ Secure checkout by Stripe · Passwordless PropBetEdge access</div>
     </div>`;
   }
@@ -114,10 +121,12 @@
     const note = window.PBEPro?.denialNote?.() || '';
     return `<div class="pbe-funnel-root" data-funnel-state="signed-in-free" data-membership="free" data-funnel-note="${escapeHtml(state().entitlement?.reason || '')}">
       <div class="pbe-funnel-head">
-        <span>FOUNDING SEASON · NFL PRO</span>
-        <strong>${note ? 'Unlock NFL Pro again.' : 'Your account is ready. Unlock PBE Picks.'}</strong>
-        <p>${note ? escapeHtml(note) : 'Upgrade the verified email below. No new account setup and no free-trial handoff.'}</p>
+        <span>PROPBETEDGE PRO ACCESS</span>
+        <strong>${note ? 'Pick your access again.' : 'Your account is ready. Pick your access.'}</strong>
+        <p>${note ? escapeHtml(note) : 'All Access covers every PropBetEdge Pro sport under one membership. Only want NFL? Choose an NFL Pro plan below.'}</p>
       </div>
+      ${allAccessCard(membership())}
+      ${allAccessDivider()}
       <div class="pbe-funnel-user"><span>Signed in as</span><strong>${escapeHtml(email)}</strong></div>
       <div class="pbe-pro-plans pbe-funnel-plans" role="radiogroup" aria-label="NFL Pro plans">
         ${planCard('monthly', selected)}
@@ -126,10 +135,9 @@
       <div class="pbe-pro-auth-state pbe-funnel-auth">
         <button class="pbe-pro-cta" id="pbe-funnel-checkout" type="button"></button>
         <div class="pbe-funnel-charge">${escapeHtml(PRICING.charge)}</div>
-        <button class="pbe-pro-cta secondary" id="pbe-funnel-refresh" type="button">Already paid? Refresh access</button>
+        <div class="pbe-funnel-signin-row"><span>Already paid?</span><button class="pbe-funnel-signin-link" id="pbe-funnel-refresh" type="button">Refresh access</button></div>
         <div class="pbe-pro-message" id="pbe-funnel-message"></div>
       </div>
-      ${allAccessCard(membership())}
       <div class="pbe-pro-secure">◆ Secure checkout by Stripe · Entitlement verified by PropBetEdge</div>
     </div>`;
   }
@@ -144,7 +152,7 @@
   }
 
   /* Active members. One markup, three states from the shared contract:
-       sport_pro   NFL PRO ACTIVE · plan · manage link · All Access upgrade card
+       sport_pro   NFL PRO ACTIVE · plan · manage link · UPGRADE TO ALL ACCESS hero (no NFL purchase)
        all_access  ALL ACCESS ACTIVE · manage link · network row · NO purchase CTA
        owner       OWNER · no manage link · no purchase CTA
      `owner` (the legacy role flag) still drives data-funnel-state so the

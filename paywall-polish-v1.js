@@ -162,10 +162,13 @@
     if(!root||!head)return;
     if(applyActiveMember(root,head))return;
     const state=root.dataset.funnelState||'';
+    /* Free readers: ALL ACCESS is the primary offer (the hero sits right under
+       this head), NFL Pro the single-sport alternative. The head names the
+       choice; the hero and the plans carry the detail. */
     if(state==='signed-out'||state==='signed-in-free'){
-      setText(head.querySelector('span'),'NFL PRO · PBE ALGO · AUTOMATED LEARNING PICKER');
-      setText(head.querySelector('strong'),state==='signed-out'?'Unlock the picker built to learn from its grades.':'Your account is ready. Unlock PBE Algo.');
-      setText(head.querySelector('p'),'Official qualified PBE Picks, locked decision receipts, an auditable Track Record, and a governed champion/challenger learning architecture under one NFL Pro account.');
+      setText(head.querySelector('span'),'PROPBETEDGE PRO ACCESS');
+      setText(head.querySelector('strong'),state==='signed-out'?'Pick your access.':'Your account is ready. Pick your access.');
+      setText(head.querySelector('p'),'All Access covers every PropBetEdge Pro sport under one membership. Only want NFL? PBE Algo, official PBE Picks and the Track Record are yours with an NFL Pro plan below.');
     }
   }
 

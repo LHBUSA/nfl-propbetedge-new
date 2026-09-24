@@ -8,9 +8,9 @@
 .pbe-pro-modal{
   width:min(1080px,calc(100vw - 40px))!important;
   max-width:1080px!important;
-  max-height:min(820px,calc(100dvh - 40px))!important;
-  overflow:auto!important;
-  overscroll-behavior:contain;
+  /* ZERO internal scrollbars: no max-height, overflow visible. The purchase
+     surface is sized to fit the viewport (nfl-all-access-hero-v1.css). */
+  overflow:visible!important;
   border-radius:22px!important;
   background:
     radial-gradient(circle at 83% 4%,rgba(216,183,91,.105),transparent 25rem),
@@ -241,7 +241,7 @@
 
 /* ---- Responsive ------------------------------------------------------ */
 @media(max-width:900px){
-  .pbe-pro-modal{width:min(760px,calc(100vw - 24px))!important;max-height:calc(100dvh - 24px)!important}
+  .pbe-pro-modal{width:min(760px,calc(100vw - 24px))!important}
   .pbe-pro-modal-grid{grid-template-columns:1fr!important}
   .pbe-pro-pitch{padding:28px 25px 24px!important;border-right:0!important;border-bottom:1px solid rgba(255,255,255,.065)!important}
   .pbe-pro-pitch h2{font-size:clamp(42px,9vw,60px)!important;max-width:650px!important}
@@ -254,7 +254,7 @@
 
 @media(max-width:620px){
   .pbe-pro-backdrop{padding:6px!important;align-items:center!important}
-  .pbe-pro-modal{width:calc(100vw - 12px)!important;max-height:calc(100dvh - 12px)!important;border-radius:15px!important}
+  .pbe-pro-modal{width:calc(100vw - 12px)!important;border-radius:15px!important}
   .pbe-pro-close{width:42px!important;height:42px!important;top:8px!important;right:8px!important}
   .pbe-pro-pitch{padding:22px 17px 18px!important}
   .pbe-pro-pitch h2{padding-right:32px;font-size:clamp(37px,11vw,48px)!important;line-height:.91!important}
@@ -275,8 +275,10 @@
   .pbe-pro-secure{font-size:8px!important}
 }
 
-/* Shared membership contract inside the funnel: the All Access card sits
-   beneath the NFL plans, the network row under the member actions. */
+/* Shared membership contract inside the funnel. The All Access offer is the
+   NFL hero (nfl-all-access-hero-v1.js/.css) rendered ABOVE the NFL plans; the
+   shared card below is only the fallback when the hero module is absent. The
+   network row sits under the member actions. */
 .pbe-funnel-root .pbe-mbr-aa{margin-top:16px}
 .pbe-funnel-root .pbe-mbr-network{margin-top:14px}
 .pbe-funnel-auth .pbe-mbr-manage{display:flex;align-items:center;justify-content:center;min-height:45px;border:1px solid rgba(216,183,91,.36);border-radius:10px;color:var(--pbe-gold-bright)!important;font:800 12px/1 var(--pbe-font-ui,Inter,sans-serif);text-decoration:none}

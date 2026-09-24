@@ -575,7 +575,12 @@
     const backdrop = ensureModal();
     renderModal();
     backdrop?.classList.add('open');
+    /* One vertical scroll context while the purchase surface is open: the
+     * page is locked (html + body) and the backdrop is the only scroller. The
+     * card itself never scrolls (nfl-all-access-hero-v1.css). */
     document.body.style.overflow = 'hidden';
+    document.documentElement.classList.add('pbe-pro-open');
+    if (backdrop) backdrop.scrollTop = 0;
     setTimeout(() => document.getElementById('pbe-pro-email')?.focus(),30);
   }
 
@@ -584,6 +589,7 @@
     paintNotice();
     document.getElementById('pbe-pro-backdrop')?.classList.remove('open');
     document.body.style.overflow = '';
+    document.documentElement.classList.remove('pbe-pro-open');
   }
 
   function cleanQuery(keys) {

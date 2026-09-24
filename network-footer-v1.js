@@ -4,6 +4,8 @@
 
   const FOOTER_ID = 'pbe-network-footer';
   const BILLING = 'https://billing.stripe.com/p/login/cNi3cv2vY7em3lr4oj7wA00';
+  /* PropBetEdge All Access (the network umbrella): ALL ACCESS + WHAT'S INCLUDED. */
+  const ALL_ACCESS = 'https://propbetedge.ai/pro';
 
   const SPORTS = [
     { key: 'nfl', label: 'NFL', sub: 'Football', current: true, route: 'home' },
@@ -74,6 +76,8 @@
             </div>
             <p data-pbe-footer-account-copy>Passwordless access · secure billing</p>
             <div class="pbe-footer-account-card-links">
+              <a href="${ALL_ACCESS}" rel="noopener" class="pbe-footer-aa-link" data-pbe-footer-all-access>ALL ACCESS ↗</a>
+              <a href="${ALL_ACCESS}" rel="noopener" data-pbe-footer-all-access-included>WHAT'S INCLUDED ↗</a>
               <a href="${BILLING}" target="_blank" rel="noopener" data-pbe-footer-manage hidden>Manage subscription ↗</a>
               <a href="https://discord.gg/kb5zCTHbME" target="_blank" rel="noopener">Member community ↗</a>
             </div>
@@ -86,6 +90,7 @@
             <span>Independent sports intelligence built from the data layer up.</span>
           </div>
           <nav aria-label="PropBetEdge ecosystem">
+            <a href="${ALL_ACCESS}" rel="noopener" class="pbe-footer-aa-link">ALL ACCESS</a>
             <a href="https://propbetedge.ai">Sports News</a>
             <a href="https://propsports.proptechusa.ai" target="_blank" rel="noopener">PropSports API</a>
             <a href="https://proptechusa.ai" target="_blank" rel="noopener">PropTechUSA.ai</a>

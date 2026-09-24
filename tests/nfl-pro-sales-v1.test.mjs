@@ -76,7 +76,8 @@ test('member surfaces are worded by the shared membership contract and expose su
   assert.doesNotMatch(sales, /isOwner|owner preview/i);
   assert.match(sales, /if \(ms === 'all_access' \|\| ms === 'owner'\) \{ existing\?\.remove\(\); return; \}/, 'nothing is sold to All Access or owner accounts');
   assert.match(sales, /Weekly · \$\{esc\(weekly\)\}/); assert.doesNotMatch(sales, /Fight Week/);
-  assert.match(sales, /allAccessCardHtml/, 'free readers see the All Access card beneath the NFL plans');
+  assert.match(sales, /allAccessCardHtml/, 'the shared contract card stays as the fallback when the NFL hero module is absent');
+  assert.ok(sales.indexOf('${allAccessHero()}') > -1 && sales.indexOf('${allAccessHero()}') < sales.indexOf('class="pbeprosell-grid"'), 'the ALL ACCESS hero renders ABOVE the NFL pitch and plans');
 
   assert.match(polish, /You have NFL PropBetEdge Pro\./);
   assert.match(polish, /You have PropBetEdge All Access\./);

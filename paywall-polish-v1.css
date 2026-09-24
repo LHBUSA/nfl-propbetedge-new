@@ -1,5 +1,5 @@
 /* PropBetEdge NFL Pro — conversion / contrast polish */
-.pbe-pro-modal{overflow:hidden!important}
+/* The modal's overflow is owned by nfl-all-access-hero-v1.css (visible, never a scrollbar). */
 .pbe-pro-modal-grid{grid-template-columns:minmax(0,1.12fr) minmax(360px,.88fr)!important}
 .pbe-pro-pitch{padding:42px 38px 36px!important}.pbe-pro-checkout{align-self:center!important}
 .pbe-pro-pitch h2{max-width:650px!important;font-size:clamp(52px,6vw,82px)!important;line-height:.84!important;text-shadow:0 8px 30px rgba(0,0,0,.27)}
