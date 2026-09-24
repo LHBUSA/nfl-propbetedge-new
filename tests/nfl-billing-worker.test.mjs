@@ -414,3 +414,45 @@ test('real auth gate: MLB traffic on the shared webhook never reaches delivery',
   await h.deliver(evt('checkout.session.completed', { id: 'cs_live_mlb2', mode: 'subscription', subscription: 'sub_mlb2', customer: 'cus_mlb2', payment_status: 'paid', customer_details: { email: 'mlb2@x.test' }, metadata: { acquired_sport: 'mlb' } }, NOW));
   assert.equal(auth.sent.length, 0);
 });
+
+/* ------------------------------------------------------------ owner Slack feed */
+function withSlack(h, { fail = false } = {}) {
+  const posts = [];
+  const inner = h.db.fetch;
+  h.db.fetch = async (input, init = {}) => {
+    const url = typeof input === 'string' ? input : input.url;
+    if (url === 'https://hooks.slack.test/T/B/x') { posts.push(JSON.parse(init.body)); return new Response(fail ? 'no' : 'ok', { status: fail ? 500 : 200 }); }
+    return inner(input, init);
+  };
+  h.env.SLACK_WEBHOOK_URL = 'https://hooks.slack.test/T/B/x';
+  return posts;
+}
+
+test('slack: exactly one "New subscriber" line when access is first delivered, whichever event order; renewals silent; cancel announced once', async () => {
+  for (const order of [['created', 'updatedActive', 'invoicePaid', 'checkout'], ['checkout', 'created', 'updatedActive', 'invoicePaid']]) {
+    const h = harness(); const posts = withSlack(h); const p = purchase({ price: MONTHLY, plan: 'nfl_founding_monthly', periodDays: 30 });
+    for (const k of order) assert.equal((await h.deliver(p[k])).status, 200, k);
+    assert.equal(h.emails.length, 1, 'one access email');
+    assert.equal(posts.length, 1, `one Slack line for ${order.join('>')}`);
+    assert.match(posts[0].text, /New subscriber/); assert.match(posts[0].text, /NFL Pro \(founding_monthly\)/); assert.ok(posts[0].text.includes(p.email.toLowerCase()));
+    assert.equal(posts[0].username, 'PropBetEdge Stripe');
+    await h.deliver(evt('customer.subscription.updated', p.subscription('active', { items: { data: [{ ...p.subscription('active').items.data[0], current_period_end: p.periodEnd + 30 * 86400 }] } }), NOW + 10));
+    await h.deliver(evt('invoice.paid', p.invoice, NOW + 11));
+    assert.equal(posts.length, 1, 'renewal + invoice stay silent');
+    await h.deliver(evt('customer.subscription.deleted', p.subscription('canceled'), NOW + 20));
+    assert.equal(posts.length, 2); assert.match(posts[1].text, /Canceled/); assert.ok(posts[1].text.includes(p.email.toLowerCase()));
+    await h.deliver(evt('customer.subscription.updated', p.subscription('canceled'), NOW + 21));
+    assert.equal(posts.length, 2, 'second canceled event silent');
+  }
+});
+
+test('slack: a failing webhook never changes the ledger or the 200; without the secret nothing is posted and /health says so', async () => {
+  const h = harness(); const posts = withSlack(h, { fail: true }); const p = purchase();
+  for (const k of ['created', 'updatedActive', 'invoicePaid', 'checkout']) assert.equal((await h.deliver(p[k])).status, 200);
+  assertEntitled(rowFor(h, p.sub), p, WEEKLY); assert.equal(posts.length, 1);
+  const quiet = harness(); const q = purchase();
+  for (const k of ['created', 'updatedActive', 'invoicePaid', 'checkout']) await quiet.deliver(q[k]);
+  assertEntitled(rowFor(quiet, q.sub), q, WEEKLY);
+  assert.equal((await quiet.health()).slack_notifications_configured, false);
+});
+

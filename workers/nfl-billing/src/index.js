@@ -28,7 +28,13 @@
  */
 
 const SERVICE = 'propbetedge-nfl-billing';
-const VERSION = 'v1.3.0';
+const VERSION = 'v1.4.0';
+/* Owner-facing Slack notifications (SLACK_WEBHOOK_URL): one line when an NFL
+   subscription first delivers access to a verified buyer, one line when a
+   subscription is canceled. Best-effort, after the ledger write; a Slack
+   failure never changes a row or Stripe's response. Inert without the secret.
+   Same username as the other PropBetEdge billing Workers: one feed. */
+const SLACK_TIMEOUT_MS = 4000;
 const DEFAULT_SUPABASE_URL = 'https://tkmlnhmylqnttmnsnief.supabase.co';
 const AUTH_WORKER_URL = 'https://propbetedge-nfl-auth.sales-fd3.workers.dev';
 /* Server-to-server delivery route on the auth Worker (NFL_AUTH_INTERNAL_TOKEN).
@@ -70,6 +76,7 @@ export default {
         ...(deep ? { deep } : {}),
         service: SERVICE,
         version: VERSION,
+        slack_notifications_configured: Boolean(env.SLACK_WEBHOOK_URL),
         runtime: 'cloudflare-workers',
         trigger: 'stripe-webhook',
         supabase: 'system-of-record',
@@ -229,7 +236,7 @@ async function handleCheckoutCompleted(env, session, eventId, eventCreated) {
     });
   }
 
-  await sendAccessEmailOnce(env, email, `subscription:${subscriptionId}`, eventId);
+  await sendAccessEmailOnce(env, email, `subscription:${subscriptionId}`, eventId, { plan: planForPrice(priceId), subscriptionId });
   return { applied: true, reason: planForPrice(priceId) };
 }
 
@@ -277,7 +284,7 @@ async function handleLegacySeasonPass(env, ctx) {
     await insert(env, 'nfl_subscriptions', record);
   }
 
-  await sendAccessEmailOnce(env, email, `checkout:${checkoutId}`, eventId);
+  await sendAccessEmailOnce(env, email, `checkout:${checkoutId}`, eventId, { plan: 'legacy_season_pass', subscriptionId: checkoutId });
   return { applied: true, reason: 'legacy_season_pass' };
 }
 
@@ -339,7 +346,10 @@ async function handleSubscriptionLifecycle(env, subscription, eventType, eventId
    * key keeps it to one email. */
   const knownEmail = normalizeEmail(existing?.customer_email);
   if (knownEmail && (status === 'active' || status === 'trialing') && record.current_period_end) {
-    await sendAccessEmailOnce(env, knownEmail, `subscription:${subscriptionId}`, eventId);
+    await sendAccessEmailOnce(env, knownEmail, `subscription:${subscriptionId}`, eventId, { plan: planForPrice(record.stripe_price_id), subscriptionId });
+  }
+  if (status === 'canceled' && existing && existing.status !== 'canceled' && knownEmail) {
+    await notifySlack(env, `:red_circle: *Canceled* — NFL Pro (${planForPrice(record.stripe_price_id)})\n${knownEmail} · ${subscriptionId}`);
   }
 
   return { applied: true, reason: `${planForPrice(record.stripe_price_id)}:${status}` };
@@ -370,7 +380,7 @@ async function handleInvoice(env, invoice, eventType, eventId, eventCreated) {
   }
 
   if (eventType === 'invoice.paid') {
-    await sendAccessEmailOnce(env, email, `subscription:${subscriptionId}`, eventId);
+    await sendAccessEmailOnce(env, email, `subscription:${subscriptionId}`, eventId, { plan: planForPrice(existing.stripe_price_id), subscriptionId });
     return { applied: true, reason: 'invoice_paid_identity' };
   }
   return { applied: false, reason: 'payment_failed_status_from_subscription_event' };
@@ -454,7 +464,7 @@ async function findSubscription(env, subscriptionId) {
   return rows[0] || null;
 }
 
-async function sendAccessEmailOnce(env, emailRaw, deliveryKey, eventId) {
+async function sendAccessEmailOnce(env, emailRaw, deliveryKey, eventId, notice = null) {
   const email = normalizeEmail(emailRaw);
   if (!email) return false;
 
@@ -482,7 +492,13 @@ async function sendAccessEmailOnce(env, emailRaw, deliveryKey, eventId) {
     await releaseDelivery(env, deliveryKey);
     throw error;
   }
-  if (result === 'sent' || result === 'already_sent') return true;
+  if (result === 'sent') {
+    /* The delivery ledger makes this the one confirmed first delivery per
+       subscription: the moment a human wants to hear about. */
+    await notifySlack(env, `:large_green_circle: *New subscriber* — NFL Pro (${notice?.plan || 'nfl'})\n${email} · ${notice?.subscriptionId || deliveryKey}`);
+    return true;
+  }
+  if (result === 'already_sent') return true;
 
   /* Not delivered: free the reservation so a later event (or Stripe's retry)
    * can try again. Not entitled yet / another backend mid-send is not an
@@ -494,6 +510,23 @@ async function sendAccessEmailOnce(env, emailRaw, deliveryKey, eventId) {
     return false;
   }
   throw new Error(`access_email_${result}`);
+}
+
+async function notifySlack(env, text) {
+  if (!env.SLACK_WEBHOOK_URL || !text) return false;
+  try {
+    const response = await fetch(env.SLACK_WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json; charset=utf-8' },
+      body: JSON.stringify({ text, username: 'PropBetEdge Stripe', icon_emoji: ':moneybag:' }),
+      signal: AbortSignal.timeout(SLACK_TIMEOUT_MS),
+    });
+    if (!response.ok) console.error(`[${SERVICE}] slack failed: ${response.status}`);
+    return response.ok;
+  } catch (error) {
+    console.error(`[${SERVICE}] slack error`, error instanceof Error ? error.message : String(error));
+    return false;
+  }
 }
 
 async function releaseDelivery(env, deliveryKey) {
