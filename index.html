@@ -149,6 +149,18 @@
   <!-- Single design-token authority. Must precede every component stylesheet. -->
   <link rel="stylesheet" href="./pbe-tokens.css?v=20260904brand1">
   <link rel="stylesheet" href="./pbe-system.css?v=20260904brand1">
+  <!-- Shared PropBetEdge membership vocabulary (badge, All Access card, account panel, network row). -->
+  <link rel="stylesheet" href="./pbe-membership.css?v=20260924aa1">
+  <!-- Shared PropBetEdge membership contract (pbe-membership.js is the byte-identical
+       copy of propbetedge-workers shared/membership). The page's scripts are classic
+       scripts, so the pure ESM module is exposed on window.PBEMembership. Module
+       scripts execute before DOMContentLoaded, which is when paywall.js first reads
+       /api/auth-session, so the first render already speaks the contract. -->
+  <script type="module">
+    import * as PBEMembership from './pbe-membership.js?v=20260924aa1';
+    window.PBEMembership = PBEMembership;
+    window.dispatchEvent(new CustomEvent('pbe:membership-ready'));
+  </script>
   <link rel="stylesheet" href="./base-v3.css?v=20260828y1">
   <link rel="stylesheet" href="./ui-v2.css?v=20260828y1">
   <link rel="stylesheet" href="./paywall.css?v=20260828y1">

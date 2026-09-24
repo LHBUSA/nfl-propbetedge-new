@@ -63,3 +63,5 @@
 @media(max-width:720px){.pbeprosell-copy,.pbeprosell-preview{padding:20px 17px}.pbeprosell h2{font-size:clamp(30px,9vw,43px)}.pbeprosell-proofline{grid-template-columns:repeat(2,minmax(0,1fr))}.pbeprosell-proofline>div:last-child{grid-column:1/-1}.pbeprosell-products{grid-template-columns:1fr}.pbeprosell-products article{border-right:0;border-bottom:1px solid var(--pbe-line-faint)}.pbeprosell-products article:last-child{border-bottom:0}.pbeprosell-actions .pbeprosell-cta{flex:1 1 170px}.pbeprosell-active{align-items:flex-start;flex-direction:column}.pbeprosell-active .pbeprosell-actions{justify-content:flex-start;width:100%}}
 @media(max-width:430px){.pbeprosell-actions>*{width:100%;flex-basis:100%!important;text-align:center}.pbeprosell-preview-head{align-items:flex-start;flex-direction:column}.pbeprosell-proofline{grid-template-columns:1fr}.pbeprosell-proofline>div:last-child{grid-column:auto}}
 @media(prefers-reduced-motion:reduce){.pbeprosell-cta{transition:none}.pbeprosell-cta:hover{transform:none}}
+/* Shared membership contract: the All Access card beneath the NFL plans (free readers only). */
+.pbeprosell-copy .pbe-mbr-aa{margin-top:18px}

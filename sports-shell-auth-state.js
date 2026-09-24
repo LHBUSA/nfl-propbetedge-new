@@ -69,6 +69,24 @@
     wireDegraded(host);
   }
 
+  /* Members show the shared membership label (NFL PRO ACTIVE / ALL ACCESS
+   * ACTIVE / OWNER) the server derived; free readers keep Sign In / Upgrade.
+   * Nothing here decides entitlement: `pro` is the access verdict, the label
+   * is read from the contract object carried with it. */
+  function memberLabel(s){
+    const m=s?.membership;
+    return m?.entitled&&m.label?m.label:'NFL Pro';
+  }
+  function accountLabel(s){
+    const loading=Boolean(s?.loading);
+    const pro=Boolean(s?.pro===true);
+    const signedIn=Boolean(s?.user?.email);
+    if(loading)return 'Account';
+    if(pro)return memberLabel(s);
+    if(isDegraded(s))return 'Access Check';
+    return signedIn?'Upgrade':'Sign In';
+  }
+
   function sync(){
     const s=window.PBEPro?.state||{};
     const loading=Boolean(s.loading);
@@ -78,12 +96,13 @@
     const btn=document.getElementById('pbes-account');
 
     if(btn){
-      btn.textContent=loading?'Account':pro?'NFL Pro':degraded?'Access Check':signedIn?'Upgrade':'Sign In';
+      btn.textContent=accountLabel(s);
       btn.classList.toggle('pro',pro);
       btn.classList.toggle('signed-in',signedIn);
       btn.classList.toggle('auth-degraded',degraded);
       btn.dataset.entitlement=pro?'pro':degraded?'degraded':signedIn?'signed-in-free':'signed-out';
-      btn.title=pro?'NFL Pro active':degraded?'Signed in — subscription verification temporarily unavailable':signedIn?'Signed in — NFL Pro not active':'Sign in to NFL Pro';
+      btn.dataset.membership=pro?(s.membership?.state||'sport_pro'):'free';
+      btn.title=pro?`${memberLabel(s)} · open your account`:degraded?'Signed in — subscription verification temporarily unavailable':signedIn?'Signed in — NFL Pro not active':'Sign in to NFL Pro';
     }
 
     const duplicate=document.getElementById('pbe-pro-account');
@@ -106,6 +125,7 @@
     observer.observe(root,{childList:true,subtree:true});
   }
 
+  window.PBEShellAuthState={accountLabel,memberLabel,isDegraded};
   window.addEventListener('pbe:pro-state',sync);
   window.addEventListener('pbe:upgrades-ready',sync);
   document.addEventListener('click',event=>{

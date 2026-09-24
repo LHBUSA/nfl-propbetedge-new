@@ -72,9 +72,9 @@
               <div class="pbe-footer-account-state"><i data-pbe-footer-account-dot></i><div><span>ACCESS</span><strong data-pbe-footer-account-state>NFL Pro account</strong></div></div>
               <button type="button" data-pbe-footer-account>Open account</button>
             </div>
-            <p data-pbe-footer-account-copy>Passwordless access · Stripe billing</p>
+            <p data-pbe-footer-account-copy>Passwordless access · secure billing</p>
             <div class="pbe-footer-account-card-links">
-              <a href="${BILLING}" target="_blank" rel="noopener">Manage subscription ↗</a>
+              <a href="${BILLING}" target="_blank" rel="noopener" data-pbe-footer-manage hidden>Manage subscription ↗</a>
               <a href="https://discord.gg/kb5zCTHbME" target="_blank" rel="noopener">Member community ↗</a>
             </div>
           </aside>
@@ -118,13 +118,22 @@
     const copy = footer.querySelector('[data-pbe-footer-account-copy]');
     const dot = footer.querySelector('[data-pbe-footer-account-dot]');
     const button = footer.querySelector('.pbe-footer-account-card button[data-pbe-footer-account]');
+    const manage = footer.querySelector('[data-pbe-footer-manage]');
+    /* Shared membership contract: label + plan text come from the server's
+       object; Manage subscription shows only when it says show_manage. */
+    const m = s.membership;
+    const member = pro && m?.entitled === true;
+    const label = member && m.label ? m.label : 'NFL Pro active';
+    const plan = member ? (window.PBEMembership?.planText?.(m) || 'Verified NFL Pro access') : 'Verified NFL Pro access';
+    const showManage = pro && (member ? m.show_manage === true : s.role !== 'owner');
 
-    if (title) title.textContent = loading ? 'Checking access…' : pro ? 'NFL Pro active' : signed ? 'Signed in · Pro inactive' : 'NFL Pro account';
+    if (title) title.textContent = loading ? 'Checking access…' : pro ? label : signed ? 'Signed in · Pro inactive' : 'NFL Pro account';
     if (copy) copy.textContent = pro
-      ? 'Verified NFL Pro access · Stripe subscription active'
+      ? plan
       : signed
         ? 'Verified account · NFL Pro is not active'
-        : 'Passwordless access · secure Stripe billing';
+        : 'Passwordless access · secure billing';
+    if (manage) manage.hidden = !showManage;
     if (dot) {
       dot.classList.toggle('on', pro);
       dot.classList.toggle('signed', signed && !pro);

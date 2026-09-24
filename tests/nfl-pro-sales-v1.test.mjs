@@ -68,16 +68,22 @@ test('NFL Pro sells ongoing feature releases and in-product add-ons as subscript
   assert.doesNotMatch(sales, /every future product|all future products|lifetime access/i);
 });
 
-test('active member surface celebrates NFL PropBetEdge Pro and exposes Stripe management', () => {
+test('member surfaces are worded by the shared membership contract and expose subscription management only where it exists', () => {
   assert.match(sales, /You have NFL/);
   assert.match(sales, /PropBetEdge Pro/);
   assert.match(sales, /Manage subscription/);
   assert.match(sales, /billing\.stripe\.com\/p\/login\/cNi3cv2vY7em3lr4oj7wA00/);
   assert.doesNotMatch(sales, /isOwner|owner preview/i);
+  assert.match(sales, /if \(ms === 'all_access' \|\| ms === 'owner'\) \{ existing\?\.remove\(\); return; \}/, 'nothing is sold to All Access or owner accounts');
+  assert.match(sales, /Weekly · \$\{esc\(weekly\)\}/); assert.doesNotMatch(sales, /Fight Week/);
+  assert.match(sales, /allAccessCardHtml/, 'free readers see the All Access card beneath the NFL plans');
 
   assert.match(polish, /You have NFL PropBetEdge Pro\./);
+  assert.match(polish, /You have PropBetEdge All Access\./);
   assert.match(polish, /Manage subscription/);
   assert.match(polish, /billing\.stripe\.com\/p\/login\/cNi3cv2vY7em3lr4oj7wA00/);
   assert.match(polish, /active-owner/);
-  assert.match(polish, /root\.dataset\.funnelState='active-pro'/);
+  assert.doesNotMatch(polish, /root\.dataset\.funnelState='active-pro'/, 'the owner state is no longer rewritten into a subscriber');
+  assert.match(polish, /if\(!m\.show_manage\)\{existing\?\.remove\(\)\}/, 'no manage link without a subscription');
+  assert.doesNotMatch(polish, /powered by Stripe/);
 });

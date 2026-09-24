@@ -47,11 +47,33 @@
     entitlement: null,
     loading: true,
     subscription: null,
+    /* The shared PropBetEdge membership contract (pbe-membership.js), read from
+     * /api/auth-session. The server derives it; the browser never widens it. */
+    membership: null,
     checkoutSyncing: false,
     notice: null,
     stage: null,
     error: null
   };
+
+  const MEMBERSHIP_STATES = ['free', 'sport_pro', 'all_access', 'owner'];
+  const FREE_MEMBERSHIP = Object.freeze({ contract: null, sport: 'nfl', state: 'free', label: 'FREE', entitled: false, access_source: null, product_key: null, plan: null, email: null, current_period_end: null, cancel_at_period_end: false, show_purchase_cta: true, show_all_access_upgrade: false, show_manage: false });
+  function readMembership(raw) {
+    const lib = window.PBEMembership;
+    if (lib?.readMembership) return lib.readMembership(raw, 'nfl');
+    /* The module did not load: keep the server's own well-formed object, else FREE. */
+    const ok = raw && typeof raw === 'object' && MEMBERSHIP_STATES.includes(raw.state) && typeof raw.label === 'string';
+    return ok ? raw : FREE_MEMBERSHIP;
+  }
+  function memberLabel(fallback) {
+    const m = state.membership;
+    return m?.entitled && m.label ? m.label : fallback;
+  }
+  function memberPlanText(fallback) {
+    const m = state.membership;
+    if (!m?.entitled) return fallback;
+    return window.PBEMembership?.planText?.(m) || fallback;
+  }
 
   /* Why a signed-in reader does not have Pro, in the reader's terms. */
   const DENIAL_COPY = {
@@ -190,18 +212,20 @@
     const periodEnd = state.subscription?.current_period_end ? new Date(state.subscription.current_period_end) : null;
     const renewCopy = periodEnd && !Number.isNaN(periodEnd.getTime())
       ? `${state.subscription?.cancel_at_period_end ? 'Access through' : 'Current period through'} ${periodEnd.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}`
-      : 'NFL Pro entitlement verified by PropBetEdge.';
-    return `<div class="pbe-pro-price-card" style="border-color:rgba(85,214,140,.20);background:linear-gradient(145deg,rgba(85,214,140,.07),rgba(255,255,255,.018))">
-      <div class="pbe-pro-plan-label" style="color:#55d68c">NFL PRO · ACTIVE</div>
+      : 'Entitlement verified by PropBetEdge.';
+    const label = memberLabel(state.role === 'owner' ? 'OWNER' : 'NFL PRO ACTIVE');
+    const plan = memberPlanText(state.role === 'owner' ? 'Owner access' : 'NFL Pro');
+    return `<div class="pbe-pro-price-card" style="border-color:rgba(85,214,140,.20);background:linear-gradient(145deg,rgba(85,214,140,.07),rgba(255,255,255,.018))" data-pbe-membership="${esc(state.membership?.state || '')}">
+      <div class="pbe-pro-plan-label" style="color:#55d68c">${esc(label)}</div>
       <div class="pbe-pro-price"><strong style="font-size:42px;color:#55d68c">UNLOCKED</strong></div>
       <div class="pbe-pro-renew">${esc(renewCopy)}</div>
     </div>
-    <div class="pbe-pro-user-card"><strong>${esc(email)}</strong><span>${state.role === 'owner' ? 'Verified owner · full NFL Pro access' : 'Verified NFL Pro subscriber'}</span></div>
+    <div class="pbe-pro-user-card"><strong>${esc(email)}</strong><span>${esc(plan)}</span></div>
     <button class="pbe-pro-cta" type="button" id="pbe-pro-open-board">Open Pro Prop Board</button>
     <button class="pbe-pro-cta secondary" id="pbe-pro-refresh" type="button">Refresh access</button>
     <button class="pbe-pro-cta secondary" id="pbe-pro-signout" type="button">Sign out</button>
     <div class="pbe-pro-message" id="pbe-pro-message"></div>
-    <div class="pbe-pro-secure">◆ Access verified against your Stripe-backed NFL entitlement</div>`;
+    <div class="pbe-pro-secure">◆ ${esc(label)} · verified by PropBetEdge</div>`;
   }
 
   function ensureModal() {
@@ -343,6 +367,7 @@
     state.role = null;
     state.entitlement = null;
     state.subscription = null;
+    state.membership = readMembership(null);
     state.error = null;
     state.loading = false;
     applyState();
@@ -384,6 +409,9 @@
       state.role = state.pro && payload?.role === 'owner' ? 'owner' : state.pro ? 'subscriber' : null;
       state.entitlement = payload?.entitlement || null;
       state.subscription = state.pro ? (payload?.subscription || null) : null;
+      /* Membership can never claim more than the access verdict above grants. */
+      const membership = readMembership(payload?.membership);
+      state.membership = state.pro || !membership.entitled ? membership : readMembership(null);
       /* /api/auth-session reports the stage it reached, so a backend failure is
        * no longer indistinguishable from a genuinely signed-out visitor. */
       state.stage = payload?.stage || null;
@@ -395,6 +423,7 @@
       state.pro = false;
       state.role = null;
       state.subscription = null;
+      state.membership = readMembership(null);
       state.access = 'unavailable';
       if (!preserveOnError || !hadIdentity) {
         state.session = null;
@@ -410,7 +439,7 @@
 
   function accountButtonHtml() {
     if (state.loading) return `<span class="pbe-pro-account-dot"></span><span class="pbe-pro-account-label">Account</span>`;
-    if (state.pro) return `<span class="pbe-pro-account-dot"></span><span class="pbe-pro-account-label">NFL Pro</span>`;
+    if (state.pro) return `<span class="pbe-pro-account-dot"></span><span class="pbe-pro-account-label">${esc(memberLabel('NFL Pro'))}</span>`;
     if (state.user) return `<span class="pbe-pro-account-dot"></span><span class="pbe-pro-account-label">Upgrade</span>`;
     return `<span class="pbe-pro-account-dot"></span><span class="pbe-pro-account-label">Sign In · Pro</span>`;
   }
@@ -444,7 +473,7 @@
     const nextClass = `pbe-pro-dashboard-strip ${state.pro ? 'pro' : ''}`.trim();
     if (strip.className !== nextClass) strip.className = nextClass;
     const next = state.pro
-      ? `<div><div class="pbe-pro-dashboard-title"><span>NFL PRO ACTIVE</span> · Proprietary PBE model intelligence is unlocked.</div><div class="pbe-pro-dashboard-copy">Fair lines, probability and model-gap output are available anywhere the production model supports the current market.</div></div><button class="pbe-pro-mini-cta" data-pbe-route="propboard">Open Pro Board</button>`
+      ? `<div><div class="pbe-pro-dashboard-title"><span>${esc(memberLabel('NFL PRO ACTIVE'))}</span> · Proprietary PBE model intelligence is unlocked.</div><div class="pbe-pro-dashboard-copy">Fair lines, probability and model-gap output are available anywhere the production model supports the current market.</div></div><button class="pbe-pro-mini-cta" data-pbe-route="propboard">Open Pro Board</button>`
       : `<div><div class="pbe-pro-dashboard-title"><span>NFL PRO</span> · Unlock the proprietary layer above the sportsbook market.</div><div class="pbe-pro-dashboard-copy">Free access keeps current book numbers useful. Pro adds PBE fair line, model probability, model gap and premium tools as they launch.</div></div><button class="pbe-pro-mini-cta" data-pbe-open-pro>Unlock NFL Pro</button>`;
     setHtml(strip,next);
     strip.querySelector('[data-pbe-route="propboard"]')?.addEventListener('click',()=>window.App?.nav?.('propboard'));
@@ -499,7 +528,7 @@
     marketPulsePaywall();
     renderModal();
     document.documentElement.dataset.pbeAccess = state.loading ? 'checking' : state.access;
-    window.dispatchEvent(new CustomEvent('pbe:pro-state',{ detail:{ pro:state.pro, access:state.access, role:state.role, signedIn:Boolean(state.user), email:state.user?.email || null, issuer:'propbetedge' } }));
+    window.dispatchEvent(new CustomEvent('pbe:pro-state',{ detail:{ pro:state.pro, access:state.access, role:state.role, membership:state.membership, signedIn:Boolean(state.user), email:state.user?.email || null, issuer:'propbetedge' } }));
   }
 
   function decorateContinuously() {
@@ -533,7 +562,7 @@
     document.getElementById('pbe-pro-refresh')?.addEventListener('click',async event => {
       const button = event.currentTarget;
       button.disabled = true;
-      message('Checking Stripe-backed NFL Pro access…');
+      message('Checking NFL Pro access…');
       await refreshAccess();
       if (!state.pro) message(state.error || 'NFL Pro is not active on this signed-in email yet. If you just subscribed, give the webhook a few seconds and refresh again.');
       button.disabled = false;

@@ -9,6 +9,7 @@ import {
   verifyWorkerJwtWithSecrets,
   supabaseAdminHeaders,
 } from './_nfl-auth.js';
+import { CONTRACT_VERSION as MEMBERSHIP_CONTRACT } from './_pbe-membership.js';
 
 const APP_ORIGIN = 'https://nfl.propbetedge.ai';
 const DEFAULT_AUTH_WORKER = 'https://propbetedge-nfl-auth.sales-fd3.workers.dev';
@@ -53,6 +54,8 @@ export default async function handler(req, res) {
       product_key: 'pbe_all_access',
       billing_url: String(process.env.PBE_BILLING_URL || 'https://propbetedge-sports-billing.sales-fd3.workers.dev'),
     },
+    /* The shared PropBetEdge membership contract every session answer carries. */
+    membership: { contract: MEMBERSHIP_CONTRACT, states: ['free', 'sport_pro', 'all_access', 'owner'] },
     secret_parity: null,
     entitlement_store: { reachable: false, status: null },
     cookies: {

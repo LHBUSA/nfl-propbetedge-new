@@ -9,7 +9,7 @@ import pathlib, subprocess, sys
 
 sys.stdout.reconfigure(encoding='utf-8')
 REPO = pathlib.Path(__file__).resolve().parent.parent
-TESTS = ['tests/nfl-all-access-bridge.test.mjs', 'tests/nfl-auth-entitlement-gate.test.mjs', 'tests/nfl-auth-access-v2.test.mjs', 'tests/nfl-auth-magic-link-single-use.test.mjs', 'tests/nfl-purchase-delivery.test.mjs', 'tests/nfl-billing-worker.test.mjs']
+TESTS = ['tests/nfl-all-access-bridge.test.mjs', 'tests/nfl-membership-state.test.mjs', 'tests/nfl-auth-entitlement-gate.test.mjs', 'tests/nfl-auth-access-v2.test.mjs', 'tests/nfl-auth-magic-link-single-use.test.mjs', 'tests/nfl-purchase-delivery.test.mjs', 'tests/nfl-billing-worker.test.mjs']
 
 MUTATIONS = [
     ('All Access outage treated as entitled', 'api/_nfl-entitlement-ledger.js',
@@ -57,8 +57,10 @@ MUTATIONS = [
     ('internal delivery reports sent without sending', 'workers/nfl-auth/src/index-v5.js',
      "  if(d.result==='sent'){",
      "  if(d.result==='sent'||d.result==='not_entitled'){"),
+    # nfl-billing v1.4.0 split the confirmed-send branch (Slack notice) from the
+    # already-sent branch; weakening the latter still declares any result sent.
     ('billing treats any delivery result as sent', 'workers/nfl-billing/src/index.js',
-     "  if (result === 'sent' || result === 'already_sent') return true;",
+     "  if (result === 'already_sent') return true;",
      "  return true;"),
     ('auth-session no longer paywalls no_entitlement', 'api/auth-session.js',
      "    if (session.access === 'no_entitlement') {",

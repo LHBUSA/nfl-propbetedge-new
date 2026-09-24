@@ -66,22 +66,43 @@
     setText(document.getElementById('pbe-pro-upgrade'),`Unlock PBE Algo${window.PBEPricing?` · ${window.PBEPricing.ctaSuffix}`:''}`);
   }
 
-  function activePeriod(){
-    return 'Verified NFL PropBetEdge Pro access.';
+  /* The shared membership contract (window.PBEPro.state.membership, read from
+     /api/auth-session through pbe-membership.js). The polish layer never decides
+     who is a member; it only words the member screen for the state the server
+     named: sport_pro · all_access · owner. */
+  function membership(){
+    const s=window.PBEPro?.state||{};
+    const m=s.membership;
+    if(m&&m.entitled&&(m.state==='sport_pro'||m.state==='all_access'||m.state==='owner'))return m;
+    const owner=s.role==='owner';
+    return {state:owner?'owner':'sport_pro',label:owner?'OWNER':'NFL PRO ACTIVE',entitled:true,show_manage:!owner,sport:'nfl'};
   }
+  function activePeriod(m){
+    return window.PBEMembership?.planText?.(m)||(m.state==='owner'?'Owner access':'Verified NFL PropBetEdge Pro access.');
+  }
+  const MEMBER_COPY={
+    sport_pro:{kicker:'NFL PROPBETEDGE PRO · VERIFIED MEMBER',title:'You have NFL PropBetEdge Pro.',seal:['PRO','ACTIVE'],
+      lede:'A national-scale NFL sports analytics platform is fully unlocked on this verified account: PBE Algo, official PBE Picks, model + market intelligence, Player DNA, team research, simulation, Game Center and the permanent Track Record.'},
+    all_access:{kicker:'PROPBETEDGE ALL ACCESS · VERIFIED MEMBER',title:'You have PropBetEdge All Access.',seal:['ALL','ACCESS'],
+      lede:'Every current and future PropBetEdge Pro sport is unlocked on this verified account, NFL included: PBE Algo, official PBE Picks, model + market intelligence, Player DNA, team research, simulation, Game Center and the permanent Track Record.'},
+    owner:{kicker:'NFL PROPBETEDGE PRO · OWNER',title:'Owner access is active.',seal:['PBE','OWNER'],
+      lede:'Every NFL Pro surface is unlocked on this verified owner account: PBE Algo, official PBE Picks, model + market intelligence, Player DNA, team research, simulation, Game Center and the permanent Track Record.'},
+  };
 
   function applyActiveMember(root,head){
     const state=root.dataset.funnelState||'';
     if(state!=='active-pro'&&state!=='active-owner')return false;
 
+    const m=membership();
+    const copy=MEMBER_COPY[m.state]||MEMBER_COPY.sport_pro;
     const email=root.querySelector('.pbe-funnel-user strong')?.textContent?.trim()||'NFL Pro member';
-    const period=activePeriod();
-    root.dataset.funnelState='active-pro';
+    const period=activePeriod(m);
     root.classList.add('pbe-funnel-member');
+    root.dataset.membership=m.state;
 
-    setText(head.querySelector('span'),'NFL PROPBETEDGE PRO · VERIFIED MEMBER');
-    setText(head.querySelector('strong'),'You have NFL PropBetEdge Pro.');
-    setText(head.querySelector('p'),'A national-scale NFL sports analytics platform is fully unlocked on this verified account: PBE Algo, official PBE Picks, model + market intelligence, Player DNA, team research, simulation, Game Center and the permanent Track Record.');
+    setText(head.querySelector('span'),copy.kicker);
+    setText(head.querySelector('strong'),copy.title);
+    setText(head.querySelector('p'),copy.lede);
 
     let status=root.querySelector('.pbe-member-status-card');
     if(!status){
@@ -89,7 +110,9 @@
       status.className='pbe-member-status-card';
       head.insertAdjacentElement('afterend',status);
     }
-    status.innerHTML=`<div class="pbe-member-seal"><span>PRO</span><b>ACTIVE</b></div><div class="pbe-member-account"><small>VERIFIED ACCOUNT</small><strong></strong><span></span></div>`;
+    const badge=window.PBEMembership?.membershipBadgeHtml?.(m)||'';
+    const next=`<div class="pbe-member-seal"><span>${copy.seal[0]}</span><b>${copy.seal[1]}</b></div><div class="pbe-member-account"><small>VERIFIED ACCOUNT</small><strong></strong><span></span>${badge}</div>`;
+    if(status.dataset.membership!==m.state){status.innerHTML=next;status.dataset.membership=m.state}
     setText(status.querySelector('strong'),email);
     setText(status.querySelector('.pbe-member-account span'),period);
 
@@ -108,19 +131,26 @@
     const caps=root.querySelector('.pbe-funnel-capabilities');
     if(caps)settledHide(caps);
 
+    /* Manage subscription only for members with a subscription (sport_pro,
+       all_access); the owner has none. The funnel may already have rendered
+       the shared manage link, in which case nothing is added. */
     const auth=root.querySelector('.pbe-funnel-auth');
-    if(auth&&!auth.querySelector('.pbe-member-manage')){
-      const a=document.createElement('a');
-      a.className='pbe-pro-cta secondary pbe-member-manage';
-      a.href=BILLING_PORTAL;
-      a.target='_blank';
-      a.rel='noopener noreferrer';
-      a.textContent='Manage subscription ↗';
-      const refresh=auth.querySelector('#pbe-funnel-refresh');
-      if(refresh)refresh.before(a);else auth.appendChild(a);
+    if(auth){
+      const existing=auth.querySelector('.pbe-member-manage');
+      if(!m.show_manage){existing?.remove()}
+      else if(!existing&&!auth.querySelector('.pbe-mbr-manage')){
+        const a=document.createElement('a');
+        a.className='pbe-pro-cta secondary pbe-member-manage';
+        a.href=BILLING_PORTAL;
+        a.target='_blank';
+        a.rel='noopener noreferrer';
+        a.textContent='Manage subscription ↗';
+        const refresh=auth.querySelector('#pbe-funnel-refresh');
+        if(refresh)refresh.before(a);else auth.appendChild(a);
+      }
     }
     setText(root.querySelector('#pbe-funnel-open-board'),'Open Pro Prop Board');
-    setText(root.querySelector('.pbe-pro-secure'),'◆ NFL PropBetEdge Pro active · verified access · subscription management powered by Stripe');
+    setText(root.querySelector('.pbe-pro-secure'),`◆ ${m.label} · verified access`);
     return true;
   }
 
@@ -154,6 +184,6 @@
     window.addEventListener('pbe:pro-state',schedule);
   }
 
-  window.PBEProPolish={apply,schedule};
+  window.PBEProPolish={apply,schedule,membership,MEMBER_COPY};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
 })();

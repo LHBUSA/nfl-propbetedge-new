@@ -20,6 +20,23 @@
   function pricing() { return window.PBEPricing || null; }
   function proState() { return window.PBEPro?.state || {}; }
   function isPro() { return Boolean(proState().pro); }
+
+  /* Shared membership contract (pbe-membership.js via window.PBEMembership).
+     free      NFL plans + the All Access card beneath them
+     sport_pro the member surface (You have NFL PropBetEdge Pro)
+     all_access / owner  no sales surface at all: nothing to sell */
+  const MEMBERSHIP_STATES = ['free', 'sport_pro', 'all_access', 'owner'];
+  function membership(s = proState()) {
+    const m = s.membership;
+    if (m && MEMBERSHIP_STATES.includes(m.state)) return m;
+    return window.PBEMembership?.deriveMembership?.({ sport: 'nfl', entitled: false }) || { sport: 'nfl', state: 'free', label: 'FREE', entitled: false };
+  }
+  function memberState(s = proState(), m = membership(s)) {
+    if (!s.pro) return 'free';
+    if (m?.entitled) return m.state;
+    return s.role === 'owner' ? 'owner' : 'sport_pro';
+  }
+  function allAccessCard(m = membership()) { return window.PBEMembership?.allAccessCardHtml?.(m, { compact: true }) || ''; }
   function isHome() { return window.App?.current === 'home' && Boolean(document.querySelector('.pbehome7')); }
 
   function planLabel(plan, fallback) {
@@ -61,10 +78,11 @@
 
           <div class="pbeprosell-actions">
             <button type="button" class="pbeprosell-cta primary" data-pro-plan="monthly">Unlock PBE Picks · ${esc(monthly)}</button>
-            <button type="button" class="pbeprosell-cta" data-pro-plan="weekly">Fight Week · ${esc(weekly)}</button>
+            <button type="button" class="pbeprosell-cta" data-pro-plan="weekly">Weekly · ${esc(weekly)}</button>
             <button type="button" class="pbeprosell-link" data-pro-route="trackrecord">Audit every graded call →</button>
           </div>
           <div class="pbeprosell-fine">Automated learning is governed, not reckless: only finalized observations can train challengers, and the production champion never silently replaces itself. New NFL Pro releases and in-product add-ons are included while your subscription is active. One verified account · Stripe checkout · Cancel anytime.</div>
+          ${allAccessCard()}
         </div>
 
         <div class="pbeprosell-preview" aria-label="Locked NFL Pro decision preview">
@@ -93,7 +111,7 @@
   function activeMarkup() {
     return `<section class="pbeprosell pbeprosell-active pbeprosell-member" data-nfl-pro-sales="active" aria-label="NFL PropBetEdge Pro active">
       <div class="pbeprosell-member-main">
-        <div class="pbeprosell-member-kicker"><span class="pbeprosell-member-status">✓ PRO ACTIVE</span><span>NFL PROPBETEDGE PRO</span></div>
+        <div class="pbeprosell-member-kicker"><span class="pbeprosell-member-status">✓ NFL PRO ACTIVE</span><span>NFL PROPBETEDGE PRO</span></div>
         <h2>You have NFL<br><em>PropBetEdge Pro.</em></h2>
         <p>National-scale NFL analytics, PBE Algo, official PBE Picks, live market intelligence, player and team research, simulation, Game Center, a verified Track Record, and the newest NFL Pro features and in-product add-ons as they ship — all under one Pro account.</p>
         <div class="pbeprosell-member-actions">
@@ -122,6 +140,9 @@
     const hero = root?.querySelector('.pbe7-hero');
     if (!root || !hero) return;
 
+    /* All Access and owner accounts have nothing to buy here: no surface. */
+    const ms = memberState();
+    if (ms === 'all_access' || ms === 'owner') { existing?.remove(); return; }
     const mode = isPro() ? 'active' : 'free';
     if (existing?.dataset?.nflProSales === mode && existing.parentElement === root) return;
     existing?.remove();
@@ -219,5 +240,5 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true });
   else boot();
 
-  window.NFLProSalesV1 = { paint, openPro, enhanceProModal, get observer() { return observer; } };
+  window.NFLProSalesV1 = { paint, openPro, enhanceProModal, markup: { sales: salesMarkup, active: activeMarkup, memberState, membership }, get observer() { return observer; } };
 })();

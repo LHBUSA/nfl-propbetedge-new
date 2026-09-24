@@ -19,6 +19,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { normalizeEmail } from './_nfl-entitlement.js';
 import { lookupNflAccessVerdict, parseOwnerEmails, supabaseAdminHeaders, ENTITLEMENT_TIMEOUT_MS, DEFAULT_NFL_SUPABASE_URL, DEFAULT_PBE_BILLING_URL } from './_nfl-entitlement-ledger.js';
+import { deriveMembership } from './_pbe-membership.js';
 
 export { supabaseAdminHeaders, ENTITLEMENT_TIMEOUT_MS };
 
@@ -150,9 +151,25 @@ export function isOwnerEmail(email) {
   return Boolean(e) && ownerEmails().includes(e);
 }
 
+/* The shared PropBetEdge membership contract (api/_pbe-membership.js, a
+ * byte-identical copy of propbetedge-workers shared/membership). It is derived
+ * here, once, from the verdict this file already reached; it never changes a
+ * grant or denial. Anything that is not a granted NFL verdict is FREE. */
+export function nflMembership({ entitled = false, accessSource = null, plan = null, email = null, currentPeriodEnd = null, cancelAtPeriodEnd = false, legacyTier = null } = {}) {
+  const allAccess = accessSource === 'all_access';
+  return deriveMembership({
+    sport: 'nfl', entitled: Boolean(entitled), accessSource,
+    productKey: allAccess ? 'pbe_all_access' : 'nfl_pro',
+    plan, email, currentPeriodEnd, cancelAtPeriodEnd, legacyTier,
+  });
+}
+
+const FREE_MEMBERSHIP = Object.freeze(nflMembership({ entitled: false }));
+
 const SIGNED_OUT = {
   valid: false, pro: false, access: 'anonymous', role: null, entitlement: null,
   user: null, subscription: null, authority: 'vercel-local', degraded: false,
+  membership: FREE_MEMBERSHIP,
 };
 
 export async function getNflSession(req) {
@@ -193,6 +210,7 @@ export async function getNflSession(req) {
 
   const signingInfo = { mode: signing.mode, verified_by: signatureSource };
   const user = { email: payload.email };
+  const freeMembership = nflMembership({ entitled: false, email: payload.email });
 
   if (isOwnerEmail(payload.email)) {
     return {
@@ -200,6 +218,7 @@ export async function getNflSession(req) {
       entitlement: { reason: 'owner', plan: 'owner' },
       user, subscription: null, authority: 'vercel-local', stage: 'owner_verified',
       cookies, degraded: false, signing: signingInfo,
+      membership: nflMembership({ entitled: true, accessSource: 'owner', plan: 'owner', email: payload.email }),
     };
   }
 
@@ -209,6 +228,7 @@ export async function getNflSession(req) {
       valid: true, pro: false, access: 'unavailable', role: null, entitlement: null,
       user, subscription: null, authority: 'vercel-local', stage: 'entitlement_secret_missing', cookies,
       degraded: true, error: 'entitlement_secret_not_configured', signing: signingInfo,
+      membership: freeMembership,
     };
   }
 
@@ -220,10 +240,14 @@ export async function getNflSession(req) {
       valid: true, pro: false, access: 'unavailable', role: null, entitlement: null,
       user, subscription: null, authority: 'vercel-local', stage: 'entitlement_lookup_failed', cookies,
       degraded: true, error: String(error?.message || 'entitlement_unavailable'), signing: signingInfo,
+      membership: freeMembership,
     };
   }
 
   if (verdict.entitled) {
+    /* pbe_all_access is the shared network umbrella; every other granted NFL
+       verdict is the sport's own plan. */
+    const accessSource = verdict.source === 'pbe_all_access' ? 'all_access' : 'sport';
     return {
       valid: true, pro: true, access: 'granted', role: 'subscriber',
       entitlement: { reason: 'entitled', plan: verdict.plan, billing: verdict.billing, source: verdict.source || 'nfl' },
@@ -237,6 +261,13 @@ export async function getNflSession(req) {
         source: verdict.source || 'nfl',
       },
       authority: 'vercel-local', stage: 'entitlement_active', cookies, degraded: false, signing: signingInfo,
+      membership: nflMembership({
+        entitled: true, accessSource, plan: verdict.plan, email: payload.email,
+        currentPeriodEnd: verdict.current_period_end, cancelAtPeriodEnd: verdict.cancel_at_period_end,
+        /* The legacy one-time NFL pass (never sold any more) is a sport_pro
+           legacy tier in the contract: nothing to manage, no renewal. */
+        legacyTier: accessSource === 'sport' && verdict.billing === 'one_time' ? 'season_pass' : null,
+      }),
     };
   }
 
@@ -244,7 +275,7 @@ export async function getNflSession(req) {
     valid: true, pro: false, access: 'no_entitlement', role: null,
     entitlement: { reason: verdict.reason, plan: verdict.plan || null, status: verdict.status || null, all_access: verdict.all_access || null },
     user, subscription: null, authority: 'vercel-local', stage: 'entitlement_missing', cookies,
-    degraded: false, signing: signingInfo,
+    degraded: false, signing: signingInfo, membership: freeMembership,
   };
 }
 

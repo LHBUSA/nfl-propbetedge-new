@@ -52,7 +52,11 @@ test('Founding Season has no trial and is clearly recurring/cancelable', () => {
 
 test('no customer-facing file states a retired or stale price', () => {
   const root = new URL('..', import.meta.url);
-  const client = fs.readdirSync(root).filter(f => /\.(js|html|css)$/.test(f));
+  /* pbe-membership.js is the byte-identical copy of the shared PropBetEdge
+     membership contract (propbetedge-workers shared/membership, v1.1.0). Its
+     "season pass" is the legacy-tier LABEL shown to an existing one-time pass
+     holder, never a price or an offer; nothing in this repo sells one. */
+  const client = fs.readdirSync(root).filter(f => /\.(js|html|css)$/.test(f) && f !== 'pbe-membership.js');
   const stale = /\$\s*9\.99\s*(\/|per)\s*(wk|week)|\$99\b|\bseason pass\b|free trial(?!\.| ·|<| handoff)/i;
   for (const f of client) {
     const text = fs.readFileSync(new URL(f, root), 'utf8');
@@ -73,13 +77,19 @@ test('no customer-facing file states a retired or stale price', () => {
   }
 });
 
-test('active NFL Pro uses the same premium presentation authority', () => {
-  assert.match(funnel, /data-funnel-state="\$\{owner \? 'active-owner' : 'active-pro'\}"/);
+test('active NFL Pro uses the same premium presentation authority, worded by the shared membership contract', () => {
+  /* The legacy owner/subscriber flag still names data-funnel-state (the polish
+     and sales layers key on it); the shared contract names the member kind. */
+  assert.match(funnel, /data-funnel-state="\$\{owner \? 'active-owner' : 'active-pro'\}" data-membership="\$\{escapeHtml\(mState\)\}"/);
   assert.match(funnel, /Your NFL Pro decision desk is live\./);
+  assert.match(funnel, /Your PropBetEdge All Access desk is live\./);
   assert.match(funnel, /Verified account/);
   assert.match(funnel, /Open Pro Prop Board/);
   assert.match(funnel, /PBE Fair Line · Model Probability · Best Line · PBE Cast · Track Record/);
   assert.match(funnel, /const mode = s\.pro \? \(owner \? 'active-owner' : 'active-pro'\) : s\.user \? 'signed-in-free' : 'signed-out'/);
+  assert.match(funnel, /const membershipChanged = \(root\?\.dataset\?\.membership \|\| 'free'\) !== mState;/, 'a membership change re-renders even when the funnel mode is unchanged');
+  assert.match(funnel, /allAccessCardHtml/); assert.match(funnel, /manageLinkHtml/); assert.match(funnel, /networkLinksHtml\?\.\('nfl'\)/);
+  assert.doesNotMatch(funnel, /Stripe-backed/, 'Stripe is never a state word shown to customers');
 });
 
 test('Cloudflare billing worker recognizes both legacy and Founding Season entitlements', () => {

@@ -274,3 +274,11 @@
   .pbe-funnel-email-label{margin-top:14px;padding-top:13px}
   .pbe-pro-secure{font-size:8px!important}
 }
+
+/* Shared membership contract inside the funnel: the All Access card sits
+   beneath the NFL plans, the network row under the member actions. */
+.pbe-funnel-root .pbe-mbr-aa{margin-top:16px}
+.pbe-funnel-root .pbe-mbr-network{margin-top:14px}
+.pbe-funnel-auth .pbe-mbr-manage{display:flex;align-items:center;justify-content:center;min-height:45px;border:1px solid rgba(216,183,91,.36);border-radius:10px;color:var(--pbe-gold-bright)!important;font:800 12px/1 var(--pbe-font-ui,Inter,sans-serif);text-decoration:none}
+.pbe-funnel-active-card .pbe-funnel-plan-text{margin-top:6px;color:var(--pbe-paper,#f5f1eb);font:600 12px/1.4 var(--pbe-font-ui,Inter,sans-serif)}
+.pbe-funnel-active-card .pbe-mbr-badge{margin-top:6px}

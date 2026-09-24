@@ -2,7 +2,11 @@
  * getNflSession() never throws, so a backend failure can no longer be
  * disguised as "not logged in". Every response carries an explicit `stage`. */
 
-import { getNflSession, purgeCookies } from './_nfl-auth.js';
+import { getNflSession, purgeCookies, nflMembership } from './_nfl-auth.js';
+
+/* The paywalled and failure answers carry the shared membership contract too:
+   FREE, with no email (the browser is told nothing about the identity). */
+const FREE_MEMBERSHIP = Object.freeze(nflMembership({ entitled: false }));
 
 /* A verified email without a current NFL entitlement is NOT an NFL customer.
  * The browser gets the paywall: no identity, no signed-in state, and the
@@ -16,6 +20,7 @@ export function paywalledAnswer(session) {
     entitlement: session.entitlement ? { reason: session.entitlement.reason || null } : null,
     user: null, subscription: null, authority: session.authority, stage: session.stage,
     cookies: session.cookies, degraded: false, session_cleared: true,
+    membership: FREE_MEMBERSHIP,
   };
 }
 
@@ -63,6 +68,7 @@ export default async function handler(req, res) {
       stage: 'handler_exception',
       degraded: true,
       error: 'session_check_failed',
+      membership: FREE_MEMBERSHIP,
     });
   }
 }
