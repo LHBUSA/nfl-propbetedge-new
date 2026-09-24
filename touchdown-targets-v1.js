@@ -645,7 +645,9 @@
     const group = document.getElementById('intelligence-nav-group');
     const anchorBefore = document.getElementById('nav-trackrecord') || document.getElementById('nav-picks');
     if (group && anchorBefore && !document.getElementById(`nav-${ROUTE}`)) {
-      group.insertBefore(navLink('Touchdown Targets', 'NEW · PRO'), anchorBefore);
+      /* The anchor is found by id, so insert relative to ITS parent — it is not
+         guaranteed to be a direct child of the group. */
+      (anchorBefore.parentNode || group).insertBefore(navLink('Touchdown Targets', 'NEW · PRO'), anchorBefore);
     }
     const primary = document.querySelector('#pbe-sports-shell .pbes-primary');
     const shellAnchor = primary?.querySelector('[data-route="trackrecord"]') || primary?.querySelector('[data-route="picks"]');
@@ -656,7 +658,10 @@
       button.dataset.route = ROUTE;
       button.textContent = 'TD Targets';
       button.addEventListener('click', () => (window.PBESportsShell?.go ? window.PBESportsShell.go(ROUTE) : window.App?.nav(ROUTE)));
-      primary.insertBefore(button, shellAnchor);
+      /* Shell nav buttons live inside .pbes-nav-group spans, so the anchor is a
+         descendant of .pbes-primary, not a child: insert within its own parent.
+         (primary.insertBefore threw NotFoundError on every boot before this.) */
+      shellAnchor.parentNode.insertBefore(button, shellAnchor);
     }
     syncNav(window.App?.current || 'home');
   }
