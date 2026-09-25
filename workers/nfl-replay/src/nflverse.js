@@ -13,13 +13,18 @@
  * folded into the scoring play's text). No text matching, no clock guessing.
  */
 
-/* The columns Replay uses — a deliberate subset of the 372 published. */
+import { OPP_COLUMNS, OPP_NUMERIC, OPP_FLAGS, META_COLUMNS } from './opportunity.js';
+
+/* The columns Replay uses — a deliberate subset of the 372 published. The
+   opportunity layer's play-level columns (down, field position, score margin,
+   dropback / scramble / attempt flags) are appended; see opportunity.js. */
 export const COLUMNS = [
   'game_id', 'play_id', 'qtr', 'play_type', 'posteam', 'defteam',
   'passer_player_name', 'passer_player_id', 'receiver_player_name', 'receiver_player_id',
   'rusher_player_name', 'rusher_player_id', 'interception_player_name', 'solo_tackle_1_player_name',
   'air_yards', 'yards_after_catch', 'yards_gained', 'epa', 'wp', 'wpa', 'cpoe', 'xpass', 'pass_oe',
-  'touchdown', 'interception', 'fumble_lost', 'sack', 'drive'
+  'touchdown', 'interception', 'fumble_lost', 'sack', 'drive',
+  ...OPP_COLUMNS
 ];
 
 /* RFC-4180 CSV: quoted fields, doubled quotes, embedded commas and newlines. */
@@ -72,14 +77,21 @@ export function createCsvParser(onRow) {
   };
 }
 
-const NUMERIC = new Set(['qtr', 'air_yards', 'yards_after_catch', 'yards_gained', 'epa', 'wp', 'wpa', 'cpoe', 'xpass', 'pass_oe', 'drive']);
-const FLAGS = new Set(['touchdown', 'interception', 'fumble_lost', 'sack']);
+const NUMERIC = new Set(['qtr', 'air_yards', 'yards_after_catch', 'yards_gained', 'epa', 'wp', 'wpa', 'cpoe', 'xpass', 'pass_oe', 'drive', ...OPP_NUMERIC]);
+const FLAGS = new Set(['touchdown', 'interception', 'fumble_lost', 'sack', ...OPP_FLAGS]);
 
 /* Column positions for a header row; a renamed key column fails loudly. */
 export function columnIndex(header) {
-  const at = Object.fromEntries(COLUMNS.map(c => [c, (header || []).indexOf(c)]));
+  const at = Object.fromEntries([...COLUMNS, ...META_COLUMNS].map(c => [c, (header || []).indexOf(c)]));
   if (at.game_id < 0 || at.play_id < 0) throw new Error('nflverse_schema_changed');
   return at;
+}
+
+/* The game-level columns, read from the first row of a game. */
+export function gameMeta(row, at, gameId) {
+  const meta = { game_id: gameId };
+  for (const c of META_COLUMNS) if (at[c] >= 0 && row[at[c]] !== undefined && row[at[c]] !== '' && row[at[c]] !== 'NA') meta[c] = row[at[c]];
+  return meta;
 }
 
 /* One play, reduced to the Replay columns. NA stays absent — an absent EPA is

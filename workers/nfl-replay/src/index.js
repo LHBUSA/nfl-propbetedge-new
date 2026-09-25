@@ -1,8 +1,17 @@
 /* nfl-replay — PBE Replay's POST-GAME ENRICHED layer, owned by Cloudflare.
  *
  *   GET  /api/replay/enrich?event=&season=&week=&type=&away=&home=
+ *   GET  /api/replay/opportunity?season=&view=radar|script&team=
  *   GET  /api/replay/health
  *   POST /api/replay/ingest?season=2026      (Bearer REPLAY_ADMIN_TOKEN)
+ *   POST /api/replay/opportunity/rebuild?season=2026   (Bearer REPLAY_ADMIN_TOKEN)
+ *
+ * OPPORTUNITY (pbe-opportunity/v1, src/opportunity.js). The same streaming
+ * pass that writes each game's Replay object writes that game's opportunity
+ * aggregate (targets, designed runs, red-zone and game-state splits). A last
+ * Workflow step joins them into one season rollup, resolving nflverse gsis ids
+ * to ESPN ids through the players table's two id columns. Opportunity Radar,
+ * My Sunday and Game Script Lab read that one object.
  *
  * INGEST ONCE, READ MANY. A cron checks the nflverse release asset
  * (play_by_play_<season>.csv.gz) every three hours. When its Last-Modified
@@ -23,7 +32,7 @@
  * travels in every object and every response.
  */
 import { WorkflowEntrypoint } from 'cloudflare:workers';
-import { VERSION, json, currentSeason, probeAsset, streamIngest, trigger, enrich, health, PIPELINE_MAX_GZ } from './pipeline.js';
+import { VERSION, json, currentSeason, probeAsset, streamIngest, trigger, enrich, health, opportunity, rebuildOpportunity, PIPELINE_MAX_GZ } from './pipeline.js';
 
 const CORS = { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'GET, OPTIONS', 'access-control-allow-headers': 'content-type' };
 
@@ -33,6 +42,9 @@ export class ReplayIngest extends WorkflowEntrypoint {
     const asset = await step.do('probe asset', { retries: { limit: 3, delay: '20 seconds', backoff: 'exponential' } }, () => probeAsset(fetch, season));
     if (asset.size && asset.size > PIPELINE_MAX_GZ) return { aborted: 'asset_too_large', asset };
     const result = await step.do('stream to R2', { retries: { limit: 3, delay: '1 minute', backoff: 'exponential' }, timeout: '15 minutes' }, () => streamIngest(this.env, season, asset));
+    /* Its own step: a crosswalk fetch failure retries this alone and never
+       re-streams the season file. */
+    result.opportunity = await step.do('opportunity rollup', { retries: { limit: 3, delay: '30 seconds', backoff: 'exponential' }, timeout: '5 minutes' }, () => rebuildOpportunity(this.env, season));
     /* A step's return value must be serializable; R2's put result is not. */
     await step.do('record run', async () => {
       await this.env.REPLAY_R2.put(`replay/${season}/last-run.json`, JSON.stringify({ ...result, instance: event.instanceId || null, asset }));
@@ -61,8 +73,15 @@ export default {
         const season = Number(url.searchParams.get('season')) || currentSeason();
         return json(await trigger(env, season, { force: url.searchParams.get('force') === '1' }));
       }
+      if (url.pathname === '/api/replay/opportunity/rebuild') {
+        if (req.method !== 'POST') return json({ error: 'POST required' }, 405);
+        if (!authorized(req, env)) return json({ error: 'unauthorized' }, 401);
+        const season = Number(url.searchParams.get('season')) || currentSeason();
+        return json(await rebuildOpportunity(env, season));
+      }
       if (req.method !== 'GET') return json({ error: 'method_not_allowed' }, 405);
       if (url.pathname === '/api/replay/enrich') return await enrich(env, url);
+      if (url.pathname === '/api/replay/opportunity') return await opportunity(env, url);
       if (url.pathname === '/api/replay/health' || url.pathname === '/health') return await health(env, url);
       return json({ error: 'not_found', path: url.pathname, service: 'nfl-replay' }, 404);
     } catch (e) {
