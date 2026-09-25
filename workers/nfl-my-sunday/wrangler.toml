@@ -1,0 +1,64 @@
+name = "nfl-my-sunday"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+account_id = "fd3a233edadd0a60916413c1199f71ee"
+# Internal only: reached by the Vercel session boundary (api/my-sunday.js)
+# with Bearer MY_SUNDAY_INTERNAL_TOKEN. Not routed through nfl-gateway.
+workers_dev = true
+
+# My Sunday v1 (pbe-my-sunday/v1): saved research + in-app alerts.
+# Secret: MY_SUNDAY_INTERNAL_TOKEN (same value as the Vercel env var).
+#
+# PRODUCTION IS NOT PROVISIONED. On approval:
+#   wrangler d1 create nfl-my-sunday           -> paste its id below
+#   wrangler d1 migrations apply nfl-my-sunday --remote
+#   wrangler deploy && wrangler secret put MY_SUNDAY_INTERNAL_TOKEN
+# Until then `wrangler deploy` (no --env) refuses on the placeholder id.
+[[d1_databases]]
+binding = "DB"
+database_name = "nfl-my-sunday"
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "migrations"
+
+# The shared change ledger (injuries, game status, market consensus) and the
+# odds snapshot. Both reads are KV-backed: one per refresh for everyone, and
+# nfl-odds GETs never reach the paid provider.
+[[services]]
+binding = "NFL_INTEL"
+service = "nfl-intel"
+
+[[services]]
+binding = "NFL_ODDS"
+service = "nfl-odds"
+
+[triggers]
+crons = ["*/10 * * * *"]
+
+[observability]
+enabled = true
+head_sampling_rate = 1
+
+# ---- ISOLATED PREVIEW (branch nfl-opportunity-my-sunday-script-v1) ----------
+# Own Worker, own D1. Reads the production change ledger and odds snapshot
+# (read-only GETs); writes only to its own database. No cron: alerts refresh
+# on a read once the last refresh is older than ten minutes.
+[env.preview]
+name = "nfl-my-sunday-preview"
+workers_dev = true
+
+[[env.preview.d1_databases]]
+binding = "DB"
+database_name = "nfl-my-sunday-preview"
+database_id = "7fff5328-d400-41f8-a6a3-2f90b0b9c045"
+migrations_dir = "migrations"
+
+[[env.preview.services]]
+binding = "NFL_INTEL"
+service = "nfl-intel"
+
+[[env.preview.services]]
+binding = "NFL_ODDS"
+service = "nfl-odds"
+
+[env.preview.triggers]
+crons = []
