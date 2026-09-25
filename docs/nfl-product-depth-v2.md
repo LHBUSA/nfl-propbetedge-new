@@ -241,3 +241,19 @@ Order matters: data first, then storage, then the frontend.
    without a deploy: set `MY_SUNDAY_ENABLED=0` (all My Sunday controls vanish;
    radar and lab are unaffected).
 6. Update `release/last-production.json` per the release-module gate.
+
+## 9. Production rollout record (2026-09-25, owner-approved)
+
+| Step | Result |
+|---|---|
+| nfl-replay | 7bb23114 → **3a40a1b4** (1.1.0); cron unchanged `20 */3 * * *` |
+| Forced re-ingest | instance `pbp-2026-1790346959000-f1790377569105`: 33 games, 5,662 plays; rollup 358 players, identity 358/358, 33/33 unique games, 0 incomplete, revision `"0x8DF1B1251455441"` |
+| nfl-my-sunday D1 | `nfl-my-sunday` 1f03e396-86cb-4c1d-9e0d-59d5c6e156e0; 0001 applied; 3 tables + 4 indexes verified |
+| nfl-my-sunday Worker | cfeb923d; cron `*/10 * * * *`; bindings DB, NFL_INTEL, NFL_ODDS; secret set |
+| Vercel Production env | MY_SUNDAY_ENABLED / ORIGIN / INTERNAL_TOKEN / OWNER_SECRET configured (values sourced from `D:\Workers\secrets\nfl-my-sunday-*`) |
+| Merge | main 09cf8f9 → **0c1ee9f** (fast-forward) |
+| Production build | **dpl_m84c9jhgVQ8ufQ5odtpBLzZvcdxG** (0c1ee9f, fresh git build, aliased nfl.propbetedge.ai) |
+
+Rollback: frontend → promote dpl_CeBNuqYgQhxbQdbcbQAX3FUvEsJX (09cf8f9);
+My Sunday kill switch `MY_SUNDAY_ENABLED=0`; replay → `npx wrangler rollback
+7bb23114-dfc5-48d7-b728-bbf52ef94877` (in workers/nfl-replay). Keep D1 data.

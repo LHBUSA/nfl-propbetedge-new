@@ -131,6 +131,41 @@ try {
     for (const p of [a1.page, a2.page, b.page]) check('no page errors', !p.errors.length, p.errors.join(' | '));
   }
 
+
+  if (FLOW === 'radar') {
+    const { page } = await ctxWith(null);
+    await go(page, 'opportunity', 7000);
+    check('#opportunity alias lands on the radar', (await page.evaluate(() => window.App?.current)) === 'usage' && await page.locator('[data-por]').count() === 1);
+    await go(page, 'usage', 7000);
+    const cards = () => page.locator('.por-card').count();
+    check('radar renders player cards', (await cards()) > 0, String(await cards()));
+    const st = await page.evaluate(() => window.PBEOpportunityRadar.store.state);
+    check('freshness says Ready or Updating', ['READY', 'UPDATING'].includes(st) && /ready|updating/i.test(await page.locator('.por-fresh').innerText()), st);
+    check('trend lines render', (await page.locator('svg.por-spark').count()) > 0);
+    for (const w of ['recent', 'season', 'latest']) { await page.locator(`[data-por-set="window"][data-value="${w}"]`).click(); await page.waitForTimeout(300); check(`window ${w} renders`, (await page.locator(`[data-por-set="window"][data-value="${w}"][aria-pressed="true"]`).count()) === 1 && (await cards()) > 0); }
+    await page.locator('[data-por-set="pos"][data-value="WR"]').click(); await page.waitForTimeout(300);
+    const wrOnly = await page.locator('.por-card .por-sub').allInnerTexts();
+    check('position filter WR', wrOnly.length > 0 && wrOnly.every(t => /WR/.test(t)), `${wrOnly.length} cards`);
+    await page.locator('[data-por-set="pos"][data-value="ALL"]').click();
+    await page.selectOption('[data-por-team]', 'KC'); await page.waitForTimeout(300);
+    const kc = await page.locator('.por-card .por-sub').allInnerTexts();
+    check('team filter KC', kc.length > 0 && kc.every(t => t.startsWith('KC')), `${kc.length} cards`);
+    await page.selectOption('[data-por-team]', 'ALL');
+    await page.selectOption('[data-por-label]', 'EXPANDING'); await page.waitForTimeout(300);
+    const labs = await page.locator('.por-card .por-label').allInnerTexts();
+    check('movement filter expanding', labs.length > 0 && labs.every(t => /expanding/i.test(t)), `${labs.length} cards`);
+    await page.selectOption('[data-por-label]', 'ALL');
+    await page.fill('[data-por-q]', 'Bijan'); await page.waitForTimeout(500);
+    const names = await page.locator('.por-card .por-name').allInnerTexts();
+    check('search finds a player', names.length >= 1 && names.every(n => /bijan/i.test(n)), names.join(','));
+    check('team distribution renders', (await page.locator('.por-dist .por-dist-bar').count()) >= 2);
+    const hlText = await page.locator('.por-hl').first().innerText().catch(() => '');
+    check('role-change highlight shows a measured sentence', /share (rose|fell) from/.test(hlText), hlText.slice(0, 80));
+    await shot(page, 'radar');
+    await go(page, 'home', 9000);
+    check('homepage role-change rail', (await page.locator('[data-por-rail] .por-rail-row').count()) >= 1 && (await page.locator('[data-por-rail] .por-rail-row').count()) <= 3);
+    check('no page errors', !page.errors.length, page.errors.join(' | '));
+  }
   if (FLOW === 'script') {
     const { page } = await ctxWith(arg('cookie-a', '') ? readFileSync(arg('cookie-a', ''), 'utf8').trim() : null);
     await go(page, 'matchups', 7000);
@@ -153,6 +188,13 @@ try {
     const reset = await page.locator('[data-gsl-out="scenario"] [data-gsl-targets]').first().innerText().catch(() => '');
     check('reset returns to baseline', reset === base0, reset);
     check('labelled scenario estimate', (await panel.innerText()).includes('Scenario estimate — not an official PBE prediction'));
+    for (const st of ['baseline', 'leading', 'trailing', 'balanced']) {
+      await page.locator(`[data-gsl-state="${st}"]`).first().click(); await page.waitForTimeout(300);
+      const txt = await panel.innerText();
+      const ok = txt.includes('Scenario unavailable') ? /at least 60 are needed/.test(txt) : txt.includes('Scenario estimate — not an official PBE prediction');
+      check(`state ${st}: computed with the label, or explained`, ok);
+    }
+    await page.locator('[data-gsl-reset]').first().click(); await page.waitForTimeout(300);
     await setRange('[data-gsl-volume]', 70); await page.waitForTimeout(300);
     await shot(page, 'scenario');
     const save = panel.locator('.pms-save').first();

@@ -60,9 +60,12 @@ try {
         return { scrollWidth: doc.scrollWidth, innerWidth, overflow: doc.scrollWidth > innerWidth + 1, wide, route: window.App?.current, title: document.querySelector('#view-container h1')?.textContent?.trim() || null };
       });
       const file = `${OUT}/${route}-${width}.png`;
-      await page.screenshot({ path: file, fullPage: true });
-      await page.screenshot({ path: `${OUT}/${route}-${width}-top.png`, fullPage: false });
-      report.push({ route, width, ...m, errors, failed, file });
+      let shotError = null;
+      const firstLine = e => String(e?.message || e).split(/\r?\n/)[0];
+      try { await page.screenshot({ path: file, fullPage: true, timeout: 60000 }); } catch (e) { shotError = `full-page screenshot: ${firstLine(e)}`; }
+      try { await page.screenshot({ path: `${OUT}/${route}-${width}-top.png`, fullPage: false, timeout: 30000 }); } catch (e) { shotError = shotError || `viewport screenshot: ${firstLine(e)}`; }
+      report.push({ route, width, ...m, errors, failed, file, shotError });
+      writeFileSync(`${OUT}/report.json`, JSON.stringify(report, null, 1));
       console.log(`${m.overflow || errors.length ? 'FAIL' : 'ok  '} #${route} @${width}  sw=${m.scrollWidth}  errors=${errors.length} failed=${failed.length}${m.wide.length ? `  wide: ${m.wide.join(' | ')}` : ''}`);
       await ctx.close();
     }
