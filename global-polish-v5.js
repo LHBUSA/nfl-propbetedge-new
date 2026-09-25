@@ -26,6 +26,7 @@
     trackrecord:['Track Record','Public verified publication record · official decisions only'],
     simulator:['Line Simulator','Model-derived threshold sensitivity · NFL Pro'],
     sgplab:['SGP Lab','Same-game leg research · no fake correlation · NFL Pro'],
+    mysunday:['My Sunday','Saved games, players, props and scenarios · every game day'],
     usage:['Opportunity Radar','Target, carry and red-zone share · current season play-by-play'],
     propchain:['PropChain','Follow the change through the market'],
     pbecast:['Game Center','Selected event · score state · market · news'],

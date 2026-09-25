@@ -231,6 +231,7 @@
         <span class="pbe25-state-pill ${gs.kind==='LIVE'?'live':gs.kind==='FINAL'?'final':''}">${esc(gs.label)}</span>
         <strong>${esc(timeLabel(g.start))}</strong>
         <small>WK ${esc(g.week??'—')}</small>
+        ${g.espnEventId?(window.PBEMySunday?.saveButtonHtml?.({type:'game',event_id:String(g.espnEventId),season:window.PBESeason?.season?.()||null,label:`${at?.abbr||g.away} @ ${ht?.abbr||g.home}`,context:{kickoff:date(g.start)?.toISOString?.()||null,week:g.week??null}})||''):''}
       </div>
       <div class="pbe25-match">
         <button class="pbe25-team-btn" type="button" ${at?.abbr?`data-team="${esc(at.abbr)}"`:''}>

@@ -93,6 +93,16 @@
     load: loadPlayerIndex,
     byGsis: id => playerIndex.byGsis.get(String(id || '')) || null,
     byEspn: id => playerIndex.byEspn.get(String(id || '')) || null,
+    /* Exactly one indexed player with this full name on one of these teams,
+       or null. Used only where a provider names a player by string (Prop
+       Board quotes); never by surname, never across other teams. */
+    find(name, teams) {
+      const want = String(name || '').trim().toLowerCase();
+      const on = new Set((teams || []).filter(Boolean).map(t => String(t).toUpperCase()));
+      if (!want || !on.size) return null;
+      const hits = [...playerIndex.byGsis.values()].filter(p => p.name.toLowerCase() === want && on.has(String(p.team || '').toUpperCase()));
+      return hits.length === 1 ? hits[0] : null;
+    },
     get ready() { return playerIndex.ready; }
   };
 
@@ -515,7 +525,14 @@
   window.addEventListener('pbe:td-targets-ready', () => { if (window.App?.current === ROUTE && store.data) paintList(); });
 
   function install() { if (!window.App?.VIEWS) return false; window.App.VIEWS[ROUTE] = render; return true; }
-  window.PBEOpportunityRadar = { version: 1, route: ROUTE, store, load, render, railHtml, forPlayer, identity, teamOut, teamIn, nextGameFor, openDna, openGame };
+  /* Open the radar on one player (My Sunday, rails). */
+  function focusPlayer(id) {
+    const row = forPlayer(id);
+    const name = row ? identity(row).name : window.PBEPlayerIndex.byGsis(id)?.name || window.PBEPlayerIndex.byEspn(id)?.name || '';
+    Object.assign(ui, { q: name, team: 'ALL', pos: 'ALL', label: 'ALL', window: 'latest', shown: PAGE });
+    window.App?.nav(ROUTE);
+  }
+  window.PBEOpportunityRadar = { version: 1, route: ROUTE, store, load, render, railHtml, forPlayer, identity, teamOut, teamIn, nextGameFor, openDna, openGame, focusPlayer };
   install();
   document.addEventListener('DOMContentLoaded', install, { once: true });
 })();

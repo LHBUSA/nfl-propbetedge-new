@@ -163,7 +163,7 @@
 
   function bandHtml(ctx, payload) {
     return `<section class="pbe-cl-band" ${MARK}>
-      <div class="pbe-cl-head"><span>Two layers</span>
+      <div class="pbe-cl-head"><span>Two layers</span>${ctx.espnId ? (window.PBEMySunday?.saveButtonHtml?.({ type: 'player', espn_id: ctx.espnId, gsis_id: /^00-\d{7}$/.test(String(ctx.dna?.player?.gsis_id || ctx.dna?.player?.player_id || '')) ? String(ctx.dna.player.gsis_id || ctx.dna.player.player_id) : undefined, team: /^[A-Z]{2,3}$/.test(ctx.team) ? ctx.team : undefined, season: window.PBESeason?.season?.() || null, label: ctx.name || 'Player', context: { source: 'player_dna', route: ctx.route } }) || '') : ''}
         <small>Current-season observations and historical baseline are kept separate and never combined into one figure.</small></div>
       <div class="pbe-cl-grid">${currentCard(payload, ctx.spec)}${historicalCard(ctx)}</div>
     </section>`;

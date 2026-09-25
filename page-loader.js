@@ -13,6 +13,11 @@
     /* The one way into PBEcast for a chosen game (explicit selection handoff).
        Loaded before every surface that links a game to PBEcast. */
     {js:'./pbe-game-handoff-v1.js'},
+    /* MY SUNDAY: the one owner of "Save to My Sunday" and of #mysunday. Loaded
+       before every surface that renders a Save button (games, Prop Board, PBE
+       Card, Touchdown Targets, Player DNA, Opportunity Radar), each of which
+       asks it for the markup. No timer on other routes; no observer. */
+    {css:'./my-sunday-v1.css',js:'./my-sunday-v1.js'},
     /* Broadcast / where-to-watch client (nfl-schedule authority) and the game
        context strip (kickoff ET, watch, venue, nfl-intel forecast). Loaded
        before every surface that shows a kickoff. Neither owns a route, a

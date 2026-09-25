@@ -138,7 +138,9 @@ export function validateItem(input) {
       const provider = clean(input.provider_player, 80);
       if (!player && !provider) return bad('player_required');
       item.context = { ...item.context, provider_player: provider };
-      item.item_key = `prop:${item.event_id || item.odds_event_id}:${player || `n${fnv(provider.toLowerCase())}`}:${item.market}:${item.side}`;
+      /* The market's own event id first: it is present from the moment a quote
+         is saved, while the ESPN game id may be resolved afterwards. */
+      item.item_key = `prop:${item.odds_event_id || item.event_id}:${player || `n${fnv(provider.toLowerCase())}`}:${item.market}:${item.side}`;
       break;
     }
     case 'pick':

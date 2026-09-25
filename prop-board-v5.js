@@ -154,6 +154,24 @@
     return list;
   }
 
+  /* My Sunday: the best quote on each side exactly as shown (book, line,
+     price, and the snapshot it came from). The saved copy is the reader's and
+     is never refreshed to today's line. */
+  function saveQuotesHtml(row, b) {
+    const ms = window.PBEMySunday;
+    if (!ms?.saveButtonHtml) return '';
+    const ev = b.event || {};
+    const quote = (q, side) => q && ms.saveButtonHtml({
+      type: 'prop', odds_event_id: /^[a-f0-9]{32}$/.test(eventId()) ? eventId() : undefined, market: row.market, side,
+      line: Number.isFinite(pointOf(q)) ? pointOf(q) : null, price: Number.isFinite(priceOf(q)) ? priceOf(q) : null, book: bookOf(q),
+      captured_at: b.captured_at || updatedOf(q) || null, provider_player: row.player, season: window.PBESeason?.season?.() || null,
+      label: `${row.player} ${side} ${row.market === 'player_anytime_td' ? 'anytime TD' : `${fmt(pointOf(q), 1)} ${String(row.market).replace(/^player_/, '').replace(/_/g, ' ')}`}`,
+      needs_resolution: { away: ev.away_team || null, home: ev.home_team || null, commence: ev.commence_time || null }
+    });
+    const o = quote(row.bestOver, 'over'), u = quote(row.bestUnder, 'under');
+    return o || u ? `<section class="pbe5-save"><h3>Save to My Sunday <small>best quote as shown</small></h3><div class="pbe5-save-row">${o || ''}${u || ''}</div></section>` : '';
+  }
+
   /* ------------------------------------------------------------- markup */
   function headerHtml() {
     const d = data(); const b = d?.board || {}; const ev = b.event || {};
@@ -289,6 +307,7 @@
       : !row.model ? `<p class="pbe5-muted">No production model output for this prop. The model publishes only where its inputs and market are supported; nothing is substituted.</p>`
       : `<dl class="pbe5-kv"><div><dt>PBE fair line</dt><dd class="pbe5-fair">${esc(fmt(fairOf(row), 1))}</dd></div><div><dt>PBE over probability</dt><dd>${Number.isFinite(probOf(row)) ? esc(fmt(probOf(row), 1)) + '%' : '—'}</dd></div><div><dt>Model gap</dt><dd class="pbe5-edge ${gapOf(row) >= 0 ? 'pos' : 'neg'}">${esc(signed(gapOf(row)))}</dd></div><div><dt>Status</dt><dd>${esc(String(row.model.decision_status || row.model.confidence || 'MODELED').replace(/_/g, ' '))}</dd></div>${Array.isArray(row.model.missing_inputs) && row.model.missing_inputs.length ? `<div><dt>Missing inputs</dt><dd>${esc(row.model.missing_inputs.join(', '))}</dd></div>` : ''}</dl><p class="pbe5-muted">Model output is PBE analysis, not a sportsbook quote and not a guarantee.</p>`;
     return `<div class="pbe5-detail">
+      ${saveQuotesHtml(row, b)}
       <section><h3>All current book quotes <small>${books.length} book${books.length === 1 ? '' : 's'}</small></h3>
         <table class="pbe5-quotes"><thead><tr><th>Book</th><th>Over</th><th>Under</th><th>Updated</th></tr></thead><tbody>${books.map(e => `<tr><td><i class="pbe5-mark" aria-hidden="true">${esc(bookMark(e.book))}</i>${esc(e.book)}</td><td class="${e.book === bestO ? 'is-best' : ''}">${e.over ? `<b>${esc(fmt(pointOf(e.over), 1))}</b> <em>${esc(odds(priceOf(e.over)))}</em>` : '<span class="pbe5-none">—</span>'}</td><td class="${e.book === bestU ? 'is-best' : ''}">${e.under ? `<b>${esc(fmt(pointOf(e.under), 1))}</b> <em>${esc(odds(priceOf(e.under)))}</em>` : '<span class="pbe5-none">—</span>'}</td><td><small>${esc(age(e.updated))}</small></td></tr>`).join('') || '<tr><td colspan="4"><span class="pbe5-muted">The provider returned a summary without individual book quotes.</span></td></tr>'}</tbody></table>
       </section>

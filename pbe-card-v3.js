@@ -375,7 +375,7 @@
       ${liveBlock(c)}${finalBlock(c)}${c.lifecycle !== 'FINAL' ? marketBlock(c) : ''}
       ${lockNote(c)}
       ${auditBlock(c)}
-      <footer class="pbec-card-foot">${esc(c.tag || '')}</footer>
+      <footer class="pbec-card-foot">${esc(c.tag || '')}${window.PBEMySunday?.saveButtonHtml?.({ type: 'pick', pick_ref: String(c.id || ''), event_id: /^\d{6,12}$/.test(String(c.game?.espn_id || '')) ? String(c.game.espn_id) : undefined, season: window.PBESeason?.season?.() || null, label: `PBE pick · ${p.main} ${p.price}`.slice(0, 80), context: { source: 'pbe_picks', scope: scope } }) || ''}</footer>
     </article>`;
   }
 

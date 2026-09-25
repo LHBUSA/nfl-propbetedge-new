@@ -254,9 +254,14 @@
     </div>`;
   }
 
-  function targetBlock(target, rank) {
+  function targetBlock(target, rank, game = null) {
     if (!target) return '';
     const player = target.player || {};
+    const save = game && /^\d{6,12}$/.test(String(game.espn_id || '')) ? (window.PBEMySunday?.saveButtonHtml?.({
+      type: 'td_target', event_id: String(game.espn_id), gsis_id: /^00-\d{7}$/.test(String(player.gsis_id || '')) ? player.gsis_id : undefined,
+      espn_id: /^\d{1,12}$/.test(String(player.espn_id || '')) ? String(player.espn_id) : undefined, season: window.PBESeason?.season?.() || null,
+      label: `${player.name || 'Player'} · ${rank} TD target`.slice(0, 80), context: { source: 'td_targets', rank }
+    }) || '') : '';
     const position = [player.position, player.team].filter(Boolean).join(' · ');
     return `<div class="pbetd-rank ${rank === 'secondary' ? 'secondary' : ''}">${rank === 'secondary' ? 'Secondary TD target' : 'Primary TD target'}</div>
       <div class="pbetd-player">
@@ -266,7 +271,7 @@
     ? `<a href="javascript:void(0)" data-pbetd-player="${esc(player.gsis_id)}" data-pbetd-position="${esc(player.position || '')}">${esc(player.name)}</a>`
     : esc(player.name)}</p>
           <p class="pbetd-meta">${esc(position)}${player.opponent ? ` ${player.at_home ? 'vs' : '@'} ${esc(player.opponent)}` : ''}</p>
-        </div>
+        </div>${save}
       </div>
       ${numbersHtml(target)}
       ${driversHtml(target)}`;
@@ -306,8 +311,8 @@
     return `<article class="pbetd-card">
       ${head}
       ${envChips(game, primary)}
-      ${targetBlock(primary, 'primary')}
-      ${secondary ? targetBlock(secondary, 'secondary') : ''}
+      ${targetBlock(primary, 'primary', game)}
+      ${secondary ? targetBlock(secondary, 'secondary', game) : ''}
       <div class="pbetd-foot">
         <span class="pbetd-locked">Locked <b>${esc(stamp(primary.locked?.at))}</b>${
   primary.locked?.before_kickoff === false ? ' · NOT PREGAME' : ''}</span>
