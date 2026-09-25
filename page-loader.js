@@ -1,7 +1,7 @@
 /* PropBetEdge NFL - ordered page/product upgrade loader v47 route-first */
 (() => {
   'use strict';
-  const VERSION='20260922pbecastfast2';
+  const VERSION='20260925opportunity1';
   const upgrades=[
     /* Establish the final homepage authority first. v6 replaces the v5 DOM with
        .pbehome6; v7 historically registered itself after that without repainting
@@ -101,7 +101,10 @@
     {css:'./simulator-v2.css',js:'./simulator-v2.js'},
     {css:'./simulator-v3-enhance.css',js:'./simulator-v3-enhance.js'},
     {css:'./sgp-lab-v2.css',js:'./sgp-lab-v2.js'},
-    {css:'./usage-v2.css',js:'./usage-v2.js'},
+    /* Opportunity Radar is the sole registrant of #usage (old links keep
+       working; #opportunity aliases to it). Usage Research v3 and its 2025
+       archive renderer are out of the runtime; git history is the rollback. */
+    {css:'./opportunity-radar-v1.css',js:'./opportunity-radar-v1.js'},
 
     /* Market Watch v3 owns runtime behavior, but its terminal stylesheet is an
        override layer on top of the structural v2 stylesheet. Keep v2 CSS only;

@@ -83,7 +83,7 @@
       ['INTELLIGENCE',[
         ['marketwatch','Market Watch',''],['picks','Model Lab',''],
         ['pbepicks','PBE Picks',''],['trackrecord','Track Record',''],
-        ['matchups','Matchups',''],['usage','Usage',''],
+        ['matchups','Matchups',''],['usage','Opportunity',''],
         ['injuries','Injuries',''],['newsintel','News','']
       ]],
       /* Player DNA is a product family, not four more entries in a general

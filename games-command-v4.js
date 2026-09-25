@@ -98,7 +98,7 @@
   const TOOLS=[
     ['propboard','Props','Core markets'],
     ['matchups','Matchup','Defense context'],
-    ['usage','Usage','Role + volume'],
+    ['usage','Radar','Role changes'],
     ['sgplab','SGP Lab','Correlation'],
     ['marketwatch','Market','Line movement'],
     ['pbecast','Game Center','Live context']

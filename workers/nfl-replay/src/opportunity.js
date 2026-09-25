@@ -416,6 +416,7 @@ export function buildRollup(gameAggs, { season, crosswalk = {}, source = {}, gen
       games_complete: games.length,
       games_incomplete: incomplete,
       weeks: [...new Set(games.map(g => `${g.season_type}:${g.week}`))],
+      game_ids: games.map(g => g.game_id),
       identity: { resolved, unresolved }
     },
     definitions: DEFINITIONS,

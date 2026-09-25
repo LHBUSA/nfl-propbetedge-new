@@ -6,7 +6,9 @@
     'season-history':'seasonhistory',
     season_history:'seasonhistory',
     superbowls:'sb',
-    super_bowls:'sb'
+    super_bowls:'sb',
+    opportunity:'usage',
+    'opportunity-radar':'usage'
   };
 
   let App = null;

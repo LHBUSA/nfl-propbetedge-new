@@ -60,7 +60,7 @@ jobs:
             games-v2.js games-command-v4.js games-intel-v5.js
             prop-board-v3.js prop-board-v5.js market-watch-v3.js matchups-v3.js
             model-lab.js model-lab-v2-enhance.js simulator-v2.js simulator-v3-enhance.js
-            sgp-lab-v2.js usage-v2.js propchain-v3.js
+            sgp-lab-v2.js opportunity-radar-v1.js propchain-v3.js
             pbecast-v6.js pbecast-v7-enhance.js
             news-intelligence-v2.js newsroom-v2.js injury-intel-v2.js player-research-v2.js
             pbe-picks-v2.js pbe-validation-v1.js
@@ -126,7 +126,7 @@ jobs:
           const src=fs.readFileSync('page-loader.js','utf8');
           const at=f=>src.indexOf(`'./${f}'`);
           const world=at('world-class-v1.css');
-          const foundations=['dashboard-v7.css','dashboard-v8-enhance.css','games-v2.css','model-lab-v2-enhance.css','simulator-v3-enhance.css','usage-v2.css'];
+          const foundations=['dashboard-v7.css','dashboard-v8-enhance.css','games-v2.css','model-lab-v2-enhance.css','simulator-v3-enhance.css','opportunity-radar-v1.css'];
           const terminal=['pbecast-v6.css','pbecast-v7-enhance.css','games-command-v4.css','games-intel-v5.css','prop-board-v5.css','pbe-picks-v2.css'];
           if(world<0) throw new Error('world-class visual layer missing');
           for(const f of foundations) if(at(f)<0||at(f)>world) throw new Error(`${f} must load before world-class-v1.css`);
@@ -154,7 +154,7 @@ jobs:
           grep -Fiq 'does not claim a change caused a move' propchain-v3.js
           grep -Fiq 'model derived' simulator-v2.js
           grep -Fiq 'correlation model unavailable' sgp-lab-v2.js
-          grep -Fiq 'target share' usage-v2.js
+          grep -Fiq 'target share' opportunity-radar-v1.js
           grep -Fiq 'local baseline' market-watch-v3.js
           grep -Fiq 'current roster is not inferred' team-research-v3.js
 

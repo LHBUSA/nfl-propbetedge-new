@@ -391,7 +391,13 @@
        never disagree about a target, and an absent module simply contributes
        nothing. */
     const tdRail = window.PBETouchdownTargets?.railHtml?.({ limit: 4, heading: 'This week’s TD targets' }) || '';
-    write(intel, `<div class="pbecc pbecc-intel">${loopHtml()}<div class="pbecc-cols">${changesHtml()}<div class="pbecc-stack">${picksHtml()}${bestLineHtml()}${tdRail}</div></div></div>`);
+    /* My Sunday (the reader's saved games, players and research) and
+       Opportunity Radar's role changes follow the same rule: the owning
+       module renders its own markup, and an absent or empty module adds
+       nothing — the radar shows at most three changes and never pads. */
+    const mySunday = window.PBEMySunday?.railHtml?.() || '';
+    const roleRail = window.PBEOpportunityRadar?.railHtml?.() || '';
+    write(intel, `<div class="pbecc pbecc-intel">${loopHtml()}<div class="pbecc-cols">${changesHtml()}<div class="pbecc-stack">${mySunday}${picksHtml()}${bestLineHtml()}${tdRail}${roleRail}</div></div></div>`);
   }
 
   /* Called by dashboard-v7 after it paints. Paints from what is already held
@@ -410,6 +416,8 @@
 
   /* Entitlement and the touchdown read both resolve after the first paint. */
   window.addEventListener('pbe:td-targets-ready', () => { if (slot('intel')) paint(); });
+  window.addEventListener('pbe:opportunity-ready', () => { if (slot('intel')) paint(); });
+  window.addEventListener('pbe:mysunday-changed', () => { if (slot('intel')) paint(); });
 
   /* Routing from inside the slots. PBEcast focus uses the one-shot session
      handoff PBEcast v6 consumes on mount, so the chosen game opens — not

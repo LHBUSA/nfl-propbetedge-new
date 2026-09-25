@@ -30,3 +30,24 @@ cpu_ms = 300000
 [observability]
 enabled = true
 head_sampling_rate = 1
+
+# ---- ISOLATED PREVIEW (branch nfl-opportunity-my-sunday-script-v1) ----------
+# `wrangler deploy --env preview` creates nfl-replay-preview: its own Worker,
+# its own R2 bucket and its own Workflow. It shares nothing writable with
+# production and has NO cron: ingest is triggered by hand with the preview
+# admin token (D:\Workers\secrets\nfl-replay-preview-admin-token).
+[env.preview]
+name = "nfl-replay-preview"
+workers_dev = true
+
+[[env.preview.r2_buckets]]
+binding = "REPLAY_R2"
+bucket_name = "nfl-replay-preview"
+
+[[env.preview.workflows]]
+name = "nfl-replay-ingest-preview"
+binding = "INGEST"
+class_name = "ReplayIngest"
+
+[env.preview.triggers]
+crons = []

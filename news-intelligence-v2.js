@@ -258,7 +258,7 @@
     if (inSelectedGame(a)) out.push(['route', 'pbecast', 'Game Center']);
     if (players.length) out.push(['player', players[0], `${players[0].split(/\s+/).slice(-1)[0]} research`]);
     if (!out.length && teams.length) out.push(['team', teams[0], `${teamName(teams[0])} research`]);
-    if (out.length < 2 && players.length && topic !== 'injury') out.push(['route', 'usage', 'Usage research']);
+    if (out.length < 2 && players.length && topic !== 'injury') out.push(['route', 'usage', 'Opportunity Radar']);
     return out.slice(0, 2);
   }
   function pathButtons(a) {

@@ -26,7 +26,7 @@
     trackrecord:['Track Record','Public verified publication record · official decisions only'],
     simulator:['Line Simulator','Model-derived threshold sensitivity · NFL Pro'],
     sgplab:['SGP Lab','Same-game leg research · no fake correlation · NFL Pro'],
-    usage:['Usage Research','2025 final role baseline · current NEWS context'],
+    usage:['Opportunity Radar','Target, carry and red-zone share · current season play-by-play'],
     propchain:['PropChain','Follow the change through the market'],
     pbecast:['Game Center','Selected event · score state · market · news'],
     newsintel:['News Intelligence','Current NFL newsroom · impact · affected teams and players'],
@@ -48,7 +48,7 @@
   const QUICK_NAV=[
     ['home','Dashboard'],['games','Games'],['propboard','Props'],['marketwatch','Watch'],
     ['matchups','Matchups'],['picks','Model'],['pbepicks','PBE Picks'],['trackrecord','Record'],
-    ['simulator','Sim'],['sgplab','SGP'],['usage','Usage'],['propchain','PropChain'],
+    ['simulator','Sim'],['sgplab','SGP'],['usage','Radar'],['propchain','PropChain'],
     ['pbecast','Game Center'],['newsintel','News'],['injuries','Injuries'],['trades','Transactions']
   ];
 
