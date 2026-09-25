@@ -23,6 +23,9 @@ const OUT = '.gate/depth-v2/flow';
 const FLOW = arg('flow', 'device');
 const WIDTH = Number(arg('width', '1440'));
 let base = arg('base', '');
+/* A Vercel share token (Deployment Protection): each context visits it once to
+   receive the access cookie. Never printed. */
+const SHARE = arg('share', '');
 const pw = await import(pathToFileURL(PW).href);
 const chromium = pw.chromium || pw.default?.chromium;
 let server = null;
@@ -45,6 +48,7 @@ async function ctxWith(token) {
   const ctx = await browser.newContext({ viewport: { width: WIDTH, height: WIDTH < 768 ? 900 : 1000 }, reducedMotion: 'reduce' });
   if (token) await ctx.addCookies([{ name: 'pbe_nfl_session_v2', value: token, domain: host, path: '/', httpOnly: true, secure: base.startsWith('https'), sameSite: 'Lax' }]);
   const page = await ctx.newPage();
+  if (SHARE) await page.goto(`${base}/?_vercel_share=${SHARE}`, { waitUntil: 'domcontentloaded', timeout: 45000 });
   page.errors = [];
   page.on('pageerror', e => page.errors.push(String(e.message).slice(0, 200)));
   return { ctx, page };
@@ -95,6 +99,15 @@ try {
     await save.click(); await a1.page.waitForTimeout(1500);
     await save.click(); await a1.page.waitForTimeout(1500);
     check('A: repeat save stays one item', (await savedCount(a1.page)) === 1, String(await savedCount(a1.page)));
+    const dup = await a1.page.evaluate(async () => {
+      const item = window.PBEMySunday.store.items[0];
+      const body = JSON.stringify({ item: { type: item.item_type, espn_id: item.espn_id, gsis_id: item.gsis_id, team: item.team, season: item.season, label: 'duplicate attempt' } });
+      const post = () => fetch('/api/my-sunday?op=save', { method: 'POST', headers: { 'content-type': 'application/json', 'x-pbe-csrf': '1' }, body }).then(r => r.status);
+      const codes = [await post(), await post()];
+      const list = await fetch('/api/my-sunday').then(r => r.json());
+      return { codes, n: list.items.length, label: list.items[0]?.label };
+    });
+    check('A: duplicate saves are idempotent and keep the original snapshot', dup.n === 1 && dup.codes.every(c => c === 200) && dup.label !== 'duplicate attempt', JSON.stringify(dup));
     const a2 = await ctxWith(A);
     await go(a2.page, 'mysunday', 6000);
     check('A: second context sees the item', (await a2.page.locator('.pms-item').count()) === 1);

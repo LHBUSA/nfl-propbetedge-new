@@ -23,6 +23,9 @@ const WIDTHS = arg('widths', '320,360,390,430,768,1024,1440').split(',').map(Num
 const ROUTES = arg('routes', 'usage,home,matchups,mysunday').split(',');
 const WAIT = Number(arg('wait', '4500'));
 let base = arg('base', '');
+/* A Vercel share token (Deployment Protection): each context visits it once to
+   receive the access cookie. Never printed. */
+const SHARE = arg('share', '');
 
 const pw = await import(pathToFileURL(PW).href);
 const chromium = pw.chromium || pw.default?.chromium;
@@ -48,6 +51,7 @@ try {
       page.on('pageerror', e => errors.push(`pageerror: ${String(e.message).slice(0, 240)}`));
       page.on('requestfailed', r => failed.push(`${r.failure()?.errorText || 'failed'} ${r.url().slice(0, 160)}`));
       page.on('response', r => { if (r.status() >= 400 && !/favicon|espncdn|googletagmanager/.test(r.url())) failed.push(`${r.status()} ${r.url().slice(0, 160)}`); });
+      if (SHARE) await page.goto(`${base}/?_vercel_share=${SHARE}`, { waitUntil: 'domcontentloaded', timeout: 45000 });
       await page.goto(`${base}/#${route}`, { waitUntil: 'domcontentloaded', timeout: 45000 });
       await page.waitForTimeout(WAIT);
       const m = await page.evaluate(() => {
