@@ -92,6 +92,7 @@
           <nav aria-label="PropBetEdge ecosystem">
             <a href="${ALL_ACCESS}" rel="noopener" class="pbe-footer-aa-link">ALL ACCESS</a>
             <a href="https://propbetedge.ai">Sports News</a>
+            <a href="https://learn.propbetedge.ai/">Learn</a>
             <a href="https://propsports.proptechusa.ai" target="_blank" rel="noopener">PropSports API</a>
             <a href="https://proptechusa.ai" target="_blank" rel="noopener">PropTechUSA.ai</a>
             <a href="https://discord.gg/kb5zCTHbME" target="_blank" rel="noopener">Discord ↗</a>
