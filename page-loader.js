@@ -102,6 +102,11 @@
        injury-shaped headlines as "injury stories", shipped a QA event id as the
        consumer default, and led a September 2026 game with 2025 standings. It
        is not loaded: two renderers would fight over App.VIEWS.matchups. */
+    /* Game Script Lab: the "Explore game script" panel Matchups asks for
+       (pure calculation core first, then the panel). Neither registers a
+       route; the Line Simulator and SGP Lab are untouched. */
+    {js:'./game-script-core-v1.js'},
+    {css:'./game-script-lab-v1.css',js:'./game-script-lab-v1.js'},
     {css:'./matchups-v3.css',js:'./matchups-v3.js'},
     {css:'./simulator-v2.css',js:'./simulator-v2.js'},
     {css:'./simulator-v3-enhance.css',js:'./simulator-v3-enhance.js'},

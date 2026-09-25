@@ -427,6 +427,7 @@
       <div class="pbe17m-grid">${formPanel(p.teams?.away, 'AWAY')}${formPanel(p.teams?.home, 'HOME')}</div>
       ${profilePanel(p)}
       ${pressurePanel(p)}
+      ${window.PBEGameScriptLab?.panelHtml?.(p) || ''}
       ${rolePanel(p)}
       ${availabilityPanel(p)}
       ${redZonePanel(p)}

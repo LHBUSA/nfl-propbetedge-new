@@ -124,15 +124,21 @@ try {
     await page.waitForTimeout(2500);
     await shot(page, 'baseline');
     const base0 = await page.locator('[data-gsl-out="scenario"] [data-gsl-targets]').first().innerText().catch(() => '');
-    await page.locator('[data-gsl-state="trailing"]').first().click(); await page.waitForTimeout(400);
-    const trailing = await page.locator('[data-gsl-out="scenario"] [data-gsl-targets]').first().innerText().catch(() => '');
-    check('trailing state changes the scenario', trailing && trailing !== base0, `${base0} -> ${trailing}`);
+    const setRange = (sel, v) => page.locator(sel).first().evaluate((el, val) => { el.value = String(val); el.dispatchEvent(new Event('input', { bubbles: true })); }, v);
+    await setRange('[data-gsl-volume]', 72); await page.waitForTimeout(300);
+    const more = await page.locator('[data-gsl-out="scenario"] [data-gsl-targets]').first().innerText().catch(() => '');
+    check('more volume -> more scenario targets', Number(more) > Number(base0), `${base0} -> ${more}`);
+    await setRange('[data-gsl-pass]', 75); await page.waitForTimeout(300);
+    const passier = await page.locator('[data-gsl-out="scenario"] [data-gsl-targets]').first().innerText().catch(() => '');
+    check('higher dropback rate -> more targets again', Number(passier) > Number(more), `${more} -> ${passier}`);
+    const thin = page.locator('[data-gsl-state][data-thin]').first();
+    if (await thin.count()) { await thin.click(); await page.waitForTimeout(300); check('a thin state is explained, not extrapolated', (await panel.innerText()).includes('Scenario unavailable')); check('an unavailable scenario cannot be saved', (await panel.locator('.pms-save').count()) === 0); }
     await page.locator('[data-gsl-reset]').first().click(); await page.waitForTimeout(400);
     const reset = await page.locator('[data-gsl-out="scenario"] [data-gsl-targets]').first().innerText().catch(() => '');
     check('reset returns to baseline', reset === base0, reset);
     check('labelled scenario estimate', (await panel.innerText()).includes('Scenario estimate — not an official PBE prediction'));
-    await page.locator('[data-gsl-state="trailing"]').first().click(); await page.waitForTimeout(300);
-    await shot(page, 'trailing');
+    await setRange('[data-gsl-volume]', 70); await page.waitForTimeout(300);
+    await shot(page, 'scenario');
     const save = panel.locator('.pms-save').first();
     if (await save.count()) { await save.click(); await page.waitForTimeout(1500); check('scenario saved', (await save.getAttribute('aria-pressed')) === 'true'); }
     check('no page errors', !page.errors.length, page.errors.join(' | '));
