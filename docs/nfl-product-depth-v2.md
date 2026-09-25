@@ -39,7 +39,15 @@ dataset. Identity crosswalk: nflverse `players.csv`, **only** the `gsis_id` and
 column is taken from it; names/positions/photos come from the Player DNA index
 by gsis id.
 
-> **Rights status (open, owner decision):** nflverse play-by-play is
+> **Owner source decision (2026-09-25):** the owner approved continued use of
+> the existing nflverse 2026 play-by-play for Opportunity Radar, Game Script
+> Lab and the My Sunday features that depend on it. This does **not** clear the
+> source: its status stays **REVIEW REQUIRED**, provenance and attribution are
+> preserved, PFR snap counts and ESPN Core bulk ingestion stay rejected,
+> nflverse player data stays limited to identifier joins, and participation
+> stays on HOLD. The approval covers only this use.
+>
+> **Rights status (unchanged):** nflverse play-by-play is
 > `REVIEW REQUIRED` in `docs/career-ledger/SOURCE_RIGHTS_AND_RECONCILIATION_AUDIT.md`
 > (nflverse CC-BY over NFL-origin data). It already powers Player DNA, the
 > Touchdown Targets model and PBE Replay in production; Opportunity Radar and

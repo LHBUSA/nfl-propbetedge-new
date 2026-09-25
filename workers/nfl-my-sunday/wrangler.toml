@@ -9,15 +9,13 @@ workers_dev = true
 # My Sunday v1 (pbe-my-sunday/v1): saved research + in-app alerts.
 # Secret: MY_SUNDAY_INTERNAL_TOKEN (same value as the Vercel env var).
 #
-# PRODUCTION IS NOT PROVISIONED. On approval:
-#   wrangler d1 create nfl-my-sunday           -> paste its id below
+# Production D1 created 2026-09-25 (owner-approved rollout): nfl-my-sunday.
 #   wrangler d1 migrations apply nfl-my-sunday --remote
 #   wrangler deploy && wrangler secret put MY_SUNDAY_INTERNAL_TOKEN
-# Until then `wrangler deploy` (no --env) refuses on the placeholder id.
 [[d1_databases]]
 binding = "DB"
 database_name = "nfl-my-sunday"
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "1f03e396-86cb-4c1d-9e0d-59d5c6e156e0"
 migrations_dir = "migrations"
 
 # The shared change ledger (injuries, game status, market consensus) and the
