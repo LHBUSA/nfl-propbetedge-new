@@ -102,11 +102,16 @@ const prop = over => ({ type: 'prop', event_id: '401872953', odds_event_id: 'a'.
 
 test('anonymous and forged sessions are denied before storage is touched', async () => {
   const { call, calls } = setup();
-  assert.equal((await call()).status, 401);
-  assert.equal((await call({ cookie: mint('owner@mysunday.test', { secret: 'attacker-secret' }) })).status, 401, 'a cookie signed with another key is not a session');
-  assert.equal((await call({ cookie: mint('owner@mysunday.test', { exp: Math.floor(Date.now() / 1000) - 10 }) })).status, 401, 'expired');
-  assert.equal((await call({ cookie: 'not.a.jwt' })).status, 401);
-  assert.equal(calls.length, 0);
+  const anon = await call();
+  assert.equal(anon.status, 200, 'a signed-out read is device mode, not an error');
+  assert.deepEqual([anon.body.synced, anon.body.items, anon.body.access], [false, [], 'anonymous']);
+  for (const cookie of [mint('owner@mysunday.test', { secret: 'attacker-secret' }), mint('owner@mysunday.test', { exp: Math.floor(Date.now() / 1000) - 10 }), 'not.a.jwt']) {
+    const r = await call({ cookie });
+    assert.equal(r.body.synced, false, 'forged / expired / malformed cookie -> no synced data');
+    assert.equal((await call({ method: 'POST', op: 'save', cookie, body: { item: player('1') } })).status, 401, 'and no write');
+  }
+  assert.equal((await call({ method: 'POST', op: 'save', body: { item: player('1') } })).status, 401);
+  assert.equal(calls.length, 0, 'storage never touched');
 });
 
 test('NFL Pro, All Access and Owner are granted server-side; a paywalled email is not', async () => {
@@ -117,8 +122,10 @@ test('NFL Pro, All Access and Owner are granted server-side; a paywalled email i
     assert.deepEqual(r.body.items, []);
   }
   const free = await call({ email: 'free@mysunday.test' });
-  assert.equal(free.status, 403);
-  assert.equal(free.body.error, 'nfl_pro_required');
+  assert.equal(free.body.synced, false, 'a paywalled email reads as device mode');
+  const freeWrite = await call({ method: 'POST', op: 'save', email: 'free@mysunday.test', body: { item: player('2') } });
+  assert.equal(freeWrite.status, 403);
+  assert.equal(freeWrite.body.error, 'nfl_pro_required');
 });
 
 test('an entitlement check that cannot complete is 503, never a grant', async () => {
@@ -153,6 +160,7 @@ test('personal answers are private, uncached and vary on Cookie', async () => {
   assert.equal(r.headers.vary, 'Cookie');
   const denied = await call();
   assert.match(denied.headers['cache-control'], /no-store/);
+  assert.equal(denied.headers.vary, 'Cookie');
 });
 
 /* ---- ownership ------------------------------------------------------------------ */

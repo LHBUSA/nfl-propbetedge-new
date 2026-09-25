@@ -106,6 +106,7 @@
       try {
         const r = await api('GET');
         if (r.status === 404 && r.body?.error === 'feature_disabled') { store.flagOff = true; store.mode = 'off'; store.items = []; store.alerts = []; }
+        else if (r.status === 200 && r.body?.synced === false) { store.flagOff = false; store.mode = 'device'; store.items = []; store.alerts = []; }
         else if (r.status === 200 && r.body) { store.flagOff = false; store.mode = 'synced'; store.items = r.body.items || []; store.alerts = r.body.alerts || []; store.alertsState = r.body.alerts_state || null; store.error = null; }
         else if (r.status === 401 || r.status === 403) { store.flagOff = false; store.mode = 'device'; store.items = []; store.alerts = []; }
         else { store.mode = entitled() ? 'synced' : 'device'; store.error = r.body?.error || `http_${r.status}`; }

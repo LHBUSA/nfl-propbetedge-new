@@ -1,6 +1,6 @@
 /* My Sunday — the session boundary (pbe-my-sunday/v1).
  *
- *   GET  /api/my-sunday                      saved items + alerts
+ *   GET  /api/my-sunday                      saved items + alerts (signed out: 200 synced:false)
  *   POST /api/my-sunday?op=save    {item}
  *   POST /api/my-sunday?op=remove  {item_key}
  *   POST /api/my-sunday?op=import  {items}   explicit device import only
@@ -87,6 +87,10 @@ export default async function handler(req, res, deps = {}) {
 
   const s = await session(req);
   const denied = accessDenial(s);
+  /* A signed-out READ is not an error: it tells the page the feature is on
+     and that this reader has no synced list (device mode), without touching
+     storage. Every write still requires a granted session. */
+  if (denied && req.method === 'GET' && denied.status !== 503) return send(res, 200, { contract: 'pbe-my-sunday/v1', enabled: true, synced: false, access: s.access, items: [], alerts: [] });
   if (denied) return send(res, denied.status, { error: denied.error, access: s.access });
 
   const origin = String(env.MY_SUNDAY_ORIGIN || '');

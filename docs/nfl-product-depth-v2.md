@@ -104,8 +104,10 @@ play-by-play does not yet) · Not yet published · Temporarily unavailable.
 - The NFL auth path issues sessions only to entitled readers (a verified email
   without an entitlement is paywalled and its cookie cleared), so there is no
   "signed-in free" state to serve; signed-out readers get the device list.
-- `api/my-sunday.js` requires `access === 'granted'` from `getNflSession`
-  (401 anonymous / forged / expired, 403 `no_entitlement`, 503 `unavailable`).
+- `api/my-sunday.js` requires `access === 'granted'` from `getNflSession` for
+  every write (401 anonymous / forged / expired, 403 `no_entitlement`, 503
+  `unavailable`). A signed-out **read** answers 200 `{synced:false, items:[]}`
+  without touching storage, so signed-out pages never log a 401.
 - Owner key = HMAC-SHA256(`MY_SUNDAY_OWNER_SECRET`, `nfl-my-sunday:v1:<email>`);
   the Worker never sees an email; any `owner`/`owner_key`/`email`/`account_id`
   in a body is dropped.
