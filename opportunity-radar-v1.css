@@ -55,9 +55,9 @@
 /* ---- cards ---- */
 .por-grid { display: grid; gap: var(--s-3); grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); }
 .por-card { display: flex; flex-direction: column; gap: var(--s-3); padding: var(--s-4); border: 1px solid var(--pbe-line); border-radius: var(--r-lg); background: var(--pbe-ink-2); min-width: 0; }
-.por-card-head { display: flex; align-items: center; gap: var(--s-3); min-width: 0; }
-.por-who { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 auto; }
-.por-name { font: 700 var(--fs-body)/1.25 var(--pbe-font-ui); color: var(--pbe-paper); overflow-wrap: anywhere; }
+.por-card-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2) var(--s-3); min-width: 0; }
+.por-who { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 150px; }
+.por-name { font: 700 var(--fs-body)/1.25 var(--pbe-font-ui); color: var(--pbe-paper); overflow-wrap: break-word; }
 .por-sub { font: 600 var(--fs-label)/1.2 var(--pbe-font-data); letter-spacing: .06em; color: var(--pbe-faint-text); }
 
 .por-face { position: relative; flex: 0 0 auto; display: inline-grid; place-items: center; overflow: hidden; border-radius: 50%; background: var(--pbe-ink-3); border: 1px solid var(--pbe-line-strong); }

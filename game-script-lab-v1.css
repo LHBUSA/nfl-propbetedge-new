@@ -74,4 +74,5 @@
   .gsl-tr.lvl1 > span:first-child { padding-left: 6px; }
   .gsl-tr.lvl2 > span:first-child { padding-left: 12px; }
   .gsl-controls { padding: var(--s-2); }
+  .gsl-th { letter-spacing: .02em; }
 }

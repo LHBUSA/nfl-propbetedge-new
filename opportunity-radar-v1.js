@@ -518,6 +518,16 @@
 
   /* ----------------------------------------------------------------- install */
 
+  /* The command center paints before this module loads and asks for the rail
+     on each paint; warm the store when home is on screen so the rail has data
+     the next time it asks (pbe:opportunity-ready triggers that repaint). */
+  function warmForHome() {
+    const route = window.App?.current || 'home';
+    if (route === 'home' && !store.data && !store.loading) load();
+  }
+  window.addEventListener('pbe:upgrades-ready', warmForHome);
+  window.addEventListener('pbe:route-changed', warmForHome);
+
   document.addEventListener('click', onClick);
   document.addEventListener('input', onInput);
   document.addEventListener('change', onChange);
