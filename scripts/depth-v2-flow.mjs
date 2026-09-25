@@ -62,8 +62,11 @@ try {
     await go(page, 'games', 6000);
     const mode = await page.evaluate(() => window.PBEMySunday?.store?.mode);
     check('signed out -> device mode', mode === 'device', mode);
+    await page.waitForSelector('.pbe25-card', { timeout: 20000 }).catch(() => {});
+    const cards = await page.locator('.pbe25-card[data-espn-event]').count();
+    const withSave = await page.locator('.pbe25-card[data-espn-event] .pms-save').count();
+    check('every game card with a game id carries Save', cards > 0 && withSave === cards, `${withSave}/${cards}`);
     const btn = page.locator('.pbe25-card .pms-save').first();
-    check('game cards carry Save', await btn.count() > 0);
     if (await btn.count()) { await btn.click(); await page.waitForTimeout(500); check('game saved (button pressed)', (await btn.getAttribute('aria-pressed')) === 'true'); }
     await go(page, 'usage', 5000);
     const pbtn = page.locator('.por-card .pms-save').first();
