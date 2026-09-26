@@ -24,8 +24,11 @@ try { git('merge-base', '--is-ancestor', head, 'origin/main'); } catch { fail(`H
 
 const short = head.slice(0, 7);
 const message = `git ${short} (${git('log', '-1', '--format=%s').slice(0, 80)})`;
-const up = spawnSync('npx', ['wrangler', 'versions', 'upload', '--tag', short, '--message', message], {
-  cwd: path.join(ROOT, 'workers/nfl-auth'), encoding: 'utf8', shell: process.platform === 'win32',
+// On Windows npx is a .cmd shim and needs a shell; quote every argument so the message stays one argument.
+const args = ['wrangler', 'versions', 'upload', '--tag', short, '--message', message.replace(/["%^&|<>]/g, '')];
+const win = process.platform === 'win32';
+const up = spawnSync('npx', win ? args.map((a) => `"${a}"`) : args, {
+  cwd: path.join(ROOT, 'workers/nfl-auth'), encoding: 'utf8', shell: win,
 });
 process.stdout.write(up.stdout || ''); process.stderr.write(up.stderr || '');
 if (up.status !== 0) fail('wrangler versions upload failed');
