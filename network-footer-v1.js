@@ -96,6 +96,7 @@
             <a href="https://propsports.proptechusa.ai" target="_blank" rel="noopener">PropSports API</a>
             <a href="https://proptechusa.ai" target="_blank" rel="noopener">PropTechUSA.ai</a>
             <a href="https://discord.gg/kb5zCTHbME" target="_blank" rel="noopener">Discord ↗</a>
+            <a class="pbe-footer-x" href="https://x.com/PROPBETEDGE" target="_blank" rel="noopener noreferrer" aria-label="Follow PropBetEdge on X (@PROPBETEDGE)" title="Follow PropBetEdge on X"><span aria-hidden="true">𝕏</span> @PROPBETEDGE</a>
           </nav>
         </section>
 

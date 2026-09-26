@@ -52,3 +52,12 @@ test('no stale PropBetEdge X identity or legacy share intent in shipped source',
     for (const re of STALE) assert.doesNotMatch(text, re, `${f} contains ${re}`);
   }
 });
+
+test('network footer: exactly one PropBetEdge X link, new tab, safe rel, accessible name', () => {
+  const src = fs.readFileSync(path.join(ROOT, 'network-footer-v1.js'), 'utf8');
+  const anchors = [...src.matchAll(/<a [^>]*href="https:\/\/x\.com\/PROPBETEDGE"[^>]*>[\s\S]*?<\/a>/g)].map(m => m[0]);
+  assert.equal(anchors.length, 1);
+  assert.match(anchors[0], /target="_blank" rel="noopener noreferrer"/);
+  assert.match(anchors[0], /aria-label="Follow PropBetEdge on X \(@PROPBETEDGE\)"/);
+  assert.match(anchors[0], /<\/span> @PROPBETEDGE<\/a>$/);
+});
