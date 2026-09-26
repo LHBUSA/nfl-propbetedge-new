@@ -30,7 +30,7 @@ const FORBIDDEN = [
   new RegExp(String.raw`\b(?:per|via|from|by|through) ${PROVIDERS}\b`, 'gi'),
   new RegExp(String.raw`\b(?:Data|Source|Sources|Powered by|Data provided by|Data from)\s*[:·]?\s*${PROVIDERS}\b`, 'gi'),
   /\bESPN(?:’|')s (?:injury|transactions|season|own|primary|public)\b/gi,
-  /\bESPN (?:team totals|injury (?:feed|report|note)|feed|roster|game records|league standings|athlete IDs?|lists|has published|clinch|scoreboard|live|model|MODEL|LIVE|SCOREBOARD)\b/g,
+  /\bESPN (?:team totals|injury (?:feed|report|note)|feed|roster|game records|league standings|athlete IDs?|lists|has published|clinch|scoreboard|live|model|MODEL|LIVE|SCOREBOARD)\b/gi,
 ];
 
 function stripComments(text) {

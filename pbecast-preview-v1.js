@@ -251,12 +251,12 @@
     const foot = '<button type="button" data-route="injuries">Injuries →</button>';
     if (av.state === 'loading') return tile('availability', 'AVAILABILITY', '', state('Reading the injury report'), foot);
     if (av.state === 'error') return tile('availability', 'AVAILABILITY', '', state('Injury report unavailable', av.error || ''), foot);
-    if (av.state === 'clear') return tile('availability', 'AVAILABILITY', 'ESPN INJURY REPORT', state('No restrictive designations', 'Neither team lists a player OUT, DOUBTFUL or QUESTIONABLE for this game.'), foot);
+    if (av.state === 'clear') return tile('availability', 'AVAILABILITY', 'PROPSPORTS INJURY REPORT', state('No restrictive designations', 'Neither team lists a player OUT, DOUBTFUL or QUESTIONABLE for this game.'), foot);
     const counts = `<div class="pbepv-counts">${av.teams.map(t => `<div><b>${esc(t.team)}</b><span class="s-out">${esc(t.out)} OUT</span><span class="s-doubtful">${esc(t.doubtful)} D</span><span class="s-questionable">${esc(t.questionable)} Q</span></div>`).join('')}</div>`;
     const line = r => `<li><em class="s-${esc(r.status.toLowerCase())}">${esc(r.status.replace(/_/g, ' '))}</em><span>${esc(r.name)}</span><small>${esc([r.position, r.team, r.injury].filter(Boolean).join(' · '))}${r.stale ? ` · last updated ${esc(r.stale)}` : ''}</small></li>`;
     const body = `${counts}<ul class="pbepv-inj">${av.top.map(line).join('')}</ul>
       ${av.total > av.top.length ? `<details class="pbepv-more" data-pv-more="${esc(gameId)}"><summary>All ${esc(av.total)} designations</summary><ul class="pbepv-inj">${av.all.slice(av.top.length).map(line).join('')}</ul></details>` : ''}`;
-    return tile('availability', 'AVAILABILITY', 'ESPN INJURY REPORT', body, foot);
+    return tile('availability', 'AVAILABILITY', 'PROPSPORTS INJURY REPORT', body, foot);
   }
 
   function changesHtml(ch, gameId) {

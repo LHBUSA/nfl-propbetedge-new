@@ -25,6 +25,8 @@
  */
 (() => {
   'use strict';
+  // Customer-facing source brand: API provenance labels name the upstream provider; the UI shows PropSports.
+  const brandLabel = (s) => String(s || '').replace(/\bESPN\b/g, 'PropSports');
 
   const esc = v => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   const arr = v => (Array.isArray(v) ? v : []);
@@ -88,7 +90,7 @@
         ${c.kind === 'INJURY_STATUS' && injuryDetail(c) ? `<p class="pbewc-injury">${esc(injuryDetail(c))}</p>` : ''}
         ${move}
         ${c.kind === 'INJURY_STATUS' && c.detail ? `<blockquote class="pbewc-note"><span>Source note</span>${esc(c.detail)}</blockquote>` : ''}
-        <div class="pbewc-foot"><span class="pbewc-src">${esc(c.source?.label || 'Source')} · ${basis} ${esc(stamp(c.observed_at))} (${esc(ago(c.observed_at))})</span><div class="pbewc-links">${c.kind === 'INJURY_STATUS' ? playerLinks(c.player, c.game) : c.game?.id ? `<button type="button" data-wc-cast="${esc(c.game.id)}">PBEcast →</button>` : ''}${c.kind === 'MARKET_MOVE' ? '<button type="button" data-route="bestline">Best Line →</button>' : ''}</div></div>
+        <div class="pbewc-foot"><span class="pbewc-src">${esc(brandLabel(c.source?.label) || 'Source')} · ${basis} ${esc(stamp(c.observed_at))} (${esc(ago(c.observed_at))})</span><div class="pbewc-links">${c.kind === 'INJURY_STATUS' ? playerLinks(c.player, c.game) : c.game?.id ? `<button type="button" data-wc-cast="${esc(c.game.id)}">PBEcast →</button>` : ''}${c.kind === 'MARKET_MOVE' ? '<button type="button" data-route="bestline">Best Line →</button>' : ''}</div></div>
       </div>
     </li>`;
   }
@@ -123,7 +125,7 @@
       <div class="pbewc-body">
         <div class="pbewc-top">${badge(w.status)}<b>${esc(w.game?.matchup || '')} · ${esc(w.headline || 'Weather')}</b>${w.indoor ? '<span class="pbewc-hist">INDOOR VENUE</span>' : ''}</div>
         <p class="pbewc-context">${esc(w.detail || '')}</p>
-        <div class="pbewc-foot"><span class="pbewc-src">${esc(w.source.label)} · effective ${esc(stamp(w.observed_at))}</span><div class="pbewc-links">${w.cta?.href ? `<a href="${esc(w.cta.href)}" target="_blank" rel="noopener">${esc(w.cta.label || 'Official alert')} ↗</a>` : ''}${w.game?.id ? `<button type="button" data-wc-cast="${esc(w.game.id)}">PBEcast →</button>` : ''}</div></div>
+        <div class="pbewc-foot"><span class="pbewc-src">${esc(brandLabel(w.source.label))} · effective ${esc(stamp(w.observed_at))}</span><div class="pbewc-links">${w.cta?.href ? `<a href="${esc(w.cta.href)}" target="_blank" rel="noopener">${esc(w.cta.label || 'Official alert')} ↗</a>` : ''}${w.game?.id ? `<button type="button" data-wc-cast="${esc(w.game.id)}">PBEcast →</button>` : ''}</div></div>
       </div>
     </li>`;
   }
@@ -181,7 +183,7 @@
     const chip = (label, x, extra = '') => `<span class="pbewc-chip ${x?.available ? 'ok' : 'off'}" title="${esc(x?.reason || x?.error || '')}">${esc(label)} · ${x?.available ? `${esc(etTime(x.fetched_at))} ET${extra}` : 'UNAVAILABLE'}</span>`;
     const wxd = weatherData();
     const wx = wxd?.available ? { available: true, fetched_at: wxd.fetched_at } : { available: false, reason: wxd?.reason || 'not_in_payload' };
-    return `<div class="pbewc-chips">${chip('ESPN INJURY REPORT', s.injuries, s.injuries?.entries ? ` · ${s.injuries.entries} entries` : '')}${chip('SCOREBOARD', s.scoreboard)}${chip('MARKET TAPE', s.market, s.market?.batches ? ` · ${s.market.batches} captures` : '')}${chip('WEATHER', wx)}</div>`;
+    return `<div class="pbewc-chips">${chip('PROPSPORTS INJURY REPORT', s.injuries, s.injuries?.entries ? ` · ${s.injuries.entries} entries` : '')}${chip('SCOREBOARD', s.scoreboard)}${chip('MARKET TAPE', s.market, s.market?.batches ? ` · ${s.market.batches} captures` : '')}${chip('WEATHER', wx)}</div>`;
   }
   function markup() {
     const st = changesStore();

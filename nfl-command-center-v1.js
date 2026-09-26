@@ -24,6 +24,8 @@
  */
 (() => {
   'use strict';
+  // Customer-facing source brand: API provenance labels name the upstream provider; the UI shows PropSports.
+  const brandLabel = (s) => String(s || '').replace(/\bESPN\b/g, 'PropSports');
 
   const TTL = { changes: 120000, picks: 300000, bestline: 300000 };
   /* The community is Discord, not an internal forum. Permanent invite to the
@@ -257,7 +259,7 @@
     return `<li class="pbecc-change is-${String(c.severity || 'LOW').toLowerCase()}">
       <span class="pbecc-badge ${STATUS_CLASS[c.status] || ''}">${esc(status)}</span>
       <div><b>${esc(who)}</b><small>${esc(sub)}</small>${affected ? `<em class="pbecc-affected">PBE PICK AFFECTED · ${esc(affected)}</em>` : ''}</div>
-      <span class="pbecc-src">${esc(c.source?.label || 'Source')} · ${esc(when)}</span>
+      <span class="pbecc-src">${esc(brandLabel(c.source?.label) || 'Source')} · ${esc(when)}</span>
     </li>`;
   }
   function changesHtml() {

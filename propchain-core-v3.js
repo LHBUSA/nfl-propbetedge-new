@@ -342,7 +342,7 @@
       const tape = tapeFor(data, game.id, c.observed_at);
       const chain = {
         ...base, market, tape, tape_scope: 'GAME',
-        entity: { ...base.entity, link: market.kind === 'PLAYER_PROPS' ? 'ESPN athlete id on the injury report · exact name on this game’s player board' : 'ESPN athlete id on the injury report' },
+        entity: { ...base.entity, link: market.kind === 'PLAYER_PROPS' ? 'provider athlete id on the injury report · exact name on this game’s player board' : 'provider athlete id on the injury report' },
         model: market.kind === 'PLAYER_PROPS' ? modelForPlayer(game, market.board_name, market.primary) : { state: 'NOT_PUBLISHED', reason: 'no_market' },
         complete: market.kind === 'PLAYER_PROPS' ? true : market.kind === 'PENDING' ? null : false,
         search: `${base.search} ${arr(market.markets).map(m => m.label).join(' ')}`

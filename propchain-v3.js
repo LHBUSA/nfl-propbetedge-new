@@ -339,7 +339,7 @@
   }
   function entityCell(c) {
     const e = c.entity || {};
-    if (e.type === 'PLAYER') return `<b>${esc([e.position, e.team].filter(Boolean).join(' · ') || 'Player')}</b><small>${esc(e.espn_id ? 'Player · ESPN athlete id' : 'Player · named in article')}</small>`;
+    if (e.type === 'PLAYER') return `<b>${esc([e.position, e.team].filter(Boolean).join(' · ') || 'Player')}</b><small>${esc(e.espn_id ? 'Player · provider athlete id' : 'Player · named in article')}</small>`;
     if (e.type === 'TEAM') return `<b>${esc(e.team || e.name)}</b><small>Team market</small>`;
     return `<b>${esc(c.game?.matchup || e.name || 'Game')}</b><small>${esc(c.kind === 'WEATHER' ? (e.venue || 'Game venue') : 'Game')}</small>`;
   }
