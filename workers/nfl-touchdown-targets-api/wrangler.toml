@@ -1,0 +1,44 @@
+# nfl-touchdown-targets-api — the PBE Touchdown Targets READ contract on
+# Cloudflare (ported from the retired Vercel function api/pbe-touchdown-targets.js).
+#
+# Browser-facing path, same origin so the host-only NFL session cookie reaches
+# it:  https://nfl.propbetedge.ai/api/pbe-touchdown-targets*  (Worker route).
+# READ ONLY: no cron, no decision logic, no writes. Decisions stay in
+# nfl-touchdown-targets-orchestrator; grading in the grader.
+#
+# Deploy with wrangler from a clean export of a pushed commit.
+# Secrets (wrangler secret put):
+#   SUPABASE_SERVICE_ROLE_KEY   reads nfl_prop_picks / receipts / grades / evaluations
+#   NFL_AUTH_INTERNAL_TOKEN     same value as propbetedge-nfl-auth's; authorises the
+#                               internal session-verdict call over the AUTH binding
+name = "nfl-touchdown-targets-api"
+main = "src/contract.js"
+compatibility_date = "2026-09-20"
+account_id = "fd3a233edadd0a60916413c1199f71ee"
+# workers.dev stays on only for the pre-cutover shadow canary; the product path is
+# the nfl.propbetedge.ai route. A cookie is never sent to workers.dev, so gated
+# views there can only ever answer 401.
+workers_dev = true
+preview_urls = false
+
+[vars]
+SUPABASE_URL = "https://tkmlnhmylqnttmnsnief.supabase.co"
+
+# The one NFL session authority (verdict only: no email, token or secret returned).
+[[services]]
+binding = "AUTH"
+service = "propbetedge-nfl-auth"
+
+# Season / week / next game — the authority the engine itself uses.
+[[services]]
+binding = "NFL_CURRENT"
+service = "nfl-current"
+
+# The durable engine run ledger (/v1/engine/runs), public-safe.
+[[services]]
+binding = "PICKS_ENGINE"
+service = "nfl-game-picks-orchestrator"
+
+[observability]
+enabled = true
+head_sampling_rate = 1

@@ -52,6 +52,7 @@ workers/nfl-prop-picks-shared/
 workers/nfl-prop-picks-tuner/
 workers/nfl-replay/
 workers/nfl-my-sunday/
+workers/nfl-touchdown-targets-api/
 workers/nfl-schedule/
 workers/nfl-td-targets-shared/
 workers/nfl-touchdown-targets-grader/

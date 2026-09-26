@@ -14,11 +14,17 @@
 const DEFAULT_ENGINE_URL = 'https://nfl-game-picks-orchestrator.sales-fd3.workers.dev';
 const DEFAULT_NFL_GATEWAY = 'https://nfl-api.propbetedge.ai';
 
-async function fetchJson(url, timeoutMs = 4000) {
+/* process.env exists on Vercel; a Cloudflare Worker passes its own bindings in
+ * `opts` instead (a Worker cannot fetch another Worker's workers.dev URL in the
+ * same account — error 1042 — so it supplies a service-binding fetch). Callers
+ * that pass nothing behave exactly as before. */
+const processEnv = () => (typeof process !== 'undefined' && process && process.env) || {};
+
+async function fetchJson(url, timeoutMs = 4000, fetchImpl = fetch) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const response = await fetch(url, { cache: 'no-store', headers: { accept: 'application/json' }, signal: controller.signal });
+    const response = await fetchImpl(url, { cache: 'no-store', headers: { accept: 'application/json' }, signal: controller.signal });
     if (!response.ok) throw new Error(`http_${response.status}`);
     return await response.json();
   } finally {
@@ -26,9 +32,9 @@ async function fetchJson(url, timeoutMs = 4000) {
   }
 }
 
-export async function currentSeason() {
-  const base = String(process.env.NFL_GATEWAY || DEFAULT_NFL_GATEWAY).replace(/\/$/, '');
-  const body = await fetchJson(`${base}/api/season`);
+export async function currentSeason(opts = {}) {
+  const base = String(opts.gatewayUrl || processEnv().NFL_GATEWAY || DEFAULT_NFL_GATEWAY).replace(/\/$/, '');
+  const body = await fetchJson(`${base}/api/season`, 4000, opts.fetchImpl || fetch);
   const season = Number(body?.season);
   const week = Number(body?.current_week);
   if (!Number.isFinite(season) || season < 2000) throw new Error('current_season_unavailable');
@@ -81,13 +87,13 @@ function laneSummary(lane) {
  * never run once reported HEALTHY on the strength of the lanes it shares with
  * another product. A missing lane is now reported as UNKNOWN, with the reason,
  * and counts against the verdict exactly as a stale one would. */
-export async function engineRuntime(lanesWanted) {
+export async function engineRuntime(lanesWanted, opts = {}) {
   const wanted = (Array.isArray(lanesWanted) ? lanesWanted : []).map(entry => (
     typeof entry === 'string' ? { lane: entry, critical: true } : { lane: entry.lane, critical: entry.critical !== false }
   ));
-  const url = `${String(process.env.PICKS_ENGINE_URL || DEFAULT_ENGINE_URL).replace(/\/$/, '')}/v1/engine/runs`;
+  const url = `${String(opts.engineUrl || processEnv().PICKS_ENGINE_URL || DEFAULT_ENGINE_URL).replace(/\/$/, '')}/v1/engine/runs`;
   try {
-    const body = await fetchJson(url);
+    const body = await fetchJson(url, 4000, opts.fetchImpl || fetch);
     const reported = new Map((Array.isArray(body?.lanes) ? body.lanes : []).map(l => [l.lane, l]));
     const lanes = wanted.map(entry => reported.get(entry.lane) || {
       lane: entry.lane,

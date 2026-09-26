@@ -10,7 +10,7 @@ import { resolveNflAccess, parseOwnerEmails, ALL_ACCESS_PRODUCT_KEY, DEFAULT_PBE
 import { normalizeEmail } from '../../../api/_nfl-entitlement.js';
 
 const SERVICE='propbetedge-nfl-auth';
-const VERSION='v7.2';
+const VERSION='v7.3';
 /* One answer for every accepted request, entitled or not, so the response
    never reveals whether an email owns NFL Pro. The decision and any email run
    after the response (ctx.waitUntil), so timing reveals nothing either. */
@@ -23,6 +23,15 @@ const PURCHASE_RECHECK_DELAYS_MS=[2000,4000,8000];
    record delivery asks here instead, with NFL_AUTH_INTERNAL_TOKEN, and gets the
    true result. Anything that is not a valid server call gets a bare 404. */
 export const INTERNAL_DELIVERY_PATH='/internal/v1/purchase-delivery';
+/* Server-to-server session verdict. The NFL session cookie is host-only on
+   nfl.propbetedge.ai, so a Cloudflare read API on that host (e.g.
+   nfl-touchdown-targets-api, reached through a Service Binding) forwards the
+   cookie's session token(s) here and gets back the one NFL answer: verified
+   against the same signing secrets this Worker issues with, and entitled
+   through the same resolveNflAccess as sign-in (NFL ledger, All Access bridge,
+   owner). The answer carries no email, token or secret. Same guard as
+   purchase delivery: anything that is not a valid server call is a bare 404. */
+export const INTERNAL_VERDICT_PATH='/internal/v1/session-verdict';
 export const DELIVERY_RESULTS=Object.freeze(['sent','already_sent','in_progress','not_entitled','ledger_unavailable','resend_failed','delivery_ledger_unavailable']);
 /* The caller is waiting (a buyer's checkout redirect), so the late-webhook
    re-check is shorter than the background one. */
@@ -40,10 +49,11 @@ const SESSION_TTL=30*24*60*60;
 export default{async fetch(req,env,ctx){
   const url=new URL(req.url),origin=req.headers.get('Origin')||'',app=String(env.APP_ORIGIN||APP_ORIGIN_DEFAULT).replace(/\/$/,'');
   if(url.pathname===INTERNAL_DELIVERY_PATH)return purchaseDelivery(req,env,app);
+  if(url.pathname===INTERNAL_VERDICT_PATH)return sessionVerdict(req,env);
   if(req.method==='OPTIONS')return new Response(null,{status:204,headers:cors(origin,app)});
   if(url.pathname==='/health'){
     const signing=signingSecrets(env);
-    return out({ok:Boolean(env.RESEND_API_KEY&&signing.primary),service:SERVICE,version:VERSION,auth_issuer:'propbetedge',session:'vercel_first_party_cookie',session_authority:'vercel:/api/auth-session',exchange:'signed_magic_to_session',entitlement_store:'supabase:nfl_subscriptions',entitlement_gate:{request:true,exchange:true,owner_configured:parseOwnerEmails(env.NFL_OWNER_EMAILS).length>0,internal_delivery_configured:internalToken(env).length>=32},all_access_bridge:{configured:allAccessConfig(env).readToken.length>0,transport:allAccessConfig(env).transport,product_key:ALL_ACCESS_PRODUCT_KEY,additive:true,fail_closed:true},email_transport:'resend',sender:FROM_EMAIL,fallback:false,requirements:{RESEND_API_KEY:Boolean(env.RESEND_API_KEY),SESSION_SIGNING_SECRET:Boolean(signing.primary),SUPABASE_SERVICE_ROLE_KEY:Boolean(env.SUPABASE_SERVICE_ROLE_KEY)},signing:{mode:signing.mode,dedicated_configured:signing.dedicatedConfigured,legacy_verify_fallback:Boolean(signing.fallback)}},200,origin,app);
+    return out({ok:Boolean(env.RESEND_API_KEY&&signing.primary),service:SERVICE,version:VERSION,auth_issuer:'propbetedge',session:'vercel_first_party_cookie',session_authority:'vercel:/api/auth-session',exchange:'signed_magic_to_session',entitlement_store:'supabase:nfl_subscriptions',entitlement_gate:{request:true,exchange:true,owner_configured:parseOwnerEmails(env.NFL_OWNER_EMAILS).length>0,internal_delivery_configured:internalToken(env).length>=32,internal_verdict_configured:internalToken(env).length>=32},all_access_bridge:{configured:allAccessConfig(env).readToken.length>0,transport:allAccessConfig(env).transport,product_key:ALL_ACCESS_PRODUCT_KEY,additive:true,fail_closed:true},email_transport:'resend',sender:FROM_EMAIL,fallback:false,requirements:{RESEND_API_KEY:Boolean(env.RESEND_API_KEY),SESSION_SIGNING_SECRET:Boolean(signing.primary),SUPABASE_SERVICE_ROLE_KEY:Boolean(env.SUPABASE_SERVICE_ROLE_KEY)},signing:{mode:signing.mode,dedicated_configured:signing.dedicatedConfigured,legacy_verify_fallback:Boolean(signing.fallback)}},200,origin,app);
   }
   if((url.pathname==='/v1/auth/request'||url.pathname==='/v1/auth/email')&&req.method==='POST')return requestLink(req,env,origin,app,ctx);
   if(url.pathname==='/v1/auth/exchange'&&req.method==='POST')return exchangeLink(req,env,origin,app);
@@ -185,6 +195,38 @@ async function purchaseDelivery(req,env,app){
   await deliveryRecord(env,key,'release');
   console.log(`[nfl-auth] purchase-delivery result=${d.result} key=${kind} email=${tag}`);
   return internal({result:d.result});
+}
+
+async function sessionVerdict(req,env){
+  const expected=internalToken(env);
+  if(req.method!=='POST'||expected.length<32||req.headers.get('Origin'))return internal({error:'not_found'},404);
+  const auth=req.headers.get('authorization')||'';
+  if(!auth.startsWith('Bearer ')||!(await sameSecret(auth.slice(7).trim(),expected)))return internal({error:'not_found'},404);
+  let body;try{body=await req.json()}catch{return internal({error:'invalid_request'},400)}
+  const tokens=(Array.isArray(body?.tokens)?body.tokens:[]).filter(t=>typeof t==='string'&&t.length>0&&t.length<=1200).slice(0,4);
+  return internal(await sessionVerdictFor(env,tokens));
+}
+
+/* The verdict, with the same stages and outcomes as api/_nfl-auth.js
+   getNflSession (tests/nfl-session-verdict-parity.test.mjs holds the two
+   together). `tokens` are the pbe_nfl_session_v2 value(s) first, then legacy. */
+export async function sessionVerdictFor(env,tokens){
+  const out={valid:false,pro:false,signed_in:false,role:null,access:'anonymous',degraded:false};
+  if(!tokens.length)return{...out,stage:'no_cookie'};
+  const signing=signingSecrets(env);
+  if(!signing.primary)return{...out,access:'unavailable',degraded:true,stage:'secret_missing'};
+  let email='';
+  for(const token of tokens){
+    try{const v=await verifyWithSecrets(token,signing);if(v.payload?.type!=='session')continue;const e=normEmail(v.payload?.email);if(e){email=e;break}}catch{}
+  }
+  if(!email)return{...out,stage:'cookie_present_invalid'};
+  const signed={...out,valid:true,signed_in:true};
+  if(parseOwnerEmails(env.NFL_OWNER_EMAILS).includes(email))return{...signed,pro:true,role:'owner',access:'granted',stage:'owner_verified'};
+  if(!String(env.SUPABASE_SERVICE_ROLE_KEY||'').trim())return{...signed,access:'unavailable',degraded:true,stage:'entitlement_secret_missing'};
+  const access=await checkAccess(env,email);
+  if(access.reason==='entitlement_unavailable')return{...signed,access:'unavailable',degraded:true,stage:'entitlement_lookup_failed'};
+  if(access.allowed)return{...signed,pro:true,role:access.role==='owner'?'owner':'subscriber',access:'granted',stage:access.role==='owner'?'owner_verified':'entitlement_active'};
+  return{...signed,access:'no_entitlement',stage:'entitlement_missing'};
 }
 
 async function deliveryRecord(env,key,op,body={}){

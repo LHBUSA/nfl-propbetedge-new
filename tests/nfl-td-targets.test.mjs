@@ -41,7 +41,9 @@ const PROP_MIGRATION = read('migrations/nfl_prop_picks_engine_v1.sql');
 const ORCHESTRATOR = read('workers/nfl-touchdown-targets-orchestrator/src/index.js');
 const GRADER = read('workers/nfl-touchdown-targets-grader/src/index.js');
 const TUNER = read('workers/nfl-touchdown-targets-tuner/src/index.js');
-const API = read('api/pbe-touchdown-targets.js');
+/* The read contract lives on Cloudflare (nfl-touchdown-targets-api); the
+   Vercel function it was ported from is retired. */
+const API = read('workers/nfl-touchdown-targets-api/src/contract.js');
 const PAGE_CSS = read('touchdown-targets-v1.css');
 const PAGE_JS = read('touchdown-targets-v1.js');
 
@@ -771,18 +773,12 @@ test('26b · promotion needs out-of-sample improvement, and ROI is never the rea
 /* ========================================================================= */
 
 test('27 · a request with no session cannot retrieve a live target', async () => {
-  process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || 'test-only-not-a-real-key';
-  const handler = (await import('../api/pbe-touchdown-targets.js')).default;
+  const { handle } = await import('../workers/nfl-touchdown-targets-api/src/contract.js');
+  const env = { SUPABASE_SERVICE_ROLE_KEY: 'test-only-not-a-real-key', NFL_AUTH_INTERNAL_TOKEN: 'x'.repeat(40), AUTH: { fetch: async () => { throw new Error('no cookie: the session authority must not even be asked'); } } };
 
   for (const view of ['current', 'week']) {
-    const captured = { status: 0, body: null, headers: {} };
-    const res = {
-      set statusCode(value) { captured.status = value; },
-      get statusCode() { return captured.status; },
-      setHeader(key, value) { captured.headers[key.toLowerCase()] = value; },
-      end(body) { captured.body = JSON.parse(body); },
-    };
-    await handler({ method: 'GET', query: { view }, headers: {} }, res);
+    const response = await handle(new Request(`https://nfl.propbetedge.ai/api/pbe-touchdown-targets?view=${view}`), env);
+    const captured = { status: response.status, body: await response.json(), headers: { 'cache-control': response.headers.get('cache-control') } };
     assert.equal(captured.status, 401, `view=${view} refuses an anonymous reader`);
     assert.equal(captured.body.entitlement, 'nfl_pro');
     assert.ok(!('games' in captured.body), 'no game payload leaves the server');
