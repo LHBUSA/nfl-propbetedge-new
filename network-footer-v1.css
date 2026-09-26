@@ -20,7 +20,7 @@
 .pbe-network-live-mark strong{color:#fff;font:900 32px/.8 "Inter",sans-serif}
 .pbe-network-live-mark small{padding-bottom:1px;color:#736f68;font:700 8px/1.25 "JetBrains Mono",monospace;letter-spacing:.1em}
 
-.pbe-network-sports{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));border:1px solid rgba(255,255,255,.075);border-radius:16px;overflow:hidden;background:rgba(255,255,255,.018);box-shadow:inset 0 1px 0 rgba(255,255,255,.025),0 20px 60px rgba(0,0,0,.16)}
+.pbe-network-sports{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border:1px solid rgba(255,255,255,.075);border-radius:16px;overflow:hidden;background:rgba(255,255,255,.018);box-shadow:inset 0 1px 0 rgba(255,255,255,.025),0 20px 60px rgba(0,0,0,.16)}
 .pbe-network-sport{position:relative;display:flex;min-width:0;min-height:92px;flex-direction:column;justify-content:center;padding:15px 17px;border-right:1px solid rgba(255,255,255,.065);color:inherit;text-decoration:none;overflow:hidden;transition:background .18s ease,transform .18s ease}
 .pbe-network-sport:last-child{border-right:0}
 .pbe-network-sport:before{content:"";position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.03),transparent 58%);opacity:0;transition:opacity .18s ease}
@@ -81,8 +81,9 @@
 @media(max-width:1080px){
   .pbe-network-footer-intro{align-items:flex-start}
   .pbe-network-sports{grid-template-columns:repeat(3,minmax(0,1fr))}
-  .pbe-network-sport:nth-child(3){border-right:0}
-  .pbe-network-sport:nth-child(-n+3){border-bottom:1px solid rgba(255,255,255,.065)}
+  .pbe-network-sport:nth-child(3n){border-right:0}
+  .pbe-network-sport:nth-child(-n+6){border-bottom:1px solid rgba(255,255,255,.065)}
+  .pbe-network-sport:last-child:nth-child(3n+1){grid-column:1/-1}
   .pbe-network-footer-console{grid-template-columns:1fr}
   .pbe-footer-account-card{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:24px;align-items:center}
   .pbe-footer-account-card>p{grid-column:1/2}.pbe-footer-account-card-links{grid-column:2/3;grid-row:2}
@@ -100,8 +101,9 @@
   .pbe-network-sport{min-height:82px;padding:13px 14px}
   .pbe-network-sport:nth-child(odd){border-right:1px solid rgba(255,255,255,.065)}
   .pbe-network-sport:nth-child(even){border-right:0}
-  .pbe-network-sport:nth-child(-n+4){border-bottom:1px solid rgba(255,255,255,.065)}
-  .pbe-network-sport:nth-child(n+5){border-bottom:0}
+  .pbe-network-sport:nth-child(-n+6){border-bottom:1px solid rgba(255,255,255,.065)}
+  .pbe-network-sport:nth-child(n+7){border-bottom:0}
+  .pbe-network-sport:last-child:nth-child(odd){grid-column:1/-1;border-right:0}
   .pbe-network-sport-top b{font-size:22px}
   .pbe-network-console-head{align-items:flex-start;flex-direction:column;gap:12px}
   .pbe-network-primary-link{width:100%;box-sizing:border-box;justify-content:space-between;min-height:40px}

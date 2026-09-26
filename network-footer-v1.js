@@ -13,7 +13,8 @@
     { key: 'nba', label: 'NBA', sub: 'Basketball', href: 'https://nba.propbetedge.ai' },
     { key: 'wnba', label: 'WNBA', sub: "Women's Basketball", href: 'https://wnba.propbetedge.ai', live: true },
     { key: 'nhl', label: 'NHL', sub: 'Hockey', href: 'https://nhl.propbetedge.ai' },
-    { key: 'ufc', label: 'UFC', sub: 'Fight Intelligence', href: 'https://ufc.propbetedge.ai' }
+    { key: 'ufc', label: 'UFC', sub: 'Fight Intelligence', href: 'https://ufc.propbetedge.ai' },
+    { key: 'tennis', label: 'Tennis', sub: 'Tennis Intelligence', href: 'https://tennis.propbetedge.ai/' }
   ];
 
   function sportTile(sport) {
