@@ -331,7 +331,7 @@
         status: c.status, transition: c.transition || null,
         title: player.name || c.headline, event_label: c.transition ? `${c.transition.from.replace(/_/g, ' ')} → ${c.transition.to.replace(/_/g, ' ')}` : `Status updated: ${String(c.status || '').replace(/_/g, ' ')}`,
         game,
-        source: { label: c.source?.label || 'ESPN injury report', provider: c.source?.provider || null, at: c.observed_at, basis: c.observed_basis, note: c.detail || null, injury: c.injury || null,
+        source: { label: c.source?.label || 'PropSports injury report', provider: c.source?.provider || null, at: c.observed_at, basis: c.observed_basis, note: c.detail || null, injury: c.injury || null,
           url: player.espn_id ? `https://www.espn.com/nfl/player/_/id/${encodeURIComponent(player.espn_id)}` : null, url_label: 'ESPN player page' },
         entity: { type: 'PLAYER', name: player.name, position: player.position || null, team: c.team?.abbreviation || null, espn_id: player.espn_id || null, headshot: player.headshot || null, prop_relevant: player.prop_relevant === true },
         search: [player.name, player.position, c.team?.abbreviation, game?.matchup, c.status].join(' ')

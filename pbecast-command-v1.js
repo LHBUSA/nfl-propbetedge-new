@@ -240,7 +240,7 @@
       <header><div><span class="pbecb-eye">${final ? 'PBE REPLAY · FINAL · LIVE-SOURCE GAME LOG' : 'KEY MOMENTS · LIVE'}</span><h2>${final ? 'How this game was decided' : 'Jump to what mattered'}</h2></div>
         <div class="pbekm-tabs" role="tablist">${tabs.map(([k, l, rows]) => `<button type="button" role="tab" aria-selected="${cur[0] === k}" class="${cur[0] === k ? 'is-on' : ''}" data-km-tab="${k}">${esc(l)} <i>${esc(rows.length)}</i></button>`).join('')}</div></header>
       ${body}
-      <footer class="pbekm-foot"><span class="pbekm-src">LIVE SOURCE · ESPN published play-by-play · ${esc(arr(d?.plays).length)} plays · ${esc(arr(d?.drives).length)} drives</span>${final ? enrichNote(en, d) : '<span class="pbekm-src">Explosive = 20+ yards stated in the play text.</span>'}</footer>
+      <footer class="pbekm-foot"><span class="pbekm-src">LIVE SOURCE · PropSports play-by-play · ${esc(arr(d?.plays).length)} plays · ${esc(arr(d?.drives).length)} drives</span>${final ? enrichNote(en, d) : '<span class="pbekm-src">Explosive = 20+ yards stated in the play text.</span>'}</footer>
     </section>`;
   }
 

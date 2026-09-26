@@ -98,7 +98,7 @@
         <h1 class="pbe6-title">${esc(d.season)} statistical leaders.<br><em>Through Week ${esc(week ?? '—')}.</em></h1>
         <div class="pbe6-copy">Accumulated from published box scores of completed ${esc(d.season)} regular-season games.
           <strong>${games} completed game${games === 1 ? '' : 's'} league-wide</strong>${games <= 2 ? ' — this is an intentionally small early-season sample, not a full-season table.' : '.'}
-          Source: ${esc(d.source?.provider || 'provider')} · updated ${esc(updated)} ET.</div>
+          Source: PropSports · updated ${esc(updated)} ET.</div>
         <span class="pbe6-archive-note${stale ? '' : ' is-live'}">${stale ? 'STALE FEED' : 'LIVE'} · ${esc(d.season)} · WEEK ${esc(week ?? '—')}</span>
       </header>
       <nav class="pbe6-tabs">${TABS.map(([k, label]) => `<button class="pbe6-tab ${state.tab === k ? 'active' : ''}" data-tab="${k}">${esc(label)}</button>`).join('')}

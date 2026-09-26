@@ -246,7 +246,7 @@
       ${chartHtml(model)}
       ${swingsHtml(model, final)}
       ${top}
-      <footer class="pbepulse-foot">Live win probability as published by ESPN · ${esc(model.observations.length)} observations${model.matched < model.observations.length ? ` · ${esc(model.matched)} matched to a published play` : ''}. Source probability, not a PropBetEdge model or prediction. A swing is the change between two consecutive observations; ${esc(model.threshold)} points or more counts as meaningful. PBEcast shows the play a swing followed and does not infer why it moved.</footer>
+      <footer class="pbepulse-foot">Live win probability from the PropSports live feed (provider model, not a PropBetEdge model) · ${esc(model.observations.length)} observations${model.matched < model.observations.length ? ` · ${esc(model.matched)} matched to a published play` : ''}. Source probability, not a PropBetEdge model or prediction. A swing is the change between two consecutive observations; ${esc(model.threshold)} points or more counts as meaningful. PBEcast shows the play a swing followed and does not infer why it moved.</footer>
     </section>`;
   }
 

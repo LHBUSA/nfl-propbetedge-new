@@ -90,7 +90,7 @@
       <header class="pbe7-hero"><div>
         <div class="pbe7-kicker">${esc(d.season)} NFL ${esc(d.season_type)} SEASON · ${stale ? 'STALE' : 'LIVE'}</div>
         <h1 class="pbe7-title">${esc(d.season)} NFL Standings.<br><em>Updating themselves.</em></h1>
-        <div class="pbe7-copy">Derived from completed ${esc(d.season)} regular-season results. ${played} game${played === 1 ? '' : 's'} completed league-wide. Source: ${esc(d.source?.provider || 'provider')} · current through ${esc(updated)} ET.</div>
+        <div class="pbe7-copy">Derived from completed ${esc(d.season)} regular-season results. ${played} game${played === 1 ? '' : 's'} completed league-wide. Source: PropSports · current through ${esc(updated)} ET.</div>
         <span class="pbe7-archive${stale ? '' : ' is-live'}">${stale ? 'STALE FEED' : 'LIVE'} · ${esc(d.season)}</span>
       </div>
       <aside class="pbe7-hero-side"><strong>${played}</strong><span>Completed regular-season game${played === 1 ? '' : 's'} behind this table</span></aside></header>

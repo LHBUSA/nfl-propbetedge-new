@@ -166,7 +166,7 @@
     const games = arr(data?.games).filter(g => g.semantics !== 'FINAL' && (ui.game === 'all' || String(g.id) === ui.game));
     const avail = data?.availability || {};
     if (!games.length) return '';
-    return `<section class="pbewc-avail"><header><span class="pbewc-eyebrow">GAME AVAILABILITY</span><h2>Who is in doubt, game by game</h2><p>Current OUT, DOUBTFUL, SUSPENDED and QUESTIONABLE designations from the ESPN injury report for every game still to be played.</p></header>
+    return `<section class="pbewc-avail"><header><span class="pbewc-eyebrow">GAME AVAILABILITY</span><h2>Who is in doubt, game by game</h2><p>Current OUT, DOUBTFUL, SUSPENDED and QUESTIONABLE designations from the PropSports injury report for every game still to be played.</p></header>
       <div class="pbewc-avail-grid">${games.map(g => {
         const rows = arr(avail[g.id]).filter(r => !ui.propOnly || r.player?.prop_relevant);
         return `<article class="pbewc-game"><header><b>${esc(g.matchup)}</b><span>${esc(etDay(g.kickoff))} · ${esc(etTime(g.kickoff))} ET</span></header>
@@ -189,7 +189,7 @@
     const head = `<header class="pbewc-hero"><span class="pbewc-eyebrow">WHAT CHANGED · ${esc(data ? `${data.window_hours}H WINDOW` : 'SOURCED CHANGES')}</span><h1>Every assumption that just moved</h1>
       <p>Injury designations, game disruptions, market moves and official weather — each tied to its player, team and game, each with its source and the source's own time.</p>${data ? sourceChips(data) : ''}</header>`;
     if (!data) {
-      return `<section class="pbewc">${head}<div class="${st.error ? 'pbewc-unavailable' : 'pbewc-empty'}"><b>${st.error ? 'What Changed is unavailable' : 'Reading sources…'}</b><span>${st.error ? `${esc(st.error)}. A failed read is shown as a failure, never as "nothing changed".` : 'ESPN injury report, scoreboard, market tape and weather.'}</span>${st.error ? '<button type="button" data-wc-retry>Retry</button>' : ''}</div></section>`;
+      return `<section class="pbewc">${head}<div class="${st.error ? 'pbewc-unavailable' : 'pbewc-empty'}"><b>${st.error ? 'What Changed is unavailable' : 'Reading sources…'}</b><span>${st.error ? `${esc(st.error)}. A failed read is shown as a failure, never as "nothing changed".` : 'PropSports injury report, scoreboard, market tape and weather.'}</span>${st.error ? '<button type="button" data-wc-retry>Retry</button>' : ''}</div></section>`;
     }
     const all = [...arr(data.changes), ...weatherItems()];
     const rank = { HIGH: 0, MEDIUM: 1, LOW: 2 };

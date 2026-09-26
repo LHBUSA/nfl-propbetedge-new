@@ -466,7 +466,7 @@
         scoring_play: true, score_value: p.score_value ?? null,
         period: p.period ?? null, clock: p.clock ?? null,
         home_score: p.home_score ?? null, away_score: p.away_score ?? null,
-        source: 'ESPN live feed via /api/nfl-live',
+        source: 'PropSports live feed',
         classification: cls.classified ? `structured play type "${p.type}"`
           : 'structured type did not classify this play; the published text is shown unchanged',
         text_policy: 'the published play text is displayed verbatim and is not interpreted'
@@ -493,7 +493,7 @@
       cta: [{ label: 'OPEN PBECAST', route: 'pbecast', game_id: g.id, kind: 'pbecast' }],
       visible_ms: CONFIG.visible_ms.GAME_FINAL,
       provenance: {
-        semantics: 'FINAL', game_id: g.id, source: 'ESPN live feed via /api/nfl-live',
+        semantics: 'FINAL', game_id: g.id, source: 'PropSports live feed',
         status: (g.status && g.status.semantics) || 'FINAL',
         claim_policy: 'a final score is reported as a result; no game is described as a '
                     + 'comeback, an upset or a game-winner without evidence for that claim'

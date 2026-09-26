@@ -286,7 +286,7 @@
     return `<div class="pc3-method" id="pc3-method" role="note"${ui.method ? '' : ' hidden'}>
       <b>How PropChain links a change to a market</b>
       <ul>
-        <li><strong>Entity.</strong> Players are linked by ESPN athlete id on the injury report, then by exact name on that game’s player board. No fuzzy matching; an ambiguous name is not linked.</li>
+        <li><strong>Entity.</strong> Players are linked by provider athlete id on the injury report, then by exact name on that game’s player board. No fuzzy matching; an ambiguous name is not linked.</li>
         <li><strong>Market tape.</strong> Cross-book median consensus per scheduled capture (08:00 · 13:00 · 18:00 ET). A move is placed before, spanning or after a change in time. PropChain shows what was observed and when — it does not claim a change caused a move.</li>
         <li><strong>Player props</strong> are stored as the latest snapshot only, so a player line shows its current value, never an invented earlier one. Consensus is the median of each book’s main line (the number it prices closest to even); best main line is the best available number among each book’s primary/main offering, then price — alternate ladders are not treated as the same wager.</li>
         <li><strong>Transitions</strong> (e.g. QUESTIONABLE → OUT) appear only when PropBetEdge captured both designations.</li>
@@ -423,11 +423,11 @@
       const what = [i.type, i.location && i.location !== i.type ? i.location : null, i.detail, i.side].filter(Boolean).join(' · ');
       body += `<p class="pc3-lead">${esc(c.entity.name)} · <strong class="tone-${STATUS_TONE[c.status] || 'mute'}">${esc(words(c.status))}</strong></p>`;
       body += c.transition
-        ? `<div class="pc3-transition"><div><small>Last captured as</small><b class="tone-${STATUS_TONE[c.transition.from] || 'mute'}">${esc(words(c.transition.from))}</b><span>${esc(stamp(c.transition.from_observed_at))}</span></div><i aria-hidden="true">→</i><div><small>First captured as</small><b class="tone-${STATUS_TONE[c.transition.to] || 'mute'}">${esc(words(c.transition.to))}</b><span>${esc(stamp(c.transition.observed_at))}</span></div></div><p class="pc3-fine">Both designations were captured by PropBetEdge from the ESPN injury report; the change happened between those two captures.</p>`
+        ? `<div class="pc3-transition"><div><small>Last captured as</small><b class="tone-${STATUS_TONE[c.transition.from] || 'mute'}">${esc(words(c.transition.from))}</b><span>${esc(stamp(c.transition.from_observed_at))}</span></div><i aria-hidden="true">→</i><div><small>First captured as</small><b class="tone-${STATUS_TONE[c.transition.to] || 'mute'}">${esc(words(c.transition.to))}</b><span>${esc(stamp(c.transition.observed_at))}</span></div></div><p class="pc3-fine">Both designations were captured by PropBetEdge from the PropSports injury report; the change happened between those two captures.</p>`
         : `<p class="pc3-fine">${data?.transitions?.available ? 'No earlier designation was captured by PropBetEdge for this player, so this is shown as an update, not a change from a prior status.' : 'Designation history is not published for this item, so this is shown as an update, not a change from a prior status.'}</p>`;
       body += dl([
         what ? ['Injury', esc(what)] : null,
-        i.return_date ? ['Return date', `${esc(i.return_date)} <small>as reported by ESPN</small>`] : null,
+        i.return_date ? ['Return date', `${esc(i.return_date)} <small>as reported by the source</small>`] : null,
         ['Source', esc(s.label)],
         ['Source time', `${esc(stamp(s.at))} <small>ESPN update time</small>`],
         inj?.fetched_at ? ['Report captured', `${esc(stamp(inj.fetched_at))}`] : null

@@ -689,7 +689,7 @@
             <ul>
               <li><b>Historical play and game data</b><span>nflverse · CC BY 4.0</span></li>
               <li><b>Historical and current weather</b><span>Open-Meteo · CC BY 4.0</span></li>
-              <li><b>Schedule, venue and identity media</b><span>ESPN public endpoints</span></li>
+              <li><b>Schedule, venue and identity media</b><span>PropSports</span></li>
               <li><b>Current markets</b><span>the existing PropBetEdge market source</span></li>
             </ul>
             <p class="q2-attr">${p.sources.map(s => esc(s.attribution || s.name)).join('<br>')}</p>
