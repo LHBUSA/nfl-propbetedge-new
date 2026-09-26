@@ -435,3 +435,25 @@ What a healthy first slate looks like, after one cron tick inside the horizon:
 
 `nfl-game-picks-orchestrator` was redeployed for the per-engine health verdict.
 Rollback version: `15345e9d-6144-4d41-8b35-c58035481adb`.
+
+## Production launch record — 2026-09-26 (owner-approved)
+
+- Root cause of "ENGINE DEGRADED — SOURCE UNAVAILABLE": the lane was never brought up. The three
+  Workers did not exist on Cloudflare (10007) and `nfl_td_targets_binary_market_v1.sql` was not
+  applied, so `nfl_prop_picks.target_rank` did not exist and `view=trackrecord` 503'd. Vercel's
+  `SUPABASE_SERVICE_ROLE_KEY` was present (`view=state` answered 200); `service_secret_missing`
+  was only ever seen on secret-less previews.
+- Migration applied in one transaction via the Supabase Management API. Proven identical
+  before/after: 45 pass_yds rows (full-row hash), 45 grades, all 45 receipt hashes and the chain;
+  every legacy receipt payload re-derived with the NEW receipt function reproduces its stored
+  SHA-256; `nfl_replace_open_prop_pick` unchanged. Pre-migration shared function definitions are
+  archived at `D:\Workers\nfl-td-pre-migration-shared-functions-2026-09-26.sql`.
+- `migrations/nfl_td_targets_rpc_grants_v1.sql` applied right after: anon/authenticated could
+  EXECUTE the SECURITY DEFINER `nfl_replace_open_td_target` (Supabase default role grants survive
+  `revoke ... from public`). Now service_role only.
+- Workers deployed from a clean export of main 0c1ee9f: grader 7e2acad0, tuner af57fbc6,
+  orchestrator 42878d12 (first deployed with cron disabled for pre-publication checks, then armed).
+- First tick 2026-09-26T00:30Z: 14 games in the 60 h horizon, 14 primary + 7 secondary targets,
+  0 abstained, 0 degraded, all TRACKING scope, 0 issued after kickoff, 0 duplicate primaries.
+  PHI @ CHI (MNF) enters the horizon on a later tick. ATL @ GB (final 09-24) was not backfilled.
+- Rollback is forward-fix only: the supplied rollback script refuses while any TD target exists.
