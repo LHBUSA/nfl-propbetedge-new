@@ -184,6 +184,9 @@ for (const [name, email] of ALLOWED) {
     assert.equal(resendCalls.length, 1);
     assert.deepEqual(resendCalls[0].to, [email.toLowerCase()]);
     assert.equal(resendCalls[0].subject, 'PropBetEdge NFL — secure sign-in');
+    assert.equal(resendCalls[0].from, 'PropBetEdge Picks <picks@propbetedge.ai>', 'sender unchanged');
+    assert.ok(resendCalls[0].html.includes('<a href="https://x.com/PROPBETEDGE"'), 'HTML sign-off travels in the real Resend payload');
+    assert.ok(resendCalls[0].text.endsWith('X: @PROPBETEDGE — https://x.com/PROPBETEDGE'), 'text sign-off travels in the real Resend payload');
   });
 }
 
