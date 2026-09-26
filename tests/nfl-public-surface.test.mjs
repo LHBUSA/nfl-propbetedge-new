@@ -75,7 +75,7 @@ test('planning and audit markdown does not ship', () => {
 
 /* ---------------------------------------------------- must always be served */
 const REQUIRED = [
-  'index.html', 'site.webmanifest',
+  'index.html', 'site.webmanifest', 'og/propbetedge-nfl-1200x630.png',
   'app-core-v3.js', 'page-loader.js', 'paywall.js', 'ui-v2.js', 'prop-board-v3.js', 'model-lab.js',
   'pbe-tokens.css', 'pbe-system.css', 'base-v3.css', 'ui-v2.css', 'paywall.css',
   'archive/utils.js', 'archive/teams.js', 'archive/superbowls.js', 'archive/hof.js',

@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<!-- PropBetEdge NFL share card (1200x630). Render: scripts/og/render-nfl-card.mjs -->
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800&family=Inter:wght@600;700&family=JetBrains+Mono:wght@500;600&display=block" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{width:1200px;height:630px;overflow:hidden;background:#08090b}
+  .card{position:relative;width:1200px;height:630px;overflow:hidden;color:#f5f3ee;font-family:Inter,system-ui,sans-serif;
+    background:
+      radial-gradient(720px 520px at 960px 120px, rgba(212,168,67,.18), transparent 62%),
+      radial-gradient(560px 420px at 100px 660px, rgba(212,168,67,.06), transparent 70%),
+      linear-gradient(160deg,#101216 0%,#0a0b0e 55%,#07080a 100%)}
+  svg.art{position:absolute;inset:0}
+  .frame{position:absolute;inset:22px;border-radius:22px;border:1px solid rgba(212,168,67,.38)}
+  .edge{position:absolute;left:22px;right:22px;bottom:22px;height:2px;
+    background:linear-gradient(90deg,transparent,rgba(232,196,104,.85) 30%,rgba(232,196,104,.85) 70%,transparent)}
+  .safe{position:absolute;left:84px;top:66px;right:84px;bottom:62px}
+  .brandrow{display:flex;align-items:center;gap:18px}
+  .brandrow img{height:58px;width:auto;filter:drop-shadow(0 6px 18px rgba(0,0,0,.55))}
+  .kicker{font:700 30px/1 'Barlow Condensed',sans-serif;letter-spacing:.02em;color:#f5f3ee}
+  .kicker span{color:#e2bb5c}
+  h1{margin-top:28px;font:800 196px/.8 'Barlow Condensed',sans-serif;letter-spacing:.01em;
+    background:linear-gradient(180deg,#ffffff 0%,#e9e5dc 60%,#bdb6a8 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .rule{width:88px;height:3px;margin:24px 0 20px;background:linear-gradient(90deg,#e8c468,rgba(232,196,104,0))}
+  .tag{font:700 32px/1 Inter,sans-serif;letter-spacing:.2em;color:#e2bb5c;text-transform:uppercase}
+  .caps{margin-top:22px;font:600 19px/1 'JetBrains Mono',monospace;letter-spacing:.14em;color:rgba(245,243,238,.78)}
+  .dot{color:#e2bb5c;padding:0 12px}
+  .foot{position:absolute;left:0;right:0;bottom:0;display:flex;align-items:flex-end;justify-content:space-between}
+  .net{font:600 17px/1 'JetBrains Mono',monospace;letter-spacing:.2em;color:rgba(245,243,238,.55)}
+  .domain{display:flex;align-items:center;gap:12px;font:600 21px/1 'JetBrains Mono',monospace;letter-spacing:.06em;color:rgba(245,243,238,.9)}
+  .domain i{display:block;width:9px;height:9px;border-radius:50%;background:#e2bb5c;box-shadow:0 0 12px rgba(226,187,92,.9)}
+</style>
+</head>
+<body>
+<div class="card">
+  <!-- abstract gridiron: perspective yard lines, hash marks and a drive trace; no league or team marks -->
+  <svg class="art" viewBox="0 0 1200 630" fill="none">
+    <g stroke="rgba(226,187,92,.16)" stroke-width="1.2">
+      <path d="M640 560 L760 60"/><path d="M730 560 L830 60"/><path d="M820 560 L900 60"/>
+      <path d="M910 560 L970 60"/><path d="M1000 560 L1040 60"/><path d="M1090 560 L1110 60"/>
+      <path d="M1180 560 L1180 60"/>
+    </g>
+    <g stroke="rgba(255,255,255,.08)" stroke-width="1">
+      <path d="M700 330 H1180"/><path d="M718 250 H1180" stroke-dasharray="2 9"/><path d="M682 410 H1180" stroke-dasharray="2 9"/>
+    </g>
+    <path d="M690 470 C760 452 800 400 860 396 S950 330 1000 300 S1080 214 1150 190"
+          stroke="url(#trace)" stroke-width="2.4" stroke-linecap="round"/>
+    <g fill="#e8c468">
+      <circle cx="860" cy="396" r="4" opacity=".55"/>
+      <circle cx="1000" cy="300" r="4.5" opacity=".8"/>
+      <circle cx="1150" cy="190" r="6"/>
+    </g>
+    <circle cx="1150" cy="190" r="15" stroke="rgba(232,196,104,.45)"/>
+    <defs>
+      <linearGradient id="trace" x1="690" y1="470" x2="1150" y2="190" gradientUnits="userSpaceOnUse">
+        <stop offset="0" stop-color="#e8c468" stop-opacity="0"/>
+        <stop offset=".45" stop-color="#e8c468" stop-opacity=".45"/>
+        <stop offset="1" stop-color="#f3d78c"/>
+      </linearGradient>
+    </defs>
+  </svg>
+  <div class="frame"></div>
+  <div class="edge"></div>
+  <div class="safe">
+    <div class="brandrow">
+      <img src="https://propbetedge.ai/logo/pbe-mark-240.png" alt="">
+      <div class="kicker">PropBet<span>Edge</span></div>
+    </div>
+    <h1>NFL</h1>
+    <div class="rule"></div>
+    <div class="tag">Football Intelligence</div>
+    <div class="caps">PBE PICKS<span class="dot">•</span>PBECAST<span class="dot">•</span>PLAYER DNA<span class="dot">•</span>TRACK RECORD</div>
+    <div class="foot">
+      <div class="net">THE SPORTS INTELLIGENCE NETWORK</div>
+      <div class="domain"><i></i>nfl.propbetedge.ai</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
