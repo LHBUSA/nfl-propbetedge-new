@@ -21,6 +21,13 @@ account_id = "fd3a233edadd0a60916413c1199f71ee"
 workers_dev = true
 preview_urls = false
 
+# The product path. Narrow on purpose: only this API terminates at Cloudflare;
+# every other path on nfl.propbetedge.ai continues to the Vercel frontend.
+# A Worker route fires only while the nfl.propbetedge.ai DNS record is proxied.
+routes = [
+  { pattern = "nfl.propbetedge.ai/api/pbe-touchdown-targets*", zone_name = "propbetedge.ai" }
+]
+
 [vars]
 SUPABASE_URL = "https://tkmlnhmylqnttmnsnief.supabase.co"
 
