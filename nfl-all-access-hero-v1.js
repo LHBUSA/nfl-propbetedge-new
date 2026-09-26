@@ -27,7 +27,7 @@
     checkoutUrl: 'https://buy.stripe.com/8x2eVdgmOaqy4pv8Ez7wA0N',
     learnUrl: 'https://propbetedge.ai/pro',
   });
-  const SPORTS_LINE = 'MLB · NFL · NBA · NHL · WNBA · UFC';
+  const SPORTS_LINE = 'MLB · NFL · NBA · NHL · WNBA · UFC · Tennis';
   const SPORTS_NEXT = 'plus every Pro sport added next.';
   const NO_HERO_STATES = new Set(['all_access', 'owner']);
 

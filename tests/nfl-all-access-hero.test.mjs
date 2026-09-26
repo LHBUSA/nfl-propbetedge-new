@@ -66,7 +66,7 @@ test('hero: exact copy and destinations, from the shared contract and from the b
     assert.match(html, /BEST VALUE · MOST COMPLETE/);
     assert.ok(text(html).includes('$29/month'), 'the price reads $29/month');
     assert.ok(text(html).includes('Every current and future PropBetEdge Pro sport.'));
-    assert.ok(text(html).includes('MLB · NFL · NBA · NHL · WNBA · UFC plus every Pro sport added next.'));
+    assert.ok(text(html).includes('MLB · NFL · NBA · NHL · WNBA · UFC · Tennis plus every Pro sport added next.'));
     assert.ok(text(html).includes('Launch offer: 25% off while active with code THEEDGE25'));
     assert.ok(html.includes(`<a class="nfl-aa-cta" href="${STRIPE_ALL_ACCESS}" rel="noopener" data-pbe-placement="all_access_checkout" data-nfl-all-access-cta="checkout">GET ALL ACCESS</a>`), 'GET ALL ACCESS links to exactly the live Payment Link');
     assert.ok(html.includes(`<a class="nfl-aa-learn" href="${LEARN}" rel="noopener" data-nfl-all-access-cta="learn">WHAT'S INCLUDED</a>`));

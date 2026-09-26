@@ -204,7 +204,7 @@ test('auth-diag reports the contract version', () => {
 /* ------------------------------------------------------------ the copies */
 test('api/_pbe-membership.js and pbe-membership.js are byte-identical; the CSS ships and the module is exposed on window', () => {
   assert.ok(readFileSync(new URL('../api/_pbe-membership.js', import.meta.url)).equals(readFileSync(new URL('../pbe-membership.js', import.meta.url))));
-  assert.equal(M.CONTRACT_VERSION, '1.1.0', 'the copy is the 1.1.0 shared contract (legacy tiers inside sport_pro)');
+  assert.equal(M.CONTRACT_VERSION, '1.2.0', 'the copy is the 1.2.0 shared contract (legacy tiers inside sport_pro)');
   assert.deepEqual([...M.LEGACY_TIERS], ['founding', 'season_pass']);
   for (const tier of ['founding', 'season_pass']) assert.match(read('pbe-membership.css'), new RegExp(`\\.pbe-mbr-badge\\.is-${tier}`));
   const html = read('index.html');
