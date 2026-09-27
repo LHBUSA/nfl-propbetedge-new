@@ -682,16 +682,32 @@ async function previewView(res, secret) {
   return send(res, 200, body, 'public, max-age=30, s-maxage=30, stale-while-revalidate=60');
 }
 
+/* Output classes that may never leave the public free sample. */
+const FREE_SAMPLE_BLOCKED_SCOPES = Object.freeze(['tracking', 'validation', 'shadow', 'research', 'rehearsal_shadow', 'unpublished']);
+
+/* A decision may leave the free sample only if it is an OFFICIAL publication.
+ * Allow-list, not deny-list: an unknown or missing scope never qualifies. */
+export function isFreeSamplePublishable(row) {
+  const scope = String(row?.publication_scope || '').toLowerCase();
+  return scope === OFFICIAL && !FREE_SAMPLE_BLOCKED_SCOPES.includes(scope);
+}
+
+/* The free-sample selection over the eligible current card: official,
+ * ACTIVE/LOCKED, strongest edge first, at most two. */
+export function selectFreeSample(current) {
+  return (current || [])
+    .filter(({ row, lifecycle }) => (lifecycle === 'ACTIVE' || lifecycle === 'LOCKED') && isFreeSamplePublishable(row))
+    .sort((a, b) => Number(b.row.edge_pct || 0) - Number(a.row.edge_pct || 0))
+    .slice(0, 2);
+}
+
 /* Public top-of-funnel sample: intentionally exposes at most two ACTIVE/LOCKED
  * OFFICIAL picks. This is a separate, tiny publication contract; it never
- * returns tracking decisions, feature vectors, receipts, stake sizing, history,
- * or the rest of the Pro card. */
+ * returns tracking/validation/shadow/research decisions, feature vectors,
+ * receipts, stake sizing, history, or the rest of the Pro card. */
 async function freeSampleView(res, secret) {
   const ctx = await loadCard(secret, { withTape: false });
-  const candidates = ctx.eligible.current
-    .filter(({ lifecycle }) => lifecycle === 'ACTIVE' || lifecycle === 'LOCKED')
-    .sort((a, b) => Number(b.row.edge_pct || 0) - Number(a.row.edge_pct || 0))
-    .slice(0, 2)
+  const candidates = selectFreeSample(ctx.eligible.current)
     .map(({ row, lifecycle }) => {
       const rawMatchup = matchupFromGameId(row.game_id);
       const matchup = rawMatchup ? {
@@ -728,6 +744,10 @@ async function freeSampleView(res, secret) {
       };
     });
 
+  /* Defence in depth: never send a non-official decision, whatever changed upstream. */
+  if (candidates.some((pick) => pick.publication_scope !== OFFICIAL)) {
+    throw new Error('free_sample_non_official_selection');
+  }
   res.setHeader('Access-Control-Allow-Origin', '*');
   return send(res, 200, {
     contract: 'pbe-free-sample-v1',
