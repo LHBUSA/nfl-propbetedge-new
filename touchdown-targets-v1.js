@@ -493,16 +493,16 @@
 
   /* ------------------------------------------------------ free TD targets */
 
-  /* FREE TD TARGETS (view=free-sample): at most two OFFICIAL primary targets,
-     chosen by the server. This renders what it is sent and nothing else — no
+  /* FREE TD TARGETS (view=free-sample): at most two primary targets, official
+     first then tracking, chosen and labelled by the server. This renders what it is sent and nothing else — no
      probability, price or rank reaches a free browser, so none is shown. A
      failed read renders nothing (never "no targets"); an empty sample renders
      the server's own empty state. */
   const FREE_REASON_COPY = {
-    td_publication_gated: 'Free TD Targets come only from OFFICIAL targets. Touchdown Targets is still in its tracking phase, so no target is official yet — nothing is manufactured to fill this space.',
-    td_engine_degraded: 'The Touchdown Targets engine is degraded, so no official target can be offered right now.',
-    no_official_primary_td_target: 'No official primary target is open for this slate yet.',
+    td_engine_degraded: 'The Touchdown Targets engine is degraded, so no target can be offered right now.',
+    no_eligible_primary_td_target: 'No primary target is open for this slate yet. Nothing is manufactured to fill this space.',
   };
+  const FREE_TRACKING_COPY = 'Named before kickoff and graded from the official final box score. Touchdown Targets is still completing its validation window.';
   const freeHeadshot = url => (/^https:\/\/a\.espncdn\.com\/i\/headshots\/nfl\/players\/full\/\d+\.png$/.test(String(url || '')) ? url : '');
 
   function freeCardHtml(target) {
@@ -510,25 +510,31 @@
     const insights = (Array.isArray(target.insights) ? target.insights : []).slice(0, 3);
     const matchup = target.opponent
       ? `${target.home_away === 'away' ? '@' : 'vs'} ${target.opponent}` : '';
-    return `<article class="pbetd-free-card" data-pbetd-free-target="${esc(target.target_id)}">
+    const official = target.official === true && target.publication_scope === 'official';
+    const scopeTag = official
+      ? '<span class="pbetd-free-scope official">OFFICIAL TARGET</span>'
+      : '<span class="pbetd-free-scope tracking">TRACKING TARGET · VALIDATION PHASE</span>';
+    return `<article class="pbetd-free-card" data-pbetd-free-target="${esc(target.target_id)}" data-pbetd-free-scope="${official ? 'official' : 'tracking'}">
       <div class="pbetd-free-top">
         <span class="pbetd-face"><span aria-hidden="true">${esc(monogram(target.player_name))}</span>${
   src ? `<img src="${esc(src)}" alt="${esc(target.player_name || '')}" loading="lazy" decoding="async" onerror="this.remove()">` : ''}</span>
         <div class="pbetd-free-who">
-          <span class="pbetd-badge">TD TARGET</span>
+          <span class="pbetd-free-tags"><span class="pbetd-badge">FREE TD TARGET</span>${scopeTag}</span>
           <h4 class="pbetd-name">${esc(target.player_name || '')}</h4>
           <span class="pbetd-free-team">${teamImg(target.team)}<b>${esc(target.team || '')}</b>${
   target.position ? ` · ${esc(target.position)}` : ''}${matchup ? ` · ${esc(matchup)}` : ''}</span>
           <span class="pbetd-free-kick">${esc(kickoff(target.kickoff_ts))}</span>
         </div>
       </div>
+      ${official ? '' : `<p class="pbetd-free-note">${esc(FREE_TRACKING_COPY)}</p>`}
       ${insights.length ? `<ul class="pbetd-free-why">${insights.map(item => `<li><span>${esc(item.label)}</span><b>${esc(item.value)}</b></li>`).join('')}</ul>` : ''}
     </article>`;
   }
 
   function freeSampleHtml(payload) {
     if (!payload || payload.contract !== 'pbe-nfl-free-td-targets-v1') return '';
-    const targets = (Array.isArray(payload.targets) ? payload.targets : []).filter(t => t && t.official === true).slice(0, 2);
+    const targets = (Array.isArray(payload.targets) ? payload.targets : [])
+      .filter(t => t && (t.publication_scope === 'official' || t.publication_scope === 'tracking')).slice(0, 2);
     const cta = `<button type="button" class="pbetd-btn gold" data-pbetd-upgrade="1">${esc(payload.cta_label || 'Unlock all TD Targets')} &rarr;</button>`;
     const title = targets.length === 2 ? '2 Free TD Targets' : targets.length === 1 ? '1 Free TD Target' : 'Free TD Targets';
     const head = `<div class="pbetd-free-head"><div class="pbetd-eyebrow"><i class="gated"></i>FREE · UP TO 2 PER SLATE</div>

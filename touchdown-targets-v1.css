@@ -716,6 +716,21 @@
 }
 .pbetd-free-team b { color: var(--pbe-paper); font-weight: 600; }
 .pbetd-free-kick { font: 500 var(--fs-micro)/1.3 var(--pbe-font-data); letter-spacing: .05em; text-transform: uppercase; color: var(--pbe-subtle); }
+.pbetd-free-tags { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.pbetd-free-scope {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--pbe-line-strong);
+  border-radius: var(--r-xs);
+  padding: 2px 6px;
+  font: 600 var(--fs-micro)/1.2 var(--pbe-font-data);
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--pbe-dim);
+  white-space: normal;
+}
+.pbetd-free-scope.official { border-color: var(--pbe-gold); color: var(--pbe-gold-bright); }
+.pbetd-free-note { margin: 0; font: 400 var(--fs-sm)/1.5 var(--pbe-font-ui); color: var(--pbe-dim); }
 .pbetd-free-why {
   display: flex;
   flex-direction: column;

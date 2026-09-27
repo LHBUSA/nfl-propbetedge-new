@@ -16,8 +16,9 @@
  *                detector: a touchdown that has happened, read only from
  *                nfl_td_target_hit_events. Never an unhit or future target,
  *                never model_snapshot. A live observation, not a grade.
- *   free-sample  public.  FREE TD TARGETS: at most two OFFICIAL, PRIMARY, open,
- *                pregame targets for the current slate (api/_td-free-sample.js).
+ *   free-sample  public.  FREE TD TARGETS: at most two PRIMARY, open, pregame
+ *                targets for one slate day, official first then tracking, each
+ *                labelled with its own scope (api/_td-free-sample.js).
  *                No probability, edge, price, rank or driver ever leaves.
  *
  * A free browser cannot receive a live target in JSON and have it hidden by

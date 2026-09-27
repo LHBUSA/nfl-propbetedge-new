@@ -12,10 +12,14 @@
  * away, and how little of each leaves.
  *
  * THE ELIGIBILITY RULE (one named predicate: isFreeTdEligible)
- *   official scope  — the standing free-sample record contract (commit 23e37cf):
- *                     only an OFFICIAL decision may leave a free sample. A
- *                     tracking target is a verified live record but it is not a
- *                     publication, so it never qualifies, whatever it scored.
+ *   scope           — OFFICIAL or TRACKING (owner decision 2026-09-27, v1.1.0).
+ *                     A tracking primary is named before kickoff, frozen and
+ *                     graded from the official final box score, so it may be
+ *                     given away — labelled as tracking, never as official.
+ *                     Making it free does NOT promote it, open the learning
+ *                     gate or touch the model, thresholds, grading or record.
+ *                     Any other scope (validation, shadow, research, …) never
+ *                     qualifies.
  *   primary         — the one player PBE names for the game. Secondaries are
  *                     never free.
  *   open            — issued and not withdrawn (killed / superseded) or settled.
@@ -35,9 +39,13 @@
  * changes. A target replaced before kickoff is a NEW row with a new id; the old
  * one is superseded and simply stops appearing here.
  *
- * ORDER: the selector's own ranking key — PBE probability, highest first — then
+ * ORDER: OFFICIAL targets fill the free slots first, then TRACKING. Within each
+ * scope, the selector's own ranking key — PBE probability, highest first — then
  * kickoff, then target id, so the same rows always give the same two. The
  * probability orders; it is never sent.
+ *
+ * LABEL: `official` and `publication_scope` are the row's own, never hardcoded.
+ * A tracking target always leaves as official:false, publication_scope:'tracking'.
  *
  * WHAT NEVER LEAVES: probability, market probability, edge, EV, price, book,
  * rank, confidence, drivers/factors, the model snapshot, receipts, or any
@@ -45,9 +53,11 @@
  */
 
 export const FREE_TD_CONTRACT = 'pbe-nfl-free-td-targets-v1';
-export const FREE_TD_PRODUCT_VERSION = 'nfl-free-td-targets/1.0.0';
+export const FREE_TD_PRODUCT_VERSION = 'nfl-free-td-targets/1.1.0';
 export const FREE_TD_MAX_TARGETS = 2;
-export const FREE_TD_ELIGIBILITY_RULE = 'official_primary_pregame_td_target';
+export const FREE_TD_ELIGIBILITY_RULE = 'primary_pregame_td_target_official_or_tracking';
+/* The publication scopes a free target may carry, in preference order. */
+export const FREE_TD_SCOPES = Object.freeze(['official', 'tracking']);
 export const FREE_TD_FULL_PRODUCT_URL = 'https://nfl.propbetedge.ai/#tdtargets';
 export const FREE_TD_CTA_LABEL = 'Unlock all TD Targets';
 export const FREE_TD_EMPTY_MESSAGE = 'No qualified free TD targets yet';
@@ -95,7 +105,7 @@ export function freeTdGameId(row) {
  * value never qualifies. */
 export function isFreeTdEligible(row) {
   if (!row || row.market !== MARKET) return false;
-  if (String(row.publication_scope || '').toLowerCase() !== 'official') return false;
+  if (!FREE_TD_SCOPES.includes(row.publication_scope)) return false;
   if (row.target_rank !== 'primary') return false;
   if (row.status !== 'open') return false;
   const issued = Date.parse(row.created_at || '');
@@ -133,12 +143,15 @@ export function freeTdGameLabel(row) {
   return m ? `${m[1]} @ ${m[2]}` : null;
 }
 
-/* Eligible rows on ONE slate day, in the selector's order, one per
- * player+game, at most two. */
+/* Eligible rows on ONE slate day — official first, then tracking, each in the
+ * selector's order — one per player+game, at most two. */
 export function selectFreeTdTargets(rows, max = FREE_TD_MAX_TARGETS, nowMs = Date.now()) {
   const limit = Math.min(Math.max(0, Number(max) || 0), FREE_TD_MAX_TARGETS);
   const slate = freeTdSlateDate(rows, nowMs);
   const ordered = arr(rows).filter(isFreeTdEligible).filter(row => etDate(row.kickoff_ts) === slate).sort((a, b) => {
+    const sa = FREE_TD_SCOPES.indexOf(a.publication_scope);
+    const sb = FREE_TD_SCOPES.indexOf(b.publication_scope);
+    if (sa !== sb) return sa - sb;
     const pa = num(a.model_prob) ?? -1;
     const pb = num(b.model_prob) ?? -1;
     if (pb !== pa) return pb - pa;
@@ -226,8 +239,8 @@ export function shapeFreeTdTarget(row, nowMs = Date.now()) {
     target_id: row.id,
     selection_type: 'td_target',
     free: true,
-    official: true,
-    publication_scope: 'official',
+    official: row.publication_scope === 'official',
+    publication_scope: row.publication_scope,
     market: MARKET,
     player_id: freeTdPlayerId(row),
     player_name: row.player_name,
@@ -252,11 +265,13 @@ export function shapeFreeTdTarget(row, nowMs = Date.now()) {
   };
 }
 
+/* Why the sample is empty — only ever because no eligible primary exists for
+ * the slate. A closed learning gate is not a reason: publication and gate_open
+ * are reported alongside as information. */
 export function freeTdEligibilityReason({ state, eligibleCount }) {
   if (eligibleCount > 0) return null;
-  if (String(state?.publication || '').toUpperCase() !== 'ALLOWED') return 'td_publication_gated';
   if (String(state?.engine_health || '').toUpperCase() !== 'HEALTHY') return 'td_engine_degraded';
-  return 'no_official_primary_td_target';
+  return 'no_eligible_primary_td_target';
 }
 
 /* The whole response body, from governance state and the slate's rows. Pure. */
@@ -264,7 +279,8 @@ export function buildFreeTdPayload({ state, rows, season, week, nowMs = Date.now
   const selected = selectFreeTdTargets(rows, FREE_TD_MAX_TARGETS, nowMs);
   const slateDate = selected.length ? freeTdSlateDate(rows, nowMs) : null;
   const targets = selected.map(row => shapeFreeTdTarget(row, nowMs));
-  if (targets.length > FREE_TD_MAX_TARGETS || targets.some(t => t.publication_scope !== 'official' || t.slate_date !== slateDate)) {
+  if (targets.length > FREE_TD_MAX_TARGETS || targets.some(t => !FREE_TD_SCOPES.includes(t.publication_scope)
+    || t.official !== (t.publication_scope === 'official') || t.slate_date !== slateDate)) {
     throw new Error('free_td_sample_contract_violation');
   }
   const reason = freeTdEligibilityReason({ state, eligibleCount: targets.length });

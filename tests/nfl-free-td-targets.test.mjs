@@ -1,7 +1,8 @@
-/* FREE TD TARGETS — /api/pbe-touchdown-targets?view=free-sample.
+/* FREE TD TARGETS — /api/pbe-touchdown-targets?view=free-sample (v1.1.0).
  *
- * The network free product: at most two OFFICIAL, PRIMARY, open, pregame
- * Touchdown Targets for one ET slate day, drawn from the existing engine. This
+ * The network free product: at most two PRIMARY, open, pregame Touchdown
+ * Targets for one ET slate day — official first, then tracking, each labelled
+ * with its own scope — drawn from the existing engine. This
  * suite pins the contract, the one eligibility predicate, the leak boundary,
  * the premium gate that must not move, the selector thresholds and the
  * grader/detector bytes, and the free cards the TD page renders.
@@ -88,40 +89,69 @@ function keysDeep(value, out = new Set()) {
 
 /* ------------------------------------------------------- the eligibility rule */
 
-test('the eligibility predicate: official + primary + open + pregame + resolved identity, nothing else', () => {
-  assert.equal(FREE_TD_ELIGIBILITY_RULE, 'official_primary_pregame_td_target');
-  assert.equal(isFreeTdEligible(target()), true);
+test('the eligibility predicate: primary + open + pregame + resolved identity, official OR tracking, nothing else', () => {
+  assert.equal(FREE_TD_ELIGIBILITY_RULE, 'primary_pregame_td_target_official_or_tracking');
+  assert.equal(isFreeTdEligible(target()), true, 'official primary eligible');
+  assert.equal(isFreeTdEligible(target({ publication_scope: 'tracking' })), true, 'tracking primary eligible');
   for (const [label, row] of [
-    ['tracking', target({ publication_scope: 'tracking' })],
+    ['validation scope', target({ publication_scope: 'validation' })],
+    ['shadow scope', target({ publication_scope: 'shadow' })],
+    ['research scope', target({ publication_scope: 'research' })],
     ['missing scope', target({ publication_scope: null })],
-    ['secondary', target({ target_rank: 'secondary' })],
+    ['upper-case / unknown scope', target({ publication_scope: 'TRACKING ' })],
+    ['official secondary', target({ target_rank: 'secondary' })],
+    ['tracking secondary', target({ publication_scope: 'tracking', target_rank: 'secondary' })],
     ['withdrawn (killed)', target({ status: 'killed' })],
+    ['tracking killed', target({ publication_scope: 'tracking', status: 'killed' })],
     ['replaced (superseded)', target({ status: 'superseded' })],
+    ['tracking superseded', target({ publication_scope: 'tracking', status: 'superseded' })],
     ['settled (graded)', target({ status: 'graded' })],
     ['issued after kickoff', target({ created_at: '2026-10-04T17:05:00Z' })],
+    ['tracking issued after kickoff', target({ publication_scope: 'tracking', created_at: '2026-10-04T17:00:00Z' })],
     ['passing yards market', target({ market: 'player_pass_yds' })],
   ]) assert.equal(isFreeTdEligible(row), false, label);
-  const noId = target();
-  noId.model_snapshot.player.gsis_id = null;
-  assert.equal(isFreeTdEligible(noId), false, 'a name without a resolved GSIS id never qualifies');
+  for (const scope of ['official', 'tracking']) {
+    const noId = target({ publication_scope: scope });
+    noId.model_snapshot.player.gsis_id = null;
+    assert.equal(isFreeTdEligible(noId), false, `${scope}: a name without a resolved GSIS id never qualifies`);
+  }
 });
 
-test('TODAY (every target tracking, publication GATED): zero targets, explicit reason, clean empty state', () => {
-  const rows = [target({ publication_scope: 'tracking', model_prob: 0.55 }), target({ publication_scope: 'tracking', model_prob: 0.5 })];
+test('TODAY (every target tracking, publication GATED): tracking primaries are served, labelled tracking — the gate is only information', () => {
+  const rows = [target({ publication_scope: 'tracking', model_prob: 0.55 }), target({ publication_scope: 'tracking', model_prob: 0.5 }), target({ publication_scope: 'tracking', model_prob: 0.45 })];
   const body = buildFreeTdPayload({ state: GATED, rows, season: 2026, week: 5, nowMs: NOW });
-  assert.equal(body.count, 0);
-  assert.deepEqual(body.targets, []);
-  assert.deepEqual(body.eligibility, { rule: 'official_primary_pregame_td_target', publication: 'GATED', gate_open: false, reason: 'td_publication_gated' });
-  assert.deepEqual(body.empty_state, { code: 'td_publication_gated', message: 'No qualified free TD targets yet' });
-  assert.equal(body.slate_date, null);
+  assert.equal(body.count, 2);
+  assert.deepEqual(body.targets.map(t => t.target_id), [rows[0].id, rows[1].id]);
+  for (const t of body.targets) {
+    assert.equal(t.official, false);
+    assert.equal(t.publication_scope, 'tracking');
+  }
+  assert.deepEqual(body.eligibility, { rule: 'primary_pregame_td_target_official_or_tracking', publication: 'GATED', gate_open: false, reason: null });
+  assert.equal(body.empty_state, null);
+  assert.equal(body.slate_date, '2026-10-04');
 });
 
-test('publication allowed but nothing official open: a different, honest reason', () => {
-  const body = buildFreeTdPayload({ state: ALLOWED, rows: [], season: 2026, week: 5, nowMs: NOW });
-  assert.equal(body.eligibility.reason, 'no_official_primary_td_target');
-  assert.equal(body.empty_state.code, 'no_official_primary_td_target');
+test('empty state only when no eligible primary exists for the slate — never because the gate is closed', () => {
+  for (const state of [GATED, ALLOWED]) {
+    const body = buildFreeTdPayload({ state, rows: [target({ target_rank: 'secondary', publication_scope: 'tracking' }), target({ status: 'killed' })], nowMs: NOW });
+    assert.equal(body.count, 0);
+    assert.equal(body.eligibility.reason, 'no_eligible_primary_td_target');
+    assert.deepEqual(body.empty_state, { code: 'no_eligible_primary_td_target', message: 'No qualified free TD targets yet' });
+    assert.equal(body.eligibility.publication, state.publication);
+  }
   const degraded = buildFreeTdPayload({ state: { ...ALLOWED, engine_health: 'DEGRADED' }, rows: [], nowMs: NOW });
   assert.equal(degraded.eligibility.reason, 'td_engine_degraded');
+});
+
+test('official is preferred over tracking, whatever the probabilities; tracking fills what official leaves', () => {
+  const tHigh = target({ publication_scope: 'tracking', model_prob: 0.9 });
+  const tMid = target({ publication_scope: 'tracking', model_prob: 0.6 });
+  const oLow = target({ publication_scope: 'official', model_prob: 0.25 });
+  const one = buildFreeTdPayload({ state: ALLOWED, rows: [tHigh, tMid, oLow], nowMs: NOW });
+  assert.deepEqual(one.targets.map(t => [t.target_id, t.publication_scope, t.official]), [[oLow.id, 'official', true], [tHigh.id, 'tracking', false]]);
+  const oA = target({ publication_scope: 'official', model_prob: 0.3 });
+  const both = buildFreeTdPayload({ state: ALLOWED, rows: [tHigh, oLow, oA], nowMs: NOW });
+  assert.deepEqual(both.targets.map(t => t.target_id), [oA.id, oLow.id], 'two official fill both slots; within a scope the selector order holds');
 });
 
 /* ------------------------------------------------------------ max two, order */
@@ -140,7 +170,7 @@ test('never more than two, whatever the slate holds; the selector\'s own order p
 });
 
 test('one qualified target shows one — nothing is manufactured to make two', () => {
-  const rows = [target({ model_prob: 0.5 }), target({ publication_scope: 'tracking', model_prob: 0.7 }), target({ target_rank: 'secondary', model_prob: 0.6 })];
+  const rows = [target({ model_prob: 0.5 }), target({ publication_scope: 'validation', model_prob: 0.7 }), target({ target_rank: 'secondary', model_prob: 0.6 }), target({ publication_scope: 'tracking', target_rank: 'secondary', model_prob: 0.65 })];
   const body = buildFreeTdPayload({ state: ALLOWED, rows, season: 2026, week: 5, nowMs: NOW });
   assert.equal(body.count, 1);
   assert.equal(body.targets[0].target_id, rows[0].id);
@@ -187,8 +217,8 @@ test('one ET slate day: the earliest day on/after today with an eligible target;
 
 /* ----------------------------------------------------------- the leak boundary */
 
-test('a free target carries exactly the contract keys and never a premium field', () => {
-  const rows = [target({ model_prob: 0.5 }, { name: 'Travis Etienne', gsis: '00-0036973', gameId: '2026_05_LV_NO' }), target({ model_prob: 0.4 })];
+test('a free target carries exactly the contract keys and never a premium field — official and tracking alike', () => {
+  const rows = [target({ model_prob: 0.5 }, { name: 'Travis Etienne', gsis: '00-0036973', gameId: '2026_05_LV_NO' }), target({ model_prob: 0.4, publication_scope: 'tracking' })];
   const body = buildFreeTdPayload({ state: ALLOWED, rows, season: 2026, week: 5, nowMs: NOW });
   assert.deepEqual(Object.keys(body), ['contract', 'sport', 'product', 'product_version', 'generated_at', 'season', 'week', 'slate_date',
     'max_targets', 'count', 'eligibility', 'targets', 'empty_state', 'full_product_url', 'cta_label']);
@@ -197,15 +227,16 @@ test('a free target carries exactly the contract keys and never a premium field'
   for (const key of FORBIDDEN_KEYS) assert.equal(keys.has(key), false, `leaked ${key}`);
   const raw = JSON.stringify(body);
   assert.doesNotMatch(raw, /%/, 'no percentage anywhere — no probability can hide in copy');
-  assert.doesNotMatch(raw, /0\.5\b|Fanatics|\+145/, 'no probability, book or price value');
-  const t = body.targets[0];
+  assert.doesNotMatch(raw, /0\.5\b|0\.4\b|0\.38|Fanatics|\+?145\b|"C"/, 'no probability, book, price or confidence value');
+  const [o, tr] = body.targets;
   assert.equal(body.contract, 'pbe-nfl-free-td-targets-v1');
-  assert.equal(body.product_version, 'nfl-free-td-targets/1.0.0');
+  assert.equal(body.product_version, 'nfl-free-td-targets/1.1.0');
   assert.equal(body.full_product_url, 'https://nfl.propbetedge.ai/#tdtargets');
   assert.equal(body.cta_label, 'Unlock all TD Targets');
-  assert.deepEqual([t.selection_type, t.free, t.official, t.publication_scope, t.market], ['td_target', true, true, 'official', 'player_anytime_td']);
-  assert.deepEqual([t.player_id, t.team, t.opponent, t.home_away, t.game_id, t.game_label, t.slate_date], ['00-0036973', 'NO', 'LV', 'home', '2026_05_LV_NO', 'LV @ NO', '2026-10-04']);
-  assert.deepEqual([t.game_status, t.locked_at, t.issued_at], ['scheduled', null, '2026-10-02T00:30:00Z']);
+  assert.deepEqual([o.selection_type, o.free, o.official, o.publication_scope, o.market], ['td_target', true, true, 'official', 'player_anytime_td']);
+  assert.deepEqual([tr.selection_type, tr.free, tr.official, tr.publication_scope, tr.market], ['td_target', true, false, 'tracking', 'player_anytime_td']);
+  assert.deepEqual([o.player_id, o.team, o.opponent, o.home_away, o.game_id, o.game_label, o.slate_date], ['00-0036973', 'NO', 'LV', 'home', '2026_05_LV_NO', 'LV @ NO', '2026-10-04']);
+  assert.deepEqual([o.game_status, o.locked_at, o.issued_at], ['scheduled', null, '2026-10-02T00:30:00Z']);
   const live = buildFreeTdPayload({ state: ALLOWED, rows, nowMs: Date.parse('2026-10-04T17:30:00Z') }).targets[0];
   assert.deepEqual([live.game_status, live.locked_at], ['started', SUN_1PM]);
 });
@@ -265,14 +296,16 @@ async function viaVercel(view, headers = {}) {
   return { status: res.statusCode, body: JSON.parse(res.body), headers: res.headers };
 }
 
-test('view=free-sample over HTTP: public, cacheable, gated today, and it reads only open primaries', async () => {
-  answer.setPicks([target({ publication_scope: 'tracking', model_prob: 0.6 }), target({ publication_scope: 'tracking', model_prob: 0.5 })]);
+test('view=free-sample over HTTP: public, cacheable, tracking served as tracking, reads only open primaries', async () => {
+  answer.setPicks([target({ publication_scope: 'tracking', model_prob: 0.6, kickoff_ts: '2099-01-03T18:00:00Z', created_at: '2099-01-01T00:00:00Z' }), target({ publication_scope: 'tracking', model_prob: 0.5, kickoff_ts: '2099-01-03T18:00:00Z', created_at: '2099-01-01T00:00:00Z' })]);
   answer.reads.length = 0;
   const out = await viaVercel('free-sample');
   assert.equal(out.status, 200);
   assert.equal(out.body.contract, 'pbe-nfl-free-td-targets-v1');
-  assert.equal(out.body.count, 0);
-  assert.equal(out.body.eligibility.reason, 'td_publication_gated');
+  assert.equal(out.body.count, 2);
+  assert.ok(out.body.targets.every(t => t.official === false && t.publication_scope === 'tracking'));
+  assert.equal(out.body.eligibility.publication, 'GATED');
+  assert.equal(out.body.eligibility.reason, null);
   assert.equal(out.body.season, 2026);
   assert.equal(out.body.week, 5);
   assert.match(out.headers['cache-control'], /^public/);
@@ -346,6 +379,39 @@ test('model, selector, grader and detector files are byte-for-byte unchanged', (
   for (const [path, hash] of Object.entries(pinned)) assert.equal(sha(path), hash, path);
 });
 
+test('learning gate, official record, publication state and premium gate logic are byte-for-byte unchanged', () => {
+  const h = s => createHash('sha256').update(s.replace(/\r\n/g, '\n')).digest('hex');
+  const slice = (src, a, b) => { const i = src.indexOf(a); const j = src.indexOf(b, i + 1); assert.ok(i >= 0 && j > i, a); return src.slice(i, j); };
+  /* The learning gate itself. */
+  assert.equal(h(read('workers/nfl-td-targets-shared/td-learning.mjs')), 'e4a1172c38730ad976f06bc7e45a0ef2ebccb9ef30a8dc8efd929e001cafeea6');
+  const REGIONS = {
+    'api/pbe-touchdown-targets.js': {
+      governance: 'ca4205bf3848ae8e96ed1969e0841d6bbeb4bb7fad5e82f64a3c152b295590fb',
+      premium: '2788049881bea1a443909fd3eaff122fe44353093443ee9818980898ec4a57b7',
+      trackrecord: '8c116d818f84657d74870e5e452089c3ac67faf870e57f0e47a61a9db961ea2e',
+    },
+    'workers/nfl-touchdown-targets-api/src/contract.js': {
+      governance: '8f05075786c3c8c006f64648e97ec2fc7bbf6d004b5162fbd7bb78117974d7cf',
+      premium: '99edaee251cfb7b931fa05e168ac4f851208686871a901d0f8d226f20a16d285',
+      trackrecord: '8c116d818f84657d74870e5e452089c3ac67faf870e57f0e47a61a9db961ea2e',
+    },
+  };
+  for (const [path, pins] of Object.entries(REGIONS)) {
+    const src = read(path);
+    /* publication/gate: GATED until a trained selector; gate = 100 finalized over 4 weeks */
+    assert.equal(h(slice(src, 'async function governance(', 'function engineState(')), pins.governance, `${path} governance`);
+    assert.equal(h(slice(src, 'async function requirePro(', '/* GRADED history only.')), pins.premium, `${path} premium gate + slate`);
+    assert.equal(h(slice(src, 'async function trackRecordView(', 'function modelView(')), pins.trackrecord, `${path} record`);
+    assert.match(src, /const MIN_FINALIZED = 100;/);
+    assert.match(src, /const MIN_WEEKS = 4;/);
+  }
+  /* The team-pick official free-sample allow-list (23e37cf) is untouched. */
+  assert.equal(h(slice(read('api/pbe-picks.js'), 'const FREE_SAMPLE_BLOCKED_SCOPES', '/* Public top-of-funnel sample')), '6d372d1b2f56bd198c497a65df3ad984af03613deb77ba79fc31fc34733fc488');
+  /* The free module never writes and never promotes. */
+  const freeSrc = read('api/_td-free-sample.js');
+  assert.doesNotMatch(freeSrc, /method:\s*'(POST|PATCH|PUT|DELETE)'|upsert|insert\(|patch\(|promot(e|ed)\s*[:=]|publication_scope\s*=\s*'official'/);
+});
+
 /* -------------------------------------------------------- the free cards (UI) */
 
 function loadPage() {
@@ -367,7 +433,7 @@ test('UI · two targets: two premium player cards with photo, team/opp, TD TARGE
   const html = page.freeSampleHtml(payload);
   const t = plainText(html);
   assert.equal((html.match(/class="pbetd-free-card"/g) || []).length, 2);
-  for (const expected of ['2 Free TD Targets', 'Travis Etienne', 'Marvin Harrison Jr.', 'TD TARGET', 'NO · RB · vs LV', 'ARI · RB · @ SEA', 'Red-zone role', 'Unlock all TD Targets →']) {
+  for (const expected of ['2 Free TD Targets', 'Travis Etienne', 'Marvin Harrison Jr.', 'FREE TD TARGET', 'OFFICIAL TARGET', 'NO · RB · vs LV', 'ARI · RB · @ SEA', 'Red-zone role', 'Unlock all TD Targets →']) {
     assert.ok(t.includes(expected), `missing ${expected}\n${t}`);
   }
   assert.match(html, /<img src="https:\/\/a\.espncdn\.com\/i\/headshots\/nfl\/players\/full\/4239996\.png"/);
@@ -389,10 +455,24 @@ test('UI · zero targets renders the clean empty state with the reason; a failed
   const t = plainText(html);
   assert.equal((html.match(/class="pbetd-free-card"/g) || []).length, 0);
   assert.ok(t.includes('No qualified free TD targets yet'));
-  assert.ok(t.includes('tracking phase'));
+  assert.ok(t.includes('No primary target is open for this slate yet'));
   assert.ok(t.includes('Unlock all TD Targets →'));
   assert.equal(page.freeSampleHtml(null), '');
   assert.equal(page.freeSampleHtml({ error: 'touchdown_targets_backend_unavailable' }), '');
+});
+
+test('UI · official card says OFFICIAL TARGET; tracking card says TRACKING TARGET · VALIDATION PHASE with the validation copy', () => {
+  const rows = [target({ model_prob: 0.4 }, { name: 'Official Guy', gsis: '00-0030001' }), target({ publication_scope: 'tracking', model_prob: 0.9 }, { name: 'Tracking Guy', gsis: '00-0030002' })];
+  const payload = buildFreeTdPayload({ state: GATED, rows, nowMs: NOW });
+  const html = page.freeSampleHtml(payload);
+  const cards = html.split('class="pbetd-free-card"').slice(1).map(plainText);
+  assert.equal(cards.length, 2);
+  assert.ok(cards[0].includes('Official Guy') && cards[0].includes('FREE TD TARGET') && cards[0].includes('OFFICIAL TARGET'));
+  assert.ok(!cards[0].includes('TRACKING'));
+  assert.ok(cards[1].includes('Tracking Guy') && cards[1].includes('FREE TD TARGET') && cards[1].includes('TRACKING TARGET · VALIDATION PHASE'));
+  assert.ok(cards[1].includes('Named before kickoff and graded from the official final box score. Touchdown Targets is still completing its validation window.'));
+  assert.ok(!/OFFICIAL TARGET/.test(cards[1]));
+  for (const card of cards.map(c => c.split('Unlock all TD Targets')[0])) assert.doesNotMatch(card, /%|probab|edge|confidence|\+\d{3}|\b0\.(4|9)0?\b/i, 'a card never shows probability, edge, confidence or price');
 });
 
 test('UI · even a malformed payload with three targets renders at most two', () => {
