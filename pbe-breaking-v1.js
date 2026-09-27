@@ -6,6 +6,8 @@
 
      NFL BREAKING   major verified league news          crimson
      GAME BREAK     a live scoring play, or a final     gold / live
+     TD TARGET HIT  a locked PBE Touchdown Target has    gold / premium
+                    scored (server-detected, read-only)
      WEATHER ALERT  official NWS, a shift, or a watch   ice / official
 
    WHAT THIS IS NOT
@@ -21,6 +23,10 @@
 
      NEWS     is_breaking / impact_score / published_at, from /api/news-feed
      GAME     situation.last_play.scoring_play + play id, from /api/nfl-live
+     TD HIT   a row the ONE server detector (nfl-touchdown-target-hit-alerts)
+              wrote to nfl_td_target_hit_events, read from
+              /api/pbe-touchdown-targets?view=hits by touchdown-hit-live-v1.js.
+              The browser never decides that a target has scored.
      WEATHER  an NWS alert id, or an Open-Meteo band transition
 
    If qualification fails there is no alert. Silence is better than fake
@@ -71,6 +77,7 @@
     visible_ms: {
       NFL_BREAKING: 38000,
       GAME_BREAK: 16000,
+      TD_TARGET_HIT: 26000,
       GAME_FINAL: 15000,
       WEATHER_ALERT: 30000,
       WEATHER_SHIFT: 22000,
@@ -93,6 +100,10 @@
   const PRIORITY = {
     NWS_EMERGENCY: 1,      // official Extreme/Severe warning at the venue
     NFL_BREAKING_MAJOR: 2, // is_breaking AND high impact
+    /* A locked PBE target connecting is a stronger fact than a touchdown,
+       field goal or ordinary story, so it outranks all three; an official
+       emergency and a major league story keep their place above it. */
+    TD_TARGET_HIT: 2.5,
     GAME_BREAK: 3,         // touchdown / safety / field goal
     WEATHER_SHIFT: 4,      // the forecast materially changed
     NFL_BREAKING: 5,       // ordinary is_breaking
@@ -362,6 +373,17 @@
       DNA_INDEX.loaded = true;
     })();
     return DNA_INDEX.ready;
+  }
+  /* Exact identity only: the gsis id frozen on the target at issuance, looked
+     up in the products' own rows. No name match of any kind. */
+  function resolvePlayerDnaById(gsisId) {
+    const id = String(gsisId || '').trim();
+    if (!id) return null;
+    for (const p of DNA_PRODUCTS) {
+      const row = (DNA_INDEX.rows.get(p.route) || []).find(r => r.gsis_id === id);
+      if (row) return { route: p.route, short: p.short, gsis_id: row.gsis_id, name: row.name };
+    }
+    return null;
   }
   function resolvePlayerDna(name) {
     const k = String(name || '').toLowerCase().trim();
@@ -735,6 +757,87 @@
       <div class="pbeb-ctas">${ctaHtml(ev.cta)}</div>`;
   }
 
+  /* ---- TD TARGET HIT ---------------------------------------------------
+     The celebration for a locked target that has scored. Every value on it
+     is a persisted field of the server's hit event; nothing is computed here
+     except formatting. It says LIVE HIT and that the final result settles
+     after the game, because the final grader — not this card — is the
+     record. A tracking target is never called official. */
+  function pctLabel(p) {
+    const v = Number(p);
+    return p !== null && p !== undefined && Number.isFinite(v) && v > 0 && v < 1 ? `${(v * 100).toFixed(1)}%` : null;
+  }
+  function oddsLabel(price) {
+    const v = Number(price);
+    if (price === null || price === undefined || !Number.isFinite(v) || v === 0) return null;
+    return v > 0 ? `+${Math.round(v)}` : `${Math.round(v)}`;
+  }
+  function tdPlayLabel(play) {
+    const type = String((play && play.type) || '').toLowerCase();
+    const kind = type.includes('rush') ? 'RUSHING TOUCHDOWN'
+      : type.includes('pass') ? 'RECEIVING TOUCHDOWN' : 'TOUCHDOWN';
+    const y = Number(play && play.yards);
+    return play && play.yards !== null && play.yards !== undefined && Number.isFinite(y)
+      ? `${Math.max(0, y)}-YARD ${kind}` : kind;
+  }
+  /* The renderer chooses what matters: the rushing line first for a back or
+     a quarterback, the receiving line first for a receiver or tight end. A
+     field the feed did not label is simply absent. */
+  function tdStatLines(stats, position) {
+    const s = stats || {};
+    const has = k => s[k] !== null && s[k] !== undefined && Number.isFinite(Number(s[k]));
+    const line = parts => parts.filter(Boolean).join(' · ');
+    const rush = has('carries') ? line([`${s.carries} CAR`, has('rush_yards') ? `${s.rush_yards} YDS` : null,
+      Number(s.rushing_td) > 0 ? `${s.rushing_td} TD` : null]) : '';
+    const rec = has('receptions') ? line([`${s.receptions} REC`, has('receiving_yards') ? `${s.receiving_yards} YDS` : null,
+      Number(s.receiving_td) > 0 ? `${s.receiving_td} TD` : null,
+      has('targets') ? `${s.targets} TGT` : null]) : '';
+    const recFirst = /^(WR|TE)$/i.test(String(position || ''));
+    const lines = recFirst ? [rec, Number(s.carries) > 0 ? rush : ''] : [rush, Number(s.receptions) > 0 ? rec : ''];
+    return lines.filter(Boolean);
+  }
+  function attachDnaCta(ev) {
+    if (!ev.player || !ev.player.gsis_id || (ev.cta || []).some(c => c.kind === 'playerdna')) return;
+    const dna = resolvePlayerDnaById(ev.player.gsis_id);
+    if (dna) ev.cta.push({ label: 'VIEW PLAYER DNA', route: dna.route, player_id: dna.gsis_id,
+                           event_id: ev.game && ev.game.id, kind: 'playerdna' });
+  }
+  function tdHitBody(ev) {
+    const g = ev.game || {}, pl = ev.player || {}, t = ev.target || {};
+    const secondary = t.rank === 'secondary';
+    const official = t.publication_scope === 'official';
+    const title = secondary ? 'SECONDARY TARGET HIT' : 'TOUCHDOWN TARGET HIT';
+    const rankLine = `${secondary ? 'SECONDARY' : 'PRIMARY'} TARGET · ${official ? 'OFFICIAL TARGET' : 'VERIFIED LIVE TARGET'}`;
+    const clock = [g.period ? `Q${g.period}` : null, g.clock].filter(Boolean).join(' · ');
+    const mine = pl.team && pl.team === g.home ? 'home' : 'away';
+    const other = mine === 'home' ? 'away' : 'home';
+    const side = k => ({ abbr: g[k], score: g[`${k}_score`] });
+    const a = side(mine), b = side(other);
+    const prob = pctLabel(t.model_prob), odds = oddsLabel(t.market_price);
+    const lines = tdStatLines(ev.live_stats, pl.position);
+    const photo = pl.headshot_url ? `<span class="pbeb-tdface"><img src="${esc(pl.headshot_url)}"
+        alt="${esc(pl.name || '')}" width="84" height="84" loading="eager" decoding="async"
+        onerror="this.parentNode.classList.add('is-broken');this.removeAttribute('src')"></span>` : '';
+    return `
+      <div class="pbeb-key"><span class="pbeb-tdmark" aria-hidden="true">🎯</span><span class="pbeb-kl">${esc(title)}</span><span class="pbeb-ks" aria-hidden="true">${secondary ? 'SECONDARY HIT' : 'TARGET HIT'}</span><span class="pbeb-tdlivechip">LIVE</span></div>
+      <div class="pbeb-main pbeb-td${photo ? '' : ' is-nophoto'}">
+        ${photo}
+        <div class="pbeb-tdid">
+          <div class="pbeb-tdname">${esc(pl.name || '')}</div>
+          <div class="pbeb-tdrank"><span>${esc(rankLine)}</span><b class="pbeb-tdscope" data-scope="${official ? 'official' : 'tracking'}">${official ? 'OFFICIAL TARGET' : 'TRACKING TARGET'}</b></div>
+          <div class="pbeb-tdplay">${clock ? `<span class="pbeb-tdclock">${esc(clock)}</span>` : ''}<span>${esc(tdPlayLabel(ev.play))}</span></div>
+          ${a.abbr && b.abbr ? `<div class="pbeb-tdscore">${crest(a.abbr, 18)}<b>${esc(a.abbr)} ${esc(a.score ?? '')}</b><i aria-hidden="true">—</i><b>${esc(b.abbr)} ${esc(b.score ?? '')}</b>${crest(b.abbr, 18)}</div>` : ''}
+        </div>
+        <dl class="pbeb-tdnums">
+          ${prob ? `<div><dt>PBE TD PROBABILITY</dt><dd>${esc(prob)}</dd></div>` : ''}
+          ${odds ? `<div><dt>LOCKED PRICE</dt><dd>${esc(odds)}</dd></div>` : ''}
+          ${lines.length ? `<div class="pbeb-tdlive"><dt>LIVE</dt><dd>${lines.map(l => `<span>${esc(l)}</span>`).join('')}</dd></div>` : ''}
+        </dl>
+        <div class="pbeb-tdfoot"><b>LIVE HIT</b> · FINAL RESULT SETTLES AFTER THE GAME</div>
+      </div>
+      <div class="pbeb-ctas">${ctaHtml(ev.cta)}</div>`;
+  }
+
   function finalBody(ev) {
     const g = ev.game;
     return `
@@ -833,12 +936,15 @@
     slot.hidden = false;
     document.documentElement.classList.add('pbe-breaking-on');
     const tone = ev.family === 'NEWS' ? 'news'
+      : ev.kind === 'TD_TARGET_HIT' ? 'tdhit'
       : ev.kind === 'GAME_FINAL' ? 'final'
       : ev.family === 'GAME' ? 'game'
       : ev.official ? 'nws'
       : ev.kind === 'WEATHER_SHIFT' ? 'shift' : 'watch';
 
+    if (ev.kind === 'TD_TARGET_HIT') attachDnaCta(ev);
     const body = ev.family === 'NEWS' ? newsBody(ev)
+      : ev.kind === 'TD_TARGET_HIT' ? tdHitBody(ev)
       : ev.kind === 'GAME_FINAL' ? finalBody(ev)
       : ev.family === 'GAME' ? gameBody(ev)
       : weatherBody(ev);
@@ -1169,6 +1275,7 @@
     /* Exposed so the fixture harness can drive every path deterministically
        without a live slate, a live wire or a live storm. */
     _test: { qualifyNews, newsEvent, classifyPlay, gameEvent, finalEvent,
+             tdHitBody, tdStatLines, tdPlayLabel, pctLabel, oddsLabel, resolvePlayerDnaById,
              ingestScoreboard, weatherEventToRail, render, openWeatherDetail,
              closeWeatherDetail, agoLabel, resolvePlayerDna, resolveMatchupDna,
              loadDnaIndex, deltaParts, windowLabel, DNA_INDEX }

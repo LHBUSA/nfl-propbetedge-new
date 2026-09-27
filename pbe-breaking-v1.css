@@ -501,3 +501,140 @@
   .pbeb-dot { animation: none; }
   .pbeb-cta { transition: none; }
 }
+
+/* ---------------------------------------------------------------------------
+   TD TARGET HIT
+   The one expanded treatment on the rail: a locked PBE Touchdown Target has
+   scored. Still docked in the shell, still no position/z-index of its own —
+   it is simply taller while it owns the rail, then collapses like any event.
+   Gold, not crimson: this is a result, not an emergency. The photograph is
+   real or absent; there is no stand-in face.
+   ------------------------------------------------------------------------- */
+.pbeb[data-tone="tdhit"] {
+  --pbeb-accent: #e9c75a; --pbeb-ink: #f3d77a; --pbeb-wash: rgba(233,199,90,.12);
+  background:
+    radial-gradient(120% 160% at 0% 50%, rgba(233,199,90,.13), transparent 58%),
+    linear-gradient(90deg, rgba(14,12,8,.99), rgba(17,15,10,.99));
+  border-bottom-color: rgba(233,199,90,.28);
+}
+.pbeb[data-tone="tdhit"]::before { width: 4px; }
+.pbeb[data-tone="tdhit"] .pbeb-inner {
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "key  cta"
+                       "main main";
+  gap: 10px 16px; padding: 12px 16px 14px 20px;
+}
+.pbeb[data-tone="tdhit"] .pbeb-key { grid-area: key; justify-self: start; }
+.pbeb[data-tone="tdhit"] .pbeb-ctas { grid-area: cta; justify-self: end; }
+.pbeb[data-tone="tdhit"] .pbeb-main { grid-area: main; }
+.pbeb-tdmark { font-size: 12px; line-height: 1; }
+
+.pbeb-td {
+  display: grid; align-items: center;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas: "face id   nums"
+                       "face foot foot";
+  gap: 6px 18px;
+}
+.pbeb-td.is-nophoto { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "id nums" "foot foot"; }
+.pbeb-tdface {
+  grid-area: face; width: 84px; height: 84px; border-radius: 50%; overflow: hidden; flex: none;
+  background: rgba(255,245,220,.05);
+  box-shadow: 0 0 0 2px rgba(233,199,90,.75), 0 0 0 6px rgba(233,199,90,.10);
+  animation: pbeb-tdring 1.6s ease-out 1;
+}
+.pbeb-tdface img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 12%; display: block; }
+/* a photograph that fails to load leaves no ring implying an identity */
+.pbeb-tdface.is-broken { display: none; }
+@keyframes pbeb-tdring {
+  0%   { box-shadow: 0 0 0 2px rgba(233,199,90,.75), 0 0 0 0 rgba(233,199,90,.45); }
+  100% { box-shadow: 0 0 0 2px rgba(233,199,90,.75), 0 0 0 6px rgba(233,199,90,.10); }
+}
+
+.pbeb-tdid { grid-area: id; min-width: 0; display: grid; gap: 5px; }
+.pbeb-tdname {
+  font: 800 26px/1.05 var(--pbe-font-ui, system-ui, sans-serif);
+  letter-spacing: .01em; text-transform: uppercase; color: var(--pbe-paper, #f4efe4);
+  overflow-wrap: anywhere;
+}
+.pbeb-tdrank {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px;
+  font: 700 10px/1.2 var(--pbe-font-data, ui-monospace, monospace);
+  letter-spacing: .14em; text-transform: uppercase; color: var(--pbeb-ink);
+}
+.pbeb-tdscope {
+  font-weight: 700; padding: 3px 6px; border-radius: 2px; letter-spacing: .12em;
+  border: 1px solid var(--pbe-line-strong, rgba(235,219,178,.22)); color: var(--pbe-paper-2, #d8d1c4);
+}
+.pbeb-tdscope[data-scope="official"] { border-color: rgba(233,199,90,.6); color: var(--pbeb-ink); }
+.pbeb-tdplay {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px;
+  font: 700 12px/1.25 var(--pbe-font-data, ui-monospace, monospace);
+  letter-spacing: .08em; text-transform: uppercase; color: var(--pbe-paper, #f4efe4);
+}
+.pbeb-tdclock { color: var(--pbe-faint-text, #a5a096); font-weight: 600; }
+.pbeb-tdscore {
+  display: inline-flex; align-items: center; gap: 7px; flex-wrap: wrap;
+  font: 700 13px/1 var(--pbe-font-data, ui-monospace, monospace);
+  letter-spacing: .06em; color: var(--pbe-paper-2, #d8d1c4); font-variant-numeric: tabular-nums;
+}
+.pbeb-tdscore i { font-style: normal; color: var(--pbe-faint-text, #8e8a80); }
+.pbeb-tdscore .pbeb-crest { width: 18px; height: 18px; }
+
+.pbeb-tdnums {
+  grid-area: nums; margin: 0; display: grid; grid-auto-flow: column;
+  grid-auto-columns: minmax(0, auto); gap: 0 22px; align-items: start;
+}
+.pbeb-tdnums > div { display: grid; gap: 5px; min-width: 0; }
+.pbeb-tdnums dt {
+  font: 700 9px/1.1 var(--pbe-font-data, ui-monospace, monospace);
+  letter-spacing: .16em; text-transform: uppercase; color: var(--pbe-faint-text, #a5a096);
+}
+.pbeb-tdnums dd {
+  margin: 0; font: 300 24px/1 var(--pbe-font-data, ui-monospace, monospace);
+  color: var(--pbe-paper, #f4efe4); font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.pbeb-tdnums > div:first-child dd { color: var(--pbeb-ink); font-weight: 400; }
+.pbeb-tdlive dd { display: grid; gap: 4px; font: 600 12px/1.2 var(--pbe-font-data, ui-monospace, monospace); letter-spacing: .06em; color: var(--pbe-paper-2, #d8d1c4); }
+.pbeb-tdfoot {
+  grid-area: foot;
+  font: 600 9.5px/1.3 var(--pbe-font-data, ui-monospace, monospace);
+  letter-spacing: .14em; text-transform: uppercase; color: var(--pbe-faint-text, #8e8a80);
+}
+.pbeb-tdfoot b { color: var(--pbeb-ink); font-weight: 800; }
+
+@media (max-width: 1100px) {
+  .pbeb-td { grid-template-areas: "face id" "face nums" "foot foot"; grid-template-columns: auto minmax(0, 1fr); }
+  .pbeb-td.is-nophoto { grid-template-areas: "id" "nums" "foot"; grid-template-columns: minmax(0, 1fr); }
+  .pbeb-tdnums { justify-content: start; }
+}
+
+@media (max-width: 760px) {
+  .pbeb[data-tone="tdhit"] .pbeb-inner {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "key" "main" "cta";
+    gap: 9px; padding: 10px 12px 12px 15px;
+  }
+  /* the full label and the LIVE chip stay: this is the one event whose name
+     IS the news */
+  .pbeb[data-tone="tdhit"] .pbeb-key .pbeb-kl { display: inline; }
+  .pbeb[data-tone="tdhit"] .pbeb-key .pbeb-ks { display: none; }
+  .pbeb[data-tone="tdhit"] .pbeb-key .pbeb-tdlivechip { display: inline; }
+  .pbeb-td { grid-template-columns: 62px minmax(0, 1fr); grid-template-areas: "face id" "nums nums" "foot foot"; gap: 9px 12px; align-items: start; }
+  .pbeb-td.is-nophoto { grid-template-columns: minmax(0, 1fr); grid-template-areas: "id" "nums" "foot"; }
+  .pbeb-tdface { width: 62px; height: 62px; }
+  .pbeb-tdname { font-size: 20px; }
+  .pbeb-tdplay { font-size: 11px; }
+  .pbeb-tdnums { grid-auto-flow: row; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 14px; }
+  .pbeb-tdnums dd { font-size: 20px; }
+  .pbeb-tdlive { grid-column: 1 / -1; }
+  .pbeb-tdlive dd { font-size: 11.5px; }
+  /* both actions stay on a phone, as full-width equals */
+  .pbeb[data-tone="tdhit"] .pbeb-ctas { justify-self: stretch; display: flex; flex-wrap: wrap; gap: 6px; }
+  .pbeb[data-tone="tdhit"] .pbeb-ctas .pbeb-cta,
+  .pbeb[data-tone="tdhit"] .pbeb-ctas .pbeb-cta:not(.is-primary) { display: inline-flex; flex: 1 1 140px; justify-content: center; min-height: 34px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pbeb-tdface { animation: none; }
+}

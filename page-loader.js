@@ -1,7 +1,7 @@
 /* PropBetEdge NFL - ordered page/product upgrade loader v47 route-first */
 (() => {
   'use strict';
-  const VERSION='20260925opportunity1';
+  const VERSION='20260927tdhit1';
   const upgrades=[
     /* Establish the final homepage authority first. v6 replaces the v5 DOM with
        .pbehome6; v7 historically registered itself after that without repainting
@@ -229,6 +229,11 @@
        products because its weather drawer reuses their body-level modal root,
        and after the news trust guard, which it depends on absolutely. */
     {css:'./pbe-breaking-v1.css',js:'./pbe-breaking-v1.js'},
+    /* TOUCHDOWN TARGET HIT reader. Detects nothing: it polls the public
+       view=hits read of the server detector's events and offers each to the
+       rail above, whose session memory shows it once. After the rail, which
+       it needs; writes nothing. */
+    {js:'./touchdown-hit-live-v1.js'},
 
     {css:'./player-dna-v1.css'},
     {js:'./player-dna-shared.js'},
