@@ -16,6 +16,9 @@
  *                detector: a touchdown that has happened, read only from
  *                nfl_td_target_hit_events. Never an unhit or future target,
  *                never model_snapshot. A live observation, not a grade.
+ *   free-sample  public.  FREE TD TARGETS: at most two OFFICIAL, PRIMARY, open,
+ *                pregame targets for the current slate (api/_td-free-sample.js).
+ *                No probability, edge, price, rank or driver ever leaves.
  *
  * A free browser cannot receive a live target in JSON and have it hidden by
  * JavaScript afterwards: `current` and `week` refuse before they read a row.
@@ -29,6 +32,7 @@
 import { getNflSession, verifiedEmail, supabaseAdminHeaders } from './_nfl-auth.js';
 import { currentSeason, engineRuntime } from './_pbe-engine-runtime.js';
 import { hitsView } from './_td-target-hits.js';
+import { freeSampleView } from './_td-free-sample.js';
 
 const DEFAULT_SUPABASE_URL = 'https://tkmlnhmylqnttmnsnief.supabase.co';
 const MARKET = 'player_anytime_td';
@@ -619,7 +623,8 @@ export default async function handler(req, res) {
     if (view === 'week') return await slateView(req, res, secret, { season, week });
     if (view === 'trackrecord' || view === 'history') return await trackRecordView(res, secret, { season });
     if (view === 'hits') return await hitsView({ res, send, sb, secret, query: req.query || {} });
-    return send(res, 404, { error: 'view_not_found', views: ['state', 'current', 'week', 'trackrecord', 'model', 'hits'] });
+    if (view === 'free-sample') return await freeSampleView({ res, send, sb, secret, governance });
+    return send(res, 404, { error: 'view_not_found', views: ['state', 'current', 'week', 'trackrecord', 'model', 'hits', 'free-sample'] });
   } catch (error) {
     /* A backend failure is reported as a backend failure. It is never allowed
      * to reach the browser as an empty slate. */

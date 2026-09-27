@@ -23,6 +23,7 @@
     slate: null,        /* Pro: this week's games */
     pro: null,          /* the entitlement the slate was fetched under */
     record: null,       /* graded history */
+    free: null,         /* public: Free TD Targets (view=free-sample) */
     error: null,
     loadedAt: null,
     loading: null,
@@ -131,6 +132,12 @@
         }
       } else {
         store.slate = null;
+        /* Free readers get the free sample; its failure is not an empty sample. */
+        try {
+          store.free = await json(`${API}?view=free-sample`);
+        } catch (_) {
+          store.free = null;
+        }
       }
       store.pro = pro;
       store.loadedAt = Date.now();
@@ -484,6 +491,61 @@
     </section>`;
   }
 
+  /* ------------------------------------------------------ free TD targets */
+
+  /* FREE TD TARGETS (view=free-sample): at most two OFFICIAL primary targets,
+     chosen by the server. This renders what it is sent and nothing else — no
+     probability, price or rank reaches a free browser, so none is shown. A
+     failed read renders nothing (never "no targets"); an empty sample renders
+     the server's own empty state. */
+  const FREE_REASON_COPY = {
+    td_publication_gated: 'Free TD Targets come only from OFFICIAL targets. Touchdown Targets is still in its tracking phase, so no target is official yet — nothing is manufactured to fill this space.',
+    td_engine_degraded: 'The Touchdown Targets engine is degraded, so no official target can be offered right now.',
+    no_official_primary_td_target: 'No official primary target is open for this slate yet.',
+  };
+  const freeHeadshot = url => (/^https:\/\/a\.espncdn\.com\/i\/headshots\/nfl\/players\/full\/\d+\.png$/.test(String(url || '')) ? url : '');
+
+  function freeCardHtml(target) {
+    const src = freeHeadshot(target.headshot_url);
+    const insights = (Array.isArray(target.insights) ? target.insights : []).slice(0, 3);
+    const matchup = target.opponent
+      ? `${target.home_away === 'away' ? '@' : 'vs'} ${target.opponent}` : '';
+    return `<article class="pbetd-free-card" data-pbetd-free-target="${esc(target.target_id)}">
+      <div class="pbetd-free-top">
+        <span class="pbetd-face"><span aria-hidden="true">${esc(monogram(target.player_name))}</span>${
+  src ? `<img src="${esc(src)}" alt="${esc(target.player_name || '')}" loading="lazy" decoding="async" onerror="this.remove()">` : ''}</span>
+        <div class="pbetd-free-who">
+          <span class="pbetd-badge">TD TARGET</span>
+          <h4 class="pbetd-name">${esc(target.player_name || '')}</h4>
+          <span class="pbetd-free-team">${teamImg(target.team)}<b>${esc(target.team || '')}</b>${
+  target.position ? ` · ${esc(target.position)}` : ''}${matchup ? ` · ${esc(matchup)}` : ''}</span>
+          <span class="pbetd-free-kick">${esc(kickoff(target.kickoff_ts))}</span>
+        </div>
+      </div>
+      ${insights.length ? `<ul class="pbetd-free-why">${insights.map(item => `<li><span>${esc(item.label)}</span><b>${esc(item.value)}</b></li>`).join('')}</ul>` : ''}
+    </article>`;
+  }
+
+  function freeSampleHtml(payload) {
+    if (!payload || payload.contract !== 'pbe-nfl-free-td-targets-v1') return '';
+    const targets = (Array.isArray(payload.targets) ? payload.targets : []).filter(t => t && t.official === true).slice(0, 2);
+    const cta = `<button type="button" class="pbetd-btn gold" data-pbetd-upgrade="1">${esc(payload.cta_label || 'Unlock all TD Targets')} &rarr;</button>`;
+    const title = targets.length === 2 ? '2 Free TD Targets' : targets.length === 1 ? '1 Free TD Target' : 'Free TD Targets';
+    const head = `<div class="pbetd-free-head"><div class="pbetd-eyebrow"><i class="gated"></i>FREE · UP TO 2 PER SLATE</div>
+        <h3>${esc(title)}</h3></div>`;
+    if (!targets.length) {
+      const code = payload.empty_state?.code || payload.eligibility?.reason || '';
+      return `<section class="pbetd-free" data-pbetd-free="0">${head}
+        <div class="pbetd-free-empty"><strong>${esc(payload.empty_state?.message || 'No qualified free TD targets yet')}</strong>
+        ${FREE_REASON_COPY[code] ? `<p>${esc(FREE_REASON_COPY[code])}</p>` : ''}</div>
+        <div class="pbetd-free-foot">${cta}</div></section>`;
+    }
+    return `<section class="pbetd-free" data-pbetd-free="${targets.length}">${head}
+      <div class="pbetd-free-grid${targets.length === 1 ? ' one' : ''}">${targets.map(freeCardHtml).join('')}</div>
+      <div class="pbetd-free-foot">${cta}<span>Every other target, the PBE probability and the drivers are NFL Pro.</span></div>
+    </section>`;
+  }
+
   /* --------------------------------------------------------------- render */
 
   function page() {
@@ -503,7 +565,7 @@
       : `<section class="pbetd-panel"><div class="pbetd-empty">${esc(slate?.engine_state || 'ENGINE WAITING — UPCOMING SLATE NOT READY')}<br>
              No game in the current window has been evaluated yet. Every game that is evaluated appears here, with a
              target or with the reason the model abstained.</div></section>`)
-    : lockHtml(state)}
+    : `${freeSampleHtml(store.free)}${lockHtml(state)}`}
       ${recordHtml(store.record)}
     </section>`;
   }
@@ -709,6 +771,7 @@
     render,
     railHtml,
     badgeHtml,
+    freeSampleHtml,
     primaryForGame,
     evaluationForGame,
     rankForPlayer,

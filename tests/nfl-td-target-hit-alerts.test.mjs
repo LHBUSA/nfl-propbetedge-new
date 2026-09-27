@@ -443,7 +443,7 @@ test('view=hits is routed identically on the Vercel function and the Cloudflare 
   for (const path of ['api/pbe-touchdown-targets.js', 'workers/nfl-touchdown-targets-api/src/contract.js']) {
     const src = read(path);
     assert.match(src, /if \(view === 'hits'\) return await hitsView\(\{ res, send, sb, secret, query: req\.query \|\| \{\} \}\);/, path);
-    assert.match(src, /views: \['state', 'current', 'week', 'trackrecord', 'model', 'hits'\]/, path);
+    assert.match(src, /views: \['state', 'current', 'week', 'trackrecord', 'model', 'hits', 'free-sample'\]/, path);
   }
 });
 

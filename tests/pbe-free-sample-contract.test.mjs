@@ -49,3 +49,12 @@ test('freeSampleView routes through selectFreeSample and refuses non-official ou
   assert.match(view, /free_sample_non_official_selection/);
   assert.doesNotMatch(view, /ctx\.eligible\.current\s*\n?\s*\.filter/);
 });
+
+test('legacy team free sample stays served, marked legacy, with its selection logic untouched', () => {
+  const src = readFileSync(new URL('../api/pbe-picks.js', import.meta.url), 'utf8');
+  const view = src.slice(src.indexOf('async function freeSampleView'), src.indexOf('async function validationHistoryView'));
+  assert.match(view, /contract: 'pbe-free-sample-v1'/);
+  assert.match(view, /product_version: 'nfl-free-team-picks\/legacy'/);
+  assert.match(view, /selection_type: 'team_pick'/);
+  assert.match(src, /if \(view === 'free-sample'\) return await freeSampleView\(res, secret\);/);
+});

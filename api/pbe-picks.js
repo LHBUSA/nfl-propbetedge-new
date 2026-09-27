@@ -725,6 +725,7 @@ async function freeSampleView(res, secret) {
           : `${team || 'TEAM'} ML`;
       return {
         sport: 'NFL',
+        selection_type: 'team_pick',
         lifecycle,
         publication_scope: row.publication_scope,
         scope_label: scope?.label || null,
@@ -751,6 +752,9 @@ async function freeSampleView(res, secret) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   return send(res, 200, {
     contract: 'pbe-free-sample-v1',
+    /* LEGACY: the network free product is now Free TD Targets
+     * (/api/pbe-touchdown-targets?view=free-sample). Kept for historical consumers. */
+    product_version: 'nfl-free-team-picks/legacy',
     sport: 'NFL',
     generated_at: new Date(ctx.nowMs).toISOString(),
     season: ctx.season,
