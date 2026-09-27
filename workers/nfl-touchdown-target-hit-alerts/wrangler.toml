@@ -1,0 +1,39 @@
+# nfl-touchdown-target-hit-alerts — the ONE detector and publisher of
+# TD_TARGET_HIT live events for PBE Touchdown Targets.
+#
+# Reads open player_anytime_td targets and each game's live package once; writes
+# ONLY public.nfl_td_target_hit_events (UNIQUE pick_id, append-only). It never
+# issues, replaces, grades or closes a target, and never writes a grade,
+# receipt, audit row or learning observation. Browsers read the result through
+# /api/pbe-touchdown-targets?view=hits and never detect or write anything.
+#
+# Deploy with wrangler from a clean export of a pushed commit, never from a
+# local working directory and never from GitHub Actions.
+name = "nfl-touchdown-target-hit-alerts"
+main = "src/index.js"
+compatibility_date = "2026-09-20"
+account_id = "fd3a233edadd0a60916413c1199f71ee"
+workers_dev = true
+preview_urls = false
+
+[vars]
+SUPABASE_URL = "https://tkmlnhmylqnttmnsnief.supabase.co"
+NFL_SITE_URL = "https://nfl.propbetedge.ai"
+
+# Every minute. A tick with no target inside its game window costs one indexed
+# query and one ledger write.
+[triggers]
+crons = ["* * * * *"]
+
+# Required secret:
+# SUPABASE_SERVICE_ROLE_KEY
+
+# Durable run ledger (run:tick|work|ok|err:<lane>), shared namespace with the
+# other NFL engine lanes.
+[[kv_namespaces]]
+binding = "PICKS_KV"
+id = "0e7c77bc62fa477ea8d1a1608fb69a62"
+
+[observability]
+enabled = true
+head_sampling_rate = 1

@@ -186,6 +186,14 @@ function drive(d,current=false){
 function stats(pkg){
   return A(pkg?.boxscore?.players).map(tb=>{const t=tb?.team||{};return{team:{id:F(t?.id),abbreviation:F(t?.abbreviation),display_name:F(t?.displayName,t?.name),logo:logo(t)},groups:A(tb?.statistics).map(group=>({name:F(group?.name),display_name:F(group?.displayName,group?.name),labels:A(group?.labels),athletes:A(group?.athletes).map(row=>{const a=row?.athlete||{};return{athlete:{id:F(a?.id),name:F(a?.displayName,a?.fullName,a?.shortName),short_name:F(a?.shortName),jersey:F(a?.jersey),headshot:headshot(a),position:F(a?.position?.abbreviation),team:F(a?.team?.abbreviation,t?.abbreviation)},starter:Boolean(row?.starter),did_not_play:Boolean(row?.didNotPlay),stats:A(row?.stats),values:A(row?.stats).map((value,i)=>({label:A(group?.labels)[i]||String(i),value}))}})}))}});
 }
+/* The scoring summary, as published. Its text names the SCORER in full first
+   ("Kenneth Walker III 10 Yd Rush (...)", "Ja'Marr Chase 3 Yd pass from Joe
+   Burrow (...)"), which the drive log's abbreviated text ("K.Walker up the
+   middle...") does not, and its id is the drive-log play id, which carries the
+   wallclock. The touchdown-target hit detector joins the two. Full lane only. */
+function scoringPlays(pkg){
+  return A(pkg?.scoringPlays).map(s=>({id:S(s?.id),type:F(s?.type?.text),type_id:F(s?.type?.id),scoring_type:F(s?.scoringType?.name),text:F(s?.text),period:N(F(s?.period?.number,s?.period)),clock:F(s?.clock?.displayValue),away_score:N(s?.awayScore),home_score:N(s?.homeScore),team:{id:F(s?.team?.id),abbreviation:F(s?.team?.abbreviation)}})).filter(s=>s.id);
+}
 function numberFromStat(value){
   const match=String(value??'').replace(/,/g,'').match(/-?\d+(?:\.\d+)?/);
   return match?Number(match[0]):null;
@@ -252,7 +260,7 @@ function detail(pkg,eventId,provider='espn_site_summary'){
   const playerStats=stats(pkg);
   const now=Date.now();
   const fresh=freshness(plays,currentPlay,now);
-  return {ok:true,source:{provider,semantics:g.status.semantics,fetched_at:new Date(now).toISOString(),transport:'poll',...fresh},game:g,current_drive:current,current_play:currentPlay,drives,plays,last_five_plays:plays.slice(-5).reverse(),leaders:leaders(pkg,playerStats),player_stats:playerStats,win_probability:A(pkg?.winprobability).map(x=>({play_id:F(x?.playId,x?.play?.id),home_win_percentage:N(x?.homeWinPercentage),tie_percentage:N(x?.tiePercentage)})),play_count:plays.length,drive_count:drives.length};
+  return {ok:true,source:{provider,semantics:g.status.semantics,fetched_at:new Date(now).toISOString(),transport:'poll',...fresh},game:g,current_drive:current,current_play:currentPlay,drives,plays,last_five_plays:plays.slice(-5).reverse(),scoring_plays:scoringPlays(pkg),leaders:leaders(pkg,playerStats),player_stats:playerStats,win_probability:A(pkg?.winprobability).map(x=>({play_id:F(x?.playId,x?.play?.id),home_win_percentage:N(x?.homeWinPercentage),tie_percentage:N(x?.tiePercentage)})),play_count:plays.length,drive_count:drives.length};
 }
 
 /* The fast lane. PBEcast polls live state every couple of seconds; it must not

@@ -19,6 +19,10 @@
  *                the product. Open targets are excluded by the query itself.
  *   model        public.  The committed artefact's provenance, fitted weights
  *                and HISTORICAL BACKTEST. Never the per-player baselines.
+ *   hits         public.  LIVE hits already observed by the one server-side
+ *                detector: a touchdown that has happened, read only from
+ *                nfl_td_target_hit_events. Never an unhit or future target,
+ *                never model_snapshot. A live observation, not a grade.
  *
  * A free browser cannot receive a live target in JSON and have it hidden by
  * JavaScript afterwards: `current` and `week` refuse before they read a row.
@@ -31,6 +35,7 @@
  */
 import { supabaseAdminHeaders } from '../../../api/_nfl-entitlement-ledger.js';
 import { currentSeason, engineRuntime } from '../../../api/_pbe-engine-runtime.js';
+import { hitsView } from '../../../api/_td-target-hits.js';
 
 /* The Worker's bindings, set once per request by handle(). They are the same
  * for every request an isolate serves, so a module binding is safe. */
@@ -659,7 +664,8 @@ async function handler(req, res) {
     if (view === 'current') return await slateView(req, res, secret, { season: null, week: null });
     if (view === 'week') return await slateView(req, res, secret, { season, week });
     if (view === 'trackrecord' || view === 'history') return await trackRecordView(res, secret, { season });
-    return send(res, 404, { error: 'view_not_found', views: ['state', 'current', 'week', 'trackrecord', 'model'] });
+    if (view === 'hits') return await hitsView({ res, send, sb, secret, query: req.query || {} });
+    return send(res, 404, { error: 'view_not_found', views: ['state', 'current', 'week', 'trackrecord', 'model', 'hits'] });
   } catch (error) {
     /* A backend failure is reported as a backend failure. It is never allowed
      * to reach the browser as an empty slate. */
