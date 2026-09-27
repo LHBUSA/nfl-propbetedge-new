@@ -8,7 +8,7 @@
 
   const LIVE_API='/api/nfl-live';
   const PBE_LOGO='https://propbetedge.ai/logo/pbe-full-400.png';
-  const state={scoreboard:null,route:'home',poll:null,auto:null,paused:false};
+  const state={scoreboard:null,route:'home',poll:null,auto:null,paused:false,scoreStructureKey:''};
   const esc=v=>String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
   const arr=v=>Array.isArray(v)?v:[];
 
@@ -273,14 +273,15 @@
       const rank=s=>s==='LIVE'?0:s==='SCHEDULE'?1:2;
       return rank(a.status?.semantics)-rank(b.status?.semantics)||new Date(a.date)-new Date(b.date);
     });
-    /* One line per game instead of two stacked team rows plus a status row.
-       Pre-game the old layout printed nothing but crests and em-dashes down
-       96px of permanent chrome on every surface; this reads as a matchup --
-       AWY @ HME -- with the state on the same line, in 54px. */
-    host.innerHTML=ordered.map(g=>{
+    /* Quiet refresh: the old rail replaced its entire DOM every 10 seconds,
+       which reset scroll position, image state and transitions on every NFL
+       route. Rebuild only when game/order/status structure changes; otherwise
+       patch score + clock values in place. */
+    const structureKey=ordered.map(g=>`${g.id}:${g.status?.semantics||'UNAVAILABLE'}`).join('|');
+    const buildCard=g=>{
       const a=g.teams?.away||{},h=g.teams?.home||{},sem=g.status?.semantics||'UNAVAILABLE';
       const liveClass=sem==='LIVE'?'live':sem==='FINAL'?'final':'';
-      const aScore=scoreValue(a,sem), hScore=scoreValue(h,sem);
+      const aScore=scoreValue(a,sem),hScore=scoreValue(h,sem);
       const hasScore=aScore!==''&&hScore!=='';
       return `<button type="button" class="pbes-score ${liveClass}" data-cast-game="${esc(g.id)}" data-cast-kickoff="${esc(g.date||'')}" aria-label="${esc(a.display_name||a.abbreviation||'Away')} at ${esc(h.display_name||h.abbreviation||'Home')}">
         <span class="pbes-score-matchup">
@@ -290,17 +291,35 @@
         </span>
         <span class="pbes-score-state">${sem==='LIVE'?'<i class="pbes-score-livedot"></i>':''}${esc(statusText(g))}${sem==='SCHEDULE'?(window.PBEBroadcast?.slot?.({event:g.id,mode:'text',lead:' · '})||''):''}</span>
       </button>`;
-    }).join('');
-    attachLogoFallbacks(host);
-    /* The same one-shot explicit selection as every other surface: the request
-       is written, then the route mounts and consumes it. No timer, no race
-       with PBEcast's own first choice. */
-    host.querySelectorAll('[data-cast-game]').forEach(btn=>btn.addEventListener('click',()=>{
+    };
+    const wireCard=btn=>btn.addEventListener('click',()=>{
       const id=btn.dataset.castGame;
       state.route='pbecast';syncActive();
       if(!window.PBEGameHandoff?.open?.(id,{kickoff:btn.dataset.castKickoff||null,source:'rail'}))go('pbecast');
-    }));
-    restartAutoAdvance();
+    });
+    if(state.scoreStructureKey!==structureKey||host.querySelectorAll('.pbes-score').length!==ordered.length){
+      const left=host.scrollLeft;
+      host.innerHTML=ordered.map(buildCard).join('');
+      state.scoreStructureKey=structureKey;
+      attachLogoFallbacks(host);
+      host.querySelectorAll('[data-cast-game]').forEach(wireCard);
+      host.scrollLeft=Math.min(left,Math.max(0,host.scrollWidth-host.clientWidth));
+      restartAutoAdvance();
+      return;
+    }
+    const cards=new Map([...host.querySelectorAll('.pbes-score')].map(btn=>[btn.dataset.castGame,btn]));
+    ordered.forEach(g=>{
+      const btn=cards.get(String(g.id));
+      if(!btn)return;
+      const a=g.teams?.away||{},h=g.teams?.home||{},sem=g.status?.semantics||'UNAVAILABLE';
+      const nums=btn.querySelectorAll('.pbes-score-num');
+      const aScore=scoreValue(a,sem),hScore=scoreValue(h,sem);
+      if(nums[0]&&nums[0].textContent!==String(aScore))nums[0].textContent=String(aScore);
+      if(nums[1]&&nums[1].textContent!==String(hScore))nums[1].textContent=String(hScore);
+      const status=btn.querySelector('.pbes-score-state');
+      const nextStatus=`${sem==='LIVE'?'<i class="pbes-score-livedot"></i>':''}${esc(statusText(g))}${sem==='SCHEDULE'?(window.PBEBroadcast?.slot?.({event:g.id,mode:'text',lead:' · '})||''):''}`;
+      if(status&&status.innerHTML!==nextStatus)status.innerHTML=nextStatus;
+    });
   }
 
   function scoreStep(){
