@@ -45,7 +45,15 @@ const hit = (over = {}) => ({
   live_stats: { carries: 8, rush_yards: 42, rushing_td: 1, targets: 4, receptions: 3, receiving_yards: 27, receiving_td: 0 },
   ...over,
 });
-let HITS = [hit()];
+/* The published event log. publish() models the detector writing new rows:
+   each gets the next identity id and a detected_at of "now". */
+let LOG = [];
+let SEQ = 100;
+function publish(fixtures) {
+  LOG = fixtures.map((h, i) => ({ ...h, id: ++SEQ, detected_at: new Date(clockStart + i * 1000).toISOString(),
+    play: { ...h.play, wallclock: new Date(clockStart - 45000).toISOString() } }));
+  return LOG.map(h => h.id);
+}
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8', '.json': 'application/json; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png',
   '.jpg': 'image/jpeg', '.webp': 'image/webp', '.ico': 'image/x-icon', '.woff2': 'font/woff2' };
@@ -54,13 +62,21 @@ const server = createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${PORT}`);
   const json = (body, status = 200) => { res.writeHead(status, { 'content-type': 'application/json', 'cache-control': 'no-store' }); res.end(JSON.stringify(body)); };
   if (url.pathname === '/api/pbe-touchdown-targets' && url.searchParams.get('view') === 'hits') {
-    hitsRequests.push({ method: req.method, since: url.searchParams.get('since') });
-    const since = Date.parse(url.searchParams.get('since') || '') || 0;
-    const rows = HITS.map((h, i) => ({ ...h, detected_at: new Date(clockStart + i * 1000).toISOString(),
-      play: { ...h.play, wallclock: new Date(clockStart - 45000).toISOString() } }))
-      .filter(h => Date.parse(h.detected_at) > since);
-    return json({ view: 'hits', since: new Date(since).toISOString(), count: rows.length,
-      cursor: rows.length ? rows[rows.length - 1].detected_at : new Date(since).toISOString(), limit: 25, hits: rows });
+    /* the production contract: after_id is the cursor; since is bootstrap only */
+    const afterRaw = url.searchParams.get('after_id');
+    let rows, next;
+    if (afterRaw !== null) {
+      const after = Number(afterRaw);
+      rows = LOG.filter(h => h.id > after);
+      next = rows.length ? Math.max(...rows.map(h => h.id)) : after;
+    } else {
+      const since = Date.parse(url.searchParams.get('since') || '') || 0;
+      const hw = LOG.length ? Math.max(...LOG.map(h => h.id)) : SEQ;
+      rows = LOG.filter(h => Date.parse(h.detected_at) > since && h.id <= hw);
+      next = rows.length ? Math.max(...rows.map(h => h.id)) : hw;
+    }
+    hitsRequests.push({ method: req.method, mode: afterRaw !== null ? 'after_id' : 'since', q: url.search, ids: rows.map(h => h.id) });
+    return json({ view: 'hits', count: rows.length, next_cursor: next, limit: 25, events: rows, hits: rows });
   }
   if (url.pathname === '/api/rb-dna' && url.searchParams.get('list')) {
     return json({ players: [{ gsis_id: '00-0039139', name: 'Jahmyr Gibbs', team_2026: 'DET', market_priced_2026: true, games: 40 }] });
@@ -158,7 +174,7 @@ async function shot(name) {
 
 for (const width of WIDTHS) {
   clockStart = Date.now();
-  HITS = [hit()];
+  publish([hit()]);
   await load(width);
   const shown = await waitFor(`!!${CARD}`, 20000);
   check(`${width} · the event arrives through the poller and renders`, shown);
@@ -216,7 +232,7 @@ const VARIANTS = [
 for (const width of [320, 1440]) {
   for (const [name, fixture, expect] of VARIANTS) {
     clockStart = Date.now();
-    HITS = [fixture];
+    publish([fixture]);
     await load(width);
     const shown = await waitFor(`!!${CARD}`, 20000);
     const flat = shown ? (await evalIn(text)).replace(/\s+/g, ' ') : '';
@@ -229,13 +245,13 @@ for (const width of [320, 1440]) {
 
 /* ---- Player DNA only on an exact gsis id; the Gibbs fixture resolves ------- */
 clockStart = Date.now();
-HITS = [hit({ pick_id: 'aaaaaaaa-0000-4000-8000-000000000009' })];
+publish([hit({ pick_id: 'aaaaaaaa-0000-4000-8000-000000000009' })]);
 await load(1440);
 await waitFor(`!!${CARD}`);
 await evalIn(`PBEBreaking.dismiss(); true`);
 await waitFor(`!!(window.PBEBreaking._test.DNA_INDEX.loaded)`, 10000);
 clockStart = Date.now();
-HITS = [hit({ pick_id: 'aaaaaaaa-0000-4000-8000-000000000010' })];
+publish([hit({ pick_id: 'aaaaaaaa-0000-4000-8000-000000000010' })]);
 await evalIn(`PBETouchdownHits.poll().then(() => true)`);
 await waitFor(`!!${CARD}`);
 const dnaLabels = await evalIn(`[...${CARD}.querySelectorAll('.pbeb-cta')].map(b => b.innerText.trim())`);
@@ -249,7 +265,7 @@ const handoff = await evalIn('window.__handoff');
 check('WATCH IN PBECAST opens the exact game through PBEGameHandoff', handoff.length === 1 && handoff[0][0] === '401872954' && handoff[0][1].source === 'breaking', JSON.stringify(handoff));
 check('... and lands on #pbecast', (await evalIn('location.hash')) === '#pbecast');
 clockStart = Date.now();
-HITS = [hit({ pick_id: 'aaaaaaaa-0000-4000-8000-000000000011' })];
+publish([hit({ pick_id: 'aaaaaaaa-0000-4000-8000-000000000011' })]);
 await evalIn(`PBETouchdownHits.poll().then(() => true)`);
 await waitFor(`!!${CARD}`);
 await evalIn(`[...${CARD}.querySelectorAll('.pbeb-cta')].find(b => b.innerText.startsWith('VIEW TOUCHDOWN TARGETS')).click(); true`);
@@ -259,7 +275,7 @@ check('VIEW TOUCHDOWN TARGETS opens #tdtargets', (await evalIn('location.hash'))
 /* ---- reduced motion --------------------------------------------------------- */
 await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
 clockStart = Date.now();
-HITS = [hit({ pick_id: 'aaaaaaaa-0000-4000-8000-000000000012' })];
+publish([hit({ pick_id: 'aaaaaaaa-0000-4000-8000-000000000012' })]);
 await load(390);
 await waitFor(`!!${CARD}`);
 const anim = await evalIn(`getComputedStyle(${CARD}.querySelector('.pbeb-tdface')).animationName`);
@@ -268,8 +284,13 @@ await send('Emulation.setEmulatedMedia', { features: [] });
 
 /* ---- the browser writes nothing, and asks for a bounded window -------------- */
 check('no browser write request of any kind (POST/PUT/PATCH/DELETE)', writes.length === 0, writes.slice(0, 5).join(' ; '));
-const firstSince = hitsRequests.map(r => Date.parse(r.since)).filter(Number.isFinite);
-check('every hits request carries a since cursor', hitsRequests.length > 0 && firstSince.length === hitsRequests.length, `${hitsRequests.length} requests`);
+const served = new Map();
+for (const r of hitsRequests) for (const i of r.ids) served.set(i, (served.get(i) || 0) + 1);
+const multi = [...served].filter(([, n]) => n !== 1);
+check('id cursor: every published event is served exactly once across the whole run (no re-serve)', served.size > 0 && multi.length === 0,
+  `${served.size} events; re-served: ${JSON.stringify(multi)}`);
+const modes = hitsRequests.reduce((m, r) => (m[r.mode] = (m[r.mode] || 0) + 1, m), {});
+check('bootstrap by since, then after_id: incremental polls outnumber bootstraps', (modes.after_id || 0) > (modes.since || 0), JSON.stringify(modes));
 const ownErrors = pageErrors.filter(e => /pbe-breaking|touchdown-hit/.test(e));
 check('no page error from the rail or the poller', ownErrors.length === 0, ownErrors.slice(0, 3).join(' | '));
 

@@ -3,41 +3,57 @@
  * THIS FILE DETECTS NOTHING. The one detector is the Cloudflare Worker
  * nfl-touchdown-target-hit-alerts; the one record is nfl_td_target_hit_events.
  * This module only:
- *   - reads GET /api/pbe-touchdown-targets?view=hits&since=<cursor>
+ *   - reads GET /api/pbe-touchdown-targets?view=hits
  *   - reshapes each event for the rail
  *   - hands it to window.PBEBreaking.offer(), the ONE global alert queue,
  *     whose session memory already guarantees an event is shown once per
  *     session and never replayed by a route change or a reload
  * It writes nothing anywhere: no database, no webhook, no Slack, no Discord.
  *
- * NO BACKFILL. The first read asks only for the last three minutes, so opening
- * the site in the evening does not celebrate an afternoon touchdown. After
- * that the cursor is the newest detected_at seen, kept for the session.
+ * THE CURSOR IS THE EVENT ID. The first read is a BOOTSTRAP: since=<now - 3
+ * minutes>, so opening the site in the evening does not celebrate an afternoon
+ * touchdown. Its next_cursor is an event id, and every read after it is
+ * after_id=<id> — never a timestamp again. The id cursor is kept in session
+ * (with the time it was last confirmed) so a reload continues from it; a
+ * cursor not confirmed within the bootstrap window is dropped and the tab
+ * bootstraps afresh rather than replaying the gap. The rail's tdhit:<pick_id>
+ * session dedupe stays underneath as the UI safety net.
  */
 (() => {
   'use strict';
   const ENDPOINT = '/api/pbe-touchdown-targets?view=hits';
   const POLL_MS = 10000;
   const INITIAL_WINDOW_MS = 3 * 60 * 1000;
-  const CURSOR_KEY = 'pbe.tdhit.cursor.v1';
+  const CURSOR_KEY = 'pbe.tdhit.after_id.v2';
 
-  let cursor = null;
+  let afterId = null;     // event id; null until the bootstrap has answered
   let timer = null;
   let inflight = false;
 
   function readCursor() {
     try {
-      const raw = sessionStorage.getItem(CURSOR_KEY);
-      const t = Date.parse(raw || '');
-      /* A cursor older than the initial window is not reused: a tab reopened
-         hours later starts fresh rather than replaying the gap. */
-      if (Number.isFinite(t) && Date.now() - t <= INITIAL_WINDOW_MS) return new Date(t).toISOString();
+      const saved = JSON.parse(sessionStorage.getItem(CURSOR_KEY) || 'null');
+      if (saved && Number.isSafeInteger(saved.id) && saved.id >= 0
+          && Number.isFinite(saved.at) && Date.now() - saved.at <= INITIAL_WINDOW_MS) return saved.id;
     } catch (_) {}
-    return new Date(Date.now() - INITIAL_WINDOW_MS).toISOString();
+    return null;
   }
-  function saveCursor(value) {
-    cursor = value;
-    try { sessionStorage.setItem(CURSOR_KEY, value); } catch (_) {}
+  function saveCursor(id) {
+    afterId = id;
+    try { sessionStorage.setItem(CURSOR_KEY, JSON.stringify({ id, at: Date.now() })); } catch (_) {}
+  }
+  /* The next cursor may never pass an event this response did not return. */
+  function nextCursorFrom(j, events, current) {
+    const ids = events.map(e => Number(e.id)).filter(Number.isSafeInteger);
+    const next = Number(j && j.next_cursor);
+    if (ids.length) {
+      const maxReturned = Math.max(...ids);
+      return Number.isSafeInteger(next) && next <= maxReturned && next >= (current ?? 0) ? next : maxReturned;
+    }
+    /* nothing returned: a bootstrap adopts the server's high-water id; an
+       incremental read stays exactly where it was */
+    if (current === null) return Number.isSafeInteger(next) && next >= 0 ? next : null;
+    return current;
   }
 
   /* Shape only. Every value is the server's; nothing is decided here. */
@@ -81,16 +97,20 @@
     if (inflight || !window.PBEBreaking || typeof window.PBEBreaking.offer !== 'function') return;
     inflight = true;
     try {
-      const since = cursor || readCursor();
-      const r = await fetch(`${ENDPOINT}&since=${encodeURIComponent(since)}`,
+      if (afterId === null) afterId = readCursor();
+      const query = afterId !== null
+        ? `after_id=${afterId}`
+        : `since=${encodeURIComponent(new Date(Date.now() - INITIAL_WINDOW_MS).toISOString())}`;
+      const r = await fetch(`${ENDPOINT}&${query}`,
         { headers: { accept: 'application/json' }, cache: 'no-store', credentials: 'same-origin' });
       if (!r.ok) return;
       const j = await r.json();
-      const hits = Array.isArray(j.hits) ? j.hits : [];
-      for (const hit of hits) {
+      const events = Array.isArray(j.events) ? j.events : [];
+      for (const hit of events) {
         if (hit && hit.pick_id) window.PBEBreaking.offer(toRailEvent(hit));
       }
-      saveCursor(typeof j.cursor === 'string' && j.cursor ? j.cursor : since);
+      const next = nextCursorFrom(j, events, afterId);
+      if (next !== null) saveCursor(next);
     } catch (_) {
       /* silence: the rail never reports its own plumbing */
     } finally {
@@ -106,7 +126,7 @@
   }
   function stop() { clearInterval(timer); timer = null; }
 
-  window.PBETouchdownHits = { start, stop, poll, _test: { toRailEvent, readCursor, CURSOR_KEY, POLL_MS, INITIAL_WINDOW_MS } };
+  window.PBETouchdownHits = { start, stop, poll, _test: { toRailEvent, readCursor, nextCursorFrom, cursor: () => afterId, CURSOR_KEY, POLL_MS, INITIAL_WINDOW_MS } };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
   else start();
