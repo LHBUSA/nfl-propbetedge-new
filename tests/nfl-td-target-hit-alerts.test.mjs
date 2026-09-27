@@ -402,9 +402,10 @@ async function callHits(rows, query = {}) {
 test('16 · view=hits reads ONLY the hit-event table: an unhit target cannot leave through it', async () => {
   const out = await callHits([hitRowFor(chase())]);
   assert.equal(out.status, 200);
-  assert.deepEqual(out.reads.map(r => r.path), ['nfl_td_target_hit_events']);
-  assert.match(out.reads[0].q, /detected_at=gt\./);
-  assert.match(out.reads[0].q, /limit=25/);
+  /* bootstrap: the high-water id, then the bounded window — both on the hit table only */
+  assert.deepEqual(out.reads.map(r => r.path), ['nfl_td_target_hit_events', 'nfl_td_target_hit_events']);
+  assert.match(out.reads[1].q, /detected_at=gt\./);
+  assert.match(out.reads[1].q, /limit=25/);
   assert.equal(out.cache, 'no-store');
   assert.equal(out.body.count, 1);
   const shaped = out.body.hits[0];
@@ -418,7 +419,7 @@ test('17 · view=hits never returns model_snapshot, the pool, components or the 
   for (const leak of ['model_snapshot', 'ranked_pool', 'secret_component', 'Somebody Unhit', 'espn_site_summary', 'provider', 'selector']) {
     assert.equal(text.includes(leak), false, `leaked ${leak}`);
   }
-  assert.equal(out.reads[0].q.includes('model_snapshot'), false);
+  assert.equal(out.reads.some(r => r.q.includes('model_snapshot')), false);
 });
 
 test('18 · a tracking target is never labelled official', async () => {

@@ -99,23 +99,74 @@ export function shapeHit(row) {
   };
 }
 
-/* `sb(path, query, secret)` is the caller's PostgREST reader; `send` its
- * responder. Both callers pass their own. */
+/* after_id: a non-negative integer event id, or null when absent/unreadable. */
+export function parseAfterId(raw) {
+  const value = String(raw ?? '').trim();
+  if (!/^\d{1,15}$/.test(value)) return null;
+  return Number(value);
+}
+
+/* THE CURSOR IS THE EVENT ID.
+ *
+ *   ?after_id=<n>  the incremental read: id > n, ascending, bounded. The
+ *                  identity column orders events durably, so two hits in the
+ *                  same millisecond (or microsecond) each arrive exactly once,
+ *                  and nothing is ever re-served. next_cursor = the largest id
+ *                  returned, or n itself when nothing is newer — never past an
+ *                  event that was not returned.
+ *   ?since=<ISO>   BOOTSTRAP / COMPATIBILITY ONLY. A browser's first read asks
+ *                  for the last few minutes so opening the site never replays
+ *                  an old touchdown; its next_cursor hands the browser an id
+ *                  and every later read is after_id. Older clients that still
+ *                  poll with since keep working (the `cursor` timestamp field
+ *                  is kept for them).
+ *   both           after_id wins.
+ *
+ * A bootstrap that finds nothing must still hand back an id cursor, and it
+ * cannot be 0: after_id=0 would return every historical hit. So the table's
+ * current high-water id is read FIRST and bounds the window read; next_cursor
+ * is that high-water mark when the window is empty, and any event inserted
+ * after it is by construction > it and arrives on the first after_id read. */
 export async function hitsView({ res, send, sb, secret, query = {}, nowMs = Date.now() }) {
-  const since = parseSince(query.since, nowMs);
-  const rows = await sb(
-    'nfl_td_target_hit_events',
-    `detected_at=gt.${encodeURIComponent(since)}&select=${HIT_FIELDS}&order=detected_at.asc&limit=${HITS_LIMIT}`,
-    secret,
-  );
-  const hits = (Array.isArray(rows) ? rows : []).map(shapeHit);
+  const TABLE = 'nfl_td_target_hit_events';
+  const afterId = parseAfterId(query.after_id);
+  if (query.after_id !== undefined && query.after_id !== '' && afterId === null) {
+    return send(res, 400, { error: 'invalid_after_id', expected: 'non-negative integer event id' }, 'no-store');
+  }
+
+  let rows;
+  let since = null;
+  let nextCursor;
+  if (afterId !== null) {
+    rows = await sb(TABLE, `id=gt.${afterId}&select=${HIT_FIELDS}&order=id.asc&limit=${HITS_LIMIT}`, secret);
+    rows = Array.isArray(rows) ? rows : [];
+    nextCursor = rows.length ? Math.max(...rows.map(row => Number(row.id))) : afterId;
+  } else {
+    since = parseSince(query.since, nowMs);
+    const top = await sb(TABLE, 'select=id&order=id.desc&limit=1', secret);
+    const highWater = Array.isArray(top) && top.length ? Number(top[0].id) : 0;
+    rows = await sb(
+      TABLE,
+      `detected_at=gt.${encodeURIComponent(since)}&id=lte.${highWater}&select=${HIT_FIELDS}&order=id.asc&limit=${HITS_LIMIT}`,
+      secret,
+    );
+    rows = Array.isArray(rows) ? rows : [];
+    nextCursor = rows.length ? Math.max(...rows.map(row => Number(row.id))) : highWater;
+  }
+
+  const events = rows.map(shapeHit);
   return send(res, 200, {
     view: 'hits',
+    mode: afterId !== null ? 'after_id' : 'since_bootstrap',
+    after_id: afterId,
     since,
-    count: hits.length,
-    cursor: hits.length ? hits[hits.length - 1].detected_at : since,
+    count: events.length,
+    next_cursor: nextCursor,
     limit: HITS_LIMIT,
-    hits,
+    events,
+    /* compatibility for clients that predate after_id */
+    hits: events,
+    cursor: events.length ? events[events.length - 1].detected_at : since,
     definition: 'at least one rushing or receiving touchdown credited to the target, observed live on a fresh scoring play',
     settlement: 'LIVE HIT — the final result settles after the game, from the official final box score',
   }, 'no-store');
