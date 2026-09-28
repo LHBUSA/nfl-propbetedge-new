@@ -46,7 +46,7 @@
           </div>
           <div class="pbe-network-live-mark" aria-label="Eight live PropBetEdge sport products">
             <span><i></i> LIVE NETWORK</span>
-            <strong>6</strong>
+            <strong>8</strong>
             <small>SPORT PRODUCTS</small>
           </div>
         </section>
