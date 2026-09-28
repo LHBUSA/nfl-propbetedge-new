@@ -44,7 +44,7 @@
               <p>Markets, models, live context, verified decisions and deep research — built independently for how each sport actually works.</p>
             </div>
           </div>
-          <div class="pbe-network-live-mark" aria-label="Six live PropBetEdge sport products">
+          <div class="pbe-network-live-mark" aria-label="Eight live PropBetEdge sport products">
             <span><i></i> LIVE NETWORK</span>
             <strong>6</strong>
             <small>SPORT PRODUCTS</small>
