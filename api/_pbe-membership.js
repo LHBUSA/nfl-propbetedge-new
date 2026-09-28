@@ -16,7 +16,7 @@
 
 export const CONTRACT_VERSION = '1.2.0';
 
-export const SPORT_LABELS = Object.freeze({ mlb: 'MLB', nfl: 'NFL', nba: 'NBA', nhl: 'NHL', wnba: 'WNBA', ufc: 'UFC', tennis: 'Tennis' });
+export const SPORT_LABELS = Object.freeze({ mlb: 'MLB', nfl: 'NFL', nba: 'NBA', nhl: 'NHL', wnba: 'WNBA', ufc: 'UFC', tennis: 'Tennis', soccer: 'Soccer' });
 
 export const ALL_ACCESS_URL = 'https://propbetedge.ai/pro';
 export const MANAGE_URL = 'https://billing.stripe.com/p/login/cNi3cv2vY7em3lr4oj7wA00';
@@ -43,6 +43,7 @@ export const NETWORK = Object.freeze([
   { key: 'wnba', label: 'WNBA', name: 'PropBetEdge WNBA', url: 'https://wnba.propbetedge.ai' },
   { key: 'ufc', label: 'UFC', name: 'PropBetEdge UFC', url: 'https://ufc.propbetedge.ai' },
   { key: 'tennis', label: 'Tennis', name: 'PropBetEdge Tennis', url: 'https://tennis.propbetedge.ai' },
+  { key: 'soccer', label: 'Soccer', name: 'PropBetEdge Soccer', url: 'https://soccer.propbetedge.ai' },
 ]);
 
 export const STATES = Object.freeze(['free', 'sport_pro', 'all_access', 'owner']);
