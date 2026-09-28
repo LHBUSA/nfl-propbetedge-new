@@ -388,12 +388,14 @@ test('learning gate, official record, publication state and premium gate logic a
     'api/pbe-touchdown-targets.js': {
       governance: 'ca4205bf3848ae8e96ed1969e0841d6bbeb4bb7fad5e82f64a3c152b295590fb',
       premium: '2788049881bea1a443909fd3eaff122fe44353093443ee9818980898ec4a57b7',
-      trackrecord: '8c116d818f84657d74870e5e452089c3ac67faf870e57f0e47a61a9db961ea2e',
+      // re-pinned 2026-09-27: owner-ordered official/tracking split (api/_td-record-scope.js); selection unchanged
+      trackrecord: 'bf0a0bb9cbfd6d4cfefe6731b41fea55c1427763c7573d335218a37a77c6a327',
     },
     'workers/nfl-touchdown-targets-api/src/contract.js': {
       governance: '8f05075786c3c8c006f64648e97ec2fc7bbf6d004b5162fbd7bb78117974d7cf',
       premium: '99edaee251cfb7b931fa05e168ac4f851208686871a901d0f8d226f20a16d285',
-      trackrecord: '8c116d818f84657d74870e5e452089c3ac67faf870e57f0e47a61a9db961ea2e',
+      // re-pinned 2026-09-27: owner-ordered official/tracking split (api/_td-record-scope.js); selection unchanged
+      trackrecord: 'bf0a0bb9cbfd6d4cfefe6731b41fea55c1427763c7573d335218a37a77c6a327',
     },
   };
   for (const [path, pins] of Object.entries(REGIONS)) {

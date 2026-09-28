@@ -175,7 +175,7 @@
       ['Games analyzed', counts ? String(counts.games_analyzed) : String(coverage.games_evaluated ?? '—'), 'final pregame decisions'],
       ['Primary targets', counts ? String(counts.primary_targets) : String(coverage.target_issued ?? '—'), 'one per game, maximum'],
       ['Hit / pending', counts ? `${counts.hit} / ${counts.pending}` : '—', 'graded from the official box score'],
-      ['Season primary record', hitRate === null ? '—' : pct(hitRate), `${record.decided ?? 0} graded`],
+      ['Validation sample', hitRate === null ? '—' : pct(hitRate), `${record.decided ?? 0} graded · learning gate, all scopes`],
       ['Games abstained', counts ? String(counts.abstained) : String(coverage.abstained ?? '—'),
         coverage.abstention_rate === null || coverage.abstention_rate === undefined ? 'rate pending' : `${(coverage.abstention_rate * 100).toFixed(1)}% of decidable games`],
     ];
@@ -351,9 +351,17 @@
     </select></label>`;
   }
 
+  /* The record's scope is the PERSISTED publication_scope and nothing else (mirrors api/_td-record-scope.js).
+     Not whether a target was shown free, graded, its rank, date, model or the gate. Anything else is in neither. */
+  function scopeOfTarget(target) {
+    const scope = String(target?.publication_scope ?? '').trim().toLowerCase();
+    return scope === 'official' || scope === 'tracking' ? scope : null;
+  }
+
   function recordRows(record) {
     return (Array.isArray(record?.targets) ? record.targets : []).map(target => ({
       id: target.id,
+      scope: scopeOfTarget(target),
       week: target.week,
       season: target.season,
       team: target.player?.team ?? null,
@@ -401,9 +409,18 @@
         record?.error ? ` (${esc(record.error)})` : ''}. This is a source failure, not an empty record.</div></section>`;
     }
     const allRows = recordRows(record);
-    const rows = applyFilters(allRows);
+    /* Two records, never merged: OFFICIAL first, then TRACKING (validation phase). */
+    return ['official', 'tracking'].map(scope => scopePanel(record, allRows, scope)).join('');
+  }
+
+  function scopePanel(record, allRows, scope) {
+    const scopeRows = allRows.filter(row => row.scope === scope);
+    const rows = applyFilters(scopeRows);
     const summary = summarize(rows);
     const coverage = record.coverage || {};
+    const scoped = record.records?.[scope] || null;
+    const pendingBlock = scoped ? (filters.rank === 'primary' ? scoped.primary : scoped.all) : null;
+    const official = scope === 'official';
 
     const hero = [
       ['Record', `${summary.wins}-${summary.losses}`, `${summary.graded} graded`, summary.wins > summary.losses ? 'good' : summary.wins < summary.losses ? 'bad' : ''],
@@ -412,6 +429,7 @@
       ['ROI', summary.roi === null ? '—' : `${summary.roi > 0 ? '+' : ''}${summary.roi.toFixed(1)}%`, 'per unit risked', summary.roi > 0 ? 'good' : summary.roi < 0 ? 'bad' : ''],
       ['Avg PBE probability', summary.avgProbability === null ? '—' : pct(summary.avgProbability), 'at issuance', ''],
       ['Brier', summary.brier === null ? '—' : summary.brier.toFixed(4), 'lower is better', ''],
+      ['Pending', pendingBlock ? String(pendingBlock.pending) : '—', official ? 'open official targets' : 'open tracking targets', ''],
       ['Games abstained', String(coverage.abstained ?? '—'),
         coverage.abstention_rate === null || coverage.abstention_rate === undefined ? 'rate pending' : `${(coverage.abstention_rate * 100).toFixed(1)}% of decidable games`, ''],
     ];
@@ -438,11 +456,15 @@
   target.receipt?.chain_hash ? `#${esc(target.receipt.seq)} ${esc(String(target.receipt.chain_hash).slice(0, 10))}…` : '—'}</td>
         </tr>`;
       }).join('')
-      : `<tr><td colspan="13" class="pbetd-empty">No graded touchdown targets match these filters.</td></tr>`;
+      : `<tr><td colspan="13" class="pbetd-empty">${official && !scopeRows.length
+        ? 'No official Touchdown Targets have been graded yet. Targets are issued at tracking scope until the learning gate opens; their results are in the Tracking record below and never count here.'
+        : `No graded ${official ? 'official' : 'tracking'} touchdown targets match these filters.`}</td></tr>`;
 
-    return `<section class="pbetd-panel">
+    return `<section class="pbetd-panel" data-pbetd-record-scope="${esc(scope)}">
       <div class="pbetd-panel-head">
-        <div><span>Verified live track record</span><strong>Touchdown Targets</strong></div>
+        <div>${official
+          ? '<span>Verified live track record · official targets only</span><strong>Official TD Target record</strong>'
+          : '<span>Validation phase · tracking targets only · not the official record</span><strong>Tracking TD Target record</strong>'}</div>
         <div class="pbetd-filters">
           <label>Rank<select data-pbetd-filter="rank">
             <option value="primary"${filters.rank === 'primary' ? ' selected' : ''}>Primary only</option>
@@ -774,6 +796,7 @@
     load,
     loadRecord,
     recordSection,
+    recordHtml,
     render,
     railHtml,
     badgeHtml,

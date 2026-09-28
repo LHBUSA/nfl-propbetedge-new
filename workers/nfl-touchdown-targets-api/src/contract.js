@@ -37,6 +37,7 @@ import { supabaseAdminHeaders } from '../../../api/_nfl-entitlement-ledger.js';
 import { currentSeason, engineRuntime } from '../../../api/_pbe-engine-runtime.js';
 import { hitsView } from '../../../api/_td-target-hits.js';
 import { freeSampleView } from '../../../api/_td-free-sample.js';
+import { tdRecordsByScope } from '../../../api/_td-record-scope.js';
 
 /* The Worker's bindings, set once per request by handle(). They are the same
  * for every request an isolate serves, so a module binding is safe. */
@@ -605,15 +606,23 @@ async function trackRecordView(res, secret, { season }) {
     secret,
   ));
   const ids = rows.map(row => row.id);
-  const [grades, receipts] = await Promise.all([gradesFor(secret, ids), receiptsFor(secret, ids)]);
+  /* Open targets feed only the per-scope PENDING counts; the table stays graded history. */
+  const [grades, receipts, open] = await Promise.all([
+    gradesFor(secret, ids),
+    receiptsFor(secret, ids),
+    sb('nfl_prop_picks', `market=eq.${MARKET}&status=eq.open${filter}&select=id,publication_scope,target_rank&limit=2000`, secret).then(arr),
+  ]);
   const shaped = rows.map(row => shapeTarget(row, { grade: grades.get(row.id) || null, receipt: receipts.get(row.id) || null }));
   const coverage = await coverageSummary(secret, season ?? state.current?.season ?? null);
+  /* OFFICIAL and TRACKING records split by the persisted publication_scope only (api/_td-record-scope.js). */
+  const records = tdRecordsByScope({ settled: shaped, open });
   return send(res, 200, {
     ...state,
     scope: 'VERIFIED LIVE TRACK RECORD',
     scope_note_backtest: 'The model artefact carries a HISTORICAL BACKTEST. It is served at view=model '
       + 'and is never part of this record.',
     coverage,
+    records,
     count: shaped.length,
     targets: shaped,
   }, 'public, max-age=30, s-maxage=30, stale-while-revalidate=120');
