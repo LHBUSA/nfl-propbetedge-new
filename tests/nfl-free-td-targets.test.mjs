@@ -481,3 +481,29 @@ test('UI · even a malformed payload with three targets renders at most two', ()
   payload.targets.push({ ...payload.targets[0], target_id: 'extra' });
   assert.equal((page.freeSampleHtml(payload).match(/class="pbetd-free-card"/g) || []).length, 2);
 });
+
+test('free-sample is read-only: a tracking free target can never touch the official TD record, grades or publication state', async () => {
+  answer.setPicks([target({ publication_scope: 'tracking', model_prob: 0.6, kickoff_ts: '2099-01-03T18:00:00Z', created_at: '2099-01-01T00:00:00Z' })]);
+  const prior = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = async (url, init = {}) => {
+    const href = String(url instanceof Request ? url.url : url);
+    calls.push({ href, method: String(init.method || (url instanceof Request ? url.method : 'GET')).toUpperCase() });
+    return prior(url, init);
+  };
+  try {
+    const out = await viaVercel('free-sample');
+    assert.equal(out.body.targets[0].official, false);
+    assert.equal(out.body.targets[0].publication_scope, 'tracking');
+  } finally {
+    globalThis.fetch = prior;
+  }
+  assert.ok(calls.length > 0);
+  for (const c of calls) {
+    assert.equal(c.method, 'GET', `free-sample issued ${c.method} ${c.href}`);
+    assert.ok(!/\/rpc\//.test(c.href), `free-sample called an RPC: ${c.href}`);
+  }
+  const src = readFileSync(new URL('../api/_td-free-sample.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(src, /method\s*:\s*['"](POST|PATCH|PUT|DELETE)/i, 'free-sample module has no write path');
+  assert.doesNotMatch(src, /publication_scope\s*:\s*['"]official['"]/, 'free-sample never assigns official scope');
+});
