@@ -4,11 +4,18 @@
  * Cloudflare contract (workers/nfl-touchdown-targets-api/src/contract.js), so
  * the two cannot drift.
  *
- * WHY IT IS PUBLIC
- * Every row is a touchdown that has ALREADY happened, observed by the one
- * server-side detector (nfl-touchdown-target-hit-alerts). The query reads only
- * nfl_td_target_hit_events — never nfl_prop_picks — so an open target that has
- * not scored cannot leave through this door however it is called. No
+ * WHO SEES WHAT (owner rule 2026-09-29: target identities are Pro only)
+ * The endpoint answers everyone, because a hit is a marketing moment, but the
+ * entitlement tier is resolved SERVER-SIDE before the read:
+ *   pro     the full hit: player, athlete ids, rank, probability, price, the
+ *           play, clock, score, live stat line.
+ *   locked  (free, signed out, or an entitlement check that failed) one
+ *           generic notice per hit: its event id and fixed copy. The query
+ *           for this tier SELECTS ONLY id — no player, game, team, time, clock,
+ *           score, play or rank is read, so none can be returned, and nothing
+ *           identifies which game or which player scored.
+ * The query reads only nfl_td_target_hit_events — never nfl_prop_picks — so an
+ * open target that has not scored cannot leave through this door. No
  * model_snapshot, candidate pool, driver or selector internals are selected.
  *
  * ANNOUNCED ONLY. The table also persists hits observed late (live_stale) or
@@ -134,18 +141,31 @@ export function parseAfterId(raw) {
  * current high-water id is read FIRST and bounds the window read; next_cursor
  * is that high-water mark when the window is empty, and any event inserted
  * after it is by construction > it and arrives on the first after_id read. */
-export async function hitsView({ res, send, sb, secret, query = {}, nowMs = Date.now() }) {
+/* The only thing a locked reader receives per hit. Fixed copy, no data. */
+export const LOCKED_HEADLINE = 'One of PBE’s Touchdown Targets just scored.';
+export const LOCKED_DETAIL = 'Unlock All Access Pro to see the player and model details.';
+export function shapeLockedHit(row) {
+  return { id: row.id, kind: 'TD_TARGET_HIT', access: 'locked', headline: LOCKED_HEADLINE, detail: LOCKED_DETAIL };
+}
+
+export async function hitsView({ res, send, sb, secret, query = {}, nowMs = Date.now(), resolveAccess = async () => ({ tier: 'anonymous' }) }) {
   const TABLE = 'nfl_td_target_hit_events';
   const afterId = parseAfterId(query.after_id);
   if (query.after_id !== undefined && query.after_id !== '' && afterId === null) {
     return send(res, 400, { error: 'invalid_after_id', expected: 'non-negative integer event id' }, 'no-store');
   }
 
+  let access;
+  try { access = await resolveAccess(); } catch (_) { access = { tier: 'unavailable' }; }
+  const pro = access?.tier === 'pro';
+  /* The locked tier reads the event id and nothing else. */
+  const fields = pro ? HIT_FIELDS : 'id';
+
   let rows;
   let since = null;
   let nextCursor;
   if (afterId !== null) {
-    rows = await sb(TABLE, `id=gt.${afterId}&${ANNOUNCED}&select=${HIT_FIELDS}&order=id.asc&limit=${HITS_LIMIT}`, secret);
+    rows = await sb(TABLE, `id=gt.${afterId}&${ANNOUNCED}&select=${fields}&order=id.asc&limit=${HITS_LIMIT}`, secret);
     rows = Array.isArray(rows) ? rows : [];
     nextCursor = rows.length ? Math.max(...rows.map(row => Number(row.id))) : afterId;
   } else {
@@ -154,16 +174,33 @@ export async function hitsView({ res, send, sb, secret, query = {}, nowMs = Date
     const highWater = Array.isArray(top) && top.length ? Number(top[0].id) : 0;
     rows = await sb(
       TABLE,
-      `detected_at=gt.${encodeURIComponent(since)}&id=lte.${highWater}&${ANNOUNCED}&select=${HIT_FIELDS}&order=id.asc&limit=${HITS_LIMIT}`,
+      `detected_at=gt.${encodeURIComponent(since)}&id=lte.${highWater}&${ANNOUNCED}&select=${fields}&order=id.asc&limit=${HITS_LIMIT}`,
       secret,
     );
     rows = Array.isArray(rows) ? rows : [];
     nextCursor = rows.length ? Math.max(...rows.map(row => Number(row.id))) : highWater;
   }
 
-  const events = rows.map(shapeHit);
+  if (!pro) {
+    const events = rows.map(shapeLockedHit);
+    return send(res, 200, {
+      view: 'hits',
+      access: 'locked',
+      mode: afterId !== null ? 'after_id' : 'since_bootstrap',
+      after_id: afterId,
+      count: events.length,
+      next_cursor: nextCursor,
+      limit: HITS_LIMIT,
+      events,
+      hits: events,
+      cursor: null,
+    }, 'private, no-store, max-age=0');
+  }
+
+  const events = rows.map(row => ({ ...shapeHit(row), access: 'pro' }));
   return send(res, 200, {
     view: 'hits',
+    access: 'pro',
     mode: afterId !== null ? 'after_id' : 'since_bootstrap',
     after_id: afterId,
     since,
@@ -176,5 +213,5 @@ export async function hitsView({ res, send, sb, secret, query = {}, nowMs = Date
     cursor: events.length ? events[events.length - 1].detected_at : since,
     definition: 'at least one rushing or receiving touchdown credited to the target, observed live on a fresh scoring play',
     settlement: 'LIVE HIT — the final result settles after the game, from the official final box score',
-  }, 'no-store');
+  }, 'private, no-store, max-age=0');
 }

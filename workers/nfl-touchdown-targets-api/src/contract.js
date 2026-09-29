@@ -19,10 +19,10 @@
  *                the product. Open targets are excluded by the query itself.
  *   model        public.  The committed artefact's provenance, fitted weights
  *                and HISTORICAL BACKTEST. Never the per-player baselines.
- *   hits         public.  LIVE hits already observed by the one server-side
- *                detector: a touchdown that has happened, read only from
- *                nfl_td_target_hit_events. Never an unhit or future target,
- *                never model_snapshot. A live observation, not a grade.
+ *   hits         identity NFL PRO / ALL ACCESS. LIVE hits observed by the one
+ *                server-side detector. Pro: the full hit. Everyone else: a
+ *                generic notice (event id + fixed copy; only id is selected).
+ *                Never an unhit target, never model_snapshot.
  *
  * A free browser cannot receive a live target in JSON and have it hidden by
  * JavaScript afterwards: `current` and `week` refuse before they read a row.
@@ -37,7 +37,7 @@ import { supabaseAdminHeaders } from '../../../api/_nfl-entitlement-ledger.js';
 import { currentSeason, engineRuntime } from '../../../api/_pbe-engine-runtime.js';
 import { hitsView } from '../../../api/_td-target-hits.js';
 import { freeSampleView } from '../../../api/_td-free-sample.js';
-import { tdRecordsByScope } from '../../../api/_td-record-scope.js';
+import { tdRecordsByScope, splitCanonical } from '../../../api/_td-record-scope.js';
 import { gameView } from '../../../api/_td-game-view.js';
 
 /* The Worker's bindings, set once per request by handle(). They are the same
@@ -608,15 +608,22 @@ async function trackRecordView(res, secret, { season }) {
   ));
   const ids = rows.map(row => row.id);
   /* Open targets feed only the per-scope PENDING counts; the table stays graded history. */
-  const [grades, receipts, open] = await Promise.all([
+  const [grades, receipts, open, finals] = await Promise.all([
     gradesFor(secret, ids),
     receiptsFor(secret, ids),
     sb('nfl_prop_picks', `market=eq.${MARKET}&status=eq.open${filter}&select=id,publication_scope,target_rank&limit=2000`, secret).then(arr),
+    sb('nfl_td_final_pregame_evaluation', `select=primary_pick_id,secondary_pick_id${filter}&limit=2000`, secret).then(arr),
   ]);
-  const shaped = rows.map(row => shapeTarget(row, { grade: grades.get(row.id) || null, receipt: receipts.get(row.id) || null }));
+  const every = rows.map(row => shapeTarget(row, { grade: grades.get(row.id) || null, receipt: receipts.get(row.id) || null }));
+  /* The record is the CANONICAL LOCKED SET only: targets in their game's final
+     pregame evaluation. A target withdrawn or replaced before kickoff keeps its
+     rows and grade in the database and is listed below with its reason, but it
+     is not a locked prediction and never counts (api/_td-record-scope.js). */
+  const { locked: shaped, excluded } = splitCanonical({ rows: every, evaluations: finals });
+  const openLocked = splitCanonical({ rows: open, evaluations: finals }).locked;
   const coverage = await coverageSummary(secret, season ?? state.current?.season ?? null);
   /* OFFICIAL and TRACKING records split by the persisted publication_scope only (api/_td-record-scope.js). */
-  const records = tdRecordsByScope({ settled: shaped, open });
+  const records = tdRecordsByScope({ settled: shaped, open: openLocked });
   return send(res, 200, {
     ...state,
     scope: 'VERIFIED LIVE TRACK RECORD',
@@ -624,8 +631,13 @@ async function trackRecordView(res, secret, { season }) {
       + 'and is never part of this record.',
     coverage,
     records,
+    record_rule: 'canonical locked set: a target counts only if it is in its game’s final pregame evaluation (the set held at kickoff)',
     count: shaped.length,
     targets: shaped,
+    excluded_from_record: excluded.map(({ id, reason, row }) => ({
+      id, reason, player_name: row.player?.name ?? null, espn_id: row.espn_id ?? null, target_rank: row.target_rank,
+      issued_at: row.locked?.at ?? null, kickoff_ts: row.kickoff_ts, grade: row.grade?.result ?? null,
+    })),
   }, 'public, max-age=30, s-maxage=30, stale-while-revalidate=120');
 }
 
@@ -684,7 +696,7 @@ async function handler(req, res) {
     if (view === 'current') return await slateView(req, res, secret, { season: null, week: null });
     if (view === 'week') return await slateView(req, res, secret, { season, week });
     if (view === 'trackrecord' || view === 'history') return await trackRecordView(res, secret, { season });
-    if (view === 'hits') return await hitsView({ res, send, sb, secret, query: req.query || {} });
+    if (view === 'hits') return await hitsView({ res, send, sb, secret, query: req.query || {}, resolveAccess: () => gameAccess(req) });
     if (view === 'free-sample') return await freeSampleView({ res, send, sb, secret, governance });
     if (view === 'game') return await gameView({ res, send, sb, secret, query: req.query || {}, resolveAccess: () => gameAccess(req), driversFrom });
     return send(res, 404, { error: 'view_not_found', views: ['state', 'current', 'week', 'trackrecord', 'model', 'hits', 'free-sample', 'game'] });

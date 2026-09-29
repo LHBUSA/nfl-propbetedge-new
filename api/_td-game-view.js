@@ -28,8 +28,15 @@
  * the real scoring play (ESPN play id, type, yards, quarter, clock); it is
  * never inferred from a name here.
  *
- * Targets are the rows the track record counts (status open or graded).
- * Nothing is ever issued, changed or re-ranked by this read.
+ * Targets are the CANONICAL LOCKED SET: the ids in the game's final pregame
+ * evaluation, exactly the rows the track record counts. A target withdrawn or
+ * replaced before kickoff is never shown. Nothing is issued, changed or
+ * re-ranked by this read.
+ *
+ * LIVE COUNTS ARE PRO. While any target is unsettled, a locked reader gets the
+ * number of targets only: a per-game HIT count that ticks up seconds after a
+ * touchdown would name the scorer by inference. Once every target is graded
+ * the tally is public, as the graded record already is.
  */
 
 export const GAME_TARGET_FIELDS = [
@@ -49,7 +56,7 @@ export const GAME_HIT_FIELDS = [
 
 const EVALUATION_FIELDS = [
   'espn_id', 'event_id', 'season', 'week', 'kickoff_ts', 'away_team', 'home_team',
-  'outcome', 'reason', 'publication_scope', 'decided_at',
+  'outcome', 'reason', 'publication_scope', 'decided_at', 'primary_pick_id', 'secondary_pick_id',
 ].join(',');
 
 const arr = value => (Array.isArray(value) ? value : []);
@@ -232,8 +239,12 @@ export async function gameView({ res, send, sb, secret, query = {}, resolveAcces
     decided_at: evaluation.decided_at ?? null,
   };
 
-  const eventFilter = `event_id=eq.${encodeURIComponent(evaluation.event_id)}&market=eq.player_anytime_td&status=in.(open,graded)`;
-  const rows = arr(await sb('nfl_prop_picks', `${eventFilter}&select=${pro ? GAME_TARGET_FIELDS : FREE_TARGET_FIELDS}&limit=12`, secret));
+  const canonical = [evaluation.primary_pick_id, evaluation.secondary_pick_id].filter(id => /^[0-9a-f-]{36}$/i.test(String(id || '')));
+  const rows = canonical.length ? arr(await sb(
+    'nfl_prop_picks',
+    `id=in.(${inList(canonical)})&market=eq.player_anytime_td&status=in.(open,graded)&select=${pro ? GAME_TARGET_FIELDS : FREE_TARGET_FIELDS}&limit=4`,
+    secret,
+  )) : [];
   const ids = rows.map(row => row.id).filter(Boolean);
   const [grades, hits] = ids.length ? await Promise.all([
     sb('nfl_prop_pick_grades', `pick_id=in.(${inList(ids)})&select=${pro ? 'pick_id,result,final_value,graded_at,settlement_note' : 'pick_id,result'}`, secret).then(arr),
@@ -247,7 +258,11 @@ export async function gameView({ res, send, sb, secret, query = {}, resolveAcces
   const counts = countStates(states);
 
   if (!pro) {
-    return send(res, 200, { ...base, evaluated: true, game, evaluation: evaluationOut, counts });
+    const settled = counts.targets > 0 && counts.pending === 0 && rows.every(row => row.status === 'graded');
+    return send(res, 200, {
+      ...base, evaluated: true, game, evaluation: evaluationOut,
+      counts: settled ? { ...counts, settled: true } : { targets: counts.targets, settled: false },
+    });
   }
 
   const targets = ranked.map(({ row, rank }) => shapeGameTarget({ row, rank, grade: gradeBy.get(row.id) || null, hit: hitBy.get(row.id) || null, driversFrom }));

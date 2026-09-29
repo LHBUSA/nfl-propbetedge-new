@@ -31,7 +31,8 @@ const PICKS = [
   { id: '11111111-1111-4111-8111-111111111111', event_id: 'e1', season: 2026, week: 3, kickoff_ts: KICK, player_name: 'Cam Skattebo', player_key: 'cam skattebo', market: 'player_anytime_td', side: 'YES', book: 'DraftKings', book_key: 'draftkings', market_price: 120, opposite_price: -150, model_prob: 0.4041, market_prob: 0.43, edge_pct: -2.6, ev_pct: -4, confidence_bucket: 'tracking', target_rank: 'primary', projection_model_version: 'pbe-td-hazard-v1', selector_version: 2, phase: 'early_bird', publication_scope: 'tracking', status: 'open', created_at: '2026-09-26T00:30:05Z', closed_at: null, model_snapshot: snap('Cam Skattebo', '4696981', 0.4041) },
   { id: '22222222-2222-4222-8222-222222222222', event_id: 'e0', season: 2026, week: 2, kickoff_ts: '2026-09-20T17:00:00Z', player_name: 'Graded Guy', player_key: 'graded guy', market: 'player_anytime_td', side: 'YES', book: 'FanDuel', book_key: 'fanduel', market_price: 150, opposite_price: -190, model_prob: 0.36, market_prob: 0.38, edge_pct: -2, ev_pct: -1, confidence_bucket: 'tracking', target_rank: 'primary', projection_model_version: 'pbe-td-hazard-v1', selector_version: 2, phase: 'locked', publication_scope: 'tracking', status: 'graded', created_at: '2026-09-19T12:00:00Z', closed_at: '2026-09-21T00:00:00Z', model_snapshot: snap('Graded Guy', '1', 0.36) },
 ];
-const EVALS = [{ id: 1, market: 'player_anytime_td', event_id: 'e1', game_id: '2026_03_TEN_NYG', espn_id: '401872956', season: 2026, week: 3, kickoff_ts: KICK, away_team: 'TEN', home_team: 'NYG', outcome: 'target_issued', reason: null, primary_pick_id: PICKS[0].id, secondary_pick_id: null, market_selections: 23, eligible_pool: 23, top_probability: 0.4041, selector_version: 2, publication_scope: 'tracking', detail: {}, decided_at: '2026-09-26T00:30:05Z' }];
+/* Every target in the record is in its game's final pregame evaluation (the canonical locked set). */
+const EVALS = [{ id: 0, market: 'player_anytime_td', event_id: 'e0', game_id: '2026_02_X_Y', espn_id: '401772000', season: 2026, week: 2, kickoff_ts: '2026-09-20T17:00:00Z', away_team: 'X', home_team: 'Y', outcome: 'target_issued', reason: null, primary_pick_id: '22222222-2222-4222-8222-222222222222', secondary_pick_id: null, market_selections: 20, eligible_pool: 20, top_probability: 0.36, selector_version: 2, publication_scope: 'tracking', detail: {}, decided_at: '2026-09-20T16:45:00Z' }, { id: 1, market: 'player_anytime_td', event_id: 'e1', game_id: '2026_03_TEN_NYG', espn_id: '401872956', season: 2026, week: 3, kickoff_ts: KICK, away_team: 'TEN', home_team: 'NYG', outcome: 'target_issued', reason: null, primary_pick_id: PICKS[0].id, secondary_pick_id: null, market_selections: 23, eligible_pool: 23, top_probability: 0.4041, selector_version: 2, publication_scope: 'tracking', detail: {}, decided_at: '2026-09-26T00:30:05Z' }];
 const RECEIPTS = PICKS.map((p, i) => ({ seq: 50 + i, pick_id: p.id, issued_at: p.created_at, receipt_version: 'pbe-td-target-issuance-v1', payload_sha256: 'a'.repeat(64), previous_chain_hash: 'b'.repeat(64), chain_hash: 'c'.repeat(64) }));
 const GRADES = [{ pick_id: PICKS[1].id, final_value: 1, result: 'win', units_delta: 1.5, clv_prob: 0.01, clv_beat: true, brier: 0.41, source: 'espn_box', graded_at: '2026-09-21T01:00:00Z', result_definition: 'pbe_offensive_td_from_final_box_score', non_offensive_td: false, settlement_note: null }];
 const SELECTOR = [{ version: 2, market: 'player_anytime_td', projection_model: 'pbe-td-hazard-v1', config: { primary_min_prob: 0.22 }, trained: false, promoted: true, training_rows: 0, trained_through_week: null, backtest_brier: null, backtest_units: null, notes: 'seed', created_at: '2026-09-26T00:00:00Z', promoted_at: null }];
@@ -52,7 +53,10 @@ function answer(url) {
   if (table === 'nfl_prop_selector_models') return SELECTOR;
   if (table === 'nfl_prop_learning_observations') return [];
   if (table === 'nfl_prop_pick_audit_events') return [];
-  if (table === 'nfl_td_final_pregame_evaluation') return EVALS;
+  if (table === 'nfl_td_final_pregame_evaluation') {
+    const wk = /week=eq\.(\d+)/.exec(q)?.[1];
+    return wk ? EVALS.filter(e => String(e.week) === wk) : EVALS;
+  }
   if (table === 'nfl_prop_pick_grades') return GRADES;
   if (table === 'nfl_prop_pick_receipts') return RECEIPTS;
   if (table === 'nfl_prop_picks') {

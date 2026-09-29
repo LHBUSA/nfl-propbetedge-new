@@ -83,8 +83,10 @@ test('I. free product is untouched: the free sample and the free-picks tracker c
 test('the Vercel function and the Worker compute the record with the one shared module, by persisted scope', () => {
   for (const path of ['api/pbe-touchdown-targets.js', 'workers/nfl-touchdown-targets-api/src/contract.js']) {
     const src = read(path);
-    assert.match(src, /import \{ tdRecordsByScope \} from '[./]+(api\/)?_td-record-scope\.js';/);
-    assert.match(src, /const records = tdRecordsByScope\(\{ settled: shaped, open \}\);/);
+    assert.match(src, /import \{ tdRecordsByScope, splitCanonical \} from '[./]+(api\/)?_td-record-scope\.js';/);
+    /* 2026-09-29: only the canonical locked set counts; exclusions are listed, never deleted */
+    assert.match(src, /const \{ locked: shaped, excluded \} = splitCanonical\(\{ rows: every, evaluations: finals \}\);/);
+    assert.match(src, /const records = tdRecordsByScope\(\{ settled: shaped, open: openLocked \}\);/);
     assert.match(src, /status=eq\.open\$\{filter\}&select=id,publication_scope,target_rank/);
   }
 });

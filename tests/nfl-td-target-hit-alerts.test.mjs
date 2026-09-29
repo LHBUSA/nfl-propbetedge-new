@@ -400,7 +400,7 @@ async function callHits(rows, query = {}) {
   const sb = async (path, q) => { reads.push({ path, q: decodeURIComponent(q) }); return rows; };
   const res = { statusCode: 200, headers: {}, body: '', setHeader(k, v) { this.headers[k.toLowerCase()] = v; }, end(b) { this.body = b; } };
   const send = (r, status, body, cache) => { r.statusCode = status; r.setHeader('cache-control', cache); r.end(JSON.stringify(body)); };
-  await hitsView({ res, send, sb, secret: 's', query, nowMs: ms('2026-09-27T17:22:00Z') });
+  await hitsView({ res, send, sb, secret: 's', query, nowMs: ms('2026-09-27T17:22:00Z'), resolveAccess: async () => ({ tier: 'pro' }) });
   return { status: res.statusCode, body: JSON.parse(res.body), cache: res.headers['cache-control'], reads };
 }
 
@@ -411,10 +411,10 @@ test('16 · view=hits reads ONLY the hit-event table: an unhit target cannot lea
   assert.deepEqual(out.reads.map(r => r.path), ['nfl_td_target_hit_events', 'nfl_td_target_hit_events']);
   assert.match(out.reads[1].q, /detected_at=gt\./);
   assert.match(out.reads[1].q, /limit=25/);
-  assert.equal(out.cache, 'no-store');
+  assert.equal(out.cache, 'private, no-store, max-age=0');
   assert.equal(out.body.count, 1);
   const shaped = out.body.hits[0];
-  assert.deepEqual(Object.keys(shaped).sort(), ['detected_at', 'game', 'id', 'live_stats', 'pick_id', 'play', 'player', 'target'].sort());
+  assert.deepEqual(Object.keys(shaped).sort(), ['detected_at', 'game', 'id', 'live_stats', 'pick_id', 'play', 'player', 'target', 'access'].sort());
   assert.deepEqual(shaped.game, { espn_id: CIN_PIT, away: 'CIN', home: 'PIT', away_score: 7, home_score: 7, period: 1, clock: '5:50' });
 });
 
@@ -447,7 +447,7 @@ test('the cursor is bounded: default 30 minutes, never older than 24 hours, neve
 test('view=hits is routed identically on the Vercel function and the Cloudflare contract', () => {
   for (const path of ['api/pbe-touchdown-targets.js', 'workers/nfl-touchdown-targets-api/src/contract.js']) {
     const src = read(path);
-    assert.match(src, /if \(view === 'hits'\) return await hitsView\(\{ res, send, sb, secret, query: req\.query \|\| \{\} \}\);/, path);
+    assert.match(src, /if \(view === 'hits'\) return await hitsView\(\{ res, send, sb, secret, query: req\.query \|\| \{\}, resolveAccess: \(\) => gameAccess\(req\) \}\);/, path);
     assert.match(src, /views: \['state', 'current', 'week', 'trackrecord', 'model', 'hits', 'free-sample', 'game'\]/, path);
   }
 });

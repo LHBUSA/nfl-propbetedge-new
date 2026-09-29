@@ -60,7 +60,7 @@ function table(rows) {
 async function view(t, query, nowMs = NOW) {
   const res = { statusCode: 200, headers: {}, body: '', setHeader(k, v) { this.headers[k] = v; }, end(b) { this.body = b; } };
   const send = (r, status, body, cache) => { r.statusCode = status; r.setHeader('cache-control', cache); r.end(JSON.stringify(body)); };
-  await hitsView({ res, send, sb: t.sb, secret: 's', query, nowMs });
+  await hitsView({ res, send, sb: t.sb, secret: 's', query, nowMs, resolveAccess: async () => ({ tier: 'pro' }) });
   return { status: res.statusCode, body: JSON.parse(res.body), cache: res.headers['cache-control'] };
 }
 const HIGGINS = row(1, '2026-09-27T18:31:28.077492+00:00', 'f6d4c300-9cb1-4334-946a-f22374265adb');
@@ -71,7 +71,7 @@ test('1/2 · bootstrap by since returns the recent event, and next_cursor is its
   const t = table([HIGGINS]);
   const out = await view(t, { since: '2026-09-27T18:29:00Z' });
   assert.equal(out.status, 200);
-  assert.equal(out.cache, 'no-store');
+  assert.equal(out.cache, 'private, no-store, max-age=0');
   assert.equal(out.body.mode, 'since_bootstrap');
   assert.deepEqual(out.body.events.map(e => e.pick_id), [HIGGINS.pick_id]);
   assert.equal(out.body.next_cursor, 1);

@@ -57,7 +57,27 @@
   }
 
   /* Shape only. Every value is the server's; nothing is decided here. */
+  /* A locked reader's event is a generic notice from the server: an id and
+     fixed copy. There is no game, player or play in it to show. */
+  function toLockedRailEvent(hit) {
+    const PR = window.PBEBreaking && window.PBEBreaking.PRIORITY;
+    const CFG = window.PBEBreaking && window.PBEBreaking.CONFIG;
+    return {
+      key: `tdhit:locked:${hit.id}`,
+      family: 'GAME', kind: 'TD_TARGET_HIT', locked: true,
+      priority: PR && PR.TD_TARGET_HIT !== undefined ? PR.TD_TARGET_HIT : 2.5,
+      label: 'PBE TOUCHDOWN TARGET HIT',
+      live: true,
+      headline: String(hit.headline || 'One of PBE’s Touchdown Targets just scored.'),
+      detail: String(hit.detail || 'Unlock All Access Pro to see the player and model details.'),
+      cta: [{ label: 'UNLOCK ALL ACCESS PRO', kind: 'upgrade' }, { label: 'SEE THE RECORD', route: 'trackrecord', kind: 'route' }],
+      visible_ms: (CFG && CFG.visible_ms && CFG.visible_ms.TD_TARGET_HIT) || 26000,
+      provenance: { semantics: 'LIVE TARGET HIT (identity is Pro)', source: '/api/pbe-touchdown-targets?view=hits' }
+    };
+  }
+
   function toRailEvent(hit) {
+    if (hit && hit.access === 'locked') return toLockedRailEvent(hit);
     const g = hit.game || {}, pl = hit.player || {}, t = hit.target || {}, play = hit.play || {};
     const cta = [];
     if (/^\d{6,12}$/.test(String(g.espn_id || ''))) {
@@ -107,7 +127,9 @@
       const j = await r.json();
       const events = Array.isArray(j.events) ? j.events : [];
       for (const hit of events) {
-        if (hit && hit.pick_id) {
+        if (hit && hit.access === 'locked' && Number.isSafeInteger(Number(hit.id))) {
+          window.PBEBreaking.offer(toRailEvent(hit));
+        } else if (hit && hit.pick_id) {
           window.PBEBreaking.offer(toRailEvent(hit));
           /* PBEcast's Touchdown Targets card reads its game now instead of on
              its next cadence tick. A hint only: the card re-reads the server. */

@@ -51,7 +51,7 @@ const PICKS = [
     model_prob: 0.3301, market_prob: 0.3012, edge_pct: 0.0289, confidence_bucket: 'B', market_price: 190, book: 'fanduel', target_rank: 'secondary', projection_model_version: 'pbe-td-hazard-v1', selector_version: 3,
     publication_scope: 'tracking', status: 'open', created_at: '2026-09-27T15:20:00.000Z', model_snapshot: snapshot('Chase Brown', '4362238', 'RB') },
 ];
-const EVAL = { espn_id: GAME, event_id: 'odds-cin-pit', season: 2026, week: 4, kickoff_ts: '2026-09-27T17:00:00.000Z', away_team: 'CIN', home_team: 'PIT', outcome: 'target_issued', reason: null, publication_scope: 'tracking', decided_at: '2026-09-27T16:45:00Z' };
+const EVAL = { espn_id: GAME, event_id: 'odds-cin-pit', season: 2026, week: 4, kickoff_ts: '2026-09-27T17:00:00.000Z', away_team: 'CIN', home_team: 'PIT', outcome: 'target_issued', reason: null, publication_scope: 'tracking', decided_at: '2026-09-27T16:45:00Z', primary_pick_id: '11111111-1111-4111-8111-111111111111', secondary_pick_id: '22222222-2222-4222-8222-222222222222' };
 function hitRow() {
   const v = evaluateTarget({ target: PICKS[0], detail: LIVE, mode: 'final_backfill', statuses: ['open'] });
   return { ...v.row, detection: 'live_fresh', detected_at: new Date().toISOString() };
@@ -200,7 +200,7 @@ for (const width of WIDTHS) {
     check(`${width} · placement: field -> Game Pulse -> TD TARGETS -> Key Moments -> game log`, (await evalIn(order)) === 'ok', await evalIn(order));
     const html = await evalIn(`${MOD}.outerHTML`);
     const flat = (await evalIn(`${MOD}.innerText`)).replace(/\s+/g, ' ');
-    check(`${width} · teaser: "PBE identified 2 touchdown targets" + unlock`, /PBE identified 2 touchdown targets for this matchup\./.test(flat) && /Unlock with All Access Pro/.test(flat), flat.slice(0, 120));
+    check(`${width} · teaser: "PBE identified 2 touchdown targets" + unlock, no live HIT count`, /PBE identified 2 touchdown targets for this matchup\./.test(flat) && /Unlock with All Access Pro/.test(flat) && !/\d+ (HIT|MISS|PENDING)/.test(flat.replace(/TRACKING RECORD.*$/, '')), flat.slice(0, 120));
     const leaks = ["Chase", '4362628', '4362238', '44.0', '33.0', 'RED-ZONE', 'headshots', 'Yd pass', '11111111', '22222222'].filter(s => html.includes(s));
     check(`${width} · locked module holds no identity, face, probability, reason or play`, leaks.length === 0, leaks.join(','));
     const body = gameBodies.at(-1) || '';

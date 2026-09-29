@@ -149,3 +149,13 @@ test('loader: the poller loads after the rail, the version is busted, reduced mo
   assert.match(read('index.html'), /page-loader\.js\?v=20260928tdcast1/);
   assert.match(read('pbe-breaking-v1.css'), /@media \(prefers-reduced-motion: reduce\) \{\s*\.pbeb-tdface \{ animation: none; \}/);
 });
+
+test('locked (free) hit renders fixed copy, the unlock CTA and nothing about the player, game or play', () => {
+  const html = T.tdHitBody({ kind: 'TD_TARGET_HIT', locked: true, headline: 'One of PBE’s Touchdown Targets just scored.',
+    detail: 'Unlock All Access Pro to see the player and model details.',
+    cta: [{ label: 'UNLOCK ALL ACCESS PRO', kind: 'upgrade' }, { label: 'SEE THE RECORD', route: 'trackrecord', kind: 'route' }] });
+  assert.match(html, /PBE TOUCHDOWN TARGET HIT/);
+  assert.match(html, /One of PBE’s Touchdown Targets just scored\./);
+  assert.match(html, /UNLOCK ALL ACCESS PRO/);
+  for (const absent of ['<img', 'PROBABILITY', 'LOCKED PRICE', 'PRIMARY', 'SECONDARY', 'tdscore', 'tdclock', 'WATCH IN PBECAST']) assert.equal(html.includes(absent), false, absent);
+});

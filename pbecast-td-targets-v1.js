@@ -129,7 +129,7 @@
     const sem = semOf(id);
     const data = store.get(id)?.data;
     if (sem === 'LIVE') return POLL.LIVE;
-    if (sem === 'FINAL') return data?.counts?.pending > 0 ? POLL.FINAL_PENDING : null;
+    if (sem === 'FINAL') return data?.counts?.pending > 0 || data?.counts?.settled === false ? POLL.FINAL_PENDING : null;
     if (sem === 'SCHEDULE') return POLL.SCHEDULE;
     return null;
   }
