@@ -186,12 +186,14 @@ test('13 · a missing player headshot still publishes, with no image', () => {
   assert.equal(v.row.source.headshot_authority, 'none');
 });
 
-test('14/15 · freshness: <= 5 minutes is a hit; older is stale_existing_hit and never an event', () => {
+test('14/15 · freshness: <= 5 minutes is a hit (live_fresh, announced); older is stale_existing_hit, persisted live_stale, never announced', () => {
   const detail = fixture(CIN_PIT);
-  assert.equal(evaluateTarget({ target: chase(), detail, nowMs: ms(CHASE_TD) + FRESHNESS_MS }).outcome, 'hit');
+  const fresh = evaluateTarget({ target: chase(), detail, nowMs: ms(CHASE_TD) + FRESHNESS_MS });
+  assert.equal(fresh.outcome, 'hit');
+  assert.equal(fresh.row.detection, 'live_fresh');
   const stale = evaluateTarget({ target: chase(), detail, nowMs: ms(CHASE_TD) + FRESHNESS_MS + 1000 });
   assert.equal(stale.outcome, 'stale_existing_hit');
-  assert.equal(stale.row, undefined);
+  assert.equal(stale.row.detection, 'live_stale');
   /* The real launch-time case: this payload was captured ~18 minutes after
    * the touchdown. It must not celebrate. */
   assert.equal(evaluateTarget({ target: chase(), detail, nowMs: ms('2026-09-27T17:38:00Z') }).outcome, 'stale_existing_hit');
@@ -288,8 +290,8 @@ function harness({ targets, details, existingHits = [], dbHasRowsTheSelectMisses
     const q = decodeURIComponent(url.search);
     if (method === 'GET' && table === 'nfl_prop_picks') {
       assert.match(q, /market=eq\.player_anytime_td/);
-      assert.match(q, /status=eq\.open/);
-      return ok(targets.filter(t => t.status === 'open'));
+      assert.match(q, /status=in\.\(open,graded\)/);
+      return ok(targets.filter(t => t.status === 'open' || t.status === 'graded'));
     }
     if (method === 'GET' && table === 'nfl_td_target_hit_events') return ok([...hits.values()].filter(r => !hidden.has(r.pick_id)).map(r => ({ pick_id: r.pick_id })));
     if (method === 'POST' && table === 'nfl_td_target_hit_events') {
@@ -338,12 +340,15 @@ test('9 · primary and secondary in one game each connect once; the game package
   assert.deepEqual([...h.hits.values()].map(r => [r.player_name, r.target_rank]).sort(), [["Ja'Marr Chase", 'primary'], ['Roman Wilson', 'secondary']]);
 });
 
-test('launch safety · a touchdown scored before the Worker was watching is counted, never published', async () => {
+test('launch safety · a touchdown scored before the Worker was watching is persisted live_stale, never announced', async () => {
   const h = harness({ targets: [chase(), target('Roman Wilson', '4431492', CIN_PIT)], details: { [CIN_PIT]: fixture(CIN_PIT) } });
   const run = await runDetection(h.env, { nowMs: ms('2026-09-27T17:38:00Z') });
   assert.equal(run.counts.stale_existing_hits, 2);
+  assert.equal(run.counts.stale_recorded, 2);
   assert.equal(run.counts.hits_detected, 0);
-  assert.equal(h.calls.filter(c => c.method !== 'GET').length, 0);
+  assert.deepEqual(run.published, []);
+  assert.deepEqual([...h.hits.values()].map(r => r.detection), ['live_stale', 'live_stale']);
+  assert.ok(h.calls.filter(c => c.method !== 'GET').every(c => c.path === '/rest/v1/nfl_td_target_hit_events'));
 });
 
 test('write surface · the Worker writes ONE table and nothing else: no grade, pick, receipt, audit or learning write', async () => {
@@ -443,7 +448,7 @@ test('view=hits is routed identically on the Vercel function and the Cloudflare 
   for (const path of ['api/pbe-touchdown-targets.js', 'workers/nfl-touchdown-targets-api/src/contract.js']) {
     const src = read(path);
     assert.match(src, /if \(view === 'hits'\) return await hitsView\(\{ res, send, sb, secret, query: req\.query \|\| \{\} \}\);/, path);
-    assert.match(src, /views: \['state', 'current', 'week', 'trackrecord', 'model', 'hits', 'free-sample'\]/, path);
+    assert.match(src, /views: \['state', 'current', 'week', 'trackrecord', 'model', 'hits', 'free-sample', 'game'\]/, path);
   }
 });
 

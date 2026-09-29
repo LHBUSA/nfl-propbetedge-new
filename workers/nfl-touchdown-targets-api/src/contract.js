@@ -38,6 +38,7 @@ import { currentSeason, engineRuntime } from '../../../api/_pbe-engine-runtime.j
 import { hitsView } from '../../../api/_td-target-hits.js';
 import { freeSampleView } from '../../../api/_td-free-sample.js';
 import { tdRecordsByScope } from '../../../api/_td-record-scope.js';
+import { gameView } from '../../../api/_td-game-view.js';
 
 /* The Worker's bindings, set once per request by handle(). They are the same
  * for every request an isolate serves, so a module binding is safe. */
@@ -659,6 +660,15 @@ async function receiptsFor(secret, ids) {
   return new Map(batches.flat().filter(Boolean).map(row => [row.pick_id, row]));
 }
 
+/* view=game: same one-word tier as the Vercel function, from this Worker's
+ * session authority. Anything but a granted Pro session is locked. */
+async function gameAccess(req) {
+  const auth = await sessionVerdict(req);
+  if (auth?.degraded) return { tier: 'unavailable' };
+  if (auth?.signed_in !== true) return { tier: 'anonymous' };
+  return { tier: auth.pro === true ? 'pro' : 'no_entitlement' };
+}
+
 async function handler(req, res) {
   if (req.method !== 'GET') return send(res, 405, { error: 'method_not_allowed' });
   const secret = serviceSecret();
@@ -676,7 +686,8 @@ async function handler(req, res) {
     if (view === 'trackrecord' || view === 'history') return await trackRecordView(res, secret, { season });
     if (view === 'hits') return await hitsView({ res, send, sb, secret, query: req.query || {} });
     if (view === 'free-sample') return await freeSampleView({ res, send, sb, secret, governance });
-    return send(res, 404, { error: 'view_not_found', views: ['state', 'current', 'week', 'trackrecord', 'model', 'hits', 'free-sample'] });
+    if (view === 'game') return await gameView({ res, send, sb, secret, query: req.query || {}, resolveAccess: () => gameAccess(req), driversFrom });
+    return send(res, 404, { error: 'view_not_found', views: ['state', 'current', 'week', 'trackrecord', 'model', 'hits', 'free-sample', 'game'] });
   } catch (error) {
     /* A backend failure is reported as a backend failure. It is never allowed
      * to reach the browser as an empty slate. */

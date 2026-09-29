@@ -368,8 +368,9 @@ test('model, selector, grader and detector files are byte-for-byte unchanged', (
   const pinned = {
     'workers/nfl-touchdown-targets-grader/src/index.js': '8b28351932eb0f965683485647ddf6514e73ee551e696cc7755c5cd25b68df11',
     'workers/nfl-td-targets-shared/td-grading.mjs': '2551516e7d2df3ef9442399a5b0595bc5eeeef9c5154a7a3b4480e3cdef7fa9a',
-    'workers/nfl-td-targets-shared/td-live-hit.mjs': '821aadf094a1d54602b197fd05b5e2b7b8d76e6211c08c41a261569810e019d8',
-    'workers/nfl-touchdown-target-hit-alerts/src/index.js': '2bef1f72b2b77146486065118f581e85a818233cb6eea9141c15fd4db4547460',
+    // re-pinned 2026-09-28: PBEcast detection modes (live_stale / final_backfill); grader + definition unchanged
+    'workers/nfl-td-targets-shared/td-live-hit.mjs': 'b8d6707bd71f6b42b2670b76afa71bd23748ef916c8597477de628842aaaced1',
+    'workers/nfl-touchdown-target-hit-alerts/src/index.js': '03d06bb8bb933eeb53580cda052658e52da908c23784bc054f202bd8fd2cb352',
     'workers/nfl-td-targets-shared/td-selector.mjs': '16db24c90d8bf239d944e396f4eac949089cb60c77b9bf15e3679680b2432313',
     'workers/nfl-td-targets-shared/td-kernel.mjs': '29550cf0d815bd5fea9782afca2e04fac0991628b8fcb6d8cc1eac35a3035673',
     'workers/nfl-td-targets-shared/td-score.mjs': '9b8b5f237f3557a2df385c184935d95c0ec2c1d0ec03bea070afbc567f584e0a',

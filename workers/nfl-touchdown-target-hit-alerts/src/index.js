@@ -14,9 +14,15 @@
  *      from the existing /api/nfl-live contract, however many targets it holds
  *   3. judges each target with td-live-hit.mjs, whose touchdown test IS the
  *      final grader's readPlayerScoring() — one football definition
- *   4. publishes a hit only when the scoring play is fresh (<= 5 minutes), so
- *      a touchdown scored before this Worker was watching is never replayed
+ *   4. announces a hit only when the scoring play is fresh (<= 5 minutes), so
+ *      a touchdown scored before this Worker was watching is never replayed;
+ *      that older touchdown is still PERSISTED (detection live_stale) so the
+ *      PBEcast target card shows its permanent HIT with the real play
  *   5. writes an auditable run record to the durable ledger
+ *
+ * Targets are read while OPEN or already GRADED inside the game window: if the
+ * grader settles a game before this Worker saw the touchdown, the hit row is
+ * still recorded (live_stale) from the same package, never announced.
  *
  * WHAT IT NEVER DOES
  * Issue, replace, grade, close or supersede a target; write a grade, receipt,
@@ -30,7 +36,7 @@ import { RESULT_DEFINITION } from '../../nfl-td-targets-shared/td-grading.mjs';
 import { evaluateTarget, DETECTOR, FRESHNESS_MS } from '../../nfl-td-targets-shared/td-live-hit.mjs';
 
 export const SERVICE = 'nfl-touchdown-target-hit-alerts';
-export const VERSION = 'v1.0.0';
+export const VERSION = 'v1.1.0';
 export const TD_MARKET = 'player_anytime_td';
 export const HITS_TABLE = 'nfl_td_target_hit_events';
 /* Kickoff inside the last six hours: every regulation and overtime game. */
@@ -81,6 +87,7 @@ export function emptyCounts() {
     duplicate_hits: 0,
     already_published: 0,
     stale_existing_hits: 0,
+    stale_recorded: 0,
     no_td_yet: 0,
     play_unmatched: 0,
     freshness_unproven: 0,
@@ -100,7 +107,7 @@ export async function runDetection(env, { cron = null, nowMs = Date.now() } = {}
     const lower = encodeURIComponent(new Date(nowMs - GAME_WINDOW_MS).toISOString());
     const targets = await select(
       env, 'nfl_prop_picks',
-      `market=eq.${TD_MARKET}&status=eq.open&kickoff_ts=lt.${upper}&kickoff_ts=gt.${lower}`
+      `market=eq.${TD_MARKET}&status=in.(open,graded)&kickoff_ts=lt.${upper}&kickoff_ts=gt.${lower}`
         + `&select=${TARGET_FIELDS}&order=kickoff_ts.asc&limit=200`,
     ) || [];
     if (!targets.length) {
@@ -143,14 +150,18 @@ export async function runDetection(env, { cron = null, nowMs = Date.now() } = {}
       if (!Array.isArray(detail.scoring_plays)) { counts.source_unavailable += gameTargets.length; continue; }
 
       for (const target of gameTargets) {
-        const verdict = evaluateTarget({ target, detail, nowMs });
+        const verdict = evaluateTarget({ target, detail, nowMs, statuses: ['open', 'graded'] });
         if (verdict.outcome === 'hit') {
           const claimed = await claim(env, verdict.row);
           if (claimed) {
             counts.hits_detected += 1;
             published.push({ pick_id: target.id, target_rank: target.target_rank, play_id: verdict.row.play_id, espn_id: espn });
           } else counts.duplicate_hits += 1;
-        } else if (verdict.outcome === 'stale_existing_hit') counts.stale_existing_hits += 1;
+        } else if (verdict.outcome === 'stale_existing_hit') {
+          counts.stale_existing_hits += 1;
+          /* Persisted for the permanent PBEcast HIT, never announced. */
+          if (verdict.row && await claim(env, verdict.row)) counts.stale_recorded += 1;
+        }
         else if (verdict.outcome === 'no_td') counts.no_td_yet += 1;
         else if (verdict.outcome === 'play_unmatched') counts.play_unmatched += 1;
         else if (verdict.outcome === 'freshness_unproven') counts.freshness_unproven += 1;
@@ -177,7 +188,10 @@ export async function runDetection(env, { cron = null, nowMs = Date.now() } = {}
 }
 
 /* The atomic claim. The UNIQUE (pick_id) constraint decides; a conflict
- * returns no row, which is how a duplicate is recognised. */
+ * returns no row, which is how a duplicate is recognised. A second target
+ * credited on the SAME scoring play hits the (espn_id, play_id) unique index
+ * instead, which PostgREST reports as 409: also a duplicate, never a failure
+ * that would stop the rest of the tick. */
 export async function claim(env, row) {
   const url = `${String(env.SUPABASE_URL || '').replace(/\/$/, '')}/rest/v1/${HITS_TABLE}?on_conflict=pick_id`;
   const response = await fetch(url, {
@@ -189,6 +203,7 @@ export async function claim(env, row) {
     body: JSON.stringify([row]),
     cache: 'no-store',
   });
+  if (response.status === 409) return false;
   if (!response.ok) throw new Error(`supabase_${response.status}:${HITS_TABLE}`);
   const rows = await response.json().catch(() => []);
   return Array.isArray(rows) && rows.length > 0;

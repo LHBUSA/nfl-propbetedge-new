@@ -11,6 +11,11 @@
  * not scored cannot leave through this door however it is called. No
  * model_snapshot, candidate pool, driver or selector internals are selected.
  *
+ * ANNOUNCED ONLY. The table also persists hits observed late (live_stale) or
+ * recovered after the final (final_backfill) so PBEcast can show a permanent
+ * HIT. Those are never served here: every read filters detection=live_fresh,
+ * so the rail can never celebrate an old touchdown.
+ *
  * WHAT IT IS NOT
  * A grade. The final grader settles every target from the FINAL box score;
  * this is a live observation and says so on every response.
@@ -24,6 +29,8 @@ export const HIT_FIELDS = [
   'play_id', 'play_type', 'play_text', 'play_wallclock', 'live_stats', 'source',
 ].join(',');
 
+/* Only fresh live observations are announcements. */
+export const ANNOUNCED = 'detection=eq.live_fresh';
 export const HITS_LIMIT = 25;
 export const HITS_DEFAULT_WINDOW_MS = 30 * 60 * 1000;
 export const HITS_MAX_WINDOW_MS = 24 * 3600 * 1000;
@@ -138,7 +145,7 @@ export async function hitsView({ res, send, sb, secret, query = {}, nowMs = Date
   let since = null;
   let nextCursor;
   if (afterId !== null) {
-    rows = await sb(TABLE, `id=gt.${afterId}&select=${HIT_FIELDS}&order=id.asc&limit=${HITS_LIMIT}`, secret);
+    rows = await sb(TABLE, `id=gt.${afterId}&${ANNOUNCED}&select=${HIT_FIELDS}&order=id.asc&limit=${HITS_LIMIT}`, secret);
     rows = Array.isArray(rows) ? rows : [];
     nextCursor = rows.length ? Math.max(...rows.map(row => Number(row.id))) : afterId;
   } else {
@@ -147,7 +154,7 @@ export async function hitsView({ res, send, sb, secret, query = {}, nowMs = Date
     const highWater = Array.isArray(top) && top.length ? Number(top[0].id) : 0;
     rows = await sb(
       TABLE,
-      `detected_at=gt.${encodeURIComponent(since)}&id=lte.${highWater}&select=${HIT_FIELDS}&order=id.asc&limit=${HITS_LIMIT}`,
+      `detected_at=gt.${encodeURIComponent(since)}&id=lte.${highWater}&${ANNOUNCED}&select=${HIT_FIELDS}&order=id.asc&limit=${HITS_LIMIT}`,
       secret,
     );
     rows = Array.isArray(rows) ? rows : [];

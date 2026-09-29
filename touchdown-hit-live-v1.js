@@ -107,7 +107,12 @@
       const j = await r.json();
       const events = Array.isArray(j.events) ? j.events : [];
       for (const hit of events) {
-        if (hit && hit.pick_id) window.PBEBreaking.offer(toRailEvent(hit));
+        if (hit && hit.pick_id) {
+          window.PBEBreaking.offer(toRailEvent(hit));
+          /* PBEcast's Touchdown Targets card reads its game now instead of on
+             its next cadence tick. A hint only: the card re-reads the server. */
+          try { window.dispatchEvent(new CustomEvent('pbe:td-target-hit', { detail: { espn_id: String(hit.game?.espn_id || ''), pick_id: hit.pick_id } })); } catch (_) {}
+        }
       }
       const next = nextCursorFrom(j, events, afterId);
       if (next !== null) saveCursor(next);

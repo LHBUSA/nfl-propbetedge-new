@@ -22,6 +22,9 @@
  *                    board moves below the game
  *   GAME PULSE       mounted from pbecast-pulse-v1.js between the selected-game
  *                    surface and Key Moments; a tapped swing opens its play here
+ *   TD TARGETS       mounted from pbecast-td-targets-v1.js directly after Game
+ *                    Pulse; it also marks the real scoring play of a target
+ *                    HIT in Key Moments and the full game log
  *
  * WHAT IS NOT HERE, ON PURPOSE. No routes, no player dots, no ball flight.
  * Public NFL live data carries no player or ball coordinates; field position
@@ -297,10 +300,15 @@
        selected game, then Game Pulse, then Key Moments / PBE Replay. */
     const moments = hostFor(root, 'moments', '[data-cast6-action]');
     const pulse = hostFor(root, 'pulse', '[data-cast6-action]');
+    /* field -> win probability -> TOUCHDOWN TARGETS -> key moments -> log */
+    const tdTargets = hostFor(root, 'tdtargets', '[data-cast6-action]');
     place(pulse, pre ? pick : root.querySelector('[data-cast6-action]'));
-    place(moments, pulse);
+    place(tdTargets, pulse);
+    place(moments, tdTargets);
     window.PBEcastPulse?.mount?.(pulse, v6());
+    window.PBEcastTDTargets?.mount?.(tdTargets, v6());
     write(moments, keyMomentsHtml());
+    window.PBEcastTDTargets?.decorate?.(root);
   }
 
   /* A Game Pulse swing names a published play id. Open it where Key Moments

@@ -21,8 +21,11 @@
  *   freshness  the play's wallclock, joined from the play log by play id. The
  *              celebration marks the moment the target CONNECTED — his first
  *              touchdown — and only when that play is at most five minutes old.
- *              A touchdown scored before this detector was watching is counted
- *              as stale_existing_hit and never replayed.
+ *              A touchdown scored before this detector was watching is
+ *              stale_existing_hit: it is PERSISTED (detection live_stale) so
+ *              PBEcast can show the permanent HIT, and never announced.
+ *   detection  live_fresh (announced) | live_stale | final_backfill. Only
+ *              live_fresh ever reaches view=hits or a celebration.
  *
  * Deterministic: the same payload, target and clock always give the same
  * verdict. No I/O.
@@ -36,6 +39,7 @@ export const FRESHNESS_MS = 5 * 60 * 1000;
 /* A wallclock this far in the future is a clock problem, not a fresh play. */
 export const FUTURE_TOLERANCE_MS = 2 * 60 * 1000;
 /* ESPN play type ids for the two offensive touchdown plays. */
+export const DETECTIONS = Object.freeze(['live_fresh', 'live_stale', 'final_backfill']);
 export const OFFENSIVE_TD_TYPES = Object.freeze({ '67': 'Passing Touchdown', '68': 'Rushing Touchdown' });
 
 const arr = value => (Array.isArray(value) ? value : []);
@@ -141,11 +145,17 @@ export function targetScoringPlays(detail, verifiedName) {
   return out;
 }
 
-/* The verdict for one open target against one live game payload.
+/* The verdict for one target against one game payload.
  * Outcomes: hit | no_td | not_open | identity_missing | identity_mismatch |
- * play_unmatched | freshness_unproven | stale_existing_hit. */
-export function evaluateTarget({ target, detail, nowMs = Date.now(), freshnessMs = FRESHNESS_MS }) {
-  if (str(target?.status) !== 'open') return { outcome: 'not_open' };
+ * play_unmatched | freshness_unproven | stale_existing_hit.
+ *
+ * mode 'live' (the Worker): statuses defaults to open only; a fresh play is a
+ * hit (detection live_fresh), an older one is stale_existing_hit and carries a
+ * live_stale row to persist, never to announce.
+ * mode 'final_backfill' (one-off recovery): the caller names the statuses
+ * (graded wins); freshness does not apply and the row says final_backfill. */
+export function evaluateTarget({ target, detail, nowMs = Date.now(), freshnessMs = FRESHNESS_MS, mode = 'live', statuses = ['open'] }) {
+  if (!statuses.includes(str(target?.status))) return { outcome: 'not_open' };
   const snapshot = target?.model_snapshot || {};
   const espnPlayerId = snapshot.player?.espn_id;
   if (!/^\d+$/.test(str(espnPlayerId).trim())) return { outcome: 'identity_missing' };
@@ -166,19 +176,36 @@ export function evaluateTarget({ target, detail, nowMs = Date.now(), freshnessMs
   const first = plays[0];
   if (first.logged && first.logged.scoring_play === false) return { outcome: 'play_unmatched', seen };
   const wallMs = Date.parse(first.logged?.wallclock || '');
+  if (mode === 'final_backfill') {
+    /* The game is over and graded; the play is history, so its age is not a
+       question. The wallclock is kept when the log has it, never invented. */
+    const known = Number.isFinite(wallMs);
+    return {
+      outcome: 'hit',
+      seen,
+      row: hitRow({ target, detail, identity, seen, first, wallMs: known ? wallMs : null, ageMs: known ? nowMs - wallMs : null, detection: 'final_backfill' }),
+    };
+  }
   if (!Number.isFinite(wallMs)) return { outcome: 'freshness_unproven', seen };
   const ageMs = nowMs - wallMs;
   if (ageMs < -FUTURE_TOLERANCE_MS) return { outcome: 'freshness_unproven', seen };
-  if (ageMs > freshnessMs) return { outcome: 'stale_existing_hit', seen, play_age_s: Math.round(ageMs / 1000) };
+  if (ageMs > freshnessMs) {
+    return {
+      outcome: 'stale_existing_hit',
+      seen,
+      play_age_s: ageMs === null ? null : Math.round(ageMs / 1000),
+      row: hitRow({ target, detail, identity, seen, first, wallMs, ageMs, detection: 'live_stale' }),
+    };
+  }
 
   return {
     outcome: 'hit',
     seen,
-    row: hitRow({ target, detail, identity, seen, first, wallMs, ageMs }),
+    row: hitRow({ target, detail, identity, seen, first, wallMs, ageMs, detection: 'live_fresh' }),
   };
 }
 
-function hitRow({ target, detail, identity, seen, first, wallMs, ageMs }) {
+function hitRow({ target, detail, identity, seen, first, wallMs, ageMs, detection }) {
   const snapshot = target.model_snapshot || {};
   const game = detail?.game || {};
   const away = game.teams?.away || {};
@@ -215,7 +242,7 @@ function hitRow({ target, detail, identity, seen, first, wallMs, ageMs }) {
     play_text: scoring?.text || null,
     period: toInt(scoring?.period) ?? toInt(game.status?.period),
     clock: scoring?.clock || null,
-    play_wallclock: new Date(wallMs).toISOString(),
+    play_wallclock: wallMs === null ? null : new Date(wallMs).toISOString(),
     away_team: away.abbreviation || null,
     home_team: home.abbreviation || null,
     away_score: awayScore,
@@ -223,6 +250,7 @@ function hitRow({ target, detail, identity, seen, first, wallMs, ageMs }) {
     /* A real photograph from the feed, of the athlete proven by id, or none. */
     headshot_url: identity.headshot,
     live_stats: liveStatLine(identity.rows),
+    detection,
     source: {
       provider: detail?.source?.provider || null,
       result_definition: RESULT_DEFINITION,
@@ -231,7 +259,7 @@ function hitRow({ target, detail, identity, seen, first, wallMs, ageMs }) {
       live_status: game.status?.semantics || null,
       scoring_play_id: str(scoring?.id) || null,
       play_yards: Number.isFinite(first.scorer?.yards) ? first.scorer.yards : null,
-      play_age_s: Math.round(ageMs / 1000),
+      play_age_s: ageMs === null ? null : Math.round(ageMs / 1000),
       freshness_limit_s: Math.round(FRESHNESS_MS / 1000),
       box_offensive_td: seen.offensive_td,
       box_rushing_td: seen.rushing_td,

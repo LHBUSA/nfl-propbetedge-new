@@ -18,8 +18,10 @@ import { hitsView, parseAfterId } from '../api/_td-target-hits.js';
 const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 const NOW = Date.parse('2026-09-27T18:32:00Z');
 /* the detector as deployed at 27ac822 (Worker 0b0f16d5) */
-const DETECTOR_SHA = '2bef1f72b2b77146486065118f581e85a818233cb6eea9141c15fd4db4547460';
-const LIVE_HIT_SHA = '821aadf094a1d54602b197fd05b5e2b7b8d76e6211c08c41a261569810e019d8';
+/* re-pinned 2026-09-28: detection modes (live_stale persisted, final_backfill); the touchdown
+   definition (td-grading.mjs) and the final grader stay byte-identical below */
+const DETECTOR_SHA = '03d06bb8bb933eeb53580cda052658e52da908c23784bc054f202bd8fd2cb352';
+const LIVE_HIT_SHA = 'b8d6707bd71f6b42b2670b76afa71bd23748ef916c8597477de628842aaaced1';
 
 /* ---- the fake table -------------------------------------------------------- */
 function row(id, detectedAt, pick = `00000000-0000-4000-8000-${String(id).padStart(12, '0')}`) {

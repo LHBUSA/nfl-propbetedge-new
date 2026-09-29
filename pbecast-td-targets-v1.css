@@ -1,0 +1,92 @@
+/* PropBetEdge NFL — PBEcast TOUCHDOWN TARGETS. Tokens only (pbe-tokens.css),
+   the same surface family as Game Pulse. HIT carries the strongest treatment:
+   gold border, gold wash, gold badge. Nothing here scrolls inside itself. */
+.pbetdc{background:var(--pbe-ink-2);border:1px solid var(--pbe-line);border-radius:var(--r-md,10px);padding:14px 16px;margin-top:10px;color:var(--pbe-paper);font-family:var(--pbe-font-ui);min-width:0}
+.pbetdc *{box-sizing:border-box}
+.pbetdc button{font:inherit;cursor:pointer}
+.pbetdc.has-hit{border-color:rgba(212,175,55,.45)}
+.pbetdc-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:6px 14px;margin-bottom:12px}
+.pbetdc-head>div{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;width:100%}
+.pbetdc-eye{font:800 11px/1 var(--pbe-font-data);letter-spacing:.14em;color:var(--pbe-gold)}
+.pbetdc-pro,.pbetdc-lock{font:800 10px/1 var(--pbe-font-data);letter-spacing:.1em;font-style:normal;padding:3px 6px;border-radius:4px}
+.pbetdc-pro{background:var(--pbe-gold);color:var(--pbe-ink-4)}
+.pbetdc-lock{border:1px solid var(--pbe-line-strong);color:var(--pbe-paper-2)}
+.pbetdc-head h2{margin:2px 0 0;font:800 var(--fs-h3,16px)/1.3 var(--pbe-font-ui);flex:1 1 260px;min-width:0}
+.pbetdc-tally{font:700 12px/1.3 var(--pbe-font-data);color:var(--pbe-paper-2);font-variant-numeric:tabular-nums}
+
+.pbetdc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:10px}
+.pbetdc-card{position:relative;display:flex;flex-direction:column;gap:10px;min-width:0;padding:12px;border:1px solid var(--pbe-line);border-radius:var(--r-sm,8px);background:var(--pbe-ink-4)}
+.pbetdc-card-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.pbetdc-rank{font:800 12px/1 var(--pbe-font-data);letter-spacing:.1em;color:var(--pbe-paper)}
+.pbetdc-rank small{margin-left:6px;font-weight:700;font-size:10px;color:var(--pbe-faint);letter-spacing:.1em}
+.pbetdc-badge{font:800 10px/1 var(--pbe-font-data);letter-spacing:.1em;padding:5px 7px;border-radius:4px;white-space:nowrap}
+.pbetdc-badge.is-pending{border:1px solid var(--pbe-line-strong);color:var(--pbe-paper-2)}
+.pbetdc-badge.is-hit{background:var(--pbe-gold);color:var(--pbe-ink-4)}
+.pbetdc-badge.is-miss{background:var(--pbe-ink-2);color:var(--pbe-dim);border:1px solid var(--pbe-line)}
+.pbetdc-badge.is-void{border:1px dashed var(--pbe-line-strong);color:var(--pbe-dim)}
+
+.pbetdc-who{display:flex;align-items:center;gap:10px;min-width:0}
+.pbetdc-who>div{min-width:0}
+.pbetdc-who b{display:block;font:800 16px/1.2 var(--pbe-font-ui);overflow-wrap:anywhere}
+.pbetdc-who small{display:block;margin-top:2px;font:600 12px/1.3 var(--pbe-font-data);color:var(--pbe-paper-2)}
+.pbetdc-face{position:relative;flex:0 0 auto;width:52px;height:52px;border-radius:50%;overflow:hidden;background:var(--pbe-ink-2);border:1px solid var(--pbe-line-strong);display:grid;place-items:center}
+.pbetdc-face i{font:800 15px/1 var(--pbe-font-data);font-style:normal;color:var(--pbe-dim)}
+.pbetdc-face img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top center}
+
+.pbetdc-nums{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:6px;margin:0}
+.pbetdc-nums div{padding:7px 8px;border-radius:6px;background:var(--pbe-ink-2);min-width:0}
+.pbetdc-nums dt{font:700 9px/1.2 var(--pbe-font-data);letter-spacing:.1em;color:var(--pbe-faint)}
+.pbetdc-nums dd{margin:3px 0 0;font:800 15px/1.1 var(--pbe-font-data);font-variant-numeric:tabular-nums;color:var(--pbe-paper)}
+.pbetdc-why{list-style:none;margin:0;padding:0;display:grid;gap:5px}
+.pbetdc-why li{display:grid;gap:1px;padding-left:10px;border-left:2px solid var(--pbe-line-strong);font:500 12px/1.35 var(--pbe-font-ui);color:var(--pbe-paper-2)}
+.pbetdc-why li.is-up{border-left-color:var(--pbe-gold)}
+.pbetdc-why b{font:800 10px/1.3 var(--pbe-font-data);letter-spacing:.08em;color:var(--pbe-paper)}
+.pbetdc-foot{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 10px;font:600 10px/1.3 var(--pbe-font-data);letter-spacing:.06em;color:var(--pbe-faint)}
+
+/* HIT — the strongest state */
+.pbetdc-card.is-hit{border:2px solid var(--pbe-gold);background:linear-gradient(160deg,rgba(212,175,55,.20),rgba(212,175,55,.05) 55%,var(--pbe-ink-4))}
+.pbetdc-hit{display:grid;gap:2px;padding:9px 10px;border-radius:6px;background:rgba(212,175,55,.14);border:1px solid rgba(212,175,55,.5)}
+.pbetdc-hit span{font:800 11px/1.2 var(--pbe-font-data);letter-spacing:.12em;color:var(--pbe-gold)}
+.pbetdc-hit b{font:800 15px/1.25 var(--pbe-font-ui);color:var(--pbe-paper)}
+.pbetdc-hit em{font:700 12px/1.2 var(--pbe-font-data);font-style:normal;color:var(--pbe-paper-2)}
+.pbetdc-card.is-miss{opacity:.78}
+.pbetdc-card.is-miss .pbetdc-face img{filter:grayscale(1)}
+.pbetdc-card.is-void{opacity:.66;border-style:dashed}
+
+/* the short celebration: a gold pulse on the card that just connected */
+.pbetdc-card.is-celebrate{animation:pbetdc-pulse 1.3s ease-out 3}
+@keyframes pbetdc-pulse{0%{box-shadow:0 0 0 0 rgba(212,175,55,.75)}70%{box-shadow:0 0 0 14px rgba(212,175,55,0)}100%{box-shadow:0 0 0 0 rgba(212,175,55,0)}}
+@media (prefers-reduced-motion:reduce){.pbetdc-card.is-celebrate{animation:none;outline:3px solid var(--pbe-gold);outline-offset:2px}}
+
+/* locked (free / signed out) */
+.pbetdc-ghosts{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:8px}
+.pbetdc-ghost{display:grid;gap:7px;padding:12px;border:1px dashed var(--pbe-line-strong);border-radius:var(--r-sm,8px);background:var(--pbe-ink-4)}
+.pbetdc-ghost span{font:800 11px/1 var(--pbe-font-data);letter-spacing:.1em;color:var(--pbe-paper-2)}
+.pbetdc-ghost i{display:block;height:10px;border-radius:5px;background:var(--pbe-ink-2)}
+.pbetdc-ghost i+i{width:60%}
+.pbetdc-cta{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin-top:12px}
+.pbetdc-cta p{margin:0;flex:1 1 240px;font:500 12px/1.4 var(--pbe-font-ui);color:var(--pbe-paper-2)}
+.pbetdc-unlock{border:0;border-radius:8px;padding:11px 16px;background:var(--pbe-gold);color:var(--pbe-ink-4);font:800 13px/1 var(--pbe-font-ui)!important;letter-spacing:.02em;min-height:44px}
+.pbetdc-unlock:focus-visible,.pbetdc-record button:focus-visible{outline:2px solid var(--pbe-paper);outline-offset:2px}
+
+.pbetdc-empty,.pbetdc-note{margin:0;font:500 12px/1.45 var(--pbe-font-ui);color:var(--pbe-paper-2)}
+.pbetdc-note{margin-top:10px;color:var(--pbe-faint)}
+.pbetdc-record{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;margin:10px 0 0;padding-top:10px;border-top:1px solid var(--pbe-line);font:600 12px/1.3 var(--pbe-font-data);color:var(--pbe-paper-2)}
+.pbetdc-record b{font-weight:800;letter-spacing:.1em;color:var(--pbe-paper);font-size:11px}
+.pbetdc-record span{font-variant-numeric:tabular-nums}
+.pbetdc-record button{margin-left:auto;border:0;background:none;color:var(--pbe-gold);font-weight:700;padding:6px 0;min-height:32px}
+.pbetdc-skel{height:84px;border-radius:8px;background:var(--pbe-ink-4)}
+
+/* play-by-play marker, attached to the real scoring play */
+.pbetdc-pbp{display:grid;gap:2px;list-style:none;margin:6px 0 2px;padding:8px 10px;border-radius:6px;border:1px solid var(--pbe-gold);background:rgba(212,175,55,.14);font-family:var(--pbe-font-ui)}
+.pbetdc-pbp span{font:800 11px/1.3 var(--pbe-font-data);letter-spacing:.08em;color:var(--pbe-gold);overflow-wrap:anywhere}
+.pbetdc-pbp small{font:600 12px/1.3 var(--pbe-font-data);color:var(--pbe-paper)}
+.is-td-target-hit{box-shadow:inset 3px 0 0 var(--pbe-gold)}
+
+@media (max-width:430px){
+  .pbetdc{padding:12px}
+  .pbetdc-card{padding:10px}
+  .pbetdc-face{width:44px;height:44px}
+  .pbetdc-nums{grid-template-columns:1fr 1fr}
+  .pbetdc-record button{margin-left:0}
+}

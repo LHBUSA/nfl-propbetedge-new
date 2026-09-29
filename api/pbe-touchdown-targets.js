@@ -16,6 +16,9 @@
  *                detector: a touchdown that has happened, read only from
  *                nfl_td_target_hit_events. Never an unhit or future target,
  *                never model_snapshot. A live observation, not a grade.
+ *   game         shell public, targets NFL PRO / ALL ACCESS. One game for the
+ *                PBEcast module (api/_td-game-view.js). Free: counts only —
+ *                the free branch never selects a name, probability or play.
  *   free-sample  public.  FREE TD TARGETS: at most two PRIMARY, open, pregame
  *                targets for one slate day, official first then tracking, each
  *                labelled with its own scope (api/_td-free-sample.js).
@@ -35,6 +38,7 @@ import { currentSeason, engineRuntime } from './_pbe-engine-runtime.js';
 import { hitsView } from './_td-target-hits.js';
 import { freeSampleView } from './_td-free-sample.js';
 import { tdRecordsByScope } from './_td-record-scope.js';
+import { gameView } from './_td-game-view.js';
 
 const DEFAULT_SUPABASE_URL = 'https://tkmlnhmylqnttmnsnief.supabase.co';
 const MARKET = 'player_anytime_td';
@@ -617,6 +621,16 @@ async function receiptsFor(secret, ids) {
   return new Map(batches.flat().filter(Boolean).map(row => [row.pick_id, row]));
 }
 
+/* view=game never refuses: the module shell renders for everyone. The tier is
+ * the same authority requirePro uses, reduced to one word; anything but a
+ * granted Pro/All Access session (including a degraded check) is locked. */
+async function gameAccess(req) {
+  const auth = await getNflSession(req);
+  if (auth?.degraded) return { tier: 'unavailable' };
+  if (!verifiedEmail(auth)) return { tier: 'anonymous' };
+  return { tier: auth.pro === true ? 'pro' : 'no_entitlement' };
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'GET') return send(res, 405, { error: 'method_not_allowed' });
   const secret = serviceSecret();
@@ -634,7 +648,8 @@ export default async function handler(req, res) {
     if (view === 'trackrecord' || view === 'history') return await trackRecordView(res, secret, { season });
     if (view === 'hits') return await hitsView({ res, send, sb, secret, query: req.query || {} });
     if (view === 'free-sample') return await freeSampleView({ res, send, sb, secret, governance });
-    return send(res, 404, { error: 'view_not_found', views: ['state', 'current', 'week', 'trackrecord', 'model', 'hits', 'free-sample'] });
+    if (view === 'game') return await gameView({ res, send, sb, secret, query: req.query || {}, resolveAccess: () => gameAccess(req), driversFrom });
+    return send(res, 404, { error: 'view_not_found', views: ['state', 'current', 'week', 'trackrecord', 'model', 'hits', 'free-sample', 'game'] });
   } catch (error) {
     /* A backend failure is reported as a backend failure. It is never allowed
      * to reach the browser as an empty slate. */
