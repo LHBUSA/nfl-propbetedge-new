@@ -4,16 +4,16 @@
  * Cloudflare contract (workers/nfl-touchdown-targets-api/src/contract.js), so
  * the two cannot drift.
  *
- * WHO SEES WHAT (owner rule 2026-09-29: target identities are Pro only)
- * The endpoint answers everyone, because a hit is a marketing moment, but the
- * entitlement tier is resolved SERVER-SIDE before the read:
+ * WHO SEES WHAT (owner rule, V1 freeze 2026-09-29: live target signals are Pro only)
+ * The entitlement tier is resolved SERVER-SIDE before anything is read:
  *   pro     the full hit: player, athlete ids, rank, probability, price, the
  *           play, clock, score, live stat line.
- *   locked  (free, signed out, or an entitlement check that failed) one
- *           generic notice per hit: its event id and fixed copy. The query
- *           for this tier SELECTS ONLY id — no player, game, team, time, clock,
- *           score, play or rank is read, so none can be returned, and nothing
- *           identifies which game or which player scored.
+ *   locked  (free, signed out, or an entitlement check that failed) NOTHING.
+ *           Not a generic notice, not a count, not a cursor: even the timing
+ *           of an anonymous "a target scored" can be matched against the live
+ *           scoreboard to name the player. The table is not queried for this
+ *           tier at all, so the response is byte-identical before and after
+ *           every hit.
  * The query reads only nfl_td_target_hit_events — never nfl_prop_picks — so an
  * open target that has not scored cannot leave through this door. No
  * model_snapshot, candidate pool, driver or selector internals are selected.
@@ -141,12 +141,15 @@ export function parseAfterId(raw) {
  * current high-water id is read FIRST and bounds the window read; next_cursor
  * is that high-water mark when the window is empty, and any event inserted
  * after it is by construction > it and arrives on the first after_id read. */
-/* The only thing a locked reader receives per hit. Fixed copy, no data. */
-export const LOCKED_HEADLINE = 'One of PBE’s Touchdown Targets just scored.';
-export const LOCKED_DETAIL = 'Unlock All Access Pro to see the player and model details.';
-export function shapeLockedHit(row) {
-  return { id: row.id, kind: 'TD_TARGET_HIT', access: 'locked', headline: LOCKED_HEADLINE, detail: LOCKED_DETAIL };
-}
+/* The whole response a locked reader ever gets. Frozen: it cannot vary with a hit. */
+export const LOCKED_HITS_BODY = Object.freeze({
+  view: 'hits',
+  access: 'locked',
+  events: [],
+  hits: [],
+  next_cursor: null,
+  note: 'Live Touchdown Target signals are All Access Pro. Settled results are public in the Track Record.',
+});
 
 export async function hitsView({ res, send, sb, secret, query = {}, nowMs = Date.now(), resolveAccess = async () => ({ tier: 'anonymous' }) }) {
   const TABLE = 'nfl_td_target_hit_events';
@@ -158,8 +161,10 @@ export async function hitsView({ res, send, sb, secret, query = {}, nowMs = Date
   let access;
   try { access = await resolveAccess(); } catch (_) { access = { tier: 'unavailable' }; }
   const pro = access?.tier === 'pro';
-  /* The locked tier reads the event id and nothing else. */
-  const fields = pro ? HIT_FIELDS : 'id';
+  /* No live target signal of any kind leaves for a locked reader: no rows,
+     no count, no cursor. Constant response; the table is never read. */
+  if (!pro) return send(res, 200, LOCKED_HITS_BODY, 'private, no-store, max-age=0');
+  const fields = HIT_FIELDS;
 
   let rows;
   let since = null;
@@ -179,22 +184,6 @@ export async function hitsView({ res, send, sb, secret, query = {}, nowMs = Date
     );
     rows = Array.isArray(rows) ? rows : [];
     nextCursor = rows.length ? Math.max(...rows.map(row => Number(row.id))) : highWater;
-  }
-
-  if (!pro) {
-    const events = rows.map(shapeLockedHit);
-    return send(res, 200, {
-      view: 'hits',
-      access: 'locked',
-      mode: afterId !== null ? 'after_id' : 'since_bootstrap',
-      after_id: afterId,
-      count: events.length,
-      next_cursor: nextCursor,
-      limit: HITS_LIMIT,
-      events,
-      hits: events,
-      cursor: null,
-    }, 'private, no-store, max-age=0');
   }
 
   const events = rows.map(row => ({ ...shapeHit(row), access: 'pro' }));

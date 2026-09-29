@@ -36,7 +36,7 @@ import { RESULT_DEFINITION } from '../../nfl-td-targets-shared/td-grading.mjs';
 import { evaluateTarget, DETECTOR, FRESHNESS_MS } from '../../nfl-td-targets-shared/td-live-hit.mjs';
 
 export const SERVICE = 'nfl-touchdown-target-hit-alerts';
-export const VERSION = 'v1.1.0';
+export const VERSION = 'v1.1.1';
 export const TD_MARKET = 'player_anytime_td';
 export const HITS_TABLE = 'nfl_td_target_hit_events';
 /* Kickoff inside the last six hours: every regulation and overtime game. */
@@ -52,16 +52,17 @@ export default {
     const url = new URL(req.url);
     if (url.pathname !== '/health') return json({ error: 'not_found', service: SERVICE, version: VERSION }, 404);
     const lane = laneHealth(SERVICE, await readLane(env, SERVICE));
+    /* PUBLIC endpoint: liveness only. Per-tick counts, the published list
+       (pick, game, play ids) and tick times would be a live target signal
+       matchable against the scoreboard, so none of them is served. The full
+       run record stays in the durable ledger for operators. */
     return json({
       service: SERVICE,
       version: VERSION,
       health: lane.state,
       health_reason: lane.reason,
-      last_tick: lane.last_tick,
-      last_work: lane.last_work,
-      last_ok_at: lane.last_ok_at,
-      last_error: lane.last_error,
-      counts: lane.last_work?.counts || null,
+      last_ok_at: lane.last_ok_at ? String(lane.last_ok_at).slice(0, 13) + ':00Z' : null,
+      last_error_class: lane.last_error?.error_class ?? null,
       market: TD_MARKET,
       detector: DETECTOR,
       result_definition: RESULT_DEFINITION,

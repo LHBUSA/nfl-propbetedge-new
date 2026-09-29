@@ -90,3 +90,10 @@
   .pbetdc-nums{grid-template-columns:1fr 1fr}
   .pbetdc-record button{margin-left:0}
 }
+
+/* names and photos open stats + Player DNA */
+.pbetdc-plink{all:unset;cursor:pointer;color:inherit;border-radius:4px}
+.pbetdc-who b .pbetdc-plink{text-decoration:underline;text-decoration-color:rgba(212,175,55,.55);text-underline-offset:3px}
+.pbetdc-plink:hover{color:var(--pbe-gold)}
+.pbetdc-plink:focus-visible{outline:2px solid var(--pbe-gold);outline-offset:2px}
+.pbetdc-pbp .pbetdc-plink{color:var(--pbe-gold);text-decoration:underline;text-underline-offset:2px}

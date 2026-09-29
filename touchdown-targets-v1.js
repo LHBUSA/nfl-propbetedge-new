@@ -210,6 +210,16 @@
   /* Which Player DNA product covers a position. Declared here because both
      the card and the click handler read it. */
   const DNA_ROUTE = { QB: 'qbdna', RB: 'rbdna', WR: 'wrdna', TE: 'tedna' };
+  /* Every Touchdown Target name opens the player's Player DNA profile (full
+     stats + DNA) through the one hand-off, by GSIS id only; a player whose
+     position has no DNA page, or no GSIS id, is plain text, never a guess. */
+  const playerLinkable = player => Boolean(player?.gsis_id && DNA_ROUTE[String(player.position || '').toUpperCase()]);
+  function playerLink(player, inner = null) {
+    const label = inner ?? esc(player?.name || '—');
+    return playerLinkable(player)
+      ? `<a href="javascript:void(0)" class="pbetd-player-link" data-pbetd-player="${esc(player.gsis_id)}" data-pbetd-position="${esc(player.position || '')}" title="${esc(player.name || '')}: stats + Player DNA">${label}</a>`
+      : label;
+  }
 
   function envChips(game, target) {
     const environment = target?.environment || game?.environment || null;
@@ -274,9 +284,7 @@
       <div class="pbetd-player">
         ${faceHtml(player)}
         <div class="pbetd-who">
-          <p class="pbetd-name">${player.gsis_id && DNA_ROUTE[String(player.position || '').toUpperCase()]
-    ? `<a href="javascript:void(0)" data-pbetd-player="${esc(player.gsis_id)}" data-pbetd-position="${esc(player.position || '')}">${esc(player.name)}</a>`
-    : esc(player.name)}</p>
+          <p class="pbetd-name">${playerLink(player)}</p>
           <p class="pbetd-meta">${esc(position)}${player.opponent ? ` ${player.at_home ? 'vs' : '@'} ${esc(player.opponent)}` : ''}</p>
         </div>${save}
       </div>
@@ -442,7 +450,7 @@
         return `<tr>
           <td>${esc(target.week ?? '—')}</td>
           <td>${esc(target.away_team || '—')} @ ${esc(target.home_team || '—')}</td>
-          <td class="player">${esc(target.player?.name || '—')}</td>
+          <td class="player">${playerLink(target.player)}</td>
           <td>${esc(target.player?.team || '—')}</td>
           <td>${esc(target.player?.position || '—')}</td>
           <td>${esc(String(target.target_rank || '').toUpperCase())}</td>
@@ -790,6 +798,9 @@
   }
 
   window.PBETouchdownTargets = {
+    openPlayer,
+    playerLink,
+    playerLinkable,
     version: 1,
     route: ROUTE,
     store,

@@ -802,20 +802,7 @@
     if (dna) ev.cta.push({ label: 'VIEW PLAYER DNA', route: dna.route, player_id: dna.gsis_id,
                            event_id: ev.game && ev.game.id, kind: 'playerdna' });
   }
-  /* Free / signed-out: the server sent no identity, so there is none to draw. */
-  function tdHitLockedBody(ev) {
-    return `
-      <div class="pbeb-key"><span class="pbeb-tdmark" aria-hidden="true">🎯</span><span class="pbeb-kl">PBE TOUCHDOWN TARGET HIT</span><span class="pbeb-tdlivechip">LIVE</span></div>
-      <div class="pbeb-main pbeb-td is-nophoto is-locked">
-        <div class="pbeb-tdid">
-          <div class="pbeb-tdname">${esc(ev.headline || '')}</div>
-          <div class="pbeb-tdplay"><span>${esc(ev.detail || '')}</span></div>
-        </div>
-      </div>
-      <div class="pbeb-ctas">${ctaHtml(ev.cta)}</div>`;
-  }
   function tdHitBody(ev) {
-    if (ev.locked) return tdHitLockedBody(ev);
     const g = ev.game || {}, pl = ev.player || {}, t = ev.target || {};
     const secondary = t.rank === 'secondary';
     const official = t.publication_scope === 'official';
@@ -984,7 +971,6 @@
 
   function runCta(c, ev, opener) {
     if (c.kind === 'weather-detail') return openWeatherDetail(ev, opener);
-    if (c.kind === 'upgrade') { window.PBEPro?.open?.('PBE Touchdown Targets'); return; }
     if (c.route) {
       /* PBEcast deep-link: focus the game, and carry the play id so an Arcade
          replay can target it later. Not a dependency now — the current cast

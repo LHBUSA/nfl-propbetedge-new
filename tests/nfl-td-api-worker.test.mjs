@@ -61,7 +61,8 @@ function answer(url) {
   if (table === 'nfl_prop_pick_receipts') return RECEIPTS;
   if (table === 'nfl_prop_picks') {
     const m = /status=in\.\(([^)]*)\)/.exec(q);
-    const allowed = m ? m[1].split(',') : null;
+    const eq = /status=eq\.([a-z]+)/.exec(q);
+    const allowed = m ? m[1].split(',') : eq ? [eq[1]] : null;
     return PICKS.filter(p => !allowed || allowed.includes(p.status));
   }
   return [];
@@ -172,7 +173,9 @@ test('public views stay public and the record stays graded-only', async () => {
   const record = await viaWorker('trackrecord');
   assert.equal(record.status, 200);
   assert.deepEqual(record.body.targets.map(t => t.player?.name ?? t.player_name), ['Graded Guy'], 'the open target never leaves through the record');
-  assert.match(record.cache, /public/);
+  assert.match(record.cache, /private, no-store/);
+  assert.equal(record.body.access, 'public_settled');
+  assert.equal('probability' in (record.body.targets[0].model || {}), false);
   assert.equal((await viaWorker('model')).status, 200);
   assert.equal(state.servedBy, 'nfl-touchdown-targets-api/v1.0.0');
 });

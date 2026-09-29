@@ -20,7 +20,7 @@ const NOW = Date.parse('2026-09-27T18:32:00Z');
 /* the detector as deployed at 27ac822 (Worker 0b0f16d5) */
 /* re-pinned 2026-09-28: detection modes (live_stale persisted, final_backfill); the touchdown
    definition (td-grading.mjs) and the final grader stay byte-identical below */
-const DETECTOR_SHA = '03d06bb8bb933eeb53580cda052658e52da908c23784bc054f202bd8fd2cb352';
+const DETECTOR_SHA = '783d1b44b0865fa32ec828b077bfb547116c3c4ec5c05ef16e3b2525af164dfe';
 const LIVE_HIT_SHA = 'b8d6707bd71f6b42b2670b76afa71bd23748ef916c8597477de628842aaaced1';
 
 /* ---- the fake table -------------------------------------------------------- */

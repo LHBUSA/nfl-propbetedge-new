@@ -37,7 +37,7 @@ import { supabaseAdminHeaders } from '../../../api/_nfl-entitlement-ledger.js';
 import { currentSeason, engineRuntime } from '../../../api/_pbe-engine-runtime.js';
 import { hitsView } from '../../../api/_td-target-hits.js';
 import { freeSampleView } from '../../../api/_td-free-sample.js';
-import { tdRecordsByScope, splitCanonical } from '../../../api/_td-record-scope.js';
+import { tdRecordsByScope, splitCanonical, settledEventIds, publicSettledTarget } from '../../../api/_td-record-scope.js';
 import { gameView } from '../../../api/_td-game-view.js';
 
 /* The Worker's bindings, set once per request by handle(). They are the same
@@ -597,7 +597,7 @@ async function slateView(req, res, secret, { season, week }) {
 
 /* GRADED history only. The query excludes open targets, so a live prediction
  * cannot leave through this door however the view is called. */
-async function trackRecordView(res, secret, { season }) {
+async function trackRecordView(req, res, secret, { season }) {
   const state = await governance(secret);
   const filter = season ? `&season=eq.${season}` : '';
   const rows = arr(await sb(
@@ -611,7 +611,7 @@ async function trackRecordView(res, secret, { season }) {
   const [grades, receipts, open, finals] = await Promise.all([
     gradesFor(secret, ids),
     receiptsFor(secret, ids),
-    sb('nfl_prop_picks', `market=eq.${MARKET}&status=eq.open${filter}&select=id,publication_scope,target_rank&limit=2000`, secret).then(arr),
+    sb('nfl_prop_picks', `market=eq.${MARKET}&status=eq.open${filter}&select=id,event_id,publication_scope,target_rank&limit=2000`, secret).then(arr),
     sb('nfl_td_final_pregame_evaluation', `select=primary_pick_id,secondary_pick_id${filter}&limit=2000`, secret).then(arr),
   ]);
   const every = rows.map(row => shapeTarget(row, { grade: grades.get(row.id) || null, receipt: receipts.get(row.id) || null }));
@@ -624,21 +624,30 @@ async function trackRecordView(res, secret, { season }) {
   const coverage = await coverageSummary(secret, season ?? state.current?.season ?? null);
   /* OFFICIAL and TRACKING records split by the persisted publication_scope only (api/_td-record-scope.js). */
   const records = tdRecordsByScope({ settled: shaped, open: openLocked });
+  /* Free = settled proof only: whole-game settlement, no model internals. */
+  let pro = false;
+  try { pro = (await gameAccess(req)).tier === 'pro'; } catch (_) { pro = false; }
+  const unsettled = settledEventIds({ locked: shaped, open: openLocked });
+  const visible = pro ? shaped : shaped.filter(t => !unsettled.has(String(t.event_id))).map(publicSettledTarget);
+  const visibleExcluded = pro ? excluded : excluded.filter(x => !unsettled.has(String(x.row?.event_id)));
+  /* The free totals are computed over the same settled games the free table shows. */
+  const recordsOut = pro ? records : tdRecordsByScope({ settled: shaped.filter(t => !unsettled.has(String(t.event_id))), open: openLocked });
   return send(res, 200, {
     ...state,
     scope: 'VERIFIED LIVE TRACK RECORD',
     scope_note_backtest: 'The model artefact carries a HISTORICAL BACKTEST. It is served at view=model '
       + 'and is never part of this record.',
     coverage,
-    records,
+    records: recordsOut,
     record_rule: 'canonical locked set: a target counts only if it is in its game’s final pregame evaluation (the set held at kickoff)',
-    count: shaped.length,
-    targets: shaped,
-    excluded_from_record: excluded.map(({ id, reason, row }) => ({
+    access: pro ? 'pro' : 'public_settled',
+    count: visible.length,
+    targets: visible,
+    excluded_from_record: visibleExcluded.map(({ id, reason, row }) => ({
       id, reason, player_name: row.player?.name ?? null, espn_id: row.espn_id ?? null, target_rank: row.target_rank,
       issued_at: row.locked?.at ?? null, kickoff_ts: row.kickoff_ts, grade: row.grade?.result ?? null,
     })),
-  }, 'public, max-age=30, s-maxage=30, stale-while-revalidate=120');
+  }, 'private, no-store, max-age=0');
 }
 
 function modelView(res) {
@@ -695,7 +704,7 @@ async function handler(req, res) {
     if (view === 'model') return modelView(res);
     if (view === 'current') return await slateView(req, res, secret, { season: null, week: null });
     if (view === 'week') return await slateView(req, res, secret, { season, week });
-    if (view === 'trackrecord' || view === 'history') return await trackRecordView(res, secret, { season });
+    if (view === 'trackrecord' || view === 'history') return await trackRecordView(req, res, secret, { season });
     if (view === 'hits') return await hitsView({ res, send, sb, secret, query: req.query || {}, resolveAccess: () => gameAccess(req) });
     if (view === 'free-sample') return await freeSampleView({ res, send, sb, secret, governance });
     if (view === 'game') return await gameView({ res, send, sb, secret, query: req.query || {}, resolveAccess: () => gameAccess(req), driversFrom });

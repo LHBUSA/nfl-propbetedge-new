@@ -165,6 +165,23 @@
     return { what, when };
   }
 
+  /* Names and photos open the player's stats + Player DNA through the one
+     Touchdown Targets hand-off (GSIS id only). */
+  const DNA_POSITIONS = new Set(['QB', 'RB', 'WR', 'TE']);
+  function playerLink(player, inner) {
+    const ok = /^00-\d{7}$/.test(String(player?.gsis_id || '')) && DNA_POSITIONS.has(String(player?.position || '').toUpperCase());
+    return ok
+      ? `<button type="button" class="pbetdc-plink" data-pbetdc-player="${esc(player.gsis_id)}" data-pbetdc-position="${esc(player.position)}" title="${esc(player.name || '')}: stats + Player DNA">${inner}</button>`
+      : inner;
+  }
+  function openPlayer(gsis, position) {
+    if (window.PBETouchdownTargets?.openPlayer) return window.PBETouchdownTargets.openPlayer(gsis, position);
+    const route = { QB: 'qbdna', RB: 'rbdna', WR: 'wrdna', TE: 'tedna' }[String(position || '').toUpperCase()];
+    if (!route) return;
+    try { sessionStorage.setItem('pbe.playerdna.focus', JSON.stringify({ route, player_id: String(gsis), event_id: null, source: 'pbecast_td' })); } catch (_) {}
+    window.App?.nav?.(route);
+  }
+
   function face(player) {
     const initials = String(player?.name || '').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
     const src = /^https:\/\/a\.espncdn\.com\//.test(String(player?.headshot_url || '')) ? player.headshot_url : '';
@@ -189,7 +206,7 @@
         <span class="pbetdc-rank">${state === 'MISS' || state === 'VOID' ? '' : '🎯 '}TARGET #${esc(t.rank)}<small>${t.target_rank === 'primary' ? 'PRIMARY' : 'SECONDARY'}</small></span>
         ${STATE_BADGE[state] || STATE_BADGE.PENDING}
       </header>
-      <div class="pbetdc-who">${face(p)}<div><b>${esc(p.name || 'Target')}</b><small>${esc(matchup)}</small></div></div>
+      <div class="pbetdc-who">${playerLink(p, face(p))}<div><b>${playerLink(p, esc(p.name || 'Target'))}</b><small>${esc(matchup)}</small></div></div>
       ${h ? `<div class="pbetdc-hit" role="status"><span>🎯 TOUCHDOWN TARGET HIT</span><b>${esc(h.what)}</b>${h.when ? `<em>${esc(h.when)}</em>` : ''}</div>` : ''}
       ${state === 'HIT' && !h ? '<div class="pbetdc-hit" role="status"><span>🎯 TOUCHDOWN TARGET HIT</span><b>Settled from the official final box score</b></div>' : ''}
       ${nums.length ? `<dl class="pbetdc-nums">${nums.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>` : ''}
@@ -278,7 +295,7 @@
   }
   function markerHtml(t) {
     const h = hitLine(t.hit);
-    return `<span>🎯 PBE TOUCHDOWN TARGET HIT — ${esc(t.player?.name || '')}</span><small>${esc([h.what, h.when].filter(Boolean).join(' · '))}</small>`;
+    return `<span>🎯 PBE TOUCHDOWN TARGET HIT — ${playerLink(t.player, esc(t.player?.name || ''))}</span><small>${esc([h.what, h.when].filter(Boolean).join(' · '))}</small>`;
   }
   function decorate(root) {
     const scope = root || document.querySelector('.pbecast6');
@@ -308,6 +325,8 @@
 
   document.addEventListener('click', e => {
     if (e.target.closest?.('[data-pbetdc-upgrade]')) { window.PBEPro?.open?.('PBE Touchdown Targets'); return; }
+    const player = e.target.closest?.('[data-pbetdc-player]');
+    if (player) { openPlayer(player.dataset.pbetdcPlayer, player.dataset.pbetdcPosition); return; }
     const route = e.target.closest?.('[data-pbetdc-route]');
     if (route) window.App?.nav?.(route.dataset.pbetdcRoute);
   });
@@ -325,5 +344,5 @@
     if (window.App?.current !== 'pbecast') { clearTimeout(timer); timer = null; mountedId = null; }
   });
 
-  window.PBEcastTDTargets = { mount, html, decorate, load, store, hitLine, _state: { lastState, celebrating } };
+  window.PBEcastTDTargets = { mount, html, decorate, load, store, hitLine, playerLink, _state: { lastState, celebrating } };
 })();

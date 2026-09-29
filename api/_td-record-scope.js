@@ -103,3 +103,48 @@ export function splitCanonical({ rows = [], evaluations = [] } = {}) {
   }
   return { locked, excluded };
 }
+
+/**
+ * PUBLIC SETTLED PROOF (owner rule, V1 freeze 2026-09-29).
+ *
+ * Free readers see the Track Record only for games whose ENTIRE canonical set
+ * has settled: while any target of a game is still open, none of that game's
+ * targets is public (a partially graded game stays protected). What a free
+ * reader sees of a settled target is the proof: who, rank, when it was named,
+ * the issued price, the result, units, and the receipt. Never the model:
+ * probability, confidence, edge/EV, drivers, environment, Brier, CLV or the
+ * snapshot. Pro keeps the full shape.
+ */
+export function settledEventIds({ locked = [], open = [] } = {}) {
+  const unsettled = new Set(open.map(row => String(row?.event_id)));
+  for (const row of locked) if (String(row?.status) === 'open') unsettled.add(String(row?.event_id));
+  return unsettled;
+}
+
+export function publicSettledTarget(t) {
+  return {
+    id: t.id,
+    event_id: t.event_id,
+    espn_id: t.espn_id ?? null,
+    season: t.season,
+    week: t.week,
+    kickoff_ts: t.kickoff_ts,
+    away_team: t.away_team ?? null,
+    home_team: t.home_team ?? null,
+    target_rank: t.target_rank,
+    status: t.status,
+    publication_scope: t.publication_scope,
+    player: { name: t.player?.name ?? null, gsis_id: t.player?.gsis_id ?? null, espn_id: t.player?.espn_id ?? null, position: t.player?.position ?? null, team: t.player?.team ?? null, opponent: t.player?.opponent ?? null },
+    model: { selector_version: t.model?.selector_version ?? null },
+    market: { best_price: t.market?.best_price ?? null, best_book: t.market?.best_book ?? null },
+    locked: { at: t.locked?.at ?? null, before_kickoff: t.locked?.before_kickoff ?? null },
+    grade: t.grade ? {
+      result: t.grade.result,
+      offensive_td: t.grade.offensive_td ?? null,
+      units: t.grade.units ?? null,
+      graded_at: t.grade.graded_at ?? null,
+      result_definition: t.grade.result_definition ?? null,
+    } : null,
+    receipt: t.receipt ?? null,
+  };
+}

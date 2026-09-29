@@ -370,7 +370,7 @@ test('model, selector, grader and detector files are byte-for-byte unchanged', (
     'workers/nfl-td-targets-shared/td-grading.mjs': '2551516e7d2df3ef9442399a5b0595bc5eeeef9c5154a7a3b4480e3cdef7fa9a',
     // re-pinned 2026-09-28: PBEcast detection modes (live_stale / final_backfill); grader + definition unchanged
     'workers/nfl-td-targets-shared/td-live-hit.mjs': 'b8d6707bd71f6b42b2670b76afa71bd23748ef916c8597477de628842aaaced1',
-    'workers/nfl-touchdown-target-hit-alerts/src/index.js': '03d06bb8bb933eeb53580cda052658e52da908c23784bc054f202bd8fd2cb352',
+    'workers/nfl-touchdown-target-hit-alerts/src/index.js': '783d1b44b0865fa32ec828b077bfb547116c3c4ec5c05ef16e3b2525af164dfe',
     'workers/nfl-td-targets-shared/td-selector.mjs': '16db24c90d8bf239d944e396f4eac949089cb60c77b9bf15e3679680b2432313',
     'workers/nfl-td-targets-shared/td-kernel.mjs': '29550cf0d815bd5fea9782afca2e04fac0991628b8fcb6d8cc1eac35a3035673',
     'workers/nfl-td-targets-shared/td-score.mjs': '9b8b5f237f3557a2df385c184935d95c0ec2c1d0ec03bea070afbc567f584e0a',
@@ -390,15 +390,15 @@ test('learning gate, official record, publication state and premium gate logic a
       governance: 'ca4205bf3848ae8e96ed1969e0841d6bbeb4bb7fad5e82f64a3c152b295590fb',
       premium: '2788049881bea1a443909fd3eaff122fe44353093443ee9818980898ec4a57b7',
       // re-pinned 2026-09-27: owner-ordered official/tracking split (api/_td-record-scope.js); selection unchanged
-      // re-pinned 2026-09-29: owner-ordered canonical locked set (splitCanonical); withdrawn targets excluded, not deleted
-      trackrecord: '671c6dbc2c6a8c0c2b7a68ba485082a24a3d805767bb25ea5230fc3f9c03040c',
+      // re-pinned 2026-09-29 (V1 freeze): canonical locked set + free = settled public proof (publicSettledTarget); withdrawn excluded, not deleted
+      trackrecord: '0177ac2fcb624e8771ebd8ac4c6f9389afe6de5fbd5b9daed18df3b3499f5235',
     },
     'workers/nfl-touchdown-targets-api/src/contract.js': {
       governance: '8f05075786c3c8c006f64648e97ec2fc7bbf6d004b5162fbd7bb78117974d7cf',
       premium: '99edaee251cfb7b931fa05e168ac4f851208686871a901d0f8d226f20a16d285',
       // re-pinned 2026-09-27: owner-ordered official/tracking split (api/_td-record-scope.js); selection unchanged
-      // re-pinned 2026-09-29: owner-ordered canonical locked set (splitCanonical); withdrawn targets excluded, not deleted
-      trackrecord: '671c6dbc2c6a8c0c2b7a68ba485082a24a3d805767bb25ea5230fc3f9c03040c',
+      // re-pinned 2026-09-29 (V1 freeze): canonical locked set + free = settled public proof (publicSettledTarget); withdrawn excluded, not deleted
+      trackrecord: '0177ac2fcb624e8771ebd8ac4c6f9389afe6de5fbd5b9daed18df3b3499f5235',
     },
   };
   for (const [path, pins] of Object.entries(REGIONS)) {

@@ -604,19 +604,19 @@ const HIT_LEAKS = ["Ja'Marr Chase", 'ja marr chase', '4362628', '00-0036900', 'p
   'confidence', 'CIN', 'PIT', '401872950', 'Burrow', 'Yd', 'headshot', '"play"', 'play_id', 'play_text', '"player"', 'clock', 'period', 'away_score', 'home_score', 'detected_at', 'live_stats', PRIMARY_ID, 'tracking'];
 
 for (const tier of ['anonymous', 'no_entitlement', 'unavailable']) {
-  test(`hits · ${tier}: a generic notice per hit, with no name, athlete id, rank, probability, game, time or play`, async () => {
-    for (const query of [{}, { after_id: '0' }]) {
-      const out = await callHitsAs(tier, [HIT_DB_ROW()], query);
+  test(`LIVE FREE · hits (${tier}): no event, count, cursor or timing; the table is never read; byte-identical before and after a hit`, async () => {
+    const before = await callHitsAs(tier, [], {});
+    const after = await callHitsAs(tier, [HIT_DB_ROW()], {});
+    const incremental = await callHitsAs(tier, [HIT_DB_ROW()], { after_id: '0' });
+    for (const out of [before, after, incremental]) {
       assert.equal(out.status, 200);
-      assert.equal(out.body.access, 'locked');
-      assert.deepEqual(out.body.events, [{ id: 7, kind: 'TD_TARGET_HIT', access: 'locked', headline: 'One of PBE’s Touchdown Targets just scored.', detail: 'Unlock All Access Pro to see the player and model details.' }]);
-      assert.equal(out.body.next_cursor, 7);
-      assert.equal(out.body.cursor, null);
-      for (const leak of HIT_LEAKS) assert.equal(out.raw.includes(leak), false, `${tier} hits leaked ${leak}`);
-      /* not stripped afterwards: the locked tier SELECTS only the id */
-      for (const read of out.reads.filter(r => !r.q.includes('order=id.desc'))) assert.match(read.q, /select=id&/);
+      assert.deepEqual(out.body, { view: 'hits', access: 'locked', events: [], hits: [], next_cursor: null, note: 'Live Touchdown Target signals are All Access Pro. Settled results are public in the Track Record.' });
+      assert.equal(out.reads.length, 0, 'the locked tier never queries the hit table');
       assert.equal(out.cache, 'private, no-store, max-age=0');
+      for (const leak of HIT_LEAKS) assert.equal(out.raw.includes(leak), false, `${tier} leaked ${leak}`);
     }
+    assert.equal(before.raw, after.raw);
+    assert.equal(after.raw, incremental.raw);
   });
 }
 
@@ -632,33 +632,71 @@ test('hits · Pro / All Access: the full legitimate hit (player, ids, rank, prob
   assert.equal(h.game.clock, '5:50');
 });
 
-test('hits · an access check that throws is locked; no resolver at all is locked', async () => {
+test('LIVE FREE · hits: an access check that throws, or no resolver, is locked and silent', async () => {
   const r = res();
-  await hitsView({ res: r, send, sb: async () => [HIT_DB_ROW()], secret: 's', query: { after_id: '0' }, resolveAccess: async () => { throw new Error('down'); } });
-  assert.equal(JSON.parse(r.body).access, 'locked');
+  await hitsView({ res: r, send, sb: async () => { throw new Error('must not read'); }, secret: 's', query: { after_id: '0' }, resolveAccess: async () => { throw new Error('down'); } });
+  assert.deepEqual(JSON.parse(r.body).events, []);
   const r2 = res();
-  await hitsView({ res: r2, send, sb: async () => [HIT_DB_ROW()], secret: 's', query: { after_id: '0' } });
+  await hitsView({ res: r2, send, sb: async () => { throw new Error('must not read'); }, secret: 's', query: {} });
   assert.equal(JSON.parse(r2.body).access, 'locked');
-  assert.equal(r2.body.includes('Chase'), false);
 });
 
-test('hits · the rail turns a locked event into fixed copy + unlock CTA, with no game handoff', () => {
+test('LIVE FREE · no alert-rail target event exists for a non-Pro reader: the poller and rail have no locked path', () => {
+  const poller = executable(read('touchdown-hit-live-v1.js'));
+  const rail = executable(read('pbe-breaking-v1.js'));
+  assert.equal(/access === 'locked'|toLockedRailEvent/.test(poller), false);
+  assert.match(poller, /if \(hit && hit\.pick_id\) \{/);
+  assert.equal(/tdHitLockedBody|kind === 'upgrade'/.test(rail), false);
+});
+
+test('LIVE FREE · the detector\'s public /health carries no per-tick counts, published ids or tick times', () => {
+  const src = executable(read('workers/nfl-touchdown-target-hit-alerts/src/index.js'));
+  const health = src.slice(src.indexOf("if (url.pathname !== '/health')"), src.indexOf('async scheduled('));
+  for (const banned of ['last_tick', 'last_work', 'counts', 'published']) assert.equal(health.includes(banned), false, banned);
+});
+
+test('LIVE PRO · a legitimate scorer event reaches the Pro rail immediately with player, play and PBEcast handoff', () => {
   const store = new Map();
   const window = { addEventListener() {}, dispatchEvent() {}, PBEBreaking: { offer() {}, PRIORITY: {}, CONFIG: {} } };
   const document = { hidden: false, addEventListener() {} };
   const sessionStorage = { getItem: k => store.get(k) ?? null, setItem: (k, v) => store.set(k, String(v)) };
   window.window = window;
-  const ctx = vm.createContext({ window, document, sessionStorage, setTimeout: () => 0, clearTimeout() {}, setInterval: () => 0, clearInterval() {}, Date, Math, JSON, Number, String, Array, Set, Map, Object, Promise, console });
-  vm.runInContext(read('touchdown-hit-live-v1.js'), ctx);
-  const ev = JSON.parse(JSON.stringify(window.PBETouchdownHits._test.toRailEvent({ id: 7, kind: 'TD_TARGET_HIT', access: 'locked', headline: 'One of PBE’s Touchdown Targets just scored.', detail: 'Unlock All Access Pro to see the player and model details.' })));
-  assert.equal(ev.locked, true);
-  assert.equal(ev.key, 'tdhit:locked:7');
-  assert.equal(JSON.stringify(ev).includes('pbecast'), false);
-  assert.equal('player' in ev || 'game' in ev || 'target' in ev || 'play' in ev, false);
-  assert.deepEqual(ev.cta.map(c => c.kind), ['upgrade', 'route']);
-  const rail = read('pbe-breaking-v1.js');
-  assert.match(rail, /if \(ev\.locked\) return tdHitLockedBody\(ev\);/);
-  assert.match(rail, /if \(c\.kind === 'upgrade'\) \{ window\.PBEPro\?\.open\?\.\('PBE Touchdown Targets'\); return; \}/);
+  vm.runInContext(read('touchdown-hit-live-v1.js'), vm.createContext({ window, document, sessionStorage, setTimeout: () => 0, clearTimeout() {}, setInterval: () => 0, clearInterval() {}, Date, Math, JSON, Number, String, Array, Set, Map, Object, Promise, console }));
+  const hit = { ...shapeHitFromRow(), access: 'pro' };
+  const ev = JSON.parse(JSON.stringify(window.PBETouchdownHits._test.toRailEvent(hit)));
+  assert.equal(ev.player.name, "Ja'Marr Chase");
+  assert.equal(ev.cta[0].kind, 'pbecast');
+  assert.equal(ev.cta[0].game_id, CIN_PIT);
+});
+
+/* ================================ FINAL FREE: settled public Track Record */
+
+test('FINAL FREE · settled games are public proof: names and results, never probability, confidence, edge, drivers, Brier or snapshot', async () => {
+  const { publicSettledTarget, settledEventIds } = await import('../api/_td-record-scope.js');
+  const full = shapeGameTargetForRecord();
+  const pub = publicSettledTarget(full);
+  assert.equal(pub.player.name, "Ja'Marr Chase");
+  assert.equal(pub.grade.result, 'win');
+  const text = JSON.stringify(pub);
+  for (const banned of ['probability', 'confidence', 'edge', 'ev_pct', 'drivers', 'brier', 'clv', 'model_snapshot', 'lambda', 'environment', 'artefact', 'game_market', 'availability']) {
+    assert.equal(text.includes(banned), false, `public record leaked ${banned}`);
+  }
+  assert.deepEqual(Object.keys(pub.model), ['selector_version']);
+  /* PARTIALLY GRADED: one open target keeps the whole game private */
+  const unsettled = settledEventIds({ locked: [{ event_id: 'g1', status: 'graded' }, { event_id: 'g2', status: 'graded' }], open: [{ event_id: 'g2' }] });
+  assert.deepEqual([...unsettled], ['g2']);
+});
+
+test('FINAL FREE · both record views: tier from the session authority, free rows = settled games only, stripped, totals over the same rows, private cache', () => {
+  for (const path of ['api/pbe-touchdown-targets.js', 'workers/nfl-touchdown-targets-api/src/contract.js']) {
+    const src = read(path);
+    assert.ok(src.includes("try { pro = (await gameAccess(req)).tier === 'pro'; } catch (_) { pro = false; }"), path);
+    assert.ok(src.includes('const visible = pro ? shaped : shaped.filter(t => !unsettled.has(String(t.event_id))).map(publicSettledTarget);'), path);
+    assert.ok(src.includes('const recordsOut = pro ? records : tdRecordsByScope({ settled: shaped.filter(t => !unsettled.has(String(t.event_id))), open: openLocked });'), path);
+    const view = src.slice(src.indexOf('async function trackRecordView('), src.indexOf('function modelView('));
+    assert.ok(view.includes("'private, no-store, max-age=0'"), path);
+    assert.equal(view.includes("'public, max-age"), false, path);
+  }
 });
 
 /* ================================= 2026-09-29: CANONICAL LOCKED SET ONLY */
@@ -684,7 +722,7 @@ test('record · both record views apply the canonical rule and publish the exclu
   for (const path of ['api/pbe-touchdown-targets.js', 'workers/nfl-touchdown-targets-api/src/contract.js']) {
     const src = read(path);
     assert.ok(src.includes("sb('nfl_td_final_pregame_evaluation', `select=primary_pick_id,secondary_pick_id${filter}&limit=2000`, secret)"), path);
-    assert.ok(src.includes('excluded_from_record: excluded.map'), path);
+    assert.ok(src.includes('excluded_from_record: visibleExcluded.map'), path);
     assert.ok(src.includes('const openLocked = splitCanonical({ rows: open, evaluations: finals }).locked;'), path);
   }
 });
@@ -713,4 +751,61 @@ test('audit · scripts/td-record-audit.mjs checks every graded target against th
   for (const rule of ['created_before_kickoff', 'in_canonical_locked_set', 'one_grade', 'no_duplicate_rank', 'no_duplicate_player', 'win_has_scoring_play', 'no_lifecycle_after_kickoff']) {
     assert.ok(src.includes(rule), rule);
   }
+});
+
+function shapeHitFromRow() {
+  const row = { id: 7, ...hitRow(chase()), id: 7 };
+  return {
+    id: row.id, pick_id: row.pick_id, detected_at: row.detected_at,
+    game: { espn_id: row.espn_id, away: row.away_team, home: row.home_team, away_score: row.away_score, home_score: row.home_score, period: row.period, clock: row.clock },
+    player: { name: row.player_name, espn_id: row.espn_player_id, gsis_id: row.gsis_id, position: row.position, team: row.team, opponent: row.opponent, headshot_url: row.headshot_url },
+    target: { rank: row.target_rank, publication_scope: row.publication_scope, model_prob: row.model_prob, market_price: row.market_price },
+    play: { id: row.play_id, type: row.play_type, text: row.play_text }, live_stats: row.live_stats,
+  };
+}
+function shapeGameTargetForRecord() {
+  return {
+    id: PRIMARY_ID, event_id: 'odds-cin-pit', espn_id: CIN_PIT, season: 2026, week: 4, kickoff_ts: '2026-09-27T17:00:00.000Z', away_team: 'CIN', home_team: 'PIT',
+    target_rank: 'primary', status: 'graded', publication_scope: 'tracking',
+    player: { name: "Ja'Marr Chase", key: 'ja marr chase', espn_id: '4362628', gsis_id: '00-0036900', position: 'WR', team: 'CIN', opponent: 'PIT', at_home: false },
+    model: { probability: 0.44, version: 'pbe-td-hazard-v1', artefact_probability: 0.43, lambda: 0.58, selector_version: 2, confidence: 'A', label: 'x' },
+    market: { probability: 0.38, books: 5, best_price: 150, best_book: 'DraftKings', disagreement_pp: 1 },
+    edge_pp: 5.9, ev_pct: 12, environment: { temp_f: 60 }, game_market: { spread_points: -3 },
+    drivers: [{ key: 'red_zone_role' }], availability: { reported: true },
+    locked: { at: '2026-09-27T15:10:00Z', phase: 'locked', hours_to_kickoff: 2, before_kickoff: true },
+    grade: { result: 'win', offensive_td: 1, units: 1.5, brier: 0.31, clv_prob: 0.01, clv_beat: true, graded_at: 'x', result_definition: 'pbe', non_offensive_td: false, settlement_note: {}, source: 'espn' },
+    receipt: { seq: 1, chain_hash: 'c' },
+  };
+}
+
+/* ================================= players open stats + Player DNA (GSIS) */
+
+test('players · PBEcast cards: name and photo open the player\'s stats + Player DNA by GSIS id', async () => {
+  const M = loadModule();
+  M.store.set(CIN_PIT, { data: await payload('pro', { hits: [hitRow(chase())] }), at: Date.now() });
+  const html = M.html(CIN_PIT);
+  assert.equal((html.match(/data-pbetdc-player="00-0036900" data-pbetdc-position="WR"/g) || []).length >= 2, true);
+  assert.match(html, /title="Ja&#39;Marr Chase: stats \+ Player DNA"/);
+  const marker = M.playerLink({ name: 'X', gsis_id: '00-0036900', position: 'WR' }, 'X');
+  assert.match(marker, /data-pbetdc-player="00-0036900"/);
+  /* no GSIS id, or a position without a DNA page: plain text, never a guessed link */
+  assert.equal(M.playerLink({ name: 'K', gsis_id: '00-0036900', position: 'K' }, 'K'), 'K');
+  assert.equal(M.playerLink({ name: 'N', gsis_id: null, position: 'WR' }, 'N'), 'N');
+  const src = executable(read('pbecast-td-targets-v1.js'));
+  assert.match(src, /sessionStorage\.setItem\('pbe\.playerdna\.focus'/);
+  assert.match(src, /window\.PBETouchdownTargets\?\.openPlayer/);
+});
+
+test('players · Touchdown Targets page: every card and Track Record row name uses the one GSIS link', () => {
+  const src = read('touchdown-targets-v1.js');
+  assert.ok(src.includes('<p class="pbetd-name">${playerLink(player)}</p>'));
+  assert.ok(src.includes('<td class="player">${playerLink(target.player)}</td>'));
+  assert.ok(src.includes('    openPlayer,\n    playerLink,'));
+});
+
+test('players · the public settled record carries the ids a link needs and still no model internals', async () => {
+  const { publicSettledTarget } = await import('../api/_td-record-scope.js');
+  const pub = publicSettledTarget({ id: 'x', player: { name: 'A', gsis_id: '00-0000001', espn_id: '1', position: 'RB' }, model: { probability: 0.4, selector_version: 2 }, grade: { result: 'win', brier: 0.2 } });
+  assert.deepEqual([pub.player.gsis_id, pub.player.position], ['00-0000001', 'RB']);
+  assert.equal(JSON.stringify(pub).includes('probability') || JSON.stringify(pub).includes('brier'), false);
 });

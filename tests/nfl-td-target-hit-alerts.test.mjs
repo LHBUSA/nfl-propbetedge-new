@@ -374,8 +374,10 @@ test('source failures are counted and never become a hit; an old contract withou
   const health = await (await worker.fetch(new Request('https://w.test/health'), h.env)).json();
   assert.equal(health.service, SERVICE);
   assert.equal(health.health, 'DEGRADED');
-  assert.equal(health.counts.source_unavailable, 2);
-  for (const key of ['targets_checked', 'games_checked', 'live_games', 'hits_detected', 'duplicate_hits', 'stale_existing_hits', 'source_unavailable', 'identity_missing']) assert.ok(key in health.counts, key);
+  /* public /health is liveness only (V1 freeze): the counts live in the run record, not on the wire */
+  assert.equal(run.counts.source_unavailable, 2);
+  for (const key of ['counts', 'last_tick', 'last_work']) assert.equal(key in health, false, key);
+  assert.equal(JSON.stringify(health).includes('published'), false);
   assert.deepEqual(health.writes, ['nfl_td_target_hit_events']);
 });
 

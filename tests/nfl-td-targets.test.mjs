@@ -823,7 +823,7 @@ test('28 · photos are identity-safe and every rendered value is escaped', async
   assert.ok(!rail.includes('<img src=x'), 'a hostile heading is escaped');
   assert.match(rail, /&lt;img src=x/);
   /* And a player link only exists when there is a real id to open. */
-  assert.match(PAGE_JS, /player\.gsis_id && DNA_ROUTE\[String\(player\.position \|\| ''\)\.toUpperCase\(\)\]/);
+  assert.ok(PAGE_JS.includes("const playerLinkable = player => Boolean(player?.gsis_id && DNA_ROUTE[String(player.position || '').toUpperCase()]);"));
 });
 
 /* ========================================================================= */
