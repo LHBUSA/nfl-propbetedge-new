@@ -86,6 +86,8 @@
           </aside>
         </section>
 
+        ${window.PBEPreferredSource?.render({ surface: 'footer' }) || ''}
+
         <section class="pbe-network-footer-ecosystem">
           <div class="pbe-network-ecosystem-brand">
             <strong>PropBetEdge</strong>

@@ -1,7 +1,7 @@
 /* PropBetEdge NFL - ordered page/product upgrade loader v47 route-first */
 (() => {
   'use strict';
-  const VERSION='20260929tdfreeze1';
+  const VERSION='20260930psrc1';
   const upgrades=[
     /* Establish the final homepage authority first. v6 replaces the v5 DOM with
        .pbehome6; v7 historically registered itself after that without repainting
@@ -141,6 +141,8 @@
     {css:'./sports-shell-v3.css'},
 
     /* Global network identity + subscriber controls. */
+    /* Google Preferred Sources control; the footer asks it for markup, so it loads first. */
+    {css:'./preferred-source-v1.css',js:'./preferred-source-v1.js'},
     {css:'./network-footer-v1.css',js:'./network-footer-v1.js'},
 
     /* Production authorities. */
