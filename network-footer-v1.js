@@ -15,7 +15,8 @@
     { key: 'nhl', label: 'NHL', sub: 'Hockey', href: 'https://nhl.propbetedge.ai' },
     { key: 'ufc', label: 'UFC', sub: 'Fight Intelligence', href: 'https://ufc.propbetedge.ai' },
     { key: 'tennis', label: 'Tennis', sub: 'Tennis Intelligence', href: 'https://tennis.propbetedge.ai/' },
-    { key: 'soccer', label: 'Soccer', sub: 'Soccer Intelligence', href: 'https://soccer.propbetedge.ai/' }
+    { key: 'soccer', label: 'Soccer', sub: 'Soccer Intelligence', href: 'https://soccer.propbetedge.ai/' },
+    { key: 'golf', label: 'Golf', sub: 'Golf Intelligence', href: 'https://golf.propbetedge.ai/' }
   ];
 
   function sportTile(sport) {
@@ -44,9 +45,9 @@
               <p>Markets, models, live context, verified decisions and deep research — built independently for how each sport actually works.</p>
             </div>
           </div>
-          <div class="pbe-network-live-mark" aria-label="Eight live PropBetEdge sport products">
+          <div class="pbe-network-live-mark" aria-label="Nine live PropBetEdge sport products">
             <span><i></i> LIVE NETWORK</span>
-            <strong>8</strong>
+            <strong>9</strong>
             <small>SPORT PRODUCTS</small>
           </div>
         </section>
