@@ -428,11 +428,11 @@
       body += dl([
         what ? ['Injury', esc(what)] : null,
         i.return_date ? ['Return date', `${esc(i.return_date)} <small>as reported by the source</small>`] : null,
-        ['Source', esc(s.label)],
-        ['Source time', `${esc(stamp(s.at))} <small>ESPN update time</small>`],
+        ['Source', esc(String(s.label || '').replace(/\bESPN\b/g, 'PropSports'))],
+        ['Source time', `${esc(stamp(s.at))} <small>Last observed</small>`],
         inj?.fetched_at ? ['Report captured', `${esc(stamp(inj.fetched_at))}`] : null
       ]);
-      if (s.note) body += `<blockquote class="pc3-quote"><span>ESPN note</span>${esc(s.note)}</blockquote>`;
+      if (s.note) body += `<blockquote class="pc3-quote"><span>Status note</span>${esc(s.note)}</blockquote>`;
     } else if (c.kind === 'MARKET') {
       body += `<p class="pc3-lead">${esc(c.title)} · ${esc(c.event_label)}</p>${dl([
         ['Source', esc(s.label)], ['Earlier capture', esc(stamp(s.from_captured_at))], ['Latest capture', esc(stamp(s.at))], s.note ? ['Note', esc(s.note)] : null
@@ -601,7 +601,7 @@
         <div><small>Total</small><b>${esc(tot?.consensus?.line ?? '—')}</b><span>${tot?.best ? `best O ${esc(tot.best.line)} ${esc(american(tot.best.price))} · ${esc(tot.best.book)}` : 'no quote'}</span></div>
         <div><small>Observed moves</small><b>${esc(tape.available ? tape.moves.length : '—')}</b><span>${tape.available ? `${esc(tape.captures ?? '—')} captures stored` : esc(words(tape.reason))}</span></div></div>` : '<p class="pc3-empty-line">This game is not in the current market snapshot.</p>'}</section>`);
       const avail = arr(data?.availability?.[selected.id]);
-      blocks.push(`<section class="pc3-ctx"><header><span>Current injuries · ${esc(selected.matchup)}</span><small>Restrictive designations on the ESPN report</small></header>${avail.length ? `<ul class="pc3-ctx-list">${avail.slice(0, 14).map(r => `<li><em class="tone-${STATUS_TONE[r.status] || 'mute'}">${esc(words(r.status))}</em><b>${esc(r.player?.name)}</b><span>${esc([r.player?.position, r.team?.abbreviation].filter(Boolean).join(' · '))}</span><small>updated ${esc(clock(r.updated_at))}</small></li>`).join('')}</ul>` : '<p class="pc3-empty-line">No restrictive designations on the report for this game.</p>'}</section>`);
+      blocks.push(`<section class="pc3-ctx"><header><span>Current injuries · ${esc(selected.matchup)}</span><small>Restrictive designations on the observed injury report</small></header>${avail.length ? `<ul class="pc3-ctx-list">${avail.slice(0, 14).map(r => `<li><em class="tone-${STATUS_TONE[r.status] || 'mute'}">${esc(words(r.status))}</em><b>${esc(r.player?.name)}</b><span>${esc([r.player?.position, r.team?.abbreviation].filter(Boolean).join(' · '))}</span><small>updated ${esc(clock(r.updated_at))}</small></li>`).join('')}</ul>` : '<p class="pc3-empty-line">No restrictive designations on the report for this game.</p>'}</section>`);
       const wx = arr(data?.weather?.events).filter(e => String(e?.game?.event_id || e?.game?.game_id) === String(selected.id) && !(Date.parse(e.expires || '') <= now));
       const disrupted = arr(data?.changes).filter(x => x.kind === 'GAME_STATUS' && String(x.game?.id) === String(selected.id));
       blocks.push(`<section class="pc3-ctx"><header><span>Weather & game status</span><small>${data?.weather?.available ? `Weather read ${esc(clock(data.weather.fetched_at))} ET` : 'Weather unavailable'}</small></header>${wx.length || disrupted.length ? `<ul class="pc3-ctx-list">${disrupted.map(x => `<li><em class="tone-neg">${esc(words(x.status))}</em><b>${esc(x.game?.matchup)}</b><span>${esc(x.detail || '')}</span></li>`).join('')}${wx.slice(0, 6).map(e => `<li><em class="tone-warn">${esc(e.official ? 'NWS' : 'FORECAST')}</em><b>${esc(e.headline)}</b><span>${esc(e.game?.roof?.label || '')}</span><small>${esc(e.effective ? clock(e.effective) : '')}</small></li>`).join('')}</ul>` : `<p class="pc3-empty-line">${selected.semantics === 'FINAL' ? 'Game final.' : 'No active weather alert, forecast shift or disruption for this game.'}</p>`}</section>`);

@@ -111,7 +111,7 @@ async function injuries(env) {
       ok: false,
       semantics: 'UNAVAILABLE',
       error: 'first_ingest_pending',
-      source: { provider: 'espn_core_api_injuries', available: false },
+      source: { name: 'PropSports', provider: 'espn_core_api_injuries', available: false },
       runtime: VERSION,
       generated_at: new Date(now).toISOString()
     }, 503);
@@ -137,9 +137,9 @@ async function changes(env, url) {
   let games = [];
   if (slateRes.status === 'fulfilled') {
     games = gamesFromCurrent(slateRes.value);
-    sources.scoreboard = { provider: 'nfl-current (ESPN scoreboard authority)', available: true, fetched_at: fetchedAt, games: games.length, freshness: slateRes.value.freshness?.state || null };
+    sources.scoreboard = { name: 'PropSports', provider: 'nfl-current (scoreboard authority)', available: true, fetched_at: fetchedAt, games: games.length, freshness: slateRes.value.freshness?.state || null };
   } else {
-    sources.scoreboard = { provider: 'nfl-current (ESPN scoreboard authority)', available: false, fetched_at: fetchedAt, reason: String(slateRes.reason?.message || slateRes.reason) };
+    sources.scoreboard = { name: 'PropSports', provider: 'nfl-current (scoreboard authority)', available: false, fetched_at: fetchedAt, reason: String(slateRes.reason?.message || slateRes.reason) };
   }
 
   let injuryRows = [];
@@ -148,13 +148,13 @@ async function changes(env, url) {
     injuryRows = parseInjuryReport(inj.report);
     const age = now - Date.parse(inj.fetched_at);
     sources.injuries = {
-      provider: 'espn_core_api_injuries', available: true, fetched_at: inj.fetched_at, ingested_by: 'nfl-intel cron',
+      name: 'PropSports', provider: 'espn_core_api_injuries', available: true, fetched_at: inj.fetched_at, ingested_by: 'nfl-intel cron',
       age_seconds: Math.round(age / 1000), stale: age > INJURY_STALE_MS, entries: inj.entries,
       failed_teams: inj.failed_teams || [], record_failures: inj.record_failures || 0,
-      note: 'Designation and the time ESPN last updated its note. Prior designations are not claimed.'
+      note: 'Designation and the time the source last updated its note. Prior designations are not claimed.'
     };
   } else {
-    sources.injuries = { provider: 'espn_core_api_injuries', available: false, fetched_at: fetchedAt, reason: injRes.status === 'rejected' ? String(injRes.reason?.message || injRes.reason) : 'first_ingest_pending' };
+    sources.injuries = { name: 'PropSports', provider: 'espn_core_api_injuries', available: false, fetched_at: fetchedAt, reason: injRes.status === 'rejected' ? String(injRes.reason?.message || injRes.reason) : 'first_ingest_pending' };
   }
 
   let moves = [];

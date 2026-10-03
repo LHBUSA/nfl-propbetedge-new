@@ -41,16 +41,16 @@ export function teamLogoUrl(abbr) {
 export function playerMedia(espnId) {
   const url = headshotUrl(espnId);
   return url
-    ? { headshot_url: url, source: 'ESPN', resolved_by: 'espn_athlete_id' }
+    ? { headshot_url: url, source: 'ESPN', resolved_by: 'espn_athlete_id' } // source-brand:allow (image credit: owner-approved ESPN headshot/logo, credited not rehosted)
     : { headshot_url: null, source: null, resolved_by: null,
-        unavailable_reason: 'no ESPN athlete id on this identity' };
+        unavailable_reason: 'no verified athlete id on this identity' };
 }
 
 /** The media block attached to a team in a QB DNA response. */
 export function teamMedia(abbr) {
   const url = teamLogoUrl(abbr);
   return url
-    ? { logo_url: url, source: 'ESPN', resolved_by: 'team_abbreviation' }
+    ? { logo_url: url, source: 'ESPN', resolved_by: 'team_abbreviation' } // source-brand:allow (image credit: owner-approved ESPN headshot/logo, credited not rehosted)
     : { logo_url: null, source: null, resolved_by: null,
         unavailable_reason: 'no team abbreviation on this identity' };
 }

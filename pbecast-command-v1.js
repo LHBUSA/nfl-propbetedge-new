@@ -257,7 +257,7 @@
       const ids = arr(d?.plays).map(p => String(p.id));
       const joined = ids.filter(id => en.data.plays[id]).length;
       const when = en.data.source?.last_modified ? new Date(en.data.source.last_modified).toLocaleString('en-US', { ...ET, month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' ET' : '';
-      return `<span class="pbekm-enriched">POST-GAME ENRICHED · nflverse play-by-play (CC-BY-4.0)${when ? ` · published ${esc(when)}` : ''} · ${esc(joined)} of ${esc(ids.length)} ESPN plays joined by play id. EPA, WPA (for the team with the ball), air yards, YAC and CPOE are post-game values, not live.</span>`;
+      return `<span class="pbekm-enriched">POST-GAME ENRICHED · nflverse play-by-play (CC-BY-4.0)${when ? ` · published ${esc(when)}` : ''} · ${esc(joined)} of ${esc(ids.length)} observed plays joined by play id. EPA, WPA (for the team with the ball), air yards, YAC and CPOE are post-game values, not live.</span>`;
     }
     const why = en.reason === 'NOT_YET_PUBLISHED' ? 'nflverse has not published this game yet — it usually lands the next day'
       : en.reason === 'POST_GAME_ENRICHMENT_UNAVAILABLE' ? 'unavailable — the season has not been ingested and the source file exceeds the safe transitional bound'

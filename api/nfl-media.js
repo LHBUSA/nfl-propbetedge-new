@@ -24,7 +24,7 @@ export default async function handler(req, res) {
     if (!image) return res.status(404).json({ error: 'No NFL image found.' });
     return res.status(200).json({
       kind: 'player', name: name || null, id: espnId, image,
-      source: 'ESPN', resolved_by: 'espn_athlete_id'
+      source: 'ESPN', resolved_by: 'espn_athlete_id' // source-brand:allow (image credit / internal log only)
     });
   }
   if (kind === 'team' && abbr) {
@@ -32,7 +32,7 @@ export default async function handler(req, res) {
     if (!image) return res.status(404).json({ error: 'No NFL image found.' });
     return res.status(200).json({
       kind: 'team', name: name || null, abbreviation: abbr.toUpperCase(), image,
-      source: 'ESPN', resolved_by: 'team_abbreviation'
+      source: 'ESPN', resolved_by: 'team_abbreviation' // source-brand:allow (image credit / internal log only)
     });
   }
 
@@ -54,7 +54,7 @@ async function resolveTeam(query) {
   const response = await fetch('https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams?limit=100', {
     headers: { accept: 'application/json' },
   });
-  if (!response.ok) throw new Error(`ESPN teams ${response.status}`);
+  if (!response.ok) throw new Error(`ESPN teams ${response.status}`); // source-brand:allow (image credit / internal log only)
   const data = await response.json();
   const teams = data?.sports?.[0]?.leagues?.[0]?.teams?.map((entry) => entry?.team || entry).filter(Boolean) || [];
   const team = bestNamedMatch(teams, query, ['displayName', 'shortDisplayName', 'name', 'location', 'abbreviation']);
@@ -65,7 +65,7 @@ async function resolveTeam(query) {
     name: team.displayName || team.shortDisplayName || query,
     abbreviation,
     image: firstImage(team) || logoFromAbbreviation(abbreviation),
-    source: 'ESPN',
+    source: 'ESPN', // source-brand:allow (image credit: owner-approved ESPN headshot/logo)
   };
 }
 
@@ -76,7 +76,7 @@ async function resolvePlayer(query) {
   searchUrl.searchParams.set('sport', 'football');
 
   const response = await fetch(searchUrl, { headers: { accept: 'application/json' } });
-  if (!response.ok) throw new Error(`ESPN search ${response.status}`);
+  if (!response.ok) throw new Error(`ESPN search ${response.status}`); // source-brand:allow (image credit / internal log only)
   const data = await response.json();
   const objects = [];
   walkObjects(data, objects, 0);
@@ -92,7 +92,7 @@ async function resolvePlayer(query) {
     name: bestLabel(candidate) || query,
     id: id || null,
     image,
-    source: 'ESPN',
+    source: 'ESPN', // source-brand:allow (image credit: owner-approved ESPN headshot/logo)
   };
 }
 

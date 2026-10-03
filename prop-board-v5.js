@@ -129,7 +129,7 @@
   /* Sportsbook identity marks: the same short codes Market Watch uses,
      matched by regex on the provider's book title. Text only: the repo holds
      no sportsbook logo assets and none are invented here. */
-  const BOOK_CODES = [[/draftkings/i, 'DK'], [/fanduel/i, 'FD'], [/betmgm|mgm/i, 'MGM'], [/caesars/i, 'CZR'], [/betrivers|bet rivers/i, 'BR'], [/bet365/i, '365'], [/fanatics/i, 'FAN'], [/espn\s*bet/i, 'ESPN'], [/hard\s*rock/i, 'HR'], [/bally/i, 'BLY'], [/bovada/i, 'BOV'], [/betonline/i, 'BOL'], [/betus/i, 'BUS'], [/mybookie/i, 'MB'], [/fliff/i, 'FLF'], [/lowvig/i, 'LV'], [/betanysports/i, 'BAS']];
+  const BOOK_CODES = [[/draftkings/i, 'DK'], [/fanduel/i, 'FD'], [/betmgm|mgm/i, 'MGM'], [/caesars/i, 'CZR'], [/betrivers|bet rivers/i, 'BR'], [/bet365/i, '365'], [/fanatics/i, 'FAN'], [/espn\s*bet/i, 'ESPN'], [/hard\s*rock/i, 'HR'], [/bally/i, 'BLY'], [/bovada/i, 'BOV'], [/betonline/i, 'BOL'], [/betus/i, 'BUS'], [/mybookie/i, 'MB'], [/fliff/i, 'FLF'], [/lowvig/i, 'LV'], [/betanysports/i, 'BAS']]; // source-brand:allow (sportsbook names)
   function bookMark(name) { const n = String(name || ''); for (const [re, code] of BOOK_CODES) if (re.test(n)) return code; const w = n.replace(/[^a-z0-9 ]/gi, '').trim().split(/\s+/); return (w.length > 1 ? w[0][0] + w[1][0] : String(w[0] || '??').slice(0, 2)).toUpperCase(); }
 
   /* ------------------------------------------------------------ filters */

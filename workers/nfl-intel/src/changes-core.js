@@ -286,7 +286,7 @@ export function injuryChange(row, game) {
     actionable,
     observed_at: row.updated_at,
     observed_basis: 'SOURCE_TIMESTAMP',
-    source: { provider: 'espn_injury_report', label: 'ESPN injury report' },
+    source: { name: 'PropSports', provider: 'espn_injury_report', label: 'PropSports injury report' },
     headline: `${row.player.name} (${pos}${row.team.abbreviation}) — ${row.status.replace(/_/g, ' ')}`,
     /* ESPN's own note, carried verbatim and attributed. It is the source's
        sentence, not ours, and the UI says so. */

@@ -187,7 +187,7 @@ function countStates(states) {
  */
 export async function gameView({ res, send, sb, secret, query = {}, resolveAccess, driversFrom, nowMs = Date.now() }) {
   const espnId = String(query.espn_id ?? query.event ?? '').trim();
-  if (!ESPN_GAME_RE.test(espnId)) return send(res, 400, { error: 'invalid_espn_id', expected: 'ESPN game id' });
+  if (!ESPN_GAME_RE.test(espnId)) return send(res, 400, { error: 'invalid_espn_id', expected: 'event id' });
 
   let access;
   try { access = await resolveAccess(); } catch (_) { access = { tier: 'unavailable' }; }

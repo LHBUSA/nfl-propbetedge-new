@@ -371,10 +371,10 @@ export function composeCareer({ player, currentSeason, currentRows, currentAvail
     game_log: gameLogOut(rows),
     excluded_events: A(player?.excluded_events),
     source: {
-      identity: 'ESPN athlete id (GSIS audited against nflverse); never joined on name',
-      history: { provider: 'espn_athlete_gamelog', generated_at: historyMeta?.generated_at || null, through_season: historyMeta?.history_through_season || null },
-      current_season: { provider: 'espn_athlete_gamelog', season: currentSeason, fetched_at: currentFetchedAt || null },
-      live: { provider: 'espn_site_summary_boxscore', fetched_at: boxFetchedAt || null, semantics: 'current through the latest provider-published box score' }
+      identity: 'verified athlete id (GSIS audited against nflverse); never joined on name',
+      history: { name: 'PropSports', provider: 'espn_athlete_gamelog', generated_at: historyMeta?.generated_at || null, through_season: historyMeta?.history_through_season || null },
+      current_season: { name: 'PropSports', provider: 'espn_athlete_gamelog', season: currentSeason, fetched_at: currentFetchedAt || null },
+      live: { name: 'PropSports', provider: 'espn_site_summary_boxscore', fetched_at: boxFetchedAt || null, semantics: 'current through the latest provider-published box score' }
     },
     last_updated: new Date(now).toISOString()
   };

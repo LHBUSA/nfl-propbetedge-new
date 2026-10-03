@@ -42,7 +42,7 @@ export const FORBIDDEN_SUBSTRINGS = [
   'sp_plus', 'spplus', 'fpi', 'talent', 'recruit',
   'ppa', 'epa', 'wepa', 'elo', 'srs',
   'passing', 'rushing', 'receiving', 'tackles', 'yards', 'touchdown', 'usage', 'snaps',
-  'cfbd', 'espn', 'athlete_id', 'athleteid', 'crosswalk',
+  'cfbd', 'espn', 'athlete_id', 'athleteid', 'crosswalk', // source-brand:allow (internal key filter list, never serialized)
   'spread', 'moneyline', 'over_under',
 ];
 

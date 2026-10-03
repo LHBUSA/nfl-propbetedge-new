@@ -30,7 +30,7 @@
     {re:/betrivers|bet rivers/i,code:'BR',domain:'betrivers.com'},
     {re:/bet365/i,code:'365',domain:'bet365.com'},
     {re:/fanatics/i,code:'FAN',domain:'sportsbook.fanatics.com'},
-    {re:/espn\s*bet/i,code:'ESPN',domain:'espnbet.com'},
+    {re:/espn\s*bet/i,code:'ESPN',domain:'espnbet.com'}, // source-brand:allow (sportsbook name)
     {re:/hard\s*rock/i,code:'HR',domain:'hardrock.bet'},
     {re:/bally/i,code:'BLY',domain:'ballybet.com'},
     {re:/bovada/i,code:'BOV',domain:'bovada.lv'},

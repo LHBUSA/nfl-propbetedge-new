@@ -5,9 +5,9 @@
   const PUBLIC_DATA_LABEL='PropSports.PropTechUSA.ai';
   const LABELS=new Map([
     ['ESPN_CDN_GAMEPACKAGE',PUBLIC_DATA_LABEL],
-    ['ESPN CDN GAMEPACKAGE',PUBLIC_DATA_LABEL],
+    ['ESPN CDN GAMEPACKAGE',PUBLIC_DATA_LABEL], // source-brand:allow (scrub map: rewrites lane names to the PropSports label)
     ['ESPN_CDN_SCOREBOARD',PUBLIC_DATA_LABEL],
-    ['ESPN CDN SCOREBOARD',PUBLIC_DATA_LABEL],
+    ['ESPN CDN SCOREBOARD',PUBLIC_DATA_LABEL], // source-brand:allow (scrub map: rewrites lane names to the PropSports label)
     ['espn_cdn_gamepackage',PUBLIC_DATA_LABEL],
     ['espn_cdn_scoreboard',PUBLIC_DATA_LABEL]
   ]);

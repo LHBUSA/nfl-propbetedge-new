@@ -151,7 +151,7 @@ export default async function handler(req, res) {
       { name: 'National Weather Service active alerts', url: 'https://api.weather.gov/',
         licence: 'US Government public domain',
         attribution: 'Official alerts from the National Weather Service' },
-      { name: 'ESPN public scoreboard', url: SCOREBOARD, licence: 'public endpoint' }
+      { name: 'PropSports scoreboard', url: 'https://propsports.proptechusa.ai', licence: 'PropSports data' }
     ],
     venue_registry: { teams: Object.keys(venues().teams).length,
                       source: 'data/dist/nfl-venues.json' },

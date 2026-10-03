@@ -197,8 +197,8 @@
     const venue = [game?.venue?.name, [game?.venue?.city, game?.venue?.state].filter(Boolean).join(', ')]
       .filter(Boolean).join(' · ');
     const tv = window.PBEBroadcast?.slot?.({ event: game.id, away: away?.display_name, home: home?.display_name, lead: ' · ' }) || '';
-    const provider = String(state.detail?.source?.provider || state.scoreboard?.source?.provider || '');
-    const source = /espn/i.test(provider) ? 'ESPN' : provider ? provider.replace(/_/g, ' ').toUpperCase() : 'NFL live source';
+    // Customer data brand is PropSports; the collection lane (source.provider) stays in the API provenance.
+    const source = 'DATA · PropSports';
 
     return `<section class="pbe7-hero" style="--pbe7-away:#${esc(String(away?.color || '15263d').replace('#',''))};--pbe7-home:#${esc(String(home?.color || '31233f').replace('#',''))}">
       <div class="pbe7-hero-noise"></div>

@@ -134,7 +134,8 @@
       const board = await fetchJson(`${API}/api/odds/board?event_id=${encodeURIComponent(eventId)}&markets=player_pass_yds`);
       const event = board.event || {};
       const semantics = board?.source?.semantics || 'UNAVAILABLE';
-      const provider = board?.source?.provider || 'unknown';
+      // Customer data brand: the market collection lane stays in the API provenance (source.provider).
+      const provider = board?.source?.provider ? 'PropSports Market Feed' : 'unknown';
       const away = event.away_team || event.away || 'Away';
       const home = event.home_team || event.home || 'Home';
       const updated = board.provider_last_update || board.updated_at;
@@ -272,7 +273,7 @@
         .sort((a,b) => Math.abs(num(b.fair_line_gap_yards)) - Math.abs(num(a.fair_line_gap_yards)))
         .slice(0,2);
 
-      card.innerHTML = `<div class="pbe-v2-market-card-head"><strong>Market Pulse</strong><span class="${semantics === 'LIVE' ? 'pbe-v2-status-live' : ''}">${esc(semantics)} · ${esc(board?.source?.provider || 'provider')}</span></div>
+      card.innerHTML = `<div class="pbe-v2-market-card-head"><strong>Market Pulse</strong><span class="${semantics === 'LIVE' ? 'pbe-v2-status-live' : ''}">${esc(semantics)} · ${board?.source?.provider ? 'PropSports Market Feed' : 'provider'}</span></div>
         <div class="pbe-v2-market-content">
           <div class="pbe-v2-pulse-event">${esc(away)} @ ${esc(home)}</div>
           <div class="pbe-v2-pulse-meta">Passing-yard market · updated ${esc(formatTime(board.provider_last_update || board.updated_at))}</div>

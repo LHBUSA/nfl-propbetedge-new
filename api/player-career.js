@@ -91,14 +91,14 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') { res.statusCode = 204; res.setHeader('access-control-allow-origin', '*'); return res.end(); }
   if (req.method !== 'GET') return send(res, 405, { ok: false, error: 'method_not_allowed' });
   const espnId = String(req.query?.espn_id || '').trim();
-  if (!/^\d{1,12}$/.test(espnId)) return send(res, 400, { ok: false, error: 'espn_id_required', detail: 'identity is the ESPN athlete id; names are never accepted' });
+  if (!/^\d{1,12}$/.test(espnId)) return send(res, 400, { ok: false, error: 'espn_id_required', detail: 'identity is the verified athlete id (espn_id, deprecated alias of player_id); names are never accepted' });
 
   let data;
   try { data = ledger(); } catch (e) { return send(res, 503, { ok: false, error: 'career_ledger_unavailable', detail: String(e?.message || e) }); }
   const player = data.players?.[espnId];
   if (!player) {
     return send(res, 404, { ok: false, error: 'not_tracked', espn_id: espnId,
-      unavailable_reason: 'this ESPN athlete id is not in the Career Ledger (QB/RB/WR/TE Player DNA players only); nothing is matched by name' }, 'public, s-maxage=300');
+      unavailable_reason: 'this athlete id is not in the Career Ledger (QB/RB/WR/TE Player DNA players only); nothing is matched by name' }, 'public, s-maxage=300');
   }
 
   /* Which season is current comes from the season authority, not a calendar. */

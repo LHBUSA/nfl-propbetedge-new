@@ -184,7 +184,7 @@ async function buildSeasonAndGames() {
     team_schedule_window: schedule ? schedule.window : null,
     window: rangeAround(),
     last_updated: new Date().toISOString(),
-    source: { provider: 'espn_site_scoreboard', via: 'nfl.propbetedge.ai/api/nfl-live?range', transport: 'poll' }
+    source: { name: 'PropSports', provider: 'espn_site_scoreboard', via: 'nfl.propbetedge.ai/api/nfl-live?range', transport: 'poll' }
   };
   const slate = {
     ok: true,
@@ -257,7 +257,7 @@ async function buildStandings(season) {
        finished regular-season games the standings actually rest on. */
     completed_games: Math.round(played / 2),
     last_updated: new Date().toISOString(),
-    source: { provider: 'espn_site_standings', via: 'nfl.propbetedge.ai/api/nfl-live?standings', level: 'division', derived_from: 'completed regular-season results' }
+    source: { name: 'PropSports', provider: 'espn_site_standings', via: 'nfl.propbetedge.ai/api/nfl-live?standings', level: 'division', derived_from: 'completed regular-season results' }
   };
 }
 
@@ -387,7 +387,7 @@ function statsPayload(acc, season, meta) {
     games_pending: meta.pendingCount,
     categories,
     last_updated: acc?.__updated || new Date().toISOString(),
-    source: { provider: 'espn_site_summary', via: 'nfl.propbetedge.ai/api/nfl-live?event', derived_from: 'published box scores of completed regular-season games' }
+    source: { name: 'PropSports', provider: 'espn_site_summary', via: 'nfl.propbetedge.ai/api/nfl-live?event', derived_from: 'published box scores of completed regular-season games' }
   };
 }
 
@@ -425,7 +425,7 @@ function currentPlayer(acc, espnId, teamHint, season, meta) {
     espn_id: id || null,
     team: { abbreviation: team || null, completed_games: teamCompleted },
     league: { completed_games: meta.finalsCount, teams_with_a_completed_game: Object.keys(teams).length },
-    source: { provider: 'espn_site_summary', via: 'nfl.propbetedge.ai/api/nfl-live?event', derived_from: 'published box scores of completed regular-season games' },
+    source: { name: 'PropSports', provider: 'espn_site_summary', via: 'nfl.propbetedge.ai/api/nfl-live?event', derived_from: 'published box scores of completed regular-season games' },
     last_updated: (acc && acc.__updated) || new Date().toISOString()
   };
 
@@ -516,7 +516,7 @@ function scoresPayload(ledger, season) {
     count: games.length,
     live_count: games.filter(g => g.semantics === 'LIVE').length,
     final_count: games.filter(g => g.semantics === 'FINAL').length,
-    source: { provider: 'espn_site_scoreboard', via: 'nfl.propbetedge.ai/api/nfl-live?range', semantics: 'SCOREBOARD', ledger: 'merged across refresh windows' },
+    source: { name: 'PropSports', provider: 'espn_site_scoreboard', via: 'nfl.propbetedge.ai/api/nfl-live?range', semantics: 'SCOREBOARD', ledger: 'merged across refresh windows' },
     last_updated: ledger?.updated || new Date().toISOString(),
     games
   };

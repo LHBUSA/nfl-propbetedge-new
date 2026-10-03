@@ -10,7 +10,7 @@
     "node": ">=18"
   },
   "scripts": {
-    "test": "node --test tests/nfl-auth.test.mjs",
+    "test": "node scripts/guard-source-brand.mjs && node --test tests/nfl-auth.test.mjs tests/source-brand.test.mjs",
     "test:research": "node --test research/*.test.mjs",
     "verify-deploy-target": "node scripts/verify-deploy-target.mjs",
     "deploy:preview": "node scripts/verify-deploy-target.mjs && vercel deploy --scope justins-projects-ad4f4bb7",
@@ -19,6 +19,7 @@
     "test:engine": "node --test \"workers/nfl-picks-engine-shared/tests/*.test.mjs\"",
     "test:td": "node --test tests/nfl-td-targets.test.mjs",
     "td:build": "node scripts/build-td-model-v1.mjs",
-    "td:verify": "node scripts/build-td-model-v1.mjs --check"
+    "td:verify": "node scripts/build-td-model-v1.mjs --check",
+    "guard": "node scripts/guard-source-brand.mjs"
   }
 }

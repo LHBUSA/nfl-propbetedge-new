@@ -102,7 +102,7 @@ function shapeEvent(ev) {
     // our own table is authoritative; ESPN's flag is kept for comparison
     roof_source: v ? 'pbe_venue_table' : 'espn_only',
     surface: v ? (v.grass ? 'grass' : 'artificial') : null,
-    surface_source: v ? 'pbe_venue_table (ESPN teams API grass flag)' : null,
+    surface_source: v ? 'pbe_venue_table (turf flag)' : null,
     // real team identities for the matchup line - never letter badges
     home: teamBlock(homeAbbr, home.team.displayName),
     away: teamBlock(awayAbbr, away.team.displayName),
@@ -282,7 +282,7 @@ export default async function handler(req, res) {
     build_hint: 'replace PLAYER_ID with a GSIS id and GET /api/qb-dna/compare?<query>',
     sources: {
       schedule: SCOREBOARD,
-      venue: 'PropBetEdge venue table (ESPN teams API + Open-Meteo geocoding)',
+      venue: 'PropBetEdge venue table (PropSports teams + Open-Meteo geocoding)',
       weather: indoor ? null : 'Open-Meteo forecast API',
       markets: 'existing PropBetEdge market source'
     },

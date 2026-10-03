@@ -351,14 +351,14 @@ export default async function handler(req,res){
         season:N(raw?.season?.year)??N(meta?.season?.year),
         season_type:N(raw?.season?.type)??N(meta?.season?.type),
         week:N(raw?.week?.number)??N(meta?.week),
-        source:{provider:ranged.provider,semantics:'SCOREBOARD',fetched_at:new Date().toISOString(),transport:'poll'},
+        source:{name:'PropSports',provider:ranged.provider,semantics:'SCOREBOARD',fetched_at:new Date().toISOString(),transport:'poll'},
         games},slateView?(anyLive?'public, s-maxage=3':'public, s-maxage=30, stale-while-revalidate=60'):'no-store');
     }
     if(standingsSeason){
       if(!/^\d{4}$/.test(standingsSeason))return send(res,400,{ok:false,error:'invalid_season'});
       const raw=await upstream(`${SITE_V2}/standings?season=${encodeURIComponent(standingsSeason)}&level=3`);
       return send(res,200,{ok:true,mode:'standings',season:Number(standingsSeason),
-        source:{provider:'espn_site_standings',fetched_at:new Date().toISOString(),level:'division'},
+        source:{name:'PropSports',provider:'espn_site_standings',fetched_at:new Date().toISOString(),level:'division'},
         standings:raw},'no-store');
     }
 
