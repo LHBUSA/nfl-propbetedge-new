@@ -77,14 +77,21 @@
      Params are read from the query string, and also from a query appended to
      the hash (#propboard?player=...) so a link can carry both without the
      server ever seeing it. The routing contract itself is unchanged: nav()
-     still takes a route, and VIEWS still maps route -> renderer. */
-  function readParams() {
+     still takes a route, and VIEWS still maps route -> renderer.
+
+     A hash query belongs to the route it is written on. nav() reads params
+     before it rewrites the hash, so without the route check a
+     #pbecast?game=<id> link would follow the reader into What Changed or
+     PropChain (both read ?game=) on the next click. */
+  function readParams(route) {
     const out = {};
     try {
       new URLSearchParams(location.search).forEach((v, k) => { out[k] = v; });
       const hash = String(location.hash || '').replace(/^#/, '');
       const q = hash.indexOf('?');
-      if (q > -1) new URLSearchParams(hash.slice(q + 1)).forEach((v, k) => { out[k] = v; });
+      const owner = q > -1 ? hash.slice(0, q).trim().toLowerCase() : '';
+      const own = !route || (aliases[owner] || owner || 'home') === route;
+      if (q > -1 && own) new URLSearchParams(hash.slice(q + 1)).forEach((v, k) => { out[k] = v; });
     } catch (_) {}
     return out;
   }
@@ -135,7 +142,7 @@
     nav(route, options = {}) {
       const view = this.normalize(route);
       this.current = view;
-      this.params = readParams();
+      this.params = readParams(view);
 
       document.querySelectorAll('.sidebar-nav .nav-item').forEach(el => el.classList.remove('active'));
       document.getElementById(`nav-${view}`)?.classList.add('active');

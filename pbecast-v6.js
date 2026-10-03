@@ -96,7 +96,69 @@
     }catch(_){}
   }
   function persist(){try{localStorage.setItem(SOUND_KEY,state.sound?'1':'0');if(state.activeId&&state.explicit)localStorage.setItem(ACTIVE_KEY,String(state.activeId))}catch(_){}
-    try{if(state.activeId&&state.explicit)sessionStorage.setItem(SELECTED_KEY,JSON.stringify({game_id:String(state.activeId),kickoff:state.activeKickoff||null}))}catch(_){}}
+    try{if(state.activeId&&state.explicit)sessionStorage.setItem(SELECTED_KEY,JSON.stringify({game_id:String(state.activeId),kickoff:state.activeKickoff||null}))}catch(_){}
+    reflectUrl()}
+
+  /* URL DEEP LINK. https://nfl.propbetedge.ai/#pbecast?game=<ESPN event id>
+     (?game= in the query string is accepted too) is PBEGameHandoff.open(id,
+     {source:'deeplink'}) for a reader arriving from outside this tab, where
+     the session handoff cannot reach. takeUrlGame() yields exactly the request
+     take() would, and it goes through the same explicit-selection path in
+     takeFocus(). It is consumed once per distinct URL value (urlSeen), read
+     from the live location rather than App.params, so a replayed mount never
+     drags the reader back from a game they chose later.
+     Once a selection is EXPLICIT the address bar carries it (reflectUrl), so
+     the URL is always a shareable link to the open game. Default mode writes
+     nothing: pinning an auto-chosen game into the URL would turn it into an
+     explicit selection on reload, which default mode must never become.
+     A malformed id is dropped from the URL and ignored. An id the source does
+     not know (upstream 404 on its first read) reverts to exactly what plain
+     #pbecast would have shown, with no error state (deepLinkMissed). */
+  let urlSeen=null;
+  function urlGame(){
+    let v=null;
+    try{const h=String(location.hash||'').replace(/^#/,''),q=h.indexOf('?');
+      if(q>-1)v=new URLSearchParams(h.slice(q+1)).get('game');
+      if(v==null)v=new URLSearchParams(location.search).get('game')}catch(_){}
+    return v==null?null:String(v).trim();
+  }
+  function onRoute(){try{const h=String(location.hash||'');return window.App?.normalize?window.App.normalize(h)==='pbecast':/^#pbecast(?:\?|$)/i.test(h)}catch(_){return false}}
+  function writeHash(hash){
+    if(!onRoute())return;
+    try{const u=new URL(location.href);u.searchParams.delete('game');u.hash=hash;if(u.href!==location.href)history.replaceState(history.state,'',u.href)}catch(_){}
+  }
+  function reflectUrl(){
+    if(!state.activeId||!state.explicit||!onRoute())return;
+    urlSeen=String(state.activeId);
+    writeHash(`pbecast?game=${encodeURIComponent(state.activeId)}`);
+  }
+  const validGameId=v=>window.PBEGameHandoff?.validId?window.PBEGameHandoff.validId(v):/^\d{6,12}$/.test(String(v??'').trim());
+  function takeUrlGame(){
+    const v=urlGame();
+    if(v==null||v===urlSeen)return null;
+    urlSeen=v;
+    if(!validGameId(v)){writeHash('pbecast');return null}
+    return {game_id:v,kickoff:null,play_id:null,source:'deeplink',at:Date.now()};
+  }
+  /* What the deep link replaced, so an unknown id can be undone exactly. */
+  function snapshotSelection(){
+    let sel=null,pref=null;
+    try{sel=sessionStorage.getItem(SELECTED_KEY)}catch(_){}
+    try{pref=localStorage.getItem(ACTIVE_KEY)}catch(_){}
+    return {activeId:state.activeId,activeKickoff:state.activeKickoff,explicit:state.explicit,sel,pref};
+  }
+  function deepLinkMissed(){
+    const p=state.deepLinkProbe?.prev;state.deepLinkProbe=null;if(!p)return false;
+    const put=(store,k,v)=>{try{if(v==null)store.removeItem(k);else store.setItem(k,v)}catch(_){}};
+    try{put(sessionStorage,SELECTED_KEY,p.sel)}catch(_){}
+    try{put(localStorage,ACTIVE_KEY,p.pref)}catch(_){}
+    dropLanes(Object.keys(lanes));
+    state.activeId=p.activeId;state.activeKickoff=p.activeKickoff;state.explicit=!!(p.explicit&&p.activeId);
+    state.preferredId=p.pref;state.unavailable=null;state.focusPlayId=null;resetGame();
+    if(state.explicit)reflectUrl();else writeHash('pbecast');
+    patchAll();refresh();
+    return true;
+  }
 
   function ensureAudio(){
     const C=window.AudioContext||window.webkitAudioContext;if(!C)return null;
@@ -765,6 +827,7 @@
         applyLive(d,{sound:false});
         if(String(d?.game?.id||'')===String(state.activeId)){
           state.unavailable=null;
+          if(state.deepLinkProbe?.id===String(state.activeId))state.deepLinkProbe=null;   // the deep-linked game is real
           /* first time this game's kickoff is known: the board may belong to another week */
           if(!state.activeKickoff&&d.game.date){state.activeKickoff=d.game.date;persist();if(boardContext().url!==state.boardUrl){dropLanes(['board']);syncBoard()}
             /* the fast lane was waiting for this date; the hero's venue and records come from it */
@@ -775,6 +838,8 @@
     }catch(error){
       if(error?.name!=='AbortError'){
         state.error=error instanceof Error?error.message:String(error);
+        /* a deep-linked id the source does not know: back to plain #pbecast, no error state */
+        if(!state.detail&&state.deepLinkProbe?.id===String(state.activeId)&&/upstream_404/.test(state.error)&&deepLinkMissed())return;
         /* an honest unavailable state for the SELECTED game; never a substitute */
         if(!state.detail&&state.activeId){state.unavailable={id:String(state.activeId),reason:state.error};patchAll()}
       }
@@ -840,6 +905,7 @@
     const next=String(id??'').trim();if(!/^\d+$/.test(next))return;
     const same=next===String(state.activeId);
     if(explicit)state.explicit=true;
+    if(!same)state.deepLinkProbe=null;
     if(kickoff)state.activeKickoff=kickoff;
     if(play_id)state.focusPlayId=String(play_id);
     if(same){persist();return}
@@ -872,6 +938,7 @@
       // cannot cross the subdomain boundary, so ?event=<ESPN id>#pbecast is the
       // canonical explicit-game handoff.
       f=window.PBEGameHandoff?.take?.()||null;
+      if(!f)f=takeUrlGame();
       if(!f){
         const eventId=String(window.App?.params?.event||new URLSearchParams(location.search).get('event')||'').trim();
         if(/^\d{6,12}$/.test(eventId)){
@@ -883,6 +950,7 @@
     }catch(_){f=null}
     if(!f||!/^\d+$/.test(String(f.game_id||'')))return null;
     const id=String(f.game_id);
+    state.deepLinkProbe=f.source==='deeplink'&&id!==String(state.activeId)?{id,prev:snapshotSelection()}:null;
     if(id!==String(state.activeId)){dropLanes(Object.keys(lanes));state.activeId=id;state.activeKickoff=f.kickoff||null;state.unavailable=null;resetGame()}
     else if(f.kickoff)state.activeKickoff=f.kickoff;
     state.explicit=true;state.focusPlayId=f.play_id?String(f.play_id):null;persist();
@@ -896,9 +964,22 @@
     stopLegacyTransports();stopLanes();
     /* the schedule row and the forecast: each one memoized read, shared with Games */
     window.PBEBroadcast?.load?.();window.PBEGameContext?.load?.();
-    state.date=sportsDay();restore();takeFocus();ensureRoot();patchAll();
+    state.date=sportsDay();restore();takeFocus();reflectUrl();ensureRoot();patchAll();
     await refresh(true);
   }
+  /* A deep link pasted into a tab already on PBEcast changes only the hash, so
+     the router (same route) does nothing. It is the same request as any other
+     surface's: PBEGameHandoff.open. An id already consumed, or the game this
+     page itself wrote into the URL, is not a new request. */
+  window.addEventListener('hashchange',()=>{
+    if(!mounted()||!onRoute())return;
+    const v=urlGame();
+    if(v==null||v===urlSeen)return;
+    urlSeen=v;
+    if(!validGameId(v)){writeHash('pbecast');return}
+    if(v===String(state.activeId)&&state.explicit){reflectUrl();return}
+    window.PBEGameHandoff?.open?.(v,{source:'deeplink'});
+  });
 
   /* A hidden tab should not hold a 2.5s loop open against the live feed, and a
      tab coming back must not show a minutes-old score while it waits for the
@@ -944,6 +1025,6 @@
     return true;
   }
 
-  window.PBEcastV6={state,load,refresh,focus,select,chooseActive,boardContext,stateUrl,toggleSound,takeFocus,stopLegacyTransports,telemetry,envHtml,patchFreshness,lanes,winSeries,situationFacts,possessionTeam,fieldPositionText,heroHtml,promoteGame,toggleFeed,liveFeedHtml};
+  window.PBEcastV6={state,load,refresh,focus,select,chooseActive,urlGame,reflectUrl,takeUrlGame,deepLinkMissed,boardContext,stateUrl,toggleSound,takeFocus,stopLegacyTransports,telemetry,envHtml,patchFreshness,lanes,winSeries,situationFacts,possessionTeam,fieldPositionText,heroHtml,promoteGame,toggleFeed,liveFeedHtml};
   if(!install())document.addEventListener('DOMContentLoaded',install,{once:true});
 })();
