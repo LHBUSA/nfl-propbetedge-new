@@ -56,7 +56,7 @@
   function sourcePanel(s) {
     const c = s?.championship || null;
     return `<section class="pbe8-awards">
-      <div class="pbe8-panel-head"><strong>Source record</strong><span>Wikidata · CC0</span></div>
+      <div class="pbe8-panel-head"><strong>Source record</strong><span>DATA · PropSports</span></div>
       <div class="pbe8-award-row"><div class="pbe8-award-label">Season item</div><div class="pbe8-award-value">${esc(s?.qid || '—')}</div></div>
       <div class="pbe8-award-row"><div class="pbe8-award-label">Season label</div><div class="pbe8-award-value">${esc(s?.label || '—')}</div></div>
       <div class="pbe8-award-row"><div class="pbe8-award-label">Championship</div><div class="pbe8-award-value">${esc(c?.name || 'Not carried for this season')}</div></div>
@@ -149,7 +149,7 @@
         <h1 class="pbe8-title">Every season tells<br><em>a sourced story.</em></h1>
         <div class="pbe8-copy">Browse the verified NFL season spine and sourced Super Bowl winners from the PropBetEdge history graph. Every displayed fact comes from the versioned CC0 release snapshot; unsupported legacy fields are not guessed back into the page.</div>
         <div class="pbe8-badges">
-          <span class="pbe8-badge gold">WIKIDATA · CC0</span>
+          <span class="pbe8-badge gold">DATA · PROPSPORTS</span>
           <span class="pbe8-badge">${rows.length} NFL seasons</span>
           <span class="pbe8-badge">${min}–${max}</span>
           <span class="pbe8-badge">${esc(sourceAge())}</span>

@@ -1030,8 +1030,7 @@
         <h4>Data provenance</h4>
         <div class="q2-prov">
           <span>GSIS <b>${esc(pl.gsis_id || '—')}</b></span>
-          <span>ESPN <b>${esc(pl.espn_id || '—')}</b></span>
-          <span>PFR <b>${esc(pl.pfr_id || '—')}</b></span>
+          <span>Player ID <b>${esc(pl.espn_id || '—')}</b></span>
           <span>resolved by <b>${esc(pl.matched_by || '—')}</b></span>
           <span>snapshot <b>${esc(p.dataset_generated_at)}</b></span>
         </div>

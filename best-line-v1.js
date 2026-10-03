@@ -308,7 +308,7 @@
     } else if (id.status === 'verified') {
       const ok = id.headshot_url && !state.failedPhotos.has(id.espn_id);
       photo = ok
-        ? `<span class="pbeblp-photo"><img src="${esc(id.headshot_url)}" alt="${esc(id.name)} headshot" width="56" height="56" loading="lazy" decoding="async" data-blp-espn="${esc(id.espn_id)}"></span>`
+        ? `<span class="pbeblp-photo"><img src="${esc(id.headshot_url)}" alt="${esc(id.name)} headshot" width="56" height="56" loading="lazy" decoding="async" ${''/* source-brand:allow (DOM data-attribute name, not copy) */}data-blp-espn="${esc(id.espn_id)}"></span>`
         : '<span class="pbeblp-photo is-missing" role="img" aria-label="Photo unavailable"><i aria-hidden="true">Photo<br>unavailable</i></span>';
       const logo = teamLogo(id.team);
       meta = `${logo ? `<img class="pbeblp-mini-crest" src="${esc(logo)}" alt="" width="16" height="16" loading="lazy" decoding="async">` : ''}${esc(id.team)} · ${esc(id.position)}`;

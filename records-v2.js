@@ -139,7 +139,7 @@
         <h1 class="pbe10-title">Records that<br><em>outlive the moment.</em></h1>
         <div class="pbe10-copy">This restored record book is intentionally narrower than the retired unsourced version. It publishes only championship records derivable from the same CC0 release snapshot: title counts, championship venues and the Super Bowl timeline. Player career records return when a rights-clean statistical lane supports them.</div>
         <div class="pbe10-badges">
-          <span class="pbe10-badge red">WIKIDATA · CC0</span>
+          <span class="pbe10-badge red">DATA · PROPSPORTS</span>
           <span class="pbe10-badge">${gameCount} sourced championship results</span>
           <span class="pbe10-badge">${titles.length} winning team labels</span>
           <span class="pbe10-badge">${top ? `${esc(top.name)} · ${top.count} wins` : 'No leader'}</span>

@@ -160,7 +160,7 @@
           <h1 class="pbe11-title">Every sourced champion.<br><em>No invented box score.</em></h1>
           <div class="pbe11-copy">A championship archive from the PropBetEdge history release: Super Bowl identity, winner, decision date and venue only where carried by the CC0 source. Runner-up, score, MVP and narrative notes stay absent until a rights-clean lane supports them.</div>
           <div class="pbe11-badges">
-            <span class="pbe11-badge blue">WIKIDATA · CC0</span>
+            <span class="pbe11-badge blue">DATA · PROPSPORTS</span>
             <span class="pbe11-badge">${all.length} championship results</span>
             <span class="pbe11-badge">${years.length ? Math.min(...years) : '—'}–${years.length ? Math.max(...years) : '—'}</span>
             <span class="pbe11-badge">${esc(sourceAge())}</span>

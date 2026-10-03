@@ -783,8 +783,7 @@
         <h4>Data provenance</h4>
         <div class="q2-prov">
           <span>GSIS <b>${esc(state.dna.player.gsis_id || '—')}</b></span>
-          <span>ESPN <b>${esc(state.dna.player.espn_id || '—')}</b></span>
-          <span>PFR <b>${esc(state.dna.player.pfr_id || '—')}</b></span>
+          <span>Player ID <b>${esc(state.dna.player.espn_id || '—')}</b></span>
           <span>resolved by <b>${esc(state.dna.player.matched_by || '—')}</b></span>
           <span>snapshot <b>${esc(p.dataset_generated_at)}</b></span>
         </div>

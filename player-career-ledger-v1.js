@@ -250,7 +250,7 @@
     const sub = hs === 'ROOKIE_NO_PRIOR_HISTORY'
       ? [p.player?.position, regSeasons ? `${p.career_span?.from} only` : 'no NFL game yet']
       : [p.player?.position, span, `${regSeasons} seasons`];
-    return `<section class="pbe-car${p.live ? ' is-live' : ''}" ${MARK} data-cl-label="${esc(p.label)}" data-cl-state="${esc(hs)}" data-cl-espn="${esc(p.player?.espn_id)}">
+    return `<section class="pbe-car${p.live ? ' is-live' : ''}" ${MARK} data-cl-label="${esc(p.label)}" data-cl-state="${esc(hs)}" ${''/* source-brand:allow (DOM data-attribute name, not copy) */}data-cl-espn="${esc(p.player?.espn_id)}">
       <div class="pbe-car-head">
         <div><span class="pbe-car-eyebrow${hs === 'CAREER' ? '' : hs === 'ROOKIE_NO_PRIOR_HISTORY' ? ' is-rookie' : ' is-tracked'}">${esc(displayLabel(p))}</span>
           <span class="pbe-car-sub">${esc(sub.filter(Boolean).join(' · '))}</span></div>

@@ -543,7 +543,7 @@
 
   /* A placeholder any template can drop in; filled when the card lands. */
   function slot({ away, home, espnId, surface = 'matchup' }) {
-    return `<div data-pbec-slot data-away="${esc(away || '')}" data-home="${esc(home || '')}" data-espn="${esc(espnId || '')}" data-surface="${esc(surface)}"></div>`;
+    return `<div data-pbec-slot data-away="${esc(away || '')}" data-home="${esc(home || '')}" data-espn="${esc(espnId || '')}" data-surface="${esc(surface)}"></div>`; // source-brand:allow (DOM data-attribute name, not copy)
   }
   function fillSlots() {
     document.querySelectorAll('[data-pbec-slot]').forEach(el => {
