@@ -186,7 +186,7 @@ export function kalshiCard(entry, { placement, colors = {}, compact = false } = 
   }
   return `<section class="ic kx${compact ? ' kx--compact' : ''}" ${attrs(entry, k, placement)} aria-label="Market Pulse: live Kalshi prediction market">
     <header class="kx__hd">
-      <div class="kx__brand"><span class="kx__name">Market Pulse</span><span class="kx__sub">Live prediction market · Kalshi</span></div>
+      <div class="kx__brand"><span class="kx__name">Market Pulse</span><span class="kx__sub">${k.freshness === 'live' ? 'Live prediction market' : k.state === 'settled' ? 'Prediction market · settled' : k.freshness === 'stale' ? 'Prediction market · quote not current' : 'Prediction market'} · Kalshi</span></div>
       ${freshnessBadge(k)}
     </header>
     ${body === null ? fieldList(k, k.outcomes, { placement, movement }) : `<div class="kx__grid" style="--kx-cols:${k.outcomes.length}">${body}</div>`}

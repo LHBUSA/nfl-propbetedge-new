@@ -21,7 +21,8 @@ export function createKalshiClient({ base = 'https://propsports-markets.sales-fd
     board.pending = (async () => {
       try {
         const res = await fetchImpl(`${root}/v1/market-intelligence/sport/${encodeURIComponent(sport)}`, { headers: { accept: 'application/json' } })
-        const body = res.ok ? await res.json() : null
+        if (!res.ok) throw new Error(`board ${res.status}`) // a failed read is never cached as 'no markets'
+        const body = await res.json()
         const byEvent = new Map()
         if (body?.enabled && Array.isArray(body.events)) {
           // live entries AND completed ones (market lifecycle CLOSED/SETTLED with no live block, e.g. a field)
@@ -29,7 +30,7 @@ export function createKalshiClient({ base = 'https://propsports-markets.sales-fd
         }
         board = { at: Date.now(), byEvent, pending: null }
       } catch {
-        board = { at: Date.now(), byEvent: board.byEvent, pending: null }
+        board = { at: 0, byEvent: board.byEvent, pending: null } // failure: keep last good board, retry on the next call
       }
       return board.byEvent
     })()
@@ -49,10 +50,13 @@ export function createKalshiClient({ base = 'https://propsports-markets.sales-fd
       let value = null
       try {
         const res = await fetchImpl(`${root}/v1/market-intelligence/event/${encodeURIComponent(sport)}/${encodeURIComponent(id)}`, { headers: { accept: 'application/json' } })
-        const body = res.ok ? await res.json() : null
+        if (!res.ok) throw new Error(`event ${res.status}`) // a failed read is never cached as 'no market'
+        const body = await res.json()
         value = body?.enabled && (body.event?.kalshi || body.event?.market_history || body.event?.market?.lifecycle) ? body.event : null
       } catch {
-        value = hit?.value ?? null
+        // failure: keep the last good value but do NOT cache it, so the next poll retries immediately
+        events.set(id, { at: 0, value: hit?.value ?? null, pending: null })
+        return hit?.value ?? null
       }
       events.set(id, { at: Date.now(), value, pending: null })
       return value
