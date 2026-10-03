@@ -368,3 +368,61 @@ export function marketModule(entry, opts = {}) {
   if ((lc === 'CLOSED' || lc === 'SETTLED') && entry?.market_history) return marketHistoryCard(entry, opts)
   return kalshiCard(entry, opts)
 }
+
+/* ───────────────────────── ALGO vs MARKET (track records + event pages) ─────────────────────────
+ * Data: GET /v1/algo-vs-market/:sport (algos[].scoreboard / ledger) and /v1/algo-vs-market/event/:sport/:id.
+ * Both opinions frozen at the algorithm lock; agreements never score; only disagreements are contests.
+ * Renders nothing until an algorithm has its first qualifying comparison (no empty scoreboards). */
+const OUTCOME_LABEL = { ALGO_WIN: 'PropBetEdge', MARKET_WIN: 'Market', NEITHER: 'Neither', VOID: 'Void', AGREED_CORRECT: 'Agreed · correct', AGREED_WRONG: 'Agreed · wrong', NOT_SCORED: 'Not scored' }
+const pct = (v) => (v == null ? null : `${v.toFixed(1)}%`)
+const when = (iso) => { const t = Date.parse(iso || ''); return Number.isFinite(t) ? new Date(t).toISOString().slice(0, 10) : '' }
+
+// Display name of an outcome role: the frozen market price label, else the page's resolver, else the stored label.
+const ROLE_WORDS = new Set(['home', 'away', 'draw', 'a', 'b'])
+function avmName(r, role, label, nameOf) {
+  if (!role) return null
+  const priced = r.market?.prices?.[role]?.label
+  if (label && !ROLE_WORDS.has(String(label).toLowerCase())) return label
+  return priced || nameOf?.(r, role) || label || role
+}
+
+function avmRow(r, nameOf) {
+  const algo = avmName(r, r.algo_selection, r.algo_selection_label, nameOf)
+  const mkt = r.market?.selection ? `${avmName(r, r.market.selection, r.market.selection_label, nameOf)} · ${centsLabel(r.market.selection_price_bp, { fixed: true })}` : ''
+  const res = r.result ? (OUTCOME_LABEL[r.result.h2h_outcome] || r.result.h2h_outcome) : r.status === 'LOCKED' ? 'Locked · pending' : 'Pending'
+  return `<tr class="avm__r avm__r--${esc((r.result?.h2h_outcome || r.status || '').toLowerCase())}"><td class="mono">${esc(when(r.algo_lock_at))}</td><td>${esc(r.event_label || r.canonical_event_id)}</td><td>${esc(algo || (r.status === 'LOCKED' ? 'Locked' : '—'))}</td><td class="mono">${esc(mkt || '—')}</td><td>${esc(r.status === 'AGREEMENT' ? 'Agree' : r.status === 'DISAGREEMENT' ? 'Head to head' : r.status === 'LOCKED' ? '—' : r.status.replace(/_/g, ' ').toLowerCase())}</td><td><b>${esc(res)}</b></td></tr>`
+}
+
+/** Track-record module for ONE algorithm (an entry of payload.algos). Empty string until it has a contest. */
+export function algoVsMarketCard(algo, { nameOf = null, recent = 10, ledgerHref = null } = {}) {
+  if (!algo || !algo.scoreboard || !algo.ledger?.length) return ''
+  const s = algo.scoreboard
+  if (!(s.agreements + s.disagreements + s.pending)) return ''
+  const rows = algo.ledger.slice(0, recent).map((r) => avmRow(r, nameOf)).join('')
+  const decided = s.decided || 0
+  return `<section class="ic kx avm" data-avm="${esc(algo.algo_id)}" aria-label="Algo versus market">
+    <header class="kx__hd"><div class="kx__brand"><span class="kx__name">Algo vs Market</span><span class="kx__sub">When the algo and the market disagree, who wins?</span></div></header>
+    <div class="avm__score"><span class="avm__side"><small>PropBetEdge</small><b class="mono">${esc(String(s.algo_wins))}</b></span><span class="avm__dash">—</span><span class="avm__side"><small>Market</small><b class="mono">${esc(String(s.market_wins))}</b></span></div>
+    <p class="avm__line">${esc(String(decided))} decided disagreement${decided === 1 ? '' : 's'}${s.algo_win_rate != null ? ` · algo win rate ${esc(pct(s.algo_win_rate))}` : ''}</p>
+    <dl class="avm__stats"><div><dt>Agreed</dt><dd class="mono">${esc(String(s.agreements))}</dd></div><div><dt>Neither / void</dt><dd class="mono">${esc(String(s.neither + s.void))}</dd></div><div><dt>Pending</dt><dd class="mono">${esc(String(s.pending))}</dd></div></dl>
+    <div class="avm__tw"><table class="avm__t"><thead><tr><th>Lock</th><th>Event</th><th>PBE</th><th>Market at lock</th><th>Type</th><th>Winner</th></tr></thead><tbody>${rows}</tbody></table></div>
+    ${ledgerHref ? `<p class="kx__note"><a href="${esc(ledgerHref)}">Full head-to-head ledger</a></p>` : ''}
+    <p class="kx__note">Both opinions are frozen at the algorithm's lock: the market side is the latest market price we recorded at or before that moment (never later). The market's pick is the outcome with the highest Mid-market. Agreements are recorded but never scored; a third outcome winning counts for neither. Market: Kalshi prediction market. Every comparison is permanent.</p>
+  </section>`
+}
+
+/** Event-page layer: PBE pick vs market at PBE lock (+ result). Empty when no qualifying comparison. */
+export function algoVsMarketEvent(payload, { nameOf = null } = {}) {
+  const r = (payload?.comparisons || []).find((x) => ['AGREEMENT', 'DISAGREEMENT', 'LOCKED'].includes(x.status))
+  if (!r) return ''
+  const algo = avmName(r, r.algo_selection, r.algo_selection_label, nameOf)
+  const mkt = r.market?.selection ? avmName(r, r.market.selection, r.market.selection_label, nameOf) : null
+  const head = r.status === 'LOCKED' ? 'Locked — revealed after the result' : r.status === 'AGREEMENT' ? 'Agreement' : 'Head to head'
+  const res = r.result ? `<p class="avm__verdict"><b>${esc(OUTCOME_LABEL[r.result.h2h_outcome] || r.result.h2h_outcome)}</b>${r.result.h2h_outcome === 'ALGO_WIN' || r.result.h2h_outcome === 'MARKET_WIN' ? ' wins' : ''}</p>` : ''
+  return `<section class="ic kx avm avm--event" aria-label="PropBetEdge pick versus market at lock">
+    <header class="kx__hd"><div class="kx__brand"><span class="kx__name">Algo vs Market</span><span class="kx__sub">${esc(head)} · frozen ${esc(when(r.algo_lock_at))}</span></div></header>
+    <div class="avm__vs"><span><small>${esc(r.algo_label || 'PropBetEdge')}</small><b>${esc(algo || '—')}</b>${r.algo_probability != null ? `<em class="mono">${esc((r.algo_probability * 100).toFixed(1))}%</em>` : ''}</span><span class="avm__dash">vs</span><span><small>Market at PBE lock</small><b>${esc(mkt || '—')}</b>${r.market?.selection_price_bp != null ? `<em class="mono">${esc(centsLabel(r.market.selection_price_bp, { fixed: true }))}</em>` : ''}</span></div>
+    ${res}
+    <p class="kx__note">Market price recorded ${r.market?.snapshot_age_s != null ? `${esc(String(Math.round(r.market.snapshot_age_s / 60)))} min` : ''} before the algorithm locked (Kalshi prediction market). Later market moves never change this contest.</p>
+  </section>`
+}

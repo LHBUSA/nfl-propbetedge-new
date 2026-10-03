@@ -78,7 +78,7 @@
   }
 
   function tieNote(entry) {
-    if (entry?.kalshi?.proposition !== TIE_PROPOSITION) return '';
+    if ((entry?.kalshi?.proposition || entry?.market?.proposition) !== TIE_PROPOSITION) return '';
     return `<p class="kx-nfl-tie"><b>NFL tie rule</b> ${esc(TIE_NOTE)}</p>`;
   }
   /* entry is shown only for the event it belongs to */

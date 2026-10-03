@@ -24,7 +24,8 @@ export function createKalshiClient({ base = 'https://propsports-markets.sales-fd
         const body = res.ok ? await res.json() : null
         const byEvent = new Map()
         if (body?.enabled && Array.isArray(body.events)) {
-          for (const e of body.events) if (e?.event?.canonical_event_id && e.kalshi) byEvent.set(String(e.event.canonical_event_id), e)
+          // live entries AND completed ones (market lifecycle CLOSED/SETTLED with no live block, e.g. a field)
+          for (const e of body.events) if (e?.event?.canonical_event_id && (e.kalshi || e.market?.lifecycle)) byEvent.set(String(e.event.canonical_event_id), e)
         }
         board = { at: Date.now(), byEvent, pending: null }
       } catch {
@@ -49,7 +50,7 @@ export function createKalshiClient({ base = 'https://propsports-markets.sales-fd
       try {
         const res = await fetchImpl(`${root}/v1/market-intelligence/event/${encodeURIComponent(sport)}/${encodeURIComponent(id)}`, { headers: { accept: 'application/json' } })
         const body = res.ok ? await res.json() : null
-        value = body?.enabled && body.event?.kalshi ? body.event : null
+        value = body?.enabled && (body.event?.kalshi || body.event?.market_history || body.event?.market?.lifecycle) ? body.event : null
       } catch {
         value = hit?.value ?? null
       }
