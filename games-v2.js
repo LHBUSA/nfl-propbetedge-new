@@ -378,6 +378,8 @@
       /* the Kalshi board loads alongside the slate and never holds it up */
       const kalshi=loadKalshi();
       const [games,scores]=await Promise.all([loadSchedule(),fetchJson(`${API}/api/scores`).catch(()=>null)]);
+      /* first paint includes the Kalshi line when the board answers within 800 ms (no layout shift); never longer */
+      await Promise.race([kalshi,new Promise(r=>setTimeout(r,800))]);
       state.games=games;
       state.scores=scores;
       renderShell();
