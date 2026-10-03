@@ -11,7 +11,15 @@
  *   PBEcast   LIVE      kalshiStrip(entry, { placement: 'pbecast' }) under the hero
  *             SCHEDULE  the full kalshiCard after the pregame preview row — its own
  *                       section, next to (never inside) the sportsbook MARKET tile
- *   Games     kalshiLine on each not-final game card, from one board read
+ *             FINAL     marketModule -> "How the market closed" (history card) under
+ *                       the replay (Key Moments), once the market is CLOSED/SETTLED
+ *   Games     kalshiLine on each not-final game card, marketCloseLine on a FINAL
+ *             card, from one board read
+ *
+ * Market history (shared client marketHistoryCard / marketCloseLine): a FINAL game
+ * is not a settled market. CLOSED shows "awaiting settlement" and is re-read every
+ * 5 min until SETTLED; SETTLED is never polled again. Only stored values; the
+ * final trade and settlement are the venue's (Kalshi), never ours.
  *
  * Truth rules kept here on top of the component's own:
  *  - the browser never calls Kalshi: every read goes to our propsports-markets
@@ -98,11 +106,44 @@
     return `<div class="kx-nfl kx-nfl--strip" data-kx-nfl="${esc(placement)}">${html}</div>`;
   }
 
-  /* Restrained game-card line. Never on a final game. */
+  /* Restrained game-card line. Never on a final game (that card gets closeLine). */
   function line(entry, { final = false, id = null, K = ui() } = {}) {
     const e = forId(entry, id);
     if (final || !K || !e || e.event?.state === 'post') return '';
     return K.kalshiLine(e) || '';
+  }
+
+  /* ---- market history ------------------------------------------------------------ */
+  const CLOSED_POLL_MS = 5 * 60 * 1000;
+  const lifecycleOf = entry => String(entry?.market?.lifecycle || '').toUpperCase();
+  const isDone = entry => { const lc = lifecycleOf(entry); return lc === 'CLOSED' || lc === 'SETTLED'; };
+
+  /* "How the market closed": only for a CLOSED/SETTLED market with stored history
+     (event endpoint). Anything else -> nothing, never a placeholder. */
+  function history(entry, { placement = 'pbecast-history', id = null, K = ui() } = {}) {
+    const e = forId(entry, id);
+    if (!K?.marketHistoryCard || !e || !isDone(e) || !e.market_history) return '';
+    const html = K.marketHistoryCard(e, { placement });
+    if (!html) return '';
+    return `<div class="kx-nfl kx-nfl--history" data-kx-nfl="${esc(placement)}">${html}${tieNote(e)}</div>`;
+  }
+
+  /* Result-card line for a FINAL game (board entry). Empty when nothing was recorded. */
+  function closeLine(entry, { id = null, K = ui() } = {}) {
+    const e = forId(entry, id);
+    if (!K?.marketCloseLine || !e) return '';
+    return K.marketCloseLine(e) || '';
+  }
+
+  /* Next read for the selected game: SETTLED -> none; CLOSED -> 5 min; a FINAL
+     game whose market is still open -> idle cadence until it closes; a FINAL game
+     with no market -> none; otherwise the client's live/pregame/idle cadence. */
+  function nextPollMs(entry, phase, K) {
+    const lc = lifecycleOf(entry);
+    if (lc === 'SETTLED') return null;
+    if (lc === 'CLOSED') return CLOSED_POLL_MS;
+    if (phase === 'final') return entry ? K.client.pollMsFor('idle') : null;
+    return entry ? K.client.pollMsFor(phase) : K.client.pollMsFor('idle');
   }
 
   /* ---- Games board ------------------------------------------------------------ */
@@ -111,7 +152,9 @@
   }
   function lineFor(eventId, opts = {}) {
     const K = ui();
-    return K?.client ? line(K.client.forEvent(eventId), { ...opts, id: eventId, K }) : '';
+    if (!K?.client) return '';
+    const e = K.client.forEvent(eventId);
+    return opts.final ? closeLine(e, { id: eventId, K }) : line(e, { ...opts, id: eventId, K });
   }
   function wire(host) { try { ui()?.wireKalshi?.(host); } catch (_) {} }
 
@@ -119,14 +162,16 @@
   /* One selected game at a time. The read starts the moment PBEcast knows the
      game (in parallel with v6's own lanes, never in front of them) and is then
      polled at the client's cadence for the game's phase — live 20 s, pregame
-     45 s — while that game stays selected and PBEcast stays mounted. */
-  const cast = { id: null, phase: null, entry: null, timer: null, seq: 0, open: false, built: { strip: null, card: null } };
+     45 s — while that game stays selected and PBEcast stays mounted. A FINAL
+     game is read too: its history card follows the market to CLOSED (5 min)
+     and SETTLED (no more reads) with no release. */
+  const cast = { id: null, phase: null, entry: null, timer: null, seq: 0, open: false, built: { strip: null, card: null, history: null } };
   const castMounted = () => Boolean(root.document?.querySelector?.('.pbecast6'));
   const phaseOf = g => { const s = String(g?.status?.semantics || '').toUpperCase(); return s === 'LIVE' ? 'live' : s === 'SCHEDULE' ? 'pregame' : s === 'FINAL' ? 'final' : null; };
 
   function castStop() {
     clearTimeout(cast.timer); cast.timer = null; cast.seq += 1;
-    cast.id = null; cast.phase = null; cast.entry = null; cast.open = false; cast.built = { strip: null, card: null };
+    cast.id = null; cast.phase = null; cast.entry = null; cast.open = false; cast.built = { strip: null, card: null, history: null };
   }
   function castArm(delay) {
     clearTimeout(cast.timer);
@@ -140,7 +185,7 @@
   }
   async function castFetch() {
     const seq = cast.seq, id = cast.id;
-    if (!id || cast.phase === 'final' || !cast.phase) return;
+    if (!id || !cast.phase) return;
     const K = await ready();
     if (!K || seq !== cast.seq) return;
     let entry = null;
@@ -148,16 +193,18 @@
     if (seq !== cast.seq) return;
     if (entry !== cast.entry) { cast.entry = entry; root.PBEcastCommand?.render?.(); }
     /* no market yet: look again at the idle cadence; never stops PBEcast */
-    castArm(entry ? K.client.pollMsFor(cast.phase) : K.client.pollMsFor('idle'));
+    const ms = nextPollMs(entry, cast.phase, K);
+    if (ms != null) castArm(ms); else clearTimeout(cast.timer);
   }
   function castSync(id, phase) {
     id = id ? String(id) : '';
-    if (!id || !phase || phase === 'final') { if (cast.id) castStop(); return; }
+    if (!id || !phase) { if (cast.id) castStop(); return; }
     if (id !== cast.id) {
       castStop();
       cast.id = id; cast.phase = phase;
-      /* a board already read elsewhere (Games) paints immediately */
-      cast.entry = forId(ui()?.client?.forEvent?.(id) || null, id);
+      /* a board already read elsewhere (Games) paints immediately; a FINAL game
+         waits for the event read (the board carries no market_history) */
+      cast.entry = phase === 'final' ? null : forId(ui()?.client?.forEvent?.(id) || null, id);
       castFetch();
       return;
     }
@@ -175,13 +222,13 @@
     let html = '';
     if (own && cast.entry && cast.id === id) {
       const colors = colorsFor(g.teams);
-      const kind = phase === 'live' ? 'strip' : phase === 'pregame' ? 'card' : null;
+      const kind = isDone(cast.entry) && cast.entry.market_history ? 'history' : phase === 'live' ? 'strip' : phase === 'pregame' ? 'card' : phase === 'final' ? 'card' : null;
       if (kind) {
         /* the markup is rebuilt only for a NEW observation, so a v6 repaint
            neither replays nor cuts short the component's change flash */
         const b = cast.built[kind];
         if (!b || b.entry !== cast.entry) {
-          cast.built[kind] = { entry: cast.entry, html: kind === 'strip' ? strip(cast.entry, { placement: 'pbecast', colors, id }) : card(cast.entry, { placement: 'pbecast-preview', colors, id }) };
+          cast.built[kind] = { entry: cast.entry, html: kind === 'history' ? history(cast.entry, { placement: 'pbecast-history', id }) : kind === 'strip' ? strip(cast.entry, { placement: 'pbecast', colors, id }) : card(cast.entry, { placement: phase === 'final' ? 'pbecast-final' : 'pbecast-preview', colors, id }) };
         }
         html = cast.built[kind].html;
         if (kind === 'strip' && cast.open) html = html.replace('<details class="kx-strip"', '<details open class="kx-strip"');
@@ -199,14 +246,14 @@
     }, true);
     root.addEventListener('pbe:route-changed', () => setTimeout(() => { if (!castMounted()) castStop(); }, 0));
     root.document.addEventListener('visibilitychange', () => {
-      if (root.document.visibilityState !== 'hidden' && cast.id && castMounted()) castArm(0);
+      if (root.document.visibilityState !== 'hidden' && cast.id && castMounted() && lifecycleOf(cast.entry) !== 'SETTLED') castArm(0);
     });
     ready().then(K => { if (K && castMounted()) root.PBEcastCommand?.render?.(); });
   }
 
   return {
-    ready, loadBoard, lineFor, wire, tieNote, card, strip, line, colorsFor,
+    ready, loadBoard, lineFor, wire, tieNote, card, strip, line, history, closeLine, nextPollMs, colorsFor,
     pbecast: { mount: castMount, sync: castSync, stop: castStop, state: cast },
-    TIE_NOTE, TIE_PROPOSITION
+    TIE_NOTE, TIE_PROPOSITION, CLOSED_POLL_MS
   };
 });

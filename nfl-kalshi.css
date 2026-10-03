@@ -20,3 +20,8 @@
 .pbe25-card>.pbe25-kx{grid-column:1/-1;min-width:0}
 .pbe25-kx:empty{display:none}
 .pbe25-kx .kx-line{flex-wrap:wrap;color:var(--pbe-paper-2,#e8e1d4)}
+
+/* FINAL game card: the market-history line is quieter than the live line */
+.pbe25-kx--closed .kx-line{opacity:.86}
+/* PBEcast FINAL: "How the market closed" under the replay */
+.kx-nfl--history .kx-h__chart svg{max-width:100%}

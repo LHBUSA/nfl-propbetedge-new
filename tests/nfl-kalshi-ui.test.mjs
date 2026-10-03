@@ -136,13 +136,13 @@ test('the browser never calls Kalshi: no Kalshi API host in any shipped browser 
 });
 
 test('vendored component is byte-identical to the canonical shared client', () => {
-  /* propbetedge-workers 9352ec6 workers/propsports-markets/client/. Re-vendor
+  /* propbetedge-workers 70d92e0 workers/propsports-markets/client/ (market history). Re-vendor
      the four files together and update these hashes; never edit them here. */
   const PINNED = {
     'README.md': 'a80e4ac5d8733bde8afc0c13c281242babff8b1acd083974741f677b7af5a480',
     'kalshi-market-client.js': '653cb0fc2673f909552453052560bfd6194e0e4d045c51b1eb73483957d4c049',
-    'kalshi-market-ui.css': '572d18127bf6ce357e50b4320e0d98d83b07aa3d6bfb1e1c04c43bee4f009f98',
-    'kalshi-market-ui.js': '0f03224b086e11967329e2a4666ef5327e335fbb32ae251a31a2a543b30e1952',
+    'kalshi-market-ui.css': 'db0f4b1efd5209966fb627f72e217b9539876d5123edc10d80524d172da41a06',
+    'kalshi-market-ui.js': 'c343805e546cde66d01676c9c6c9f6f4ca746a8ba138b4b1ad0159a341f3db2a',
   };
   for (const [f, sha] of Object.entries(PINNED)) {
     assert.equal(createHash('sha256').update(readFileSync(new URL(`vendor/kalshi/${f}`, REPO))).digest('hex'), sha, `vendor/kalshi/${f} was edited`);
@@ -156,16 +156,21 @@ test('wiring: loader order, PBEcast placement, Games line', () => {
   const cmd = loader.indexOf("{css:'./pbecast-command-v1.css',js:'./pbecast-command-v1.js'}");
   assert.ok(css > 0 && nfl > css && cmd > nfl, 'component CSS, then the bridge, then the PBEcast command layer that mounts it');
   const command = read('pbecast-command-v1.js');
-  assert.match(command, /const kalshi = hostFor\(root, 'kalshi', '\[data-cast6-hero\]'\);\n    place\(kalshi, pre \? preview : hero\);\n    window\.PBENflKalshi\?\.pbecast\?\.mount\?\.\(kalshi, v6\(\)\);/);
-  assert.match(command, /place\(pick, kalshi\);/);
+  assert.match(command, /const kalshi = hostFor\(root, 'kalshi', '\[data-cast6-hero\]'\);\n    if \(!done\) place\(kalshi, pre \? preview : hero\);\n    window\.PBENflKalshi\?\.pbecast\?\.mount\?\.\(kalshi, v6\(\)\);/);
+  assert.match(command, /place\(pick, done \? hero : kalshi\);/);
+  /* FINAL: the market-history host sits directly under the replay (Key Moments) */
+  assert.match(command, /const done = Boolean\(g\) && String\(g\.id\) === activeId && sem\(g\) === 'FINAL';/);
+  assert.match(command, /place\(moments, tdTargets\);\n[^\n]*\n    if \(done\) place\(kalshi, moments\);/);
   /* the sportsbook MARKET tile is untouched and Kalshi is not in it */
   assert.doesNotMatch(read('pbecast-preview-v1.js'), /kalshi/i);
   const games = read('games-v2.js');
-  assert.match(games, /if\(!g\?\.espnEventId\|\|gs\.kind==='FINAL'\)return'';/);
+  assert.match(games, /if\(!g\?\.espnEventId\)return'';\n    const final=gs\.kind==='FINAL';/);
+  assert.match(games, /lineFor\?\.\(g\.espnEventId,\{final\}\)/, 'a FINAL card asks for the market-history line');
+  assert.match(games, /K\.lineFor\(el\.dataset\.kxSlot,\{final:el\.dataset\.kxFinal==='1'\}\)/);
   assert.match(games, /const kalshi=loadKalshi\(\);\n      const \[games,scores\]=await Promise\.all/);
   const bridgeSrc = read('nfl-kalshi.js');
   assert.match(bridgeSrc, /import\(`\$\{VENDOR\}kalshi-market-ui\.js\$\{v\}`\)/);
-  assert.match(bridgeSrc, /K\.client\.pollMsFor\(cast\.phase\)/);
+  assert.match(bridgeSrc, /nextPollMs\(entry, cast\.phase, K\)/);
 });
 
 /* ---- PBEcast lifecycle against a fake client and a fake host ----------------- */
@@ -222,18 +227,14 @@ test('PBEcast live: the strip with placement "pbecast", polled at 20 s; a game s
   assert.deepEqual(h.calls, ['401872965', '401872932']);
 });
 
-test('PBEcast final or unknown game: no read, no timer, nothing rendered', async () => {
+test('PBEcast: detail for another game than the selection -> no read, nothing rendered', async () => {
   const h = castHarness({ 401872965: entry() });
-  h.n.pbecast.mount(h.host, v6('401872965', 'FINAL'));
-  await settle();
-  assert.deepEqual(h.calls, []);
-  assert.equal(h.timers.length, 0);
-  assert.equal(h.host.innerHTML, '');
-  /* detail for another game than the selection renders nothing */
   const g = v6('401872965', 'LIVE'); g.activeId = '401872932';
   h.n.pbecast.mount(h.host, g);
   await settle();
   assert.deepEqual(h.calls, []);
+  assert.equal(h.timers.length, 0);
+  assert.equal(h.host.innerHTML, '');
 });
 
 test('PBEcast with no market: nothing rendered, looked at again only at the idle cadence', async () => {
@@ -245,4 +246,123 @@ test('PBEcast with no market: nothing rendered, looked at again only at the idle
   const live = h.timers.filter(t => !t.cleared);
   assert.equal(live.length, 1);
   assert.equal(live[0].ms, 120000);
+});
+
+/* ---- Market history ("How the market closed") ---------------------------------
+ * Fixture is the REAL settled tennis event from the live API
+ * (GET /v1/market-intelligence/event/tennis/00a0f4e8-67cb-593c-a77b-65b62d709937,
+ * 2026-10-03), reshaped here only in sport / ids / names so it reads as an NFL
+ * game. Test-only; no production code path reads it. */
+const TENNIS = JSON.parse(readFileSync(new URL('fixtures/market-history-settled-tennis.json', import.meta.url), 'utf8'));
+const NFL_URL = 'https://kalshi.com/markets/kxnflgame/nfl-game/kxnflgame-26oct04indwas';
+function settled(lifecycle = 'SETTLED') {
+  const e = JSON.parse(JSON.stringify(TENNIS.event));
+  const names = [['IND', 'Indianapolis'], ['WSH', 'Washington']];
+  e.event = { ...e.event, sport: 'nfl', competition: 'nfl', canonical_event_id: '401872965', state: 'post' };
+  e.kalshi = { ...e.kalshi, market_url: NFL_URL, event_ticker: 'KXNFLGAME-26OCT04INDWAS', proposition: 'team_wins_game_tie_half' };
+  e.market = { ...e.market, lifecycle, market_url: NFL_URL, proposition: 'team_wins_game_tie_half', close: { ...e.market.close, lifecycle } };
+  e.market.close.outcomes = e.market.close.outcomes.map((o, i) => ({ ...o, abbr: names[i][0], result: lifecycle === 'CLOSED' ? null : o.result }));
+  const h = e.market_history;
+  Object.assign(h, { lifecycle, market_url: NFL_URL, event_ticker: 'KXNFLGAME-26OCT04INDWAS', proposition: 'team_wins_game_tie_half', status_label: lifecycle === 'SETTLED' ? 'Market settled' : 'Market closed' });
+  h.outcomes.forEach((o, i) => {
+    o.abbr = names[i][0]; o.kalshi_name = names[i][1]; o.contract = `${names[i][1]} wins`;
+    if (lifecycle === 'CLOSED') o.settlement = null;
+  });
+  if (lifecycle === 'CLOSED') h.markers = { ...h.markers, settlement: null };
+  return e;
+}
+
+test('history card renders for a SETTLED NFL game (real settled JSON): stored values, venue settlement, rel sponsored', () => {
+  const html = N.history(settled(), { K, id: '401872965' });
+  const t = text(html);
+  assert.match(t, /^How the market closed Market history · Kalshi Market settled/);
+  assert.match(t, /IND Indianapolis wins First observed 94\.5¢ Final trade 1¢ Settled NO/);
+  assert.match(t, /WSH Washington wins First observed 5\.5¢ Final trade 99¢ Settled YES/);
+  assert.match(t, /Kalshi settlement: WSH — YES/);
+  assert.match(t, /“First observed” is our first record, not the opening price/);
+  assert.match(t, /not sportsbook odds and not a PropBetEdge model\. Settlement is the market venue's, not our result\./);
+  assert.match(t, /NFL tie rule A tie pays 50¢ per contract\./);
+  assert.doesNotMatch(t.replace('not the opening price', ''), /opening price|opened at|Kalshi intelligence/i);
+  assert.doesNotMatch(t, /earlier than|more accurate|stale/i);
+  assert.match(html, /<svg [^>]*aria-label="Observed market prices over time"/);
+  assert.doesNotMatch(html, /style="/, 'no inline styles');
+  const anchors = html.match(/<a [^>]*>/g) || [];
+  assert.ok(anchors.length >= 1);
+  for (const a of anchors) {
+    assert.ok(a.includes(`href="${NFL_URL}"`), a);
+    assert.match(a, /target="_blank"/);
+    assert.match(a, /rel="noopener noreferrer sponsored"/);
+  }
+});
+
+test('CLOSED market on a FINAL game: "Market closed · awaiting settlement", never settled', () => {
+  const t = text(N.history(settled('CLOSED'), { K }));
+  assert.match(t, /Market closed · awaiting settlement/);
+  assert.match(t, /Awaiting settlement/);
+  assert.doesNotMatch(t, /Settled (YES|NO)|settlement: /);
+});
+
+test('market history: no entry / no history / still trading -> nothing', () => {
+  assert.equal(N.history(null, { K }), '');
+  const noHist = settled(); delete noHist.market_history;
+  assert.equal(N.history(noHist, { K }), '');
+  const trading = settled(); trading.market.lifecycle = 'ACTIVE';
+  assert.equal(N.history(trading, { K }), '');
+  assert.equal(N.history(settled(), { K, id: '401872999' }), '', 'only for its own game');
+  assert.equal(N.history(settled(), { K: null }), '');
+  assert.equal(N.closeLine(null, { K }), '');
+  const pre = entry(); pre.market = { venue: 'kalshi', lifecycle: 'UPCOMING', close: null };
+  assert.equal(N.closeLine(pre, { K }), '', 'no close summary -> nothing on the card');
+});
+
+test('FINAL result card: restrained market-history line from the board entry', () => {
+  const l = N.closeLine(settled(), { K, id: '401872965' });
+  assert.match(text(l), /^MARKET WSH first 5\.5¢ · settled YES$/);
+  assert.match(l, /class="kx-line kx-line--closed mono"/);
+  assert.match(text(N.closeLine(settled('CLOSED'), { K })), /awaiting settlement/);
+  /* the live line is still never drawn on a final card */
+  assert.equal(N.line(entry(), { K, final: true }), '');
+});
+
+test('PBEcast FINAL game: history card from the event read; SETTLED -> no further reads', async () => {
+  const h = castHarness({ 401872965: settled() });
+  h.n.pbecast.mount(h.host, v6('401872965', 'FINAL'));
+  assert.equal(h.host.innerHTML, '', 'no board seed for a final game, nothing before the read');
+  await settle(); await settle();
+  assert.deepEqual(h.calls, ['401872965']);
+  h.n.pbecast.mount(h.host, v6('401872965', 'FINAL'));
+  assert.match(h.host.innerHTML, /data-kx-nfl="pbecast-history"[\s\S]*data-kx-history/);
+  assert.equal(h.timers.filter(t => !t.cleared).length, 0, 'SETTLED is never polled');
+});
+
+test('PBEcast FINAL game, CLOSED market: awaiting settlement, re-read every 5 min', async () => {
+  const h = castHarness({ 401872965: settled('CLOSED') });
+  h.n.pbecast.mount(h.host, v6('401872965', 'FINAL'));
+  await settle(); await settle();
+  h.n.pbecast.mount(h.host, v6('401872965', 'FINAL'));
+  assert.match(text(h.host.innerHTML), /Market closed · awaiting settlement/);
+  const live = h.timers.filter(t => !t.cleared);
+  assert.equal(live.length, 1);
+  assert.equal(live[0].ms, 5 * 60 * 1000);
+});
+
+test('PBEcast FINAL game with no market: one read, nothing rendered, no poll', async () => {
+  const h = castHarness({});
+  h.n.pbecast.mount(h.host, v6('401872965', 'FINAL'));
+  await settle(); await settle();
+  h.n.pbecast.mount(h.host, v6('401872965', 'FINAL'));
+  assert.deepEqual(h.calls, ['401872965']);
+  assert.equal(h.host.innerHTML, '');
+  assert.equal(h.timers.filter(t => !t.cleared).length, 0);
+});
+
+test('poll cadence: live 20 s, pregame 45 s, CLOSED 5 min, SETTLED none', () => {
+  const k = { client: CLIENT.createKalshiClient({ sport: 'nfl', fetchImpl: async () => ({ ok: false }) }) };
+  assert.equal(N.nextPollMs(entry(), 'live', k), 20000);
+  assert.equal(N.nextPollMs(entry(), 'pregame', k), 45000);
+  assert.equal(N.nextPollMs(null, 'live', k), 120000);
+  assert.equal(N.nextPollMs(settled('CLOSED'), 'final', k), 300000);
+  assert.equal(N.nextPollMs(settled('CLOSED'), 'live', k), 300000);
+  assert.equal(N.nextPollMs(settled(), 'final', k), null);
+  assert.equal(N.nextPollMs(null, 'final', k), null);
 });

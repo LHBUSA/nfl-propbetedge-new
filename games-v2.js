@@ -255,18 +255,20 @@
     </article>`;
   }
 
-  /* Kalshi prediction-market line (nfl-kalshi.js): not-final games with an ESPN
-     id only, from the one board read made alongside the schedule. No entry ->
-     the slot stays empty and is not drawn. */
+  /* Kalshi prediction-market line (nfl-kalshi.js): games with an ESPN id only,
+     from the one board read made alongside the schedule. Not final: the live
+     line. FINAL: the restrained market-history line (how the market closed),
+     only when the board recorded one. No entry -> the slot stays empty. */
   function kalshiSlot(g,gs){
-    if(!g?.espnEventId||gs.kind==='FINAL')return'';
-    return `<div class="pbe25-kx" data-kx-slot="${esc(g.espnEventId)}">${window.PBENflKalshi?.lineFor?.(g.espnEventId)||''}</div>`;
+    if(!g?.espnEventId)return'';
+    const final=gs.kind==='FINAL';
+    return `<div class="pbe25-kx${final?' pbe25-kx--closed':''}" data-kx-slot="${esc(g.espnEventId)}"${final?' data-kx-final="1"':''}>${window.PBENflKalshi?.lineFor?.(g.espnEventId,{final})||''}</div>`;
   }
   function repaintKalshi(){
     const K=window.PBENflKalshi;if(!K)return;
     const root=document.querySelector('.pbe25-games');if(!root)return;
     let changed=false;
-    root.querySelectorAll('[data-kx-slot]').forEach(el=>{const html=K.lineFor(el.dataset.kxSlot)||'';if((el.dataset.sig??el.innerHTML)!==html){el.innerHTML=html;el.dataset.sig=html;changed=true}});
+    root.querySelectorAll('[data-kx-slot]').forEach(el=>{const html=K.lineFor(el.dataset.kxSlot,{final:el.dataset.kxFinal==='1'})||'';if((el.dataset.sig??el.innerHTML)!==html){el.innerHTML=html;el.dataset.sig=html;changed=true}});
     if(changed)K.wire(root);
   }
   function loadKalshi(){return window.PBENflKalshi?.loadBoard?.().then(repaintKalshi).catch(()=>{})}

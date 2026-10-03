@@ -22,7 +22,9 @@
  *                    board moves below the game
  *   KALSHI           nfl-kalshi.js: prediction-market strip under the hero
  *                    while LIVE, full card after the preview row while
- *                    SCHEDULE. nfl-kalshi owns that one read and its poll
+ *                    SCHEDULE; for a FINAL game "How the market closed"
+ *                    (market history) directly under the replay (Key Moments).
+ *                    nfl-kalshi owns that one read and its poll
  *                    (our propsports-markets API, never Kalshi)
  *   GAME PULSE       mounted from pbecast-pulse-v1.js between the selected-game
  *                    surface and Key Moments; a tapped swing opens its play here
@@ -287,6 +289,7 @@
        page is a pregame preview, so the game leads and the league board follows
        it; live and final keep the board above the game. */
     const pre = Boolean(g) && String(g.id) === activeId && sem(g) === 'SCHEDULE';
+    const done = Boolean(g) && String(g.id) === activeId && sem(g) === 'FINAL';
     const hero = root.querySelector('[data-cast6-hero]');
     const place = (el, after) => { if (after && el.previousElementSibling !== after) after.after(el); };
     const board = hostFor(root, 'board', '[data-cast6-rail]');
@@ -300,12 +303,13 @@
     /* KALSHI (nfl-kalshi.js): its own section, never inside the sportsbook
        MARKET tile. PREGAME: the full prediction-market card after the preview
        row. LIVE: the one-line strip directly under the hero. No entry -> empty
-       host (hidden). Its read and poll are nfl-kalshi's, off v6's lanes. */
+       host (hidden). FINAL: market history under the replay (placed below).
+       Its read and poll are nfl-kalshi's, off v6's lanes. */
     const kalshi = hostFor(root, 'kalshi', '[data-cast6-hero]');
-    place(kalshi, pre ? preview : hero);
+    if (!done) place(kalshi, pre ? preview : hero);
     window.PBENflKalshi?.pbecast?.mount?.(kalshi, v6());
     const pick = hostFor(root, 'pick', '[data-cast6-hero]');
-    place(pick, kalshi);
+    place(pick, done ? hero : kalshi);
     write(pick, g ? (window.PBECard?.gameModule?.({ away: g.teams?.away?.abbreviation, home: g.teams?.home?.abbreviation, espnId: g.id, surface: 'pbecast' }) || '') : '');
     /* what is happening -> how much did it matter -> show me the play:
        selected game, then Game Pulse, then Key Moments / PBE Replay. */
@@ -316,6 +320,8 @@
     place(pulse, pre ? pick : root.querySelector('[data-cast6-action]'));
     place(tdTargets, pulse);
     place(moments, tdTargets);
+    /* FINAL: "How the market closed" sits directly under the replay timeline */
+    if (done) place(kalshi, moments);
     window.PBEcastPulse?.mount?.(pulse, v6());
     window.PBEcastTDTargets?.mount?.(tdTargets, v6());
     write(moments, keyMomentsHtml());
