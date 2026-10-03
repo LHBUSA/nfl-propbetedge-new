@@ -379,3 +379,41 @@ test('completed entry with no live kalshi block (8b73545 loaders keep it): histo
 test('8b73545 algoVsMarket exports are vendored but not mounted on NFL', () => {
   for (const f of ['nfl-kalshi.js', 'pbecast-command-v1.js', 'games-v2.js']) assert.doesNotMatch(read(f), /algoVsMarket/);
 });
+
+/* Mirrors propbetedge-workers a229028 (history-regression): a completed market with
+   NO live quote (kalshi null) must survive the vendored board AND event loaders and
+   render "How the market closed" through the NFL bridge — never a live card. */
+test('regression a229028: completed kalshi:null entry survives both loaders and renders history on NFL', async () => {
+  for (const lifecycle of ['SETTLED', 'CLOSED']) {
+    const ev = settled(lifecycle); ev.kalshi = null;
+    const { market_history, ...boardEntry } = ev;
+    const fetchImpl = async url => ({
+      ok: true,
+      json: async () => (/\/sport\/nfl$/.test(url)
+        ? { contract: 'market-intel/1', sport: 'nfl', enabled: true, events: [boardEntry] }
+        : { contract: 'market-intel/1', sport: 'nfl', enabled: true, event: ev }),
+    });
+    const client = CLIENT.createKalshiClient({ sport: 'nfl', fetchImpl });
+    await client.loadBoard();
+    assert.ok(client.forEvent('401872965'), `${lifecycle}: board dropped the completed entry`);
+    const got = await client.loadEvent('401872965');
+    assert.ok(got?.market_history, `${lifecycle}: event read nulled the completed entry`);
+    /* Games FINAL card, through the bridge's own lineFor + the real client */
+    const { N: n } = bridge({ PBEKalshi: { ...UI, client } });
+    const l = n.lineFor('401872965', { final: true });
+    assert.match(text(l), lifecycle === 'SETTLED' ? /^MARKET WSH .*settled YES$/ : /awaiting settlement$/);
+    assert.equal(n.lineFor('401872965'), '', 'no live line from a completed entry');
+    /* PBEcast FINAL, through castFetch + the real client */
+    const timers = [];
+    const ctx = { PBEKalshi: { ...UI, client }, setTimeout: (fn, ms) => { const t = { fn, ms }; timers.push(t); return t; }, clearTimeout: () => {}, PBEcastCommand: { render() {} } };
+    const { N: c } = bridge(ctx);
+    const host = { dataset: {}, innerHTML: '' };
+    c.pbecast.mount(host, v6('401872965', 'FINAL'));
+    await settle(); await settle();
+    c.pbecast.mount(host, v6('401872965', 'FINAL'));
+    const t = text(host.innerHTML);
+    assert.match(t, /^How the market closed/);
+    assert.match(t, lifecycle === 'SETTLED' ? /Kalshi settlement: WSH — YES/ : /Market closed · awaiting settlement/);
+    assert.doesNotMatch(t, /Market Pulse|Live prediction market/i, 'a completed market is never labelled live');
+  }
+});
