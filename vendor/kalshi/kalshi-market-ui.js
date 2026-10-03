@@ -128,6 +128,25 @@ function panel(k, o, { placement, movement, color }) {
   </div>`
 }
 
+// Field markets (> 3 outcomes, e.g. F1 race winner): a ranked list, top FIELD_TOP rows; the API
+// already filters to displayable contracts and orders them by Mid-market.
+const FIELD_TOP = 8
+function fieldList(k, outcomes, { placement, movement }) {
+  const rows = outcomes.slice(0, FIELD_TOP).map((o, i) => {
+    const h = headline(o)
+    const dir = direction(placement, o.market_ticker, h.bp)
+    const mv = movement?.[o.role] || null
+    return `<li class="kx__frow">
+      <span class="kx__frank mono">${i + 1}</span>
+      <span class="kx__fname"><b>${esc(o.abbr || o.kalshi_name || '')}</b><small class="mono">Bid ${esc(centsLabel(o.best_yes_bid_bp))} · Ask ${esc(centsLabel(o.best_yes_ask_bp))}${o.last_price_bp != null ? ` · Last ${esc(centsLabel(o.last_price_bp))}` : ''}</small></span>
+      ${link(k, `<span class="kx__px mono${dir}">${esc(h.value)}</span>`, 'kx__fprice', placement, o.market_ticker)}
+      ${mv && mv.delta_mid_bp != null && mv.delta_mid_bp !== 0 ? `<span class="kx__sd kx__sd--${mv.delta_mid_bp > 0 ? 'up' : 'down'}">${mv.delta_mid_bp > 0 ? '↑' : '↓'}${esc(Math.abs(mv.delta_mid_bp / 100).toFixed(1))}¢</span>` : '<span></span>'}
+    </li>`
+  }).join('')
+  const more = outcomes.length > FIELD_TOP ? `<p class="kx__note">${outcomes.length - FIELD_TOP} more traded contracts on Kalshi.</p>` : ''
+  return `<ol class="kx__field">${rows}</ol>${more}`
+}
+
 function settledPanel(o) {
   const res = o.result === 'yes' ? 'YES' : o.result === 'no' ? 'NO' : null
   if (!res) return ''
@@ -156,19 +175,22 @@ export function kalshiCard(entry, { placement, colors = {}, compact = false } = 
   if (!k) return ''
   const movement = entry.movement?.kalshi || null
   let body
-  if (k.state === 'open') {
+  const isField = k.outcomes.length > 3
+  if (k.state === 'open' && isField) {
+    body = null
+  } else if (k.state === 'open') {
     body = k.outcomes.map(o => panel(k, o, { placement, movement, color: colors[o.role] })).join('')
   } else {
     body = k.outcomes.map(settledPanel).join('')
     if (!body) return ''
   }
-  return `<section class="ic kx${compact ? ' kx--compact' : ''}" ${attrs(entry, k, placement)} aria-label="Kalshi prediction market">
+  return `<section class="ic kx${compact ? ' kx--compact' : ''}" ${attrs(entry, k, placement)} aria-label="Market Pulse: live Kalshi prediction market">
     <header class="kx__hd">
-      <div class="kx__brand"><span class="kx__name">Kalshi market</span><span class="kx__sub">Live prediction market</span></div>
+      <div class="kx__brand"><span class="kx__name">Market Pulse</span><span class="kx__sub">Live prediction market · Kalshi</span></div>
       ${freshnessBadge(k)}
     </header>
-    <div class="kx__grid" style="--kx-cols:${k.outcomes.length}">${body}</div>
-    ${k.state === 'open' && !compact ? '<p class="kx__note">Traded contract prices, not sportsbook odds and not a PropBetEdge model. Each YES contract pays $1 if that outcome happens. Mid-market is the midpoint of the best YES bid and ask, shown only when the spread is 10¢ or less. Movement uses our stored observations only.</p>' : ''}
+    ${body === null ? fieldList(k, k.outcomes, { placement, movement }) : `<div class="kx__grid" style="--kx-cols:${k.outcomes.length}">${body}</div>`}
+    ${k.state === 'open' && !compact ? '<p class="kx__note">Live prediction-market pricing — no sportsbook line required. Traded contract prices on Kalshi, not sportsbook odds and not a PropBetEdge model. Each YES contract pays $1 if that outcome happens. Mid-market is the midpoint of the best YES bid and ask, shown only when the spread is 10¢ or less. Movement uses our stored observations only.</p>' : ''}
     <footer class="kx__ft"><span>Kalshi · Prediction market data</span>${link(k, 'View market on Kalshi ↗', 'kx__cta', placement, null)}</footer>
   </section>`
 }
@@ -177,9 +199,11 @@ export function kalshiCard(entry, { placement, colors = {}, compact = false } = 
 export function kalshiStrip(entry, { placement = 'nbacast-strip', colors = {} } = {}) {
   const k = usable(entry)
   if (!k || k.state !== 'open') return ''
-  if (!k.outcomes.every(o => o.mid_bp !== null && o.mid_bp !== undefined)) return ''
+  const lead = k.outcomes.length > 3 ? k.outcomes.slice(0, 3) : k.outcomes
+  if (!lead.every(o => o.mid_bp !== null && o.mid_bp !== undefined)) return ''
   const movement = entry.movement?.kalshi || null
-  const items = k.outcomes.map(o => {
+  const shown = k.outcomes.length > 3 ? k.outcomes.slice(0, 3) : k.outcomes
+  const items = shown.map(o => {
     const d = movement?.[o.role]?.delta_mid_bp
     const arrow = d === null || d === undefined || d === 0 ? '' : `<span class="kx__sd kx__sd--${d > 0 ? 'up' : 'down'}">${d > 0 ? '↑' : '↓'}${esc(Math.abs(d / 100).toFixed(1))}¢</span>`
     const dir = direction(placement, o.market_ticker, o.mid_bp)
@@ -187,7 +211,7 @@ export function kalshiStrip(entry, { placement = 'nbacast-strip', colors = {} } 
     return `<span class="kx__si"${c ? ` style="--kx-team:${c}"` : ''}><b>${esc(o.abbr || '')}</b> <span class="mono kx__sp${dir}">${esc(centsLabel(o.mid_bp, { fixed: true }))}</span>${arrow}</span>`
   }).join('<span class="kx__sep" aria-hidden="true">|</span>')
   return `<details class="kx-strip" ${attrs(entry, k, placement)}>
-    <summary><span class="kx__name">Kalshi market</span><span class="kx__sitems">${items}</span>${freshnessBadge(k)}<span class="kx__chev" aria-hidden="true"></span></summary>
+    <summary><span class="kx__name">Market Pulse</span><span class="kx__sitems">${items}</span>${freshnessBadge(k)}<span class="kx__chev" aria-hidden="true"></span><span class="kx__stag">Live prediction-market expectations — no sportsbook line required · Kalshi</span></summary>
     ${kalshiCard(entry, { placement: `${placement}-expanded`, colors, compact: true })}
   </details>`
 }
@@ -196,8 +220,9 @@ export function kalshiStrip(entry, { placement = 'nbacast-strip', colors = {} } 
 export function kalshiLine(entry) {
   const k = usable(entry)
   if (!k || k.state !== 'open' || k.freshness === 'stale') return ''
-  if (!k.outcomes.every(o => o.mid_bp !== null && o.mid_bp !== undefined)) return ''
-  const px = k.outcomes.map(o => `${esc(o.abbr || '')} ${esc(centsLabel(o.mid_bp, { fixed: true }))}`).join(' · ')
+  const lead = k.outcomes.length > 3 ? k.outcomes.slice(0, 2) : k.outcomes
+  if (!lead.every(o => o.mid_bp !== null && o.mid_bp !== undefined)) return ''
+  const px = lead.map(o => `${esc(o.abbr || '')} ${esc(centsLabel(o.mid_bp, { fixed: true }))}`).join(' · ')
   return `<span class="kx-line mono" title="Kalshi Mid-market · prediction market, not sportsbook odds · updated ${esc(ageLabel(k.age_seconds))}" ${attrs(entry, k, 'game-card')}><span class="kx-line__b">KALSHI</span>${px}${k.freshness === 'live' ? '<span class="kx__pulse" aria-hidden="true"></span>' : ''}</span>`
 }
 
