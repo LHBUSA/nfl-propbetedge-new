@@ -14,7 +14,9 @@ import { resolvePlayer, gamesFor, baseline, conditionProfile, dnaSignals,
   from './_rbdna/engine.js';
 import { playerMedia, teamBlock } from './_playerdna/media.js';
 
+import { markDeprecatedIds } from './_neutral-ids.js';
 function send(res, status, body, ttl = 0) {
+  markDeprecatedIds(body);
   res.statusCode = status;
   res.setHeader('content-type', 'application/json; charset=utf-8');
   res.setHeader('access-control-allow-origin', '*');
@@ -47,7 +49,7 @@ export default function handler(req, res) {
     const rows = D.players.map(p => {
       const g = gamesFor(p.gsis_id);
       return {
-        gsis_id: p.gsis_id, espn_id: p.espn_id ?? null, pfr_id: p.pfr_id ?? null,
+        player_id: p.gsis_id, gsis_id: p.gsis_id, espn_id: p.espn_id ?? null, pfr_id: p.pfr_id ?? null,
         name: p.display_name, position: p.position ?? 'RB',
         team: g.length ? g[g.length - 1].t : null,
         games: g.length,
@@ -86,7 +88,7 @@ export default function handler(req, res) {
   let rows = gamesFor(p.gsis_id);
 
   const identity = {
-    gsis_id: p.gsis_id, espn_id: p.espn_id ?? null, pfr_id: p.pfr_id ?? null,
+    player_id: p.gsis_id, gsis_id: p.gsis_id, espn_id: p.espn_id ?? null, pfr_id: p.pfr_id ?? null,
     name: p.display_name, position: p.position ?? 'RB',
     current_team: p.team_2026 || (rows.length ? rows[rows.length - 1].t : null),
     active_2026: Boolean(p.active_2026),

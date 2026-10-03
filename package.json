@@ -10,7 +10,7 @@
     "node": ">=18"
   },
   "scripts": {
-    "test": "node scripts/guard-source-brand.mjs && node --test tests/nfl-auth.test.mjs tests/source-brand.test.mjs",
+    "test": "node scripts/guard-source-brand.mjs && node --test tests/nfl-auth.test.mjs tests/source-brand.test.mjs tests/neutral-ids.test.mjs",
     "test:research": "node --test research/*.test.mjs",
     "verify-deploy-target": "node scripts/verify-deploy-target.mjs",
     "deploy:preview": "node scripts/verify-deploy-target.mjs && vercel deploy --scope justins-projects-ad4f4bb7",

@@ -1,3 +1,4 @@
+import { markDeprecatedIds } from './_neutral-ids.js';
 const CDN = 'https://cdn.espn.com/core/nfl';
 const SITE = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl';
 const SITE_V2 = 'https://site.api.espn.com/apis/v2/sports/football/nfl';
@@ -117,6 +118,7 @@ async function rangeBoard(range){
    carry no cache at all and nothing anywhere carries stale-while-revalidate on
    live play data. Pregame and final keep ordinary caching. */
 function send(res,status,body,cache='no-store'){
+  markDeprecatedIds(body);
   res.statusCode=status;
   res.setHeader('content-type','application/json; charset=utf-8');
   res.setHeader('access-control-allow-origin','*');
@@ -260,7 +262,7 @@ function detail(pkg,eventId,provider='espn_site_summary'){
   const playerStats=stats(pkg);
   const now=Date.now();
   const fresh=freshness(plays,currentPlay,now);
-  return {ok:true,source:{provider,semantics:g.status.semantics,fetched_at:new Date(now).toISOString(),transport:'poll',...fresh},game:g,current_drive:current,current_play:currentPlay,drives,plays,last_five_plays:plays.slice(-5).reverse(),scoring_plays:scoringPlays(pkg),leaders:leaders(pkg,playerStats),player_stats:playerStats,win_probability:A(pkg?.winprobability).map(x=>({play_id:F(x?.playId,x?.play?.id),home_win_percentage:N(x?.homeWinPercentage),tie_percentage:N(x?.tiePercentage)})),play_count:plays.length,drive_count:drives.length};
+  return {ok:true,source:{name:'PropSports',provider,semantics:g.status.semantics,fetched_at:new Date(now).toISOString(),transport:'poll',...fresh},game:g,current_drive:current,current_play:currentPlay,drives,plays,last_five_plays:plays.slice(-5).reverse(),scoring_plays:scoringPlays(pkg),leaders:leaders(pkg,playerStats),player_stats:playerStats,win_probability:A(pkg?.winprobability).map(x=>({play_id:F(x?.playId,x?.play?.id),home_win_percentage:N(x?.homeWinPercentage),tie_percentage:N(x?.tiePercentage)})),play_count:plays.length,drive_count:drives.length};
 }
 
 /* The fast lane. PBEcast polls live state every couple of seconds; it must not
@@ -288,7 +290,7 @@ async function fastState(event,date){
   if(!ev)throw new Error(`event_not_on_scoreboard:${event}`);
   const g=game(ev);
   return {ok:true,layer:'state',
-    source:{provider,semantics:g.status.semantics,fetched_at:new Date().toISOString(),transport:'poll',
+    source:{name:'PropSports',provider,semantics:g.status.semantics,fetched_at:new Date().toISOString(),transport:'poll',
       /* The scoreboard's lastPlay carries no wallclock, so this lane cannot
          date itself. It publishes the play id instead and the client joins it
          against the plays lane, which does carry wallclocks. Saying "unknown"
@@ -314,7 +316,7 @@ const hasEvents=raw=>findEvents(raw).length>0;
 async function scoreboard(date){
   const {raw,provider}=await firstUpstream(BOARD_SOURCES,date,date===todayET(),hasEvents);
   const games=findEvents(raw).map(game);
-  return {ok:true,source:{provider,semantics:'SCOREBOARD',fetched_at:new Date().toISOString(),transport:'poll'},date,count:games.length,games};
+  return {ok:true,source:{name:'PropSports',provider,semantics:'SCOREBOARD',fetched_at:new Date().toISOString(),transport:'poll'},date,count:games.length,games};
 }
 export default async function handler(req,res){
   if(req.method==='OPTIONS'){res.statusCode=204;res.setHeader('access-control-allow-origin','*');res.setHeader('access-control-allow-methods','GET,OPTIONS');return res.end()}

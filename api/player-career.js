@@ -27,6 +27,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { composeCareer, parseGamelog, boxScoreLine, eventState, isRookieCandidate, parseRookieEvidence } from './_career/ledger-core.js';
 
+import { markDeprecatedIds, athleteParam } from './_neutral-ids.js';
 const SITE = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl';
 const ATHLETE = 'https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes';
 const GATEWAY = process.env.NFL_GATEWAY || 'https://nfl-api.propbetedge.ai';
@@ -63,6 +64,7 @@ async function getJson(url, ms = 8000) {
 }
 
 function send(res, status, body, cache) {
+  markDeprecatedIds(body);
   res.statusCode = status;
   res.setHeader('content-type', 'application/json; charset=utf-8');
   res.setHeader('access-control-allow-origin', '*');
@@ -90,8 +92,12 @@ async function todaysGame(team) {
 export default async function handler(req, res) {
   if (req.method === 'OPTIONS') { res.statusCode = 204; res.setHeader('access-control-allow-origin', '*'); return res.end(); }
   if (req.method !== 'GET') return send(res, 405, { ok: false, error: 'method_not_allowed' });
-  const espnId = String(req.query?.espn_id || '').trim();
-  if (!/^\d{1,12}$/.test(espnId)) return send(res, 400, { ok: false, error: 'espn_id_required', detail: 'identity is the verified athlete id (espn_id, deprecated alias of player_id); names are never accepted' });
+  // ?player_id= (canonical NFL player id) or the deprecated ?espn_id= lane athlete id; names are never accepted.
+  const asked = athleteParam(req.query || {});
+  const espnId = String(asked.laneId || '').trim();
+  if (asked.via === 'player_id' && !espnId) return send(res, 404, { ok: false, error: 'not_tracked', player_id: asked.player_id,
+    unavailable_reason: 'this player_id is not in the Career Ledger (QB/RB/WR/TE Player DNA players only); nothing is matched by name' }, 'public, s-maxage=300');
+  if (!/^\d{1,12}$/.test(espnId)) return send(res, 400, { ok: false, error: 'espn_id_required', detail: 'identity is the canonical player_id (or the deprecated espn_id); names are never accepted' });
 
   let data;
   try { data = ledger(); } catch (e) { return send(res, 503, { ok: false, error: 'career_ledger_unavailable', detail: String(e?.message || e) }); }
@@ -154,7 +160,7 @@ export default async function handler(req, res) {
     player, currentSeason, currentRows, currentAvailable, currentError,
     boxScore, boxFetchedAt, currentFetchedAt, historyMeta: data.meta, rookieEvidence
   });
-  body.today = liveGame ? { event_id: liveGame.id, state: liveGame.state === 'in' ? 'LIVE' : liveGame.state === 'post' ? 'FINAL' : 'SCHEDULE', kickoff: liveGame.kickoff } : null;
+  body.today = liveGame ? { game_id: liveGame.id, event_id: liveGame.id, state: liveGame.state === 'in' ? 'LIVE' : liveGame.state === 'post' ? 'FINAL' : 'SCHEDULE', kickoff: liveGame.kickoff } : null;
   const cache = body.live ? 'no-store'
     : liveGame ? 'public, s-maxage=15, stale-while-revalidate=15'
       : 'public, s-maxage=300, stale-while-revalidate=600';

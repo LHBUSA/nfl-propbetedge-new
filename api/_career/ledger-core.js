@@ -338,7 +338,7 @@ export function composeCareer({ player, currentSeason, currentRows, currentAvail
     display_label: DISPLAY_LABEL[historyState],
     rookie,
     player: {
-      espn_id: player.espn_id, gsis_id: player.gsis_id || null, name: player.name, position,
+      player_id: player.gsis_id || null, espn_id: player.espn_id, gsis_id: player.gsis_id || null, name: player.name, position,
       dna_positions: player.dna_positions || [], active: player.active_2026 === true, current_team: player.current_team || (last && last.t) || null,
       teams: (() => { const t = []; for (const r of rows) if (r.t && !t.includes(r.t)) t.push(r.t); return t; })()
     },

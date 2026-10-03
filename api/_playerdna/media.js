@@ -83,6 +83,7 @@ export function teamBlock(abbr, name) {
   if (!a) return null;
   const row = teamTable()[a];
   return {
+    team_id: a,
     abbreviation: a,
     name: name || (row && row.team_name) || null,
     espn_team_id: (row && row.espn_team_id) || null,

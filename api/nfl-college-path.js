@@ -28,6 +28,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { composeCollegePath, CONTRACT } from './_collegepath/college-core.js';
 
+import { markDeprecatedIds, athleteParam, playerIdFor } from './_neutral-ids.js';
 let ARTIFACT = null;
 function artifact() {
   if (ARTIFACT) return ARTIFACT;
@@ -36,6 +37,7 @@ function artifact() {
 }
 
 function send(res, status, body, cache) {
+  markDeprecatedIds(body);
   res.statusCode = status;
   res.setHeader('content-type', 'application/json; charset=utf-8');
   res.setHeader('cache-control', cache || 'no-store');
@@ -43,7 +45,12 @@ function send(res, status, body, cache) {
 }
 
 export default function handler(req, res) {
-  const espnId = String(req.query?.espn_id || '').trim();
+  // ?player_id= (canonical NFL player id) or the deprecated ?espn_id= lane athlete id.
+  const asked = athleteParam(req.query || {});
+  const espnId = String(asked.laneId || '').trim();
+  if (asked.via === 'player_id' && !espnId) {
+    return send(res, 404, { ok: false, contract: CONTRACT, error: 'player_not_tracked', player_id: asked.player_id });
+  }
   if (!/^\d{1,12}$/.test(espnId)) {
     return send(res, 400, { ok: false, contract: CONTRACT, error: 'espn_id_required' });
   }
@@ -64,6 +71,7 @@ export default function handler(req, res) {
     ambiguous,
     meta: data.meta || {},
   });
+  body.player_id = playerIdFor(espnId);
 
   /* Historical facts that change only when a release rebuilds the artifact. */
   return send(res, 200, body, 'public, s-maxage=86400, stale-while-revalidate=604800');

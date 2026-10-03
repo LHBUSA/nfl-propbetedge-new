@@ -15,7 +15,9 @@ import { resolvePlayer, gamesFor, propThreshold, tdHistory, splitRows,
 import { eventMarkets, RECEIVING_MARKET_MAP, MARKET_UNAVAILABLE } from '../_playerdna/markets.js';
 import { playerMedia, teamBlock } from '../_playerdna/media.js';
 
+import { markDeprecatedIds } from '../_neutral-ids.js';
 function send(res, status, body, ttl = 0) {
+  markDeprecatedIds(body);
   res.statusCode = status;
   res.setHeader('content-type', 'application/json; charset=utf-8');
   res.setHeader('access-control-allow-origin', '*');
@@ -55,7 +57,7 @@ export default async function handler(req, res) {
   const p = found.player;
   const rows = gamesFor(p.gsis_id);
   const identity = {
-    gsis_id: p.gsis_id, espn_id: p.espn_id ?? null, name: p.display_name,
+    player_id: p.gsis_id, gsis_id: p.gsis_id, espn_id: p.espn_id ?? null, name: p.display_name,
     position: p.position ?? 'TE', matched_by: found.matched_by,
     media: playerMedia(p.espn_id),
     team: teamBlock(p.team_2026 || (rows.length ? rows[rows.length - 1].t : null))

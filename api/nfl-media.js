@@ -1,4 +1,5 @@
 import { headshotUrl, teamLogoUrl } from './_playerdna/media.js';
+import { athleteParam, playerIdFor } from './_neutral-ids.js';
 
 export default async function handler(req, res) {
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -11,7 +12,8 @@ export default async function handler(req, res) {
 
   const kind = String(req.query?.kind || 'player').toLowerCase();
   const name = String(req.query?.name || '').trim();
-  const espnId = String(req.query?.espn_id || '').replace(/[^0-9]/g, '');
+  // ?player_id= (canonical NFL player id) or the deprecated ?espn_id= lane athlete id
+  const espnId = String(athleteParam(req.query || {}).laneId || '').replace(/[^0-9]/g, '');
   const abbr = String(req.query?.abbr || '').replace(/[^A-Za-z]/g, '');
 
   /* IDENTITY-SAFE PATH (additive).
@@ -23,7 +25,7 @@ export default async function handler(req, res) {
     const image = headshotUrl(espnId);
     if (!image) return res.status(404).json({ error: 'No NFL image found.' });
     return res.status(200).json({
-      kind: 'player', name: name || null, id: espnId, image,
+      kind: 'player', name: name || null, player_id: playerIdFor(espnId), id: espnId, image,
       source: 'ESPN', resolved_by: 'espn_athlete_id' // source-brand:allow (image credit / internal log only)
     });
   }
@@ -31,7 +33,7 @@ export default async function handler(req, res) {
     const image = teamLogoUrl(abbr);
     if (!image) return res.status(404).json({ error: 'No NFL image found.' });
     return res.status(200).json({
-      kind: 'team', name: name || null, abbreviation: abbr.toUpperCase(), image,
+      kind: 'team', name: name || null, team_id: abbr.toUpperCase(), abbreviation: abbr.toUpperCase(), image,
       source: 'ESPN', resolved_by: 'team_abbreviation' // source-brand:allow (image credit / internal log only)
     });
   }

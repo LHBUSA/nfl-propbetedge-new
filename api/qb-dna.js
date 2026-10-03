@@ -13,7 +13,9 @@ import { resolvePlayer, gamesFor, baseline, conditionProfile, dnaSignals, proven
 import { gateReport, SERVED_FIELDS } from './_qbdna/gating.js';
 import { playerMedia, teamBlock } from './_playerdna/media.js';
 
+import { markDeprecatedIds } from './_neutral-ids.js';
 function send(res, status, body, ttl = 0) {
+  markDeprecatedIds(body);
   res.statusCode = status;
   res.setHeader('content-type', 'application/json; charset=utf-8');
   res.setHeader('access-control-allow-origin', '*');
@@ -62,7 +64,7 @@ export default function handler(req, res) {
     const rows = D.players.map(p => {
       const g = gamesFor(p.gsis_id);
       return {
-        gsis_id: p.gsis_id, espn_id: p.espn_id ?? null, pfr_id: p.pfr_id ?? null,
+        player_id: p.gsis_id, gsis_id: p.gsis_id, espn_id: p.espn_id ?? null, pfr_id: p.pfr_id ?? null,
         name: p.display_name, position: p.position ?? null,
         team: g.length ? g[g.length - 1].t : null,
         games: g.length,
@@ -101,7 +103,7 @@ export default function handler(req, res) {
   const metricKey = MARKETS[metric].key;
 
   const found = resolvePlayer({
-    player_id: q.player_id, gsis_id: q.gsis_id, espn_id: q.espn_id, name: q.name
+    player_id: q.player_id, player_id: q.gsis_id, gsis_id: q.gsis_id, espn_id: q.espn_id, name: q.name
   });
   if (!found.player) {
     return send(res, 404, { ok: false, error: 'player_not_resolved', detail: found.reason,
@@ -123,7 +125,7 @@ export default function handler(req, res) {
           + 'or postseason game inside our data window.'
         : 'No completed NFL game for this player inside our data window.',
       player: {
-        gsis_id: p.gsis_id, espn_id: p.espn_id ?? null, pfr_id: p.pfr_id ?? null,
+        player_id: p.gsis_id, gsis_id: p.gsis_id, espn_id: p.espn_id ?? null, pfr_id: p.pfr_id ?? null,
         name: p.display_name, position: p.position ?? null,
         current_team: p.team_2026 ?? null,
         active_2026: Boolean(p.active_2026),
@@ -157,7 +159,7 @@ export default function handler(req, res) {
     ok: true,
     player: {
       pbe_player_id: null,                 // assigned by the canonical layer, not by this prototype
-      gsis_id: p.gsis_id, espn_id: p.espn_id ?? null, pfr_id: p.pfr_id ?? null,
+      player_id: p.gsis_id, gsis_id: p.gsis_id, espn_id: p.espn_id ?? null, pfr_id: p.pfr_id ?? null,
       name: p.display_name, position: p.position ?? null,
       current_team: rows[rows.length - 1].t ?? null,
       active_2026: Boolean(p.active_2026),

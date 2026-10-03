@@ -28,6 +28,11 @@
  */
 
 import { deriveSlate, teamSchedule, ymdET } from './slate.js';
+import CROSSWALK from '../../../data/dist/player-id-crosswalk.json' with { type: 'json' };
+import { laneToPlayer, playerIdFrom, laneIdFrom, neutralizeIds } from '../../nfl-picks-engine-shared/neutral-ids.mjs';
+
+// Neutral public ids (player_id = canonical gsis) next to deprecated lane ids, at the response boundary only.
+const PLAYER_IDS = laneToPlayer(CROSSWALK);
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -71,7 +76,7 @@ const S = v => (v == null ? '' : String(v));
 const N = v => { if (v === null || v === undefined || v === '') return null; const n = Number(v); return Number.isFinite(n) ? n : null; };
 
 function json(data, status = 200, extra = {}) {
-  return new Response(JSON.stringify(data), { status, headers: { ...CORS, ...extra } });
+  return new Response(JSON.stringify(neutralizeIds(data, PLAYER_IDS)), { status, headers: { ...CORS, ...extra } });
 }
 
 async function pbe(qs) {
@@ -422,6 +427,7 @@ function currentPlayer(acc, espnId, teamHint, season, meta) {
     ok: true,
     season: Number(season),
     season_type: 'REG',
+    player_id: playerIdFrom(PLAYER_IDS, id),
     espn_id: id || null,
     team: { abbreviation: team || null, completed_games: teamCompleted },
     league: { completed_games: meta.finalsCount, teams_with_a_completed_game: Object.keys(teams).length },
@@ -699,9 +705,10 @@ export default {
       if (path.startsWith('/api/current-player')) {
         const season = Number(p.get('season')) || (await cached(KEY.season('current')))?.season;
         if (!season) return json({ ok: false, available: false, error: 'season_unresolved' }, 503);
-        const espnId = S(p.get('espn_id')).trim();
+        // ?player_id= (canonical NFL player id) or the deprecated ?espn_id= lane athlete id
+        const espnId = S(p.get('espn_id')).trim() || S(laneIdFrom(PLAYER_IDS, S(p.get('player_id')).trim()) || '');
         const teamHint = S(p.get('team')).trim();
-        if (!espnId && !teamHint) return json({ ok: false, available: false, error: 'espn_id_or_team_required' }, 400);
+        if (!espnId && !teamHint) return json({ ok: false, available: false, error: 'espn_id_or_team_required', accepted: ['player_id', 'espn_id (deprecated)', 'team'] }, 400);
         const acc = await cached(KEY.stats(season));
         if (!acc) {
           return json({ ok: false, available: false, season, error: 'current_stats_unavailable',

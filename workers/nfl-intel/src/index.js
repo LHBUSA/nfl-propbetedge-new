@@ -33,6 +33,10 @@ import { buildInjuryBoard } from './injury-board.js';
 import { captureMarket, recentRows } from './market.js';
 import { refreshWeather, gameWeatherView, WX_KEY, WX_MAX_AGE_MS } from './weather.js';
 import { nflverseCode, nflverseGameId } from '../../nfl-picks-engine-shared/current-slate.mjs';
+import CROSSWALK from '../../../data/dist/player-id-crosswalk.json' with { type: 'json' };
+import { laneToPlayer, neutralizeIds } from '../../nfl-picks-engine-shared/neutral-ids.mjs';
+// Neutral public ids (player_id = canonical gsis) next to deprecated lane ids, at the response boundary only.
+const PLAYER_IDS = laneToPlayer(CROSSWALK);
 
 const VERSION = 'nfl-intel/1.3.0';
 const INJURY_STALE_MS = 30 * 60000;
@@ -53,7 +57,7 @@ export function intParam(url, name, fallback, lo, hi) {
 }
 
 function json(body, status = 200, maxAge = 0) {
-  return new Response(JSON.stringify(body), {
+  return new Response(JSON.stringify(neutralizeIds(body, PLAYER_IDS)), {
     status,
     headers: { ...CORS, 'content-type': 'application/json; charset=utf-8', 'cache-control': status === 200 && maxAge ? `public, max-age=${maxAge}` : 'no-store', 'x-pbe-runtime': VERSION }
   });

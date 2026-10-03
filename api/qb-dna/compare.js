@@ -20,7 +20,9 @@ import { resolvePlayer, gamesFor, baseline, splitRows, provenance,
          CONDITIONS, MARKETS, SAMPLE } from '../_qbdna/engine.js';
 import { playerMedia, teamBlock } from '../_playerdna/media.js';
 
+import { markDeprecatedIds } from '../_neutral-ids.js';
 function send(res, status, body, ttl = 0) {
+  markDeprecatedIds(body);
   res.statusCode = status;
   res.setHeader('content-type', 'application/json; charset=utf-8');
   res.setHeader('access-control-allow-origin', '*');
@@ -216,14 +218,14 @@ function playersMode(res, q) {
 
   send(res, 200, {
     ok: true, mode: 'players',
-    player_a: { gsis_id: A.player.gsis_id, espn_id: A.player.espn_id ?? null,
+    player_a: { player_id: A.player.gsis_id, gsis_id: A.player.gsis_id, espn_id: A.player.espn_id ?? null,
                 name: A.player.display_name, position: A.player.position ?? null,
                 team: ra.length ? ra[ra.length - 1].t : null,
                 matched_by: A.matched_by,
                 media: playerMedia(A.player.espn_id),
                 team_identity: teamBlock(A.player.team_2026
                   || (ra.length ? ra[ra.length - 1].t : null)) },
-    player_b: { gsis_id: B.player.gsis_id, espn_id: B.player.espn_id ?? null,
+    player_b: { player_id: B.player.gsis_id, gsis_id: B.player.gsis_id, espn_id: B.player.espn_id ?? null,
                 name: B.player.display_name, position: B.player.position ?? null,
                 team: rb.length ? rb[rb.length - 1].t : null,
                 matched_by: B.matched_by,
@@ -311,7 +313,7 @@ function contextMode(res, q) {
 
   send(res, 200, {
     ok: true, mode: 'context',
-    player: { gsis_id: found.player.gsis_id, espn_id: found.player.espn_id ?? null,
+    player: { player_id: found.player.gsis_id, gsis_id: found.player.gsis_id, espn_id: found.player.espn_id ?? null,
               name: found.player.display_name, matched_by: found.matched_by,
               media: playerMedia(found.player.espn_id),
               team: teamBlock(found.player.team_2026) },

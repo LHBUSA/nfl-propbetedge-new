@@ -19,6 +19,7 @@ import { teamBlock } from '../_playerdna/media.js';
 const SCOREBOARD = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard';
 import { forecastRequest } from '../_weather/provider.mjs';
 
+import { markDeprecatedIds } from '../_neutral-ids.js';
 let VENUES = null;
 function venues() {
   if (!VENUES) VENUES = JSON.parse(readFileSync(join(process.cwd(), 'data', 'dist', 'nfl-venues.json'), 'utf8'));
@@ -26,6 +27,7 @@ function venues() {
 }
 
 function send(res, status, body, ttl = 0) {
+  markDeprecatedIds(body);
   res.statusCode = status;
   res.setHeader('content-type', 'application/json; charset=utf-8');
   res.setHeader('access-control-allow-origin', '*');
@@ -90,11 +92,13 @@ function shapeEvent(ev) {
   const homeAbbr = home.team.abbreviation, awayAbbr = away.team.abbreviation;
   const v = venues().teams[homeAbbr] || null;
   return {
+    game_id: String(ev.id),
     espn_event_id: String(ev.id),
     label: `${awayAbbr} @ ${homeAbbr}`,
     kickoff_utc: ev.date,
     status: c.status && c.status.type && c.status.type.name,
     home_team: homeAbbr, away_team: awayAbbr,
+    home_team_id: homeAbbr, away_team_id: awayAbbr,
     home_team_espn_id: String(home.team.id), away_team_espn_id: String(away.team.id),
     espn_venue: (c.venue && c.venue.fullName) || null,
     espn_venue_indoor: c.venue ? Boolean(c.venue.indoor) : null,

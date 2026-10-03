@@ -18,12 +18,14 @@
  * Given a durable store this moves server-side unchanged, because
  * weatherEvents(next, prev) is already a pure function of two snapshots.
  */
+import { markDeprecatedIds } from './_neutral-ids.js';
 import { gameSnapshot, weatherEvents, pollIntervalMinutes, THRESHOLDS, venues }
   from './_breaking/weather.js';
 
 const SCOREBOARD = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard';
 
 function send(res, status, body, ttl = 0) {
+  markDeprecatedIds(body);
   res.statusCode = status;
   res.setHeader('content-type', 'application/json; charset=utf-8');
   res.setHeader('access-control-allow-origin', '*');
@@ -64,7 +66,8 @@ export default async function handler(req, res) {
   } catch (e) {
     return send(res, 502, { ok: false, error: 'slate_unavailable', detail: e.message });
   }
-  if (q.event_id) games = games.filter(g => g.espn_event_id === String(q.event_id));
+  const wantGame = q.game_id || q.event_id; // ?game_id= (neutral) or ?event_id=: the same scoreboard game id
+  if (wantGame) games = games.filter(g => g.espn_event_id === String(wantGame));
   if (!games.length) {
     return send(res, 200, { ok: true, games: [], monitored: 0,
       reason: q.event_id ? 'no game with that event id in the current slate'
@@ -77,7 +80,7 @@ export default async function handler(req, res) {
      the source did not need to serve. */
   const monitored = games.filter(g => pollIntervalMinutes(g.kickoff_utc, now) !== null);
   const skipped = games.filter(g => pollIntervalMinutes(g.kickoff_utc, now) === null)
-    .map(g => ({ event_id: g.espn_event_id, matchup: `${g.away_team} @ ${g.home_team}`,
+    .map(g => ({ game_id: g.espn_event_id, event_id: g.espn_event_id, matchup: `${g.away_team} @ ${g.home_team}`,
                  kickoff_utc: g.kickoff_utc,
                  reason: `kickoff is more than ${THRESHOLDS.monitor_from_hours}h away` }));
 

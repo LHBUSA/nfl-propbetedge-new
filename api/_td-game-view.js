@@ -135,6 +135,7 @@ export function shapeGameTarget({ row, rank, grade, hit, driversFrom }) {
     scope_label: scope === 'official' ? 'OFFICIAL TARGET' : 'TRACKING TARGET',
     player: {
       name: row.player_name,
+      player_id: player.gsis_id ?? null, // canonical NFL player id (gsis); espn_id below is deprecated
       espn_id: player.espn_id ?? null,
       gsis_id: player.gsis_id ?? null,
       position: player.position ?? null,
@@ -186,7 +187,8 @@ function countStates(states) {
  * @param {Function} args.driversFrom    the caller's server-side reason derivation
  */
 export async function gameView({ res, send, sb, secret, query = {}, resolveAccess, driversFrom, nowMs = Date.now() }) {
-  const espnId = String(query.espn_id ?? query.event ?? '').trim();
+  // ?game_id= (neutral scoreboard game id) or the deprecated ?espn_id= / ?event= keys; same opaque value
+  const espnId = String(query.game_id ?? query.espn_id ?? query.event ?? '').trim();
   if (!ESPN_GAME_RE.test(espnId)) return send(res, 400, { error: 'invalid_espn_id', expected: 'event id' });
 
   let access;
@@ -202,6 +204,7 @@ export async function gameView({ res, send, sb, secret, query = {}, resolveAcces
 
   const base = {
     view: 'game',
+    game_id: espnId,
     espn_id: espnId,
     access: pro ? 'pro' : 'locked',
     access_reason: pro ? null : tier,
@@ -222,6 +225,7 @@ export async function gameView({ res, send, sb, secret, query = {}, resolveAcces
 
   const kickoffMs = Date.parse(evaluation.kickoff_ts);
   const game = {
+    game_id: espnId,
     espn_id: espnId,
     season: evaluation.season,
     week: evaluation.week,

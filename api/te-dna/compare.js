@@ -15,7 +15,9 @@ import { resolvePlayer, gamesFor, baseline, splitRows, provenance, dataWindow,
          CONDITIONS, SAMPLE } from '../_tedna/engine.js';
 import { playerMedia, teamBlock } from '../_playerdna/media.js';
 
+import { markDeprecatedIds } from '../_neutral-ids.js';
 function send(res, status, body, ttl = 0) {
+  markDeprecatedIds(body);
   res.statusCode = status;
   res.setHeader('content-type', 'application/json; charset=utf-8');
   res.setHeader('access-control-allow-origin', '*');
@@ -108,7 +110,7 @@ function playersMode(res, q) {
   const baseA = summarise(ra), baseB = summarise(rb);
 
   const ident = (r, rows) => ({
-    gsis_id: r.player.gsis_id, espn_id: r.player.espn_id ?? null,
+    player_id: r.player.gsis_id, gsis_id: r.player.gsis_id, espn_id: r.player.espn_id ?? null,
     name: r.player.display_name, position: r.player.position ?? 'TE',
     team: rows.length ? rows[rows.length - 1].t : null,
     matched_by: r.matched_by,
@@ -215,7 +217,7 @@ function contextMode(res, q) {
 
   send(res, 200, {
     ok: true, mode: 'context',
-    player: { gsis_id: found.player.gsis_id, espn_id: found.player.espn_id ?? null,
+    player: { player_id: found.player.gsis_id, gsis_id: found.player.gsis_id, espn_id: found.player.espn_id ?? null,
               name: found.player.display_name, matched_by: found.matched_by,
               media: playerMedia(found.player.espn_id),
               team: teamBlock(found.player.team_2026) },
