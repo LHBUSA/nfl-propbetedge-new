@@ -25,3 +25,39 @@
 .pbe25-kx--closed .kx-line{opacity:.86}
 /* PBEcast FINAL: "How the market closed" under the replay */
 .kx-nfl--history .kx-h__chart svg{max-width:100%}
+
+/* PBEcast Market Pulse (MLB PBEcast standard): one module directly under the hero for the whole game
+   lifecycle (pregame / live / final-still-trading card, then "How the market closed"); the host is hidden
+   until a market exists. Compact per-team rows (Mid-market + stored movement side by side). Fixed
+   structure: price updates never shift layout. */
+[data-pbecc-cast="kalshi"]{margin-top:12px;min-width:0}
+.cast-mkt{min-width:0;container-type:inline-size}
+.cast-mkt .kx-nfl .kx{padding:10px 12px}
+.cast-mkt-phase{display:flex;align-items:center;gap:6px;margin:0 0 5px 2px;font:800 10px/1 var(--pbe-font-data,'JetBrains Mono',ui-monospace,monospace);letter-spacing:.14em;color:#7fb8ff}
+.cast-mkt-dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex:none}
+.cast-mkt[data-phase="live"] .cast-mkt-phase{color:#ff6b6b}
+.cast-mkt[data-phase="live"] .cast-mkt-dot{animation:cast-mkt-blink 1.6s ease-in-out infinite}
+.cast-mkt[data-phase="closed"] .cast-mkt-phase,.cast-mkt[data-phase="settled"] .cast-mkt-phase,.cast-mkt[data-phase="final-open"] .cast-mkt-phase,.cast-mkt[data-phase="stale"] .cast-mkt-phase{color:var(--pbe-dim,#b8b3a8)}
+@keyframes cast-mkt-blink{50%{opacity:.25}}
+.cast-mkt .kx__hd{margin-bottom:8px}
+.cast-mkt .kx__panel{display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-areas:"who move" "price move" "book book";column-gap:12px;align-items:end;padding:8px 10px 8px 13px}
+.cast-mkt .kx__who{grid-area:who}
+.cast-mkt .kx__price{grid-area:price;margin-top:2px}
+.cast-mkt .kx__move{grid-area:move;min-height:0;margin:0;align-self:stretch}
+.cast-mkt .kx__book{grid-area:book;margin-top:6px}
+.cast-mkt .kx__act{display:none}
+.cast-mkt .kx__ft{margin-top:8px}
+.cast-mkt .kx__panel--settled{display:block}
+@container (max-width:560px){
+  .cast-mkt .kx__panel{grid-template-columns:minmax(0,1fr);grid-template-areas:"who" "price" "move" "book";padding:8px 8px 8px 11px}
+  .cast-mkt .kx__move{margin-top:4px}
+  .cast-mkt .kx__spark{height:28px}
+  .cast-mkt .kx__book{gap:2px 8px}
+}
+
+/* PBEcast game rail (Sunday board tile; v6 rail button): one compact market footer inside the game
+   button; tabular fixed-decimal prices keep its width constant while prices move. */
+.pbecb-tile>.kx-nfl-rail,.cast6-rail button>.kx-nfl-rail{display:flex;align-items:center;gap:6px;height:12px;margin-top:6px;padding-top:3px;border-top:1px dashed rgba(127,184,255,.18);font:600 10px/1 var(--pbe-font-data,'JetBrains Mono',ui-monospace,monospace);font-style:normal;letter-spacing:.02em;white-space:nowrap;overflow:hidden;font-variant-numeric:tabular-nums;color:var(--pbe-paper-2,#e8e1d4);box-sizing:content-box}
+.pbecb-tile>.kx-nfl-rail b,.cast6-rail button>.kx-nfl-rail b{flex:none;font-weight:800;letter-spacing:.1em;color:#7fb8ff}
+.pbecb-tile>.kx-nfl-rail span,.cast6-rail button>.kx-nfl-rail span{min-width:0;overflow:hidden;text-overflow:ellipsis}
+@media (prefers-reduced-motion:reduce){.cast-mkt-dot{animation:none!important}}

@@ -8,11 +8,19 @@
  * shared membership module on window.PBEMembership.
  *
  * Placements (all optional layers; nothing waits on them):
- *   PBEcast   LIVE      kalshiStrip(entry, { placement: 'pbecast' }) under the hero
- *             SCHEDULE  the full kalshiCard after the pregame preview row — its own
- *                       section, next to (never inside) the sportsbook MARKET tile
- *             FINAL     marketModule -> "How the market closed" (history card) under
- *                       the replay (Key Moments), once the market is CLOSED/SETTLED
+ *   PBEcast   ONE Market Pulse module directly under the hero (scoreboard) for the
+ *             whole game lifecycle (MLB PBEcast standard, propbetedge-v2 6f34d67),
+ *             with a lifecycle label: MARKET OPEN · PRE-MATCH / LIVE MARKET /
+ *             GAME FINAL · MARKET STILL TRADING (full compact kalshiCard: Mid-market
+ *             per side, Updated Ns ago, stored movement + sparkline, bid/ask, View
+ *             market on Kalshi), then "How the market closed" in the same place:
+ *             MARKET CLOSED · AWAITING SETTLEMENT / MARKET SETTLED. A stale in-game
+ *             quote is labelled MARKET OPEN · QUOTE STALE, never LIVE. Its own
+ *             section, never inside the sportsbook MARKET tile.
+ *   Rail      PBEcast game rail (Sunday board tiles + v6 rail buttons): one compact
+ *             "MKT IND 65.5¢ · WSH 34.5¢" footer per game only for exact (event + both team ids), displayable, fresh
+ *             two-sided markets (kalshiLine rules); one shared-client board read per
+ *             refresh; patched in place (v6 rail DOM otherwise untouched)
  *   Games     kalshiLine on each not-final game card, marketCloseLine on a FINAL
  *             card, from one board read
  *
@@ -85,10 +93,10 @@
   const forId = (entry, id) => (entry && (!id || String(entry.event?.canonical_event_id) === String(id)) ? entry : null);
 
   /* Full card + the NFL tie note beside it. */
-  function card(entry, { placement = 'pbecast-preview', colors = {}, id = null, K = ui() } = {}) {
+  function card(entry, { placement = 'pbecast-preview', colors = {}, id = null, compact = false, K = ui() } = {}) {
     const e = forId(entry, id);
     if (!K || !e) return '';
-    const html = K.kalshiCard(e, { placement, colors });
+    const html = K.kalshiCard(e, { placement, colors, compact });
     if (!html) return '';
     return `<div class="kx-nfl" data-kx-nfl="${esc(placement)}">${html}${tieNote(e)}</div>`;
   }
@@ -135,6 +143,58 @@
     return K.marketCloseLine(e) || '';
   }
 
+  /* PBEcast module: lifecycle label over the full compact card, or the history
+     card once the market has CLOSED / SETTLED. [phase key, label] or null. */
+  function castPhase(entry, phase) {
+    if (!entry) return null;
+    const lc = lifecycleOf(entry);
+    if (lc === 'SETTLED') return ['settled', 'MARKET SETTLED'];
+    if (lc === 'CLOSED') return ['closed', 'MARKET CLOSED · AWAITING SETTLEMENT'];
+    if (phase === 'final') return ['final-open', 'GAME FINAL · MARKET STILL TRADING'];
+    if (phase === 'live') return entry.kalshi?.freshness === 'stale' ? ['stale', 'MARKET OPEN · QUOTE STALE'] : ['live', 'LIVE MARKET'];
+    if (phase === 'pregame') return ['pre', 'MARKET OPEN · PRE-MATCH'];
+    return null;
+  }
+  function castModule(entry, phase, { colors = {}, id = null, K = ui() } = {}) {
+    const e = forId(entry, id);
+    const p = castPhase(e, phase);
+    if (!K || !p) return '';
+    /* closed / settled: the history card; without a stored history yet, the settled card (never nothing after the final) */
+    const body = (isDone(e) ? history(e, { placement: 'pbecast-history', id, K }) : '') || card(e, { placement: 'pbecast', colors, id, compact: true, K });
+    if (!body) return '';
+    return `<div class="cast-mkt" data-phase="${p[0]}"><div class="cast-mkt-phase"><span class="cast-mkt-dot" aria-hidden="true"></span>${esc(p[1])}</div>${body}</div>`;
+  }
+
+  /* PBEcast rail footer text: exact event + both ESPN team ids (away / home order),
+     and only what a game card would show (kalshiLine). Not on final games. */
+  const cents = bp => `${(bp / 100).toFixed(1)}¢`;
+  function railText(entry, game, K = ui()) {
+    if (!K || !entry || !game) return '';
+    const s = String(game.status?.semantics || '').toUpperCase();
+    if (s !== 'LIVE' && s !== 'SCHEDULE') return '';
+    if (String(entry.event?.canonical_event_id ?? '') !== String(game.id)) return '';
+    if (!K.kalshiLine(entry)) return '';
+    const outs = entry.kalshi?.outcomes || [];
+    if (outs.length !== 2) return '';
+    const away = outs.find(o => o.role === 'away'), home = outs.find(o => o.role === 'home');
+    const a = game.teams?.away, h = game.teams?.home;
+    if (!away || !home || a?.id == null || h?.id == null) return '';
+    if (String(away.team_id) !== String(a.id) || String(home.team_id) !== String(h.id)) return '';
+    if (!Number.isFinite(away.mid_bp) || !Number.isFinite(home.mid_bp)) return '';
+    return `${a.abbreviation || away.abbr} ${cents(away.mid_bp)} · ${h.abbreviation || home.abbr} ${cents(home.mid_bp)}`;
+  }
+  function railMarkup(text) {
+    return `<em class="kx-nfl-rail" title="Kalshi prediction market · Mid-market (not sportsbook odds)"><b>MKT</b><span>${esc(text)}</span></em>`;
+  }
+  /* write / update / remove one rail button's footer in place; nothing else changes */
+  function patchRailChip(btn, text) {
+    const el = btn.querySelector('.kx-nfl-rail');
+    if (!text) { if (el) el.remove(); return; }
+    if (!el) { btn.insertAdjacentHTML('beforeend', railMarkup(text)); return; }
+    const px = el.querySelector('span');
+    if (px && px.textContent !== text) px.textContent = text;
+  }
+
   /* Next read for the selected game: SETTLED -> none; CLOSED -> 5 min; a FINAL
      game whose market is still open -> idle cadence until it closes; a FINAL game
      with no market -> none; otherwise the client's live/pregame/idle cadence. */
@@ -165,13 +225,13 @@
      45 s — while that game stays selected and PBEcast stays mounted. A FINAL
      game is read too: its history card follows the market to CLOSED (5 min)
      and SETTLED (no more reads) with no release. */
-  const cast = { id: null, phase: null, entry: null, timer: null, seq: 0, open: false, built: { strip: null, card: null, history: null } };
+  const cast = { id: null, phase: null, entry: null, timer: null, seq: 0, built: { module: null } };
   const castMounted = () => Boolean(root.document?.querySelector?.('.pbecast6'));
   const phaseOf = g => { const s = String(g?.status?.semantics || '').toUpperCase(); return s === 'LIVE' ? 'live' : s === 'SCHEDULE' ? 'pregame' : s === 'FINAL' ? 'final' : null; };
 
   function castStop() {
     clearTimeout(cast.timer); cast.timer = null; cast.seq += 1;
-    cast.id = null; cast.phase = null; cast.entry = null; cast.open = false; cast.built = { strip: null, card: null, history: null };
+    cast.id = null; cast.phase = null; cast.entry = null; cast.built = { module: null };
   }
   function castArm(delay) {
     clearTimeout(cast.timer);
@@ -221,38 +281,57 @@
     castSync(own ? id : '', phase);
     let html = '';
     if (own && cast.entry && cast.id === id) {
-      const colors = colorsFor(g.teams);
-      const kind = isDone(cast.entry) && cast.entry.market_history ? 'history' : phase === 'live' ? 'strip' : phase === 'pregame' ? 'card' : phase === 'final' ? 'card' : null;
-      if (kind) {
-        /* the markup is rebuilt only for a NEW observation, so a v6 repaint
-           neither replays nor cuts short the component's change flash */
-        const b = cast.built[kind];
-        if (!b || b.entry !== cast.entry) {
-          cast.built[kind] = { entry: cast.entry, html: kind === 'history' ? history(cast.entry, { placement: 'pbecast-history', id }) : kind === 'strip' ? strip(cast.entry, { placement: 'pbecast', colors, id }) : card(cast.entry, { placement: phase === 'final' ? 'pbecast-final' : 'pbecast-preview', colors, id }) };
-        }
-        html = cast.built[kind].html;
-        if (kind === 'strip' && cast.open) html = html.replace('<details class="kx-strip"', '<details open class="kx-strip"');
+      /* the markup is rebuilt only for a NEW observation (or a phase change), so
+         a v6 repaint neither replays nor cuts short the component's change flash */
+      const b = cast.built.module;
+      if (!b || b.entry !== cast.entry || b.phase !== phase) {
+        cast.built.module = { entry: cast.entry, phase, html: castModule(cast.entry, phase, { colors: colorsFor(g.teams), id }) };
       }
+      html = cast.built.module.html;
     }
-    if (host.dataset.sig === html) return;
-    host.innerHTML = html;
-    host.dataset.sig = html;
-    if (html) wire(host);
+    if (host.dataset.sig !== html) {
+      host.innerHTML = html;
+      host.dataset.sig = html;
+      if (html) wire(host);
+    }
+    railRefresh(v6);
+  }
+
+  /* PBEcast rail: ONE shared-client board read per refresh (15 s TTL, one
+     in-flight request; a render inside the TTL reuses it), off v6's lanes. */
+  let railInFlight = false;
+  function railApply(v6) {
+    const K = ui();
+    const scope = root.document?.querySelector?.('.pbecast6');
+    if (!K?.client || !scope) return;
+    const games = new Map();
+    for (const gm of [...(v6?.scoreboard?.games || []), v6?.detail?.game].filter(Boolean)) games.set(String(gm.id), gm);
+    /* the Sunday board tiles (the visible game rail) and v6's own rail buttons */
+    scope.querySelectorAll('.pbecb-tile[data-game], [data-cast6-rail] button[data-game]').forEach(btn => {
+      const gm = games.get(String(btn.dataset.game));
+      patchRailChip(btn, gm ? railText(K.client.forEvent(gm.id), gm, K) : '');
+    });
+  }
+  function railRefresh(v6) {
+    railApply(v6);
+    if (railInFlight || typeof root.document === 'undefined') return;
+    railInFlight = true;
+    ready().then(K => (K ? K.client.loadBoard() : null)).then(() => railApply(root.PBEcastV6?.state || v6)).catch(() => {}).finally(() => { railInFlight = false; });
   }
 
   if (typeof root.document !== 'undefined') {
-    root.document.addEventListener('toggle', e => {
-      if (e.target?.classList?.contains('kx-strip') && e.target.closest?.('.pbecast6')) cast.open = e.target.open;
-    }, true);
     root.addEventListener('pbe:route-changed', () => setTimeout(() => { if (!castMounted()) castStop(); }, 0));
     root.document.addEventListener('visibilitychange', () => {
       if (root.document.visibilityState !== 'hidden' && cast.id && castMounted() && lifecycleOf(cast.entry) !== 'SETTLED') castArm(0);
     });
-    ready().then(K => { if (K && castMounted()) root.PBEcastCommand?.render?.(); });
+    /* the board read starts as soon as the component is ready, so rail footers are
+       usually present in the first board paint (no tile growth after it) */
+    ready().then(K => { if (K && castMounted()) { K.client.loadBoard().catch(() => null); root.PBEcastCommand?.render?.(); } });
   }
 
   return {
     ready, loadBoard, lineFor, wire, tieNote, card, strip, line, history, closeLine, nextPollMs, colorsFor,
+    castPhase, castModule, railText, patchRailChip,
     pbecast: { mount: castMount, sync: castSync, stop: castStop, state: cast },
     TIE_NOTE, TIE_PROPOSITION, CLOSED_POLL_MS
   };

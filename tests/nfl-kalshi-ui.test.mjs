@@ -155,12 +155,12 @@ test('wiring: loader order, PBEcast placement, Games line', () => {
   const nfl = loader.indexOf("{css:'./nfl-kalshi.css',js:'./nfl-kalshi.js'}");
   const cmd = loader.indexOf("{css:'./pbecast-command-v1.css',js:'./pbecast-command-v1.js'}");
   assert.ok(css > 0 && nfl > css && cmd > nfl, 'component CSS, then the bridge, then the PBEcast command layer that mounts it');
-  const command = read('pbecast-command-v1.js');
-  assert.match(command, /const kalshi = hostFor\(root, 'kalshi', '\[data-cast6-hero\]'\);\n    if \(!done\) place\(kalshi, pre \? preview : hero\);\n    window\.PBENflKalshi\?\.pbecast\?\.mount\?\.\(kalshi, v6\(\)\);/);
-  assert.match(command, /place\(pick, done \? hero : kalshi\);/);
-  /* FINAL: the market-history host sits directly under the replay (Key Moments) */
-  assert.match(command, /const done = Boolean\(g\) && String\(g\.id\) === activeId && sem\(g\) === 'FINAL';/);
-  assert.match(command, /place\(moments, tdTargets\);\n[^\n]*\n    if \(done\) place\(kalshi, moments\);/);
+  const command = read('pbecast-command-v1.js').split('\r\n').join('\n');
+  /* MLB PBEcast standard: ONE market host directly under the hero (scoreboard) in every
+     phase; the pregame preview and the pick follow it; it never moves under the replay */
+  assert.match(command, /const kalshi = hostFor\(root, 'kalshi', '\[data-cast6-hero\]'\);\n    place\(kalshi, hero\);\n    place\(preview, kalshi\);\n    window\.PBENflKalshi\?\.pbecast\?\.mount\?\.\(kalshi, v6\(\)\);/);
+  assert.match(command, /place\(pick, pre \? preview : kalshi\);/);
+  assert.doesNotMatch(command, /place\(kalshi, moments\)/);
   /* the sportsbook MARKET tile is untouched and Kalshi is not in it */
   assert.doesNotMatch(read('pbecast-preview-v1.js'), /kalshi/i);
   const games = read('games-v2.js');
@@ -203,20 +203,28 @@ test('PBEcast pregame: one read for the selected game, full card + tie note, nex
   await settle(); await settle();
   assert.deepEqual(h.calls, ['401872965']);
   h.n.pbecast.mount(h.host, v6('401872965', 'SCHEDULE'));
-  assert.match(h.host.innerHTML, /data-kx-nfl="pbecast-preview"/);
+  assert.match(h.host.innerHTML, /^<div class="cast-mkt" data-phase="pre">/);
+  assert.match(text(h.host.innerHTML), /^MARKET OPEN · PRE-MATCH Market Pulse/);
+  assert.match(h.host.innerHTML, /data-kx-nfl="pbecast"/);
+  assert.match(h.host.innerHTML, /class="ic kx kx--compact"/);
   assert.match(text(h.host.innerHTML), /A tie pays 50¢ per contract/);
   const live = h.timers.filter(t => !t.cleared);
   assert.equal(live.length, 1);
   assert.equal(live[0].ms, 45000);
 });
 
-test('PBEcast live: the strip with placement "pbecast", polled at 20 s; a game switch drops the old timer', async () => {
+test('PBEcast live: the full compact card under LIVE MARKET (never a collapsed strip), polled at 20 s; a game switch drops the old timer', async () => {
   const other = entry({ market_url: 'https://kalshi.com/markets/kxnflgame/nfl-game/kxnflgame-26oct04detbuf' }, { canonical_event_id: '401872932' });
   const h = castHarness({ 401872965: entry(), 401872932: other });
   h.n.pbecast.mount(h.host, v6('401872965', 'LIVE'));
   await settle(); await settle();
   h.n.pbecast.mount(h.host, v6('401872965', 'LIVE'));
-  assert.match(h.host.innerHTML, /<details class="kx-strip"[^>]*data-kx-placement="pbecast"/);
+  assert.match(h.host.innerHTML, /data-phase="live"/);
+  assert.match(text(h.host.innerHTML), /^LIVE MARKET Market Pulse/);
+  assert.match(h.host.innerHTML, /class="ic kx kx--compact"[^>]*data-kx-placement="pbecast"/);
+  assert.match(text(h.host.innerHTML), /Mid-market/);
+  assert.match(text(h.host.innerHTML), /View market on Kalshi/);
+  assert.doesNotMatch(h.host.innerHTML, /<details/);
   const first = h.timers.filter(t => !t.cleared);
   assert.equal(first.length, 1);
   assert.equal(first[0].ms, 20000);
@@ -332,6 +340,7 @@ test('PBEcast FINAL game: history card from the event read; SETTLED -> no furthe
   assert.deepEqual(h.calls, ['401872965']);
   h.n.pbecast.mount(h.host, v6('401872965', 'FINAL'));
   assert.match(h.host.innerHTML, /data-kx-nfl="pbecast-history"[\s\S]*data-kx-history/);
+  assert.match(text(h.host.innerHTML), /^MARKET SETTLED How the market closed/);
   assert.equal(h.timers.filter(t => !t.cleared).length, 0, 'SETTLED is never polled');
 });
 
@@ -340,6 +349,7 @@ test('PBEcast FINAL game, CLOSED market: awaiting settlement, re-read every 5 mi
   h.n.pbecast.mount(h.host, v6('401872965', 'FINAL'));
   await settle(); await settle();
   h.n.pbecast.mount(h.host, v6('401872965', 'FINAL'));
+  assert.match(text(h.host.innerHTML), /^MARKET CLOSED · AWAITING SETTLEMENT How the market closed/);
   assert.match(text(h.host.innerHTML), /Market closed · awaiting settlement/);
   const live = h.timers.filter(t => !t.cleared);
   assert.equal(live.length, 1);
@@ -412,8 +422,40 @@ test('regression a229028: completed kalshi:null entry survives both loaders and 
     await settle(); await settle();
     c.pbecast.mount(host, v6('401872965', 'FINAL'));
     const t = text(host.innerHTML);
-    assert.match(t, /^How the market closed/);
+    assert.match(t, /^MARKET (SETTLED|CLOSED · AWAITING SETTLEMENT) How the market closed/);
     assert.match(t, lifecycle === 'SETTLED' ? /Kalshi settlement: WSH — YES/ : /Market closed · awaiting settlement/);
     assert.doesNotMatch(t, /Market Pulse|Live prediction market/i, 'a completed market is never labelled live');
   }
+});
+
+test('PBEcast lifecycle labels: final still trading, stale in-game quote never LIVE', () => {
+  assert.equal(JSON.stringify(N.castPhase(entry(), 'final')), JSON.stringify(['final-open', 'GAME FINAL · MARKET STILL TRADING']));
+  assert.match(text(N.castModule(entry(), 'final', { K })), /^GAME FINAL · MARKET STILL TRADING Market Pulse/);
+  assert.equal(JSON.stringify(N.castPhase(entry({ freshness: 'stale', age_seconds: 900 }), 'live')), JSON.stringify(['stale', 'MARKET OPEN · QUOTE STALE']));
+  assert.equal(N.castPhase(null, 'live'), null);
+  assert.equal(N.castModule(null, 'live', { K }), '');
+  assert.equal(N.castModule(entry({}, { canonical_event_id: '999' }), 'live', { K, id: '401872965' }), '', 'another game');
+});
+
+test('PBEcast rail footer: exact, displayable, fresh two-sided markets only; patched in place', () => {
+  const game = (semantics, ids = ['11', '28']) => ({ id: '401872965', status: { semantics }, teams: { away: { id: ids[0], abbreviation: 'IND' }, home: { id: ids[1], abbreviation: 'WSH' } } });
+  assert.equal(N.railText(entry(), game('SCHEDULE'), K), 'IND 65.5¢ · WSH 34.5¢');
+  assert.equal(N.railText(entry(), game('LIVE'), K), 'IND 65.5¢ · WSH 34.5¢');
+  assert.equal(N.railText(entry(), game('FINAL'), K), '', 'final: no footer');
+  assert.equal(N.railText(entry(), game('SCHEDULE', ['28', '11']), K), '', 'team ids must match away / home');
+  assert.equal(N.railText(entry({ freshness: 'stale', age_seconds: 900 }), game('LIVE'), K), '', 'stale');
+  assert.equal(N.railText(entry({ outcomes: [out({ displayable: false }), wsh()] }), game('LIVE'), K), '', 'not displayable');
+  assert.equal(N.railText(entry({}, { canonical_event_id: '1' }), game('LIVE'), K), '', 'other event');
+  let inserted = '';
+  N.patchRailChip({ querySelector: () => null, insertAdjacentHTML: (_, h) => { inserted = h; } }, 'IND 65.5¢ · WSH 34.5¢');
+  assert.match(inserted, /^<em class="kx-nfl-rail"[^>]*><b>MKT<\/b><span>IND 65\.5¢ · WSH 34\.5¢<\/span><\/em>$/);
+  const span = { textContent: 'IND 65.5¢ · WSH 34.5¢' };
+  let removed = false;
+  const el = { querySelector: () => span, remove: () => { removed = true; } };
+  N.patchRailChip({ querySelector: () => el }, 'IND 66.0¢ · WSH 34.0¢');
+  assert.equal(span.textContent, 'IND 66.0¢ · WSH 34.0¢');
+  N.patchRailChip({ querySelector: () => el }, '');
+  assert.ok(removed);
+  const src = read('nfl-kalshi.js');
+  assert.equal((src.match(/K\.client\.loadBoard\(\)/g) || []).length, 3, 'Games board, PBEcast rail refresh and its early prefetch: all the one shared-client board read (15 s TTL)');
 });
