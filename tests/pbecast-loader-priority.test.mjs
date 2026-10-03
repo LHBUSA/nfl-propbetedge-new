@@ -26,7 +26,7 @@ test('PBEcast v6 is one authority with one cache version, not a nested stale que
 });
 
 test('the document points at the new loader generation', () => {
-  assert.match(loader, /const VERSION='20260930psrc1'/);
-  assert.match(index, /page-loader\.js\?v=20260930psrc1/);
+  assert.match(loader, /const VERSION='20261003kalshi1'/);
+  assert.match(index, /page-loader\.js\?v=20261003kalshi1/);
   assert.match(index, /BUILD_VERSION='nfl-intelligence-os-production-20260922-pbecastfast2'/);
 });

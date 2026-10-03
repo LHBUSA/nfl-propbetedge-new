@@ -1,0 +1,22 @@
+/* PropBetEdge NFL — Kalshi Market Intelligence placements.
+   vendor/kalshi/kalshi-market-ui.css is the component (unchanged). This file only
+   supplies what the NBA host's `.ic` card class gave it, the NFL tie note, and
+   the two NFL hosts. Prediction-market blue stays distinct from PBE gold. */
+
+/* the card shell the component expects from its host */
+.kx-nfl .kx{display:block;min-width:0;padding:12px 14px;border:1px solid rgba(127,184,255,.24);border-radius:var(--r,10px)}
+.kx-nfl .kx-strip>.kx{padding:12px}
+.kx-nfl .kx a:focus-visible,.kx-nfl .kx-strip>summary:focus-visible{outline:2px solid #7fb8ff;outline-offset:2px}
+
+/* NFL contract rule, beside the card (Kalshi NFL game markets settle 50¢ per team on a tie) */
+.kx-nfl-tie{margin:6px 2px 0;font:500 11px/1.45 var(--pbe-font-data,'JetBrains Mono',ui-monospace,monospace);color:var(--pbe-dim,#b8b3a8)}
+.kx-nfl-tie b{margin-right:6px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#7fb8ff}
+.kx-strip>.kx-nfl-tie{margin:0;padding:0 12px 10px}
+
+/* PBEcast host (pbecast-command-v1.js [data-pbecc-cast="kalshi"]); empty = no box */
+[data-pbecc-cast="kalshi"]:empty{display:none}
+
+/* Games board: one restrained full-width row on a not-final card */
+.pbe25-card>.pbe25-kx{grid-column:1/-1;min-width:0}
+.pbe25-kx:empty{display:none}
+.pbe25-kx .kx-line{flex-wrap:wrap;color:var(--pbe-paper-2,#e8e1d4)}

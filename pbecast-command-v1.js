@@ -20,6 +20,10 @@
  *                    PBE decision, availability, what changed) directly under
  *                    the hero; the full PBE decision follows it and the Sunday
  *                    board moves below the game
+ *   KALSHI           nfl-kalshi.js: prediction-market strip under the hero
+ *                    while LIVE, full card after the preview row while
+ *                    SCHEDULE. nfl-kalshi owns that one read and its poll
+ *                    (our propsports-markets API, never Kalshi)
  *   GAME PULSE       mounted from pbecast-pulse-v1.js between the selected-game
  *                    surface and Key Moments; a tapped swing opens its play here
  *   TD TARGETS       mounted from pbecast-td-targets-v1.js directly after Game
@@ -293,8 +297,15 @@
     const preview = hostFor(root, 'preview', '[data-cast6-hero]');
     place(preview, hero);
     write(preview, pre ? (window.PBEcastPreview?.html?.(window.PBEcastPreview.fromPage(v6())) || '') : '');
+    /* KALSHI (nfl-kalshi.js): its own section, never inside the sportsbook
+       MARKET tile. PREGAME: the full prediction-market card after the preview
+       row. LIVE: the one-line strip directly under the hero. No entry -> empty
+       host (hidden). Its read and poll are nfl-kalshi's, off v6's lanes. */
+    const kalshi = hostFor(root, 'kalshi', '[data-cast6-hero]');
+    place(kalshi, pre ? preview : hero);
+    window.PBENflKalshi?.pbecast?.mount?.(kalshi, v6());
     const pick = hostFor(root, 'pick', '[data-cast6-hero]');
-    place(pick, pre ? preview : hero);
+    place(pick, kalshi);
     write(pick, g ? (window.PBECard?.gameModule?.({ away: g.teams?.away?.abbreviation, home: g.teams?.home?.abbreviation, espnId: g.id, surface: 'pbecast' }) || '') : '');
     /* what is happening -> how much did it matter -> show me the play:
        selected game, then Game Pulse, then Key Moments / PBE Replay. */

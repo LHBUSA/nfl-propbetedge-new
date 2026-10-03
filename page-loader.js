@@ -1,7 +1,7 @@
 /* PropBetEdge NFL - ordered page/product upgrade loader v47 route-first */
 (() => {
   'use strict';
-  const VERSION='20260930psrc1';
+  const VERSION='20261003kalshi1';
   const upgrades=[
     /* Establish the final homepage authority first. v6 replaces the v5 DOM with
        .pbehome6; v7 historically registered itself after that without repainting
@@ -173,6 +173,12 @@
        (view=game), mounted by the command layer after Game Pulse. No route
        registration, no detection, no writes. */
     {css:'./pbecast-td-targets-v1.css',js:'./pbecast-td-targets-v1.js'},
+    /* Kalshi Market Intelligence: the shared component, vendored unchanged in
+       vendor/kalshi/ (ES modules, imported by nfl-kalshi.js onto
+       window.PBEKalshi). Mounted by the command layer (PBEcast strip / pregame
+       card) and read by Games (card line). Optional: no route, never blocks. */
+    {css:'./vendor/kalshi/kalshi-market-ui.css'},
+    {css:'./nfl-kalshi.css',js:'./nfl-kalshi.js'},
     {css:'./pbecast-command-v1.css',js:'./pbecast-command-v1.js'},
     {css:'./stadium-selector-v1.css',js:'./stadium-selector-v1.js'},
     {css:'./production-polish-v2.css',js:'./production-polish-v2.js'},

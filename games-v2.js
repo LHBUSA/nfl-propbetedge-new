@@ -251,8 +251,25 @@
       <div class="pbe25-actions">
         ${provider?`${providerAction(provider,selected?'Active · Props':'Open Props','propboard','primary')}${castAction(g,provider,'Game Center','blue')}`:`${castAction(g,null,castLabel(g),'blue')}${teamAction(at,'Away Research')}${teamAction(ht,'Home Research')}`}
       </div>
+      ${kalshiSlot(g,gs)}
     </article>`;
   }
+
+  /* Kalshi prediction-market line (nfl-kalshi.js): not-final games with an ESPN
+     id only, from the one board read made alongside the schedule. No entry ->
+     the slot stays empty and is not drawn. */
+  function kalshiSlot(g,gs){
+    if(!g?.espnEventId||gs.kind==='FINAL')return'';
+    return `<div class="pbe25-kx" data-kx-slot="${esc(g.espnEventId)}">${window.PBENflKalshi?.lineFor?.(g.espnEventId)||''}</div>`;
+  }
+  function repaintKalshi(){
+    const K=window.PBENflKalshi;if(!K)return;
+    const root=document.querySelector('.pbe25-games');if(!root)return;
+    let changed=false;
+    root.querySelectorAll('[data-kx-slot]').forEach(el=>{const html=K.lineFor(el.dataset.kxSlot)||'';if((el.dataset.sig??el.innerHTML)!==html){el.innerHTML=html;el.dataset.sig=html;changed=true}});
+    if(changed)K.wire(root);
+  }
+  function loadKalshi(){return window.PBENflKalshi?.loadBoard?.().then(repaintKalshi).catch(()=>{})}
 
   function list(){
     const rows=filtered();
@@ -320,7 +337,7 @@
     });
   }
   wireCast();
-  function refreshList(){const host=document.getElementById('pbe25-list');if(host)host.innerHTML=list();wireCards();}
+  function refreshList(){const host=document.getElementById('pbe25-list');if(host)host.innerHTML=list();wireCards();window.PBENflKalshi?.wire?.(host);}
   /* When the forecast read lands, only the context strips are repainted, so
      the rest of each card (and every enhancement layered on it) stays put. */
   function repaintContext(){
@@ -333,7 +350,7 @@
       if(html&&el.outerHTML!==html)el.outerHTML=html;
     });
   }
-  function renderShell(){const vc=document.getElementById('view-container');if(vc){vc.innerHTML=shell();wire();}}
+  function renderShell(){const vc=document.getElementById('view-container');if(vc){vc.innerHTML=shell();wire();window.PBENflKalshi?.wire?.(vc);}}
 
   async function loadSchedule(){
     let last='schedule_unavailable';
@@ -358,10 +375,13 @@
     vc.innerHTML='<section class="pbe25-games"><div class="pbe25-empty">Loading the 2026 NFL game board…</div></section>';
     try{
       window.PBEGameContext?.load?.();
+      /* the Kalshi board loads alongside the slate and never holds it up */
+      const kalshi=loadKalshi();
       const [games,scores]=await Promise.all([loadSchedule(),fetchJson(`${API}/api/scores`).catch(()=>null)]);
       state.games=games;
       state.scores=scores;
       renderShell();
+      kalshi?.then?.(repaintKalshi);
       if(window.PBEEventSelector?.discover){
         const discovery=PBEEventSelector.discover();
         if(discovery?.then)discovery.then(()=>{if(document.querySelector('.pbe25-games')&&!state.loading)renderShell();}).catch(()=>{});
@@ -389,4 +409,6 @@
   window.addEventListener('pbe:event-changed',()=>{if(document.querySelector('.pbe25-games')&&!state.loading)renderShell();});
   window.addEventListener('pbe:events-loaded',()=>{if(document.querySelector('.pbe25-games')&&!state.loading)renderShell();});
   window.addEventListener('pbe:game-weather',repaintContext);
+  /* nfl-kalshi.js can land after a cold #games paint: read the board then */
+  window.addEventListener('pbe:kalshi-ready',()=>{if(document.querySelector('.pbe25-games'))loadKalshi();});
 })();

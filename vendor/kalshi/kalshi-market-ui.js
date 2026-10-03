@@ -1,0 +1,245 @@
+/**
+ * Kalshi Market Intelligence UI — shared, framework-free (contract market-intel/1).
+ * CANONICAL SOURCE: propbetedge-workers/workers/propsports-markets/client/kalshi-market-ui.js
+ * Products vendor this file unchanged (plus kalshi-market-ui.css) so every sport renders the
+ * same component. Outcome semantics come from the API (team / home-draw-away / player / fighter).
+ *
+ *
+ *   kalshiCard(entry, opts)   full live market module (game page, NBACast expanded)
+ *   kalshiStrip(entry, opts)  one-line live strip (NBACast)
+ *   kalshiLine(entry)         restrained compact line (Today / Games cards)
+ *   wireKalshi(root)          impressions, clicks, reduced-motion aware change flashes
+ *
+ * Truth rules (owner + Kalshi requirement):
+ *  - every Kalshi value links back to that market on Kalshi (new tab, rel sponsored); no link, no card;
+ *  - bid, ask, last trade and Mid-market are different numbers and are labelled so;
+ *  - "Mid-market" is the documented bid/ask midpoint — never a probability or a PBE prediction;
+ *  - Kalshi is a prediction market: not a sportsbook, not a PBE model;
+ *  - movement and sparklines use stored observations only (each point is a real read; nothing
+ *    is interpolated); deltas only between two observed Mid-markets;
+ *  - null stays null (absent fields are omitted, never 0); no entry -> nothing rendered;
+ *  - freshness: live (<= 2.5 min), delayed (<= 6 min), stale (labelled), withdrawn after 30 min (API).
+ */
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
+
+const centsLabel = (bp, { fixed = false } = {}) => {
+  if (bp === null || bp === undefined) return null
+  const c = bp / 100
+  return fixed || !Number.isInteger(c) ? `${c.toFixed(1)}¢` : `${c}¢`
+}
+const signedCents = bp => (bp > 0 ? '+' : bp < 0 ? '−' : '±') + `${Math.abs(bp / 100).toFixed(1)}¢`
+const count = v => (typeof v === 'number' && Number.isFinite(v) ? Math.round(v).toLocaleString('en-US') : null)
+const safeColor = c => (typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c) ? c : null)
+
+export function ageLabel(sec) {
+  if (sec === null || sec === undefined || !Number.isFinite(sec)) return ''
+  if (sec < 60) return `${Math.max(0, Math.round(sec))}s ago`
+  const m = Math.round(sec / 60)
+  return m < 60 ? `${m} min ago` : `${Math.round(m / 60)} h ago`
+}
+
+function freshnessBadge(k) {
+  const age = ageLabel(k.age_seconds)
+  if (k.state === 'settled') return '<span class="kx__st">Settled</span>'
+  if (k.freshness === 'live') return `<span class="kx__st kx__st--live"><span class="kx__pulse" aria-hidden="true"></span>Updated ${esc(age)}</span>`
+  if (k.freshness === 'delayed') return `<span class="kx__st kx__st--delayed">Delayed · Updated ${esc(age)}</span>`
+  if (k.freshness === 'stale') return `<span class="kx__st kx__st--stale">Stale · Updated ${esc(age)}</span>`
+  return ''
+}
+
+function link(k, inner, cls, placement, ticker) {
+  return `<a class="${cls}" href="${esc(k.market_url)}" target="_blank" rel="noopener noreferrer sponsored" data-kx-click data-kx-ticker="${esc(ticker || k.event_ticker)}" data-kx-placement="${esc(placement)}" data-kx-age="${esc(String(k.age_seconds ?? ''))}">${inner}</a>`
+}
+
+// Headline number: Mid-market when the book allows one, otherwise the honest bid / ask pair.
+function headline(o) {
+  if (o.mid_bp !== null && o.mid_bp !== undefined) return { value: centsLabel(o.mid_bp, { fixed: true }), label: 'Mid-market', bp: o.mid_bp }
+  return { value: `${centsLabel(o.best_yes_bid_bp)} / ${centsLabel(o.best_yes_ask_bp)}`, label: 'YES bid / ask', bp: null }
+}
+
+/* ── change flashes: compare with the last value this placement rendered ── */
+const lastShown = new Map() // `${placement}|${ticker}` -> bp
+function direction(placement, ticker, bp) {
+  if (bp === null || bp === undefined) return ''
+  const key = `${placement}|${ticker}`
+  const prev = lastShown.get(key)
+  lastShown.set(key, bp)
+  if (prev === undefined || prev === bp) return ''
+  return bp > prev ? ' is-up' : ' is-down'
+}
+
+/* ── sparkline from observed points only ── */
+export function sparkline(points, { width = 160, height = 36 } = {}) {
+  const pts = (points || []).filter(p => p.mid_bp !== null && p.mid_bp !== undefined && Number.isFinite(Date.parse(p.t)))
+  if (pts.length < 2) return ''
+  const t0 = Date.parse(pts[0].t)
+  const t1 = Date.parse(pts[pts.length - 1].t)
+  const span = Math.max(1, t1 - t0)
+  const vals = pts.map(p => p.mid_bp)
+  let lo = Math.min(...vals)
+  let hi = Math.max(...vals)
+  if (hi - lo < 200) { const mid = (hi + lo) / 2; lo = mid - 100; hi = mid + 100 } // a sub-2¢ range is drawn on a 2¢ scale, never exaggerated
+  const pad = 3
+  const x = t => pad + ((Date.parse(t) - t0) / span) * (width - 2 * pad)
+  const y = v => pad + (1 - (v - lo) / (hi - lo)) * (height - 2 * pad)
+  // Step line: the price holds until the next observation (no interpolated slopes).
+  let d = `M${x(pts[0].t).toFixed(1)},${y(pts[0].mid_bp).toFixed(1)}`
+  for (let i = 1; i < pts.length; i++) d += ` H${x(pts[i].t).toFixed(1)} V${y(pts[i].mid_bp).toFixed(1)}`
+  const dots = pts.map(p => `<circle cx="${x(p.t).toFixed(1)}" cy="${y(p.mid_bp).toFixed(1)}" r="1.6"/>`).join('')
+  const dir = vals[vals.length - 1] > vals[0] ? 'up' : vals[vals.length - 1] < vals[0] ? 'down' : 'flat'
+  return `<svg class="kx__spark kx__spark--${dir}" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" role="img" aria-label="Mid-market across ${pts.length} observed snapshots"><path d="${d}"/>${dots}</svg>`
+}
+
+function deltaChip(mv) {
+  if (!mv || mv.delta_mid_bp === null || mv.delta_mid_bp === undefined) return ''
+  const cls = mv.delta_mid_bp > 0 ? 'up' : mv.delta_mid_bp < 0 ? 'down' : 'flat'
+  const text = mv.delta_mid_bp === 0 ? 'Unchanged since first observed' : `${signedCents(mv.delta_mid_bp)} since first observed`
+  return `<span class="kx__delta kx__delta--${cls}">${esc(text)}</span>`
+}
+
+function sinceNote(mv) {
+  const p = (mv?.points || []).find(x => x.mid_bp !== null)
+  if (!p) return ''
+  const when = new Date(p.t).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+  return `<span class="kx__since">Tracking since ${esc(when)} ET</span>`
+}
+
+function panel(k, o, { placement, movement, color }) {
+  const h = headline(o)
+  const dir = direction(placement, o.market_ticker, h.bp)
+  const mv = movement?.[o.role] || null
+  const spark = mv ? sparkline(mv.points) : ''
+  const activity = [
+    count(o.volume) && `${count(o.volume)} traded`,
+    count(o.open_interest) && `OI ${count(o.open_interest)}`,
+    o.spread_bp !== null && o.spread_bp !== undefined && `Spread ${centsLabel(o.spread_bp)}`,
+  ].filter(Boolean)
+  const c = safeColor(color)
+  return `<div class="kx__panel"${c ? ` style="--kx-team:${c}"` : ''}>
+    <div class="kx__who"><b>${esc(o.abbr || o.kalshi_name || '')}</b><small>${esc(o.contract || '')} · YES</small></div>
+    ${link(k, `<span class="kx__px mono${dir}">${esc(h.value)}</span><span class="kx__pxl">${esc(h.label)}</span>`, 'kx__price', placement, o.market_ticker)}
+    <div class="kx__move">${deltaChip(mv)}${spark || sinceNote(mv)}</div>
+    <dl class="kx__book mono">
+      <div><dt>Bid</dt><dd>${esc(centsLabel(o.best_yes_bid_bp))}</dd></div>
+      <div><dt>Ask</dt><dd>${esc(centsLabel(o.best_yes_ask_bp))}</dd></div>
+      ${o.last_price_bp !== null && o.last_price_bp !== undefined ? `<div><dt>Last</dt><dd>${esc(centsLabel(o.last_price_bp))}</dd></div>` : ''}
+    </dl>
+    ${activity.length ? `<p class="kx__act mono">${esc(activity.join(' · '))}</p>` : ''}
+  </div>`
+}
+
+function settledPanel(o) {
+  const res = o.result === 'yes' ? 'YES' : o.result === 'no' ? 'NO' : null
+  if (!res) return ''
+  return `<div class="kx__panel kx__panel--settled"><div class="kx__who"><b>${esc(o.abbr || '')}</b><small>${esc(o.contract || '')}</small></div><span class="kx__px mono">Settled ${res}</span></div>`
+}
+
+function attrs(entry, k, placement) {
+  return `data-kx-impression data-kx-sport="${esc(entry.event?.sport || '')}" data-kx-event="${esc(entry.event?.canonical_event_id || '')}" data-kx-ticker="${esc(k.event_ticker)}" data-kx-placement="${esc(placement)}" data-kx-age="${esc(String(k.age_seconds ?? ''))}"`
+}
+
+function usable(entry) {
+  const k = entry?.kalshi
+  if (!k || !k.market_url || !Array.isArray(k.outcomes) || k.outcomes.length < 2) return null
+  if (k.state === 'open' && !k.outcomes.every(o => o.displayable)) return null
+  if (k.state !== 'open' && k.state !== 'settled') return null
+  return k
+}
+
+/**
+ * Full module.
+ * @param {object|null} entry  board entry or event-detail entry (detail carries `movement`)
+ * @param {{placement:string, colors?:Record<string,string>, compact?:boolean}} opts  colors keyed by role (away/home)
+ */
+export function kalshiCard(entry, { placement, colors = {}, compact = false } = {}) {
+  const k = usable(entry)
+  if (!k) return ''
+  const movement = entry.movement?.kalshi || null
+  let body
+  if (k.state === 'open') {
+    body = k.outcomes.map(o => panel(k, o, { placement, movement, color: colors[o.role] })).join('')
+  } else {
+    body = k.outcomes.map(settledPanel).join('')
+    if (!body) return ''
+  }
+  return `<section class="ic kx${compact ? ' kx--compact' : ''}" ${attrs(entry, k, placement)} aria-label="Kalshi prediction market">
+    <header class="kx__hd">
+      <div class="kx__brand"><span class="kx__name">Kalshi market</span><span class="kx__sub">Live prediction market</span></div>
+      ${freshnessBadge(k)}
+    </header>
+    <div class="kx__grid" style="--kx-cols:${k.outcomes.length}">${body}</div>
+    ${k.state === 'open' && !compact ? '<p class="kx__note">Traded contract prices, not sportsbook odds and not a PropBetEdge model. Each YES contract pays $1 if that outcome happens. Mid-market is the midpoint of the best YES bid and ask, shown only when the spread is 10¢ or less. Movement uses our stored observations only.</p>' : ''}
+    <footer class="kx__ft"><span>Kalshi · Prediction market data</span>${link(k, 'View market on Kalshi ↗', 'kx__cta', placement, null)}</footer>
+  </section>`
+}
+
+/** One-line NBACast strip. Click toggles the expanded card; prices link to Kalshi. */
+export function kalshiStrip(entry, { placement = 'nbacast-strip', colors = {} } = {}) {
+  const k = usable(entry)
+  if (!k || k.state !== 'open') return ''
+  if (!k.outcomes.every(o => o.mid_bp !== null && o.mid_bp !== undefined)) return ''
+  const movement = entry.movement?.kalshi || null
+  const items = k.outcomes.map(o => {
+    const d = movement?.[o.role]?.delta_mid_bp
+    const arrow = d === null || d === undefined || d === 0 ? '' : `<span class="kx__sd kx__sd--${d > 0 ? 'up' : 'down'}">${d > 0 ? '↑' : '↓'}${esc(Math.abs(d / 100).toFixed(1))}¢</span>`
+    const dir = direction(placement, o.market_ticker, o.mid_bp)
+    const c = safeColor(colors[o.role])
+    return `<span class="kx__si"${c ? ` style="--kx-team:${c}"` : ''}><b>${esc(o.abbr || '')}</b> <span class="mono kx__sp${dir}">${esc(centsLabel(o.mid_bp, { fixed: true }))}</span>${arrow}</span>`
+  }).join('<span class="kx__sep" aria-hidden="true">|</span>')
+  return `<details class="kx-strip" ${attrs(entry, k, placement)}>
+    <summary><span class="kx__name">Kalshi market</span><span class="kx__sitems">${items}</span>${freshnessBadge(k)}<span class="kx__chev" aria-hidden="true"></span></summary>
+    ${kalshiCard(entry, { placement: `${placement}-expanded`, colors, compact: true })}
+  </details>`
+}
+
+/** Restrained compact line for game cards: prices + freshness only. */
+export function kalshiLine(entry) {
+  const k = usable(entry)
+  if (!k || k.state !== 'open' || k.freshness === 'stale') return ''
+  if (!k.outcomes.every(o => o.mid_bp !== null && o.mid_bp !== undefined)) return ''
+  const px = k.outcomes.map(o => `${esc(o.abbr || '')} ${esc(centsLabel(o.mid_bp, { fixed: true }))}`).join(' · ')
+  return `<span class="kx-line mono" title="Kalshi Mid-market · prediction market, not sportsbook odds · updated ${esc(ageLabel(k.age_seconds))}" ${attrs(entry, k, 'game-card')}><span class="kx-line__b">KALSHI</span>${px}${k.freshness === 'live' ? '<span class="kx__pulse" aria-hidden="true"></span>' : ''}</span>`
+}
+
+/* ── analytics: kalshi_market_impression / kalshi_market_click (no PII) ── */
+const seen = new Set()
+let wired = false
+
+function gaEvent(name, el) {
+  if (typeof window === 'undefined' || typeof window.gtag !== 'function') return
+  const card = el.closest('[data-kx-impression]') || el
+  window.gtag('event', name, {
+    sport: card.dataset.kxSport || '',
+    event_id: card.dataset.kxEvent || '',
+    market_ticker: el.dataset.kxTicker || card.dataset.kxTicker || '',
+    placement: el.dataset.kxPlacement || card.dataset.kxPlacement || '',
+    snapshot_age_s: Number(el.dataset.kxAge || card.dataset.kxAge || 0) || 0,
+  })
+}
+
+/** Call after inserting HTML that may contain Kalshi UI. Idempotent. */
+export function wireKalshi(root = typeof document !== 'undefined' ? document : null) {
+  if (!root) return
+  if (!wired && typeof document !== 'undefined') {
+    wired = true
+    document.addEventListener('click', e => {
+      const a = e.target.closest?.('[data-kx-click]')
+      if (a) gaEvent('kalshi_market_click', a)
+    }, true)
+  }
+  const cards = root.querySelectorAll?.('[data-kx-impression]') || []
+  const fire = el => {
+    const key = `${el.dataset.kxTicker}|${el.dataset.kxPlacement}`
+    if (seen.has(key)) return
+    seen.add(key)
+    gaEvent('kalshi_market_impression', el)
+  }
+  if (typeof IntersectionObserver === 'undefined') { cards.forEach(fire); return }
+  const io = new IntersectionObserver(entries => {
+    for (const en of entries) if (en.isIntersecting) { fire(en.target); io.unobserve(en.target) }
+  }, { threshold: 0.5 })
+  cards.forEach(c => io.observe(c))
+}
+
+/** Test hook. */
+export function __resetKalshiFlashes() { lastShown.clear() }
