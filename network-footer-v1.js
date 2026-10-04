@@ -101,6 +101,21 @@
 
         ${window.PBEPreferredSource?.render({ surface: 'footer' }) || ''}
 
+        <nav class="pbe-network-intel" aria-label="PropBetEdge editorial and legal">
+          <span>EDITORIAL &amp; LEGAL</span>
+          <a href="https://propbetedge.ai/about">About PropBetEdge</a>
+          <a href="https://propbetedge.ai/terms">Terms</a>
+          <a href="https://propbetedge.ai/legal">Legal</a>
+          <a href="https://propbetedge.ai/support">Support</a>
+          <a href="https://propbetedge.ai/media">Media</a>
+          <a href="https://propbetedge.ai/authors">Editorial Team</a>
+          <a href="https://propbetedge.ai/authors/justin-erickson">Justin Erickson</a>
+          <a href="https://propbetedge.ai/authors/propbetedge-editorial-team">PropBetEdge Editorial Team</a>
+          <a href="https://propbetedge.ai/authors/ty-whitney">Ty Whitney</a>
+          <a href="https://propbetedge.ai/authors/erik-schwartz">Erik Schwartz</a>
+          <a href="https://propbetedge.ai/editorial-standards">Editorial Standards</a>
+        </nav>
+
         <section class="pbe-network-footer-ecosystem">
           <div class="pbe-network-ecosystem-brand">
             <strong>PropBetEdge</strong>
