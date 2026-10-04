@@ -700,7 +700,13 @@
   function trackPage(bundle) {
     const category = state.trackCategory || 'game';
     if (category !== 'game') {
-      const held = state.trackCategoryHtml[category];
+      /* Touchdown is redrawn from the TD module's live store on every paint, so
+         its record reflects the current filter selection; the held markup is
+         only the first-load fallback. */
+      const td = window.PBETouchdownTargets;
+      const held = category === 'touchdown' && state.trackCategoryHtml.touchdown && td?.store?.record && td.recordHtml
+        ? td.recordHtml(td.store.record)
+        : state.trackCategoryHtml[category];
       return `${categorySwitch(category)}${held || `<section class="pbe2-panel"><div class="pbetr-none">Loading the ${
         esc(category === 'touchdown' ? 'Touchdown Targets' : 'Player Props')} record\u2026</div></section>`}`;
     }

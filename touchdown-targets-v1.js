@@ -424,12 +424,15 @@
        tracking (validation) record. Once it opens, it is the official record,
        and validation history sits behind a secondary disclosure. */
     const active = activeRecordScope(record);
-    if (active === 'tracking') return scopePanel(record, allRows, 'tracking', 'primary');
-    return `${scopePanel(record, allRows, 'official', 'primary')}
+    /* One mount point, so a filter change can redraw the record in place on
+       any surface that renders it (this page, or Track Record's Touchdown
+       category) through the same component. */
+    if (active === 'tracking') return `<div class="pbetd-record" data-pbetd-record>${scopePanel(record, allRows, 'tracking', 'primary')}</div>`;
+    return `<div class="pbetd-record" data-pbetd-record>${scopePanel(record, allRows, 'official', 'primary')}
       <details class="pbetd-history" data-pbetd-history${historyOpen ? ' open' : ''}>
         <summary>View validation history</summary>
         ${scopePanel(record, allRows, 'tracking', 'history')}
-      </details>`;
+      </details></div>`;
   }
 
   /* The public record scope comes from the governance state the server
@@ -660,14 +663,38 @@
     document.querySelectorAll('[data-pbetd-player]').forEach(link => link.addEventListener('click', () => {
       openPlayer(link.dataset.pbetdPlayer, link.dataset.pbetdPosition);
     }));
-    document.querySelectorAll('[data-pbetd-filter]').forEach(select => select.addEventListener('change', () => {
-      filters[select.dataset.pbetdFilter] = select.value;
-      paint();
-    }));
-    /* Keep validation history open across filter repaints. */
-    document.querySelectorAll('[data-pbetd-history]').forEach(details => details.addEventListener('toggle', () => {
-      historyOpen = details.open;
-    }));
+    /* Record filters and the validation-history toggle are handled by the
+       delegated listeners installed once below, so they work on every surface
+       that mounts the record, not only on this route. */
+  }
+
+  /* A filter change reads the whole visible control set (so a held copy of the
+     markup can never mix its selects with stale module state), then redraws
+     the record. On this route that is the full page paint; elsewhere (Track
+     Record) the record's own mount point is replaced in place. */
+  function onRecordFilterChange(event) {
+    const select = event.target?.closest?.('[data-pbetd-filter]');
+    if (!select) return;
+    const host = select.closest('[data-pbetd-record]');
+    (host || document).querySelectorAll('[data-pbetd-filter]').forEach(control => {
+      filters[control.dataset.pbetdFilter] = control.value;
+    });
+    if (window.App?.current === ROUTE) { paint(); return; }
+    if (host && store.record) host.outerHTML = recordHtml(store.record);
+  }
+
+  /* Keep validation history open across filter repaints. toggle does not
+     bubble, so it is captured. */
+  function onRecordHistoryToggle(event) {
+    if (event.target?.matches?.('[data-pbetd-history]')) historyOpen = event.target.open;
+  }
+
+  let recordListeners = false;
+  function installRecordListeners() {
+    if (recordListeners) return;
+    recordListeners = true;
+    document.addEventListener('change', onRecordFilterChange);
+    document.addEventListener('toggle', onRecordHistoryToggle, true);
   }
 
   /* Player DNA is split by position, so a target opens the product that
@@ -817,6 +844,7 @@
   }
 
   function init() {
+    installRecordListeners();
     installView();
     installNav();
     [120, 420, 1100].forEach(delay => setTimeout(() => { installView(); installNav(); }, delay));
@@ -844,6 +872,7 @@
     loadRecord,
     recordSection,
     recordHtml,
+    onRecordFilterChange,
     render,
     railHtml,
     badgeHtml,

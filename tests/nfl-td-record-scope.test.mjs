@@ -218,3 +218,77 @@ test('hero: the learning-gate sample is labelled as the validation sample (all s
   assert.doesNotMatch(src, /Season primary record/);
   assert.match(src, /'Validation sample'/);
 });
+
+/* 2026-10-04 follow-up: the record filters (a) must not be forced into a tall
+   column by the panel-head rule, and (b) must redraw the record on Track
+   Record's Touchdown category, not only on the TD Targets route. */
+test('filters: the panel-head column rule excludes the filter row; mobile does not stretch labels into tall blocks', () => {
+  const css = read('touchdown-targets-v1.css');
+  assert.doesNotMatch(css, /\.pbetd-panel-head > div \{[^}]*flex-direction: column/, 'the bare > div column rule also caught .pbetd-filters');
+  assert.match(css, /\.pbetd-panel-head > div:not\(\.pbetd-filters\) \{[^}]*flex-direction: column/);
+  assert.doesNotMatch(css, /\.pbetd-filters \{[^}]*flex-direction: column/);
+  assert.doesNotMatch(css, /\.pbetd-filters label \{ flex: 1 1 128px; \}/, 'in a column this basis became a 128px-tall label');
+  const mobile = css.slice(css.indexOf('@media (max-width: 720px)'));
+  assert.match(mobile, /\.pbetd-filters \{[^}]*display: grid;[^}]*grid-template-columns: repeat\(auto-fill/);
+});
+
+function loadPageWithListeners(current) {
+  const noop = () => {};
+  const listeners = {};
+  const el = () => ({ addEventListener: noop, classList: { toggle: noop, add: noop, remove: noop }, insertBefore: noop, querySelector: () => null });
+  const window = { addEventListener: noop, dispatchEvent: noop, App: { current } };
+  const document = {
+    addEventListener: (type, fn) => { (listeners[type] ||= []).push(fn); },
+    getElementById: () => null, querySelector: () => null, querySelectorAll: () => [], createElement: el,
+  };
+  window.window = window;
+  const context = vm.createContext({ window, document, sessionStorage: { getItem: () => null, setItem: noop }, setTimeout: noop, CustomEvent: class {}, Intl, Date, Math, JSON, Number, String, Array, Set, Map, Object, Promise, console });
+  vm.runInContext(read('touchdown-targets-v1.js'), context);
+  return { page: window.PBETouchdownTargets, listeners };
+}
+const control = (key, value) => ({ dataset: { pbetdFilter: key }, value });
+const tbodyRows = html => (html.slice(html.indexOf('<tbody>'), html.indexOf('</tbody>')).match(/<tr>/g) || []).length;
+
+test('filters: a change on Track Record (another route) redraws the record in place with the filtered rows', () => {
+  const { page, listeners } = loadPageWithListeners('trackrecord');
+  assert.equal((listeners.change || []).length, 1, 'one delegated change listener, installed once');
+  assert.equal((listeners.toggle || []).length, 1, 'one captured toggle listener');
+  const rows = [
+    row('tracking', 'win'), row('tracking', 'loss'),
+    row('tracking', 'win', { target_rank: 'secondary' }), row('tracking', 'win', { target_rank: 'secondary' }),
+  ];
+  page.store.record = body(rows, 'GATED');
+  const first = page.recordHtml(page.store.record);
+  assert.match(first, /^<div class="pbetd-record" data-pbetd-record>/, 'the record has one mount point');
+  assert.equal(tbodyRows(first), 2, 'default rank filter = primary only');
+  assert.match(text(first), /Record 1-1/);
+
+  /* The visible control set is what counts: rank changed, result untouched. */
+  const host = { outerHTML: first, querySelectorAll: () => [control('rank', 'all'), control('result', 'all')] };
+  const select = control('rank', 'all');
+  select.closest = selector => (selector === '[data-pbetd-filter]' ? select : selector === '[data-pbetd-record]' ? host : null);
+  listeners.change[0]({ target: select });
+  assert.equal(tbodyRows(host.outerHTML), 4, 'rank=all redraws with primary + secondary rows');
+  assert.match(text(host.outerHTML), /Record 3-1/);
+  assert.match(host.outerHTML, /<option value="all" selected>All published<\/option>/, 'the redrawn controls keep the selection');
+
+  /* A second control narrows further and keeps the first selection. */
+  const select2 = control('result', 'win');
+  const host2 = { outerHTML: host.outerHTML, querySelectorAll: () => [control('rank', 'all'), select2] };
+  select2.closest = selector => (selector === '[data-pbetd-filter]' ? select2 : selector === '[data-pbetd-record]' ? host2 : null);
+  listeners.change[0]({ target: select2 });
+  assert.match(text(host2.outerHTML), /Record 3-0/);
+  assert.equal(tbodyRows(host2.outerHTML), 3);
+  assert.match(host2.outerHTML, /data-pbetd-record-scope="tracking" data-pbetd-record-role="primary"/, 'still the single gated validation record');
+});
+
+test('filters: changes outside a TD record are ignored; Track Record repaints the Touchdown record from the live store', () => {
+  const { page, listeners } = loadPageWithListeners('trackrecord');
+  page.store.record = body([row('tracking', 'win')], 'GATED');
+  const other = { closest: () => null };
+  assert.doesNotThrow(() => listeners.change[0]({ target: other }));
+  assert.doesNotThrow(() => listeners.change[0]({ target: null }));
+  const picks = read('pbe-picks-v2.js');
+  assert.match(picks, /category === 'touchdown' && state\.trackCategoryHtml\.touchdown && td\?\.store\?\.record && td\.recordHtml\s*\?\s*td\.recordHtml\(td\.store\.record\)/);
+  assert.doesNotMatch(read('touchdown-targets-v1.js'), /querySelectorAll\('\[data-pbetd-filter\]'\)\.forEach\(select => select\.addEventListener/, 'no per-element listener that only repaints the TD route');
+});

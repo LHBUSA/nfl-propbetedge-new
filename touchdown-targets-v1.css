@@ -494,7 +494,9 @@
   border-bottom: 1px solid var(--pbe-line-faint);
   padding: var(--s-4);
 }
-.pbetd-panel-head > div { display: flex; flex-direction: column; gap: 2px; }
+/* The title block stacks; the filter row must not (it is also a direct div
+   child of the head, and this rule used to turn it into a tall column). */
+.pbetd-panel-head > div:not(.pbetd-filters) { display: flex; flex-direction: column; gap: 2px; }
 .pbetd-panel-head span {
   font: 600 var(--fs-micro)/1 var(--pbe-font-data);
   letter-spacing: var(--ls-micro);
@@ -805,7 +807,8 @@
   .pbetd-face { width: 54px; height: 54px; }
   .pbetd-links { margin-left: 0; width: 100%; }
   .pbetd-filters { margin-left: 0; width: 100%; }
-  .pbetd-filters label { flex: 1 1 128px; }
+  .pbetd-filters { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(132px, 100%), 1fr)); gap: var(--s-2); }
+  .pbetd-filters select { width: 100%; min-height: 36px; }
   .pbetd-rail-list { grid-template-columns: 1fr; }
   .pbetd-free { padding: var(--s-4); }
   .pbetd-free-grid, .pbetd-free-grid.one { grid-template-columns: 1fr; }
