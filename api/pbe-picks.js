@@ -1,5 +1,6 @@
 import { getNflSession, verifiedEmail, supabaseAdminHeaders } from './_nfl-auth.js';
 import { teamLogoUrl } from './_playerdna/media.js';
+import { articleCors } from './_article-cors.js';
 import {
   currentSeason, matchupFromGameId, engineRuntime, composeEngineState,
 } from './_pbe-engine-runtime.js';
@@ -945,13 +946,104 @@ async function receiptView(req, res, secret) {
   }, 'public, max-age=300, s-maxage=300');
 }
 
+/* ---------------------------------------------------------------------------
+ * view=game — the PBE game decisions for ONE game (ESPN event id), for the
+ * propbetedge.ai news Article Market module.
+ *
+ * Never refuses: the tier is decided here, server-side, before anything is
+ * sent. The rows are read and filtered exactly as the card does (lifecycle,
+ * attribution, receipt), scoped to the one game and to every week, so an
+ * article keeps its game's decisions after the slate rolls over.
+ *
+ *   pro     every eligible decision on the game as a full Pro card, each
+ *           labelled by its own publication_scope (PBE VALIDATION SIGNAL /
+ *           OFFICIAL PBE PICK). Nothing is relabelled here.
+ *   locked  that decisions exist, their scope and market type, issue time —
+ *           the same locked previews view=preview already serves publicly.
+ *           assertNoSelection() runs on the finished payload.
+ * ------------------------------------------------------------------------ */
+const ESPN_GAME_RE = /^\d{6,12}$/;
+
+async function gameAccess(req) {
+  const auth = await getNflSession(req);
+  if (auth?.degraded) return { tier: 'unavailable' };
+  if (!verifiedEmail(auth)) return { tier: 'anonymous' };
+  return { tier: auth.pro === true ? 'pro' : 'no_entitlement' };
+}
+
+async function gameView(req, res, secret) {
+  const espnId = String(req.query?.game_id ?? '').trim();
+  if (!ESPN_GAME_RE.test(espnId)) return send(res, 400, { error: 'invalid_game_id', expected: 'event id' });
+  let access;
+  try { access = await gameAccess(req); } catch (_) { access = { tier: 'unavailable' }; }
+  const pro = access.tier === 'pro';
+  const nowMs = Date.now();
+  const { season } = await seasonContext();
+  const games = await gameStates(season);
+  const gameId = [...games].find(([, g]) => g.espn_id === espnId)?.[0] || null;
+  const base = {
+    view: 'game',
+    contract: CARD_CONTRACT,
+    game_id: espnId,
+    access: pro ? 'pro' : 'locked',
+    access_reason: pro ? null : access.tier,
+    entitlement: 'nfl_pro_or_all_access',
+    generated_at: new Date(nowMs).toISOString(),
+  };
+  if (!gameId) return send(res, 200, { ...base, evaluated: false, count: 0, ...(pro ? { picks: [] } : { previews: [] }) });
+
+  const rows = (await sb('nfl_game_picks', `game_id=eq.${encodeURIComponent(gameId)}&season=eq.${season}&select=${PICK_COLUMNS}&limit=200`, secret)) || [];
+  const ids = rows.map(row => row.id);
+  const [receipts, audits, grades] = await Promise.all([
+    receiptsWithText(secret, ids), auditsFor(secret, ids), gradesFor(secret, ids),
+  ]);
+  const killedIds = new Set(audits.filter(a => a.event_type === 'pick_killed').map(a => a.pick_id));
+  const verified = new Map();
+  await Promise.all(rows.map(async row => { verified.set(row.id, await verifyReceipt(row, receipts.get(row.id))); }));
+  /* week: null — a FINAL decision on this game is the article's record, not a stale card. */
+  const eligible = eligibleDecisions(rows, { nowMs, killedIds, verified, season, week: null, games });
+  const index = lineageIndex(rows);
+  const game = games.get(gameId) || null;
+
+  if (!pro) {
+    const body = {
+      ...base,
+      evaluated: true,
+      count: eligible.current.length,
+      previews: eligible.current.map(({ row, lifecycle }) => lockedPreview({ row, lifecycle, game, revisions: lineageOf(row, index).length })),
+    };
+    assertNoSelection(body);
+    return send(res, 200, body);
+  }
+
+  const runtime = await engineRuntime(GAME_LANES);
+  const healthy = runtime.health === 'HEALTHY';
+  const picks = eligible.current.map(({ row, lifecycle }) => proCard({
+    row, lifecycle,
+    receipt: receipts.get(row.id),
+    verification: verified.get(row.id),
+    grade: lifecycle === 'FINAL' ? grades.get(row.id) || null : null,
+    market: null,
+    game,
+    audits,
+    nowMs,
+    engineHealthy: healthy,
+    lineage: lineageOf(row, index),
+    receipts,
+    verified,
+  }));
+  return send(res, 200, { ...base, evaluated: true, labels: LABELS, publication_scope: 'per_row', count: picks.length, picks });
+}
+
 export default async function handler(req, res) {
+  const view = typeof req.query?.view === 'string' ? req.query.view.trim().toLowerCase() : 'state';
+  if (view === 'game') articleCors(req, res);
   if (req.method !== 'GET') return send(res, 405, { error: 'method_not_allowed' });
   const secret = serviceSecret();
   if (!secret) return send(res, 503, { error: 'picks_backend_unavailable', stage: 'service_secret_missing' });
 
-  const view = typeof req.query?.view === 'string' ? req.query.view.trim().toLowerCase() : 'state';
   try {
+    if (view === 'game') return await gameView(req, res, secret);
     if (view === 'state') return await stateView(res, secret);
     if (view === 'current') return await currentView(req, res, secret);
     if (view === 'preview') return await previewView(res, secret);

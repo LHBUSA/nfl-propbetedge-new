@@ -39,6 +39,7 @@ import { hitsView } from './_td-target-hits.js';
 import { freeSampleView } from './_td-free-sample.js';
 import { tdRecordsByScope, splitCanonical, settledEventIds, publicSettledTarget } from './_td-record-scope.js';
 import { gameView } from './_td-game-view.js';
+import { articleCors } from './_article-cors.js';
 
 const DEFAULT_SUPABASE_URL = 'https://tkmlnhmylqnttmnsnief.supabase.co';
 const MARKET = 'player_anytime_td';
@@ -653,11 +654,12 @@ async function gameAccess(req) {
 }
 
 export default async function handler(req, res) {
+  const view = typeof req.query?.view === 'string' ? req.query.view.trim().toLowerCase() : 'state';
+  if (view === 'game') articleCors(req, res);
   if (req.method !== 'GET') return send(res, 405, { error: 'method_not_allowed' });
   const secret = serviceSecret();
   if (!secret) return send(res, 503, { error: 'touchdown_targets_backend_unavailable', stage: 'service_secret_missing' });
 
-  const view = typeof req.query?.view === 'string' ? req.query.view.trim().toLowerCase() : 'state';
   const season = num(req.query?.season);
   const week = num(req.query?.week);
 
