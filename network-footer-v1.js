@@ -7,16 +7,23 @@
   /* PropBetEdge All Access (the network umbrella): ALL ACCESS + WHAT'S INCLUDED. */
   const ALL_ACCESS = 'https://propbetedge.ai/pro';
 
+  /* Family registry: kept in parity with network-family.json (vendored from
+     propbetedge-workers shared/network/family.json; tests/nfl-network-family-parity.test.mjs). */
   const SPORTS = [
+    { key: 'mlb', label: 'MLB', sub: 'Baseball', href: 'https://mlb.propbetedge.ai/' },
     { key: 'nfl', label: 'NFL', sub: 'Football', current: true, route: 'home' },
-    { key: 'mlb', label: 'MLB', sub: 'Baseball', href: 'https://mlb.propbetedge.ai' },
-    { key: 'nba', label: 'NBA', sub: 'Basketball', href: 'https://nba.propbetedge.ai' },
-    { key: 'wnba', label: 'WNBA', sub: "Women's Basketball", href: 'https://wnba.propbetedge.ai', live: true },
-    { key: 'nhl', label: 'NHL', sub: 'Hockey', href: 'https://nhl.propbetedge.ai' },
-    { key: 'ufc', label: 'UFC', sub: 'Fight Intelligence', href: 'https://ufc.propbetedge.ai' },
+    { key: 'nba', label: 'NBA', sub: 'Basketball', href: 'https://nba.propbetedge.ai/' },
+    { key: 'wnba', label: 'WNBA', sub: "Women's Basketball", href: 'https://wnba.propbetedge.ai/', live: true },
+    { key: 'nhl', label: 'NHL', sub: 'Hockey', href: 'https://nhl.propbetedge.ai/' },
+    { key: 'ufc', label: 'UFC', sub: 'Fight Intelligence', href: 'https://ufc.propbetedge.ai/' },
     { key: 'tennis', label: 'Tennis', sub: 'Tennis Intelligence', href: 'https://tennis.propbetedge.ai/' },
     { key: 'soccer', label: 'Soccer', sub: 'Soccer Intelligence', href: 'https://soccer.propbetedge.ai/' },
-    { key: 'golf', label: 'Golf', sub: 'Golf Intelligence', href: 'https://golf.propbetedge.ai/' }
+    { key: 'golf', label: 'Golf', sub: 'Golf Intelligence', href: 'https://golf.propbetedge.ai/' },
+    { key: 'f1', label: 'F1', sub: 'F1 Intelligence', href: 'https://f1.propbetedge.ai/' }
+  ];
+  /* Intelligence products: never a sport, never in the sports grid or its count. */
+  const PRODUCTS = [
+    { key: 'predictions', label: 'PropBetEdge Predictions', href: 'https://predictions.propbetedge.ai/' }
   ];
 
   function sportTile(sport) {
@@ -45,9 +52,9 @@
               <p>Markets, models, live context, verified decisions and deep research — built independently for how each sport actually works.</p>
             </div>
           </div>
-          <div class="pbe-network-live-mark" aria-label="Nine live PropBetEdge sport products">
+          <div class="pbe-network-live-mark" aria-label="Ten live PropBetEdge sport products">
             <span><i></i> LIVE NETWORK</span>
-            <strong>9</strong>
+            <strong>${SPORTS.length}</strong>
             <small>SPORT PRODUCTS</small>
           </div>
         </section>
@@ -55,6 +62,11 @@
         <section class="pbe-network-sports" aria-label="PropBetEdge sports products">
           ${SPORTS.map(sportTile).join('')}
         </section>
+
+        <nav class="pbe-network-intel" aria-label="PropBetEdge intelligence">
+          <span>INTELLIGENCE</span>
+          ${PRODUCTS.map((p) => `<a href="${p.href}" target="_blank" rel="noopener">${p.label} <i>↗</i></a>`).join('')}
+        </nav>
 
         <section class="pbe-network-footer-console">
           <div class="pbe-network-nflpro">
@@ -96,7 +108,7 @@
           </div>
           <nav aria-label="PropBetEdge ecosystem">
             <a href="${ALL_ACCESS}" rel="noopener" class="pbe-footer-aa-link">ALL ACCESS</a>
-            <a href="https://propbetedge.ai">Sports News</a>
+            <a href="https://propbetedge.ai/">Sports News</a>
             <a href="https://learn.propbetedge.ai/">Learn</a>
             <a href="https://propsports.proptechusa.ai" target="_blank" rel="noopener">PropSports API</a>
             <a href="https://proptechusa.ai" target="_blank" rel="noopener">PropTechUSA.ai</a>

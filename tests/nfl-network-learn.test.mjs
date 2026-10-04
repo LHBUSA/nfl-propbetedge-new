@@ -13,12 +13,12 @@ test('network footer ecosystem links to PropBetEdge Learn (canonical, same-tab, 
   for (const s of ['ALL ACCESS', 'Sports News', 'PropSports API', 'PropTechUSA.ai', 'Discord ↗']) assert.ok(nav.includes(s), s);
 });
 
-test('network footer sports grid lists Soccer after Tennis, and the grid holds eight tiles', () => {
+test('network footer sports grid holds the ten family sports in canonical order (Soccer after Tennis, F1 last)', () => {
   const src = fs.readFileSync(new URL('../network-footer-v1.js', import.meta.url), 'utf8');
   const sports = src.slice(src.indexOf('const SPORTS = ['), src.indexOf('];', src.indexOf('const SPORTS = [')));
-  assert.deepEqual([...sports.matchAll(/key: '([a-z]+)'/g)].map((m) => m[1]), ['nfl', 'mlb', 'nba', 'wnba', 'nhl', 'ufc', 'tennis', 'soccer']);
+  assert.deepEqual([...sports.matchAll(/key: '([a-z0-9]+)'/g)].map((m) => m[1]), ['mlb', 'nfl', 'nba', 'wnba', 'nhl', 'ufc', 'tennis', 'soccer', 'golf', 'f1']);
   assert.match(sports, /\{ key: 'soccer', label: 'Soccer', sub: 'Soccer Intelligence', href: 'https:\/\/soccer\.propbetedge\.ai\/' \}/);
   assert.equal((src.match(/soccer\.propbetedge\.ai/g) || []).length, 1, 'Soccer lives once, in the SPORTS registry');
   const css = fs.readFileSync(new URL('../network-footer-v1.css', import.meta.url), 'utf8');
-  assert.match(css, /\.pbe-network-sports\{display:grid;grid-template-columns:repeat\(8,minmax\(0,1fr\)\)/);
+  assert.match(css, /\.pbe-network-sports\{display:grid;grid-template-columns:repeat\(5,minmax\(0,1fr\)\)/);
 });
