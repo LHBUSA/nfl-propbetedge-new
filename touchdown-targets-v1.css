@@ -506,6 +506,43 @@
   color: var(--pbe-paper);
 }
 
+/* One visible TD Target record (2026-10-04): badge, subcopy, disclosure, and
+   validation history as a secondary disclosure under the official record. */
+.pbetd-panel-head span.pbetd-record-badge {
+  align-self: flex-start;
+  margin-bottom: var(--s-1);
+  padding: 4px 8px;
+  border: 1px solid var(--pbe-line);
+  border-radius: var(--r-pill);
+  color: var(--pbe-gold);
+}
+.pbetd-panel-head span.pbetd-record-badge.official { border-color: var(--pbe-gold); }
+.pbetd-record-sub {
+  margin-top: var(--s-1);
+  font: 400 var(--fs-sm)/1.45 var(--pbe-font-ui);
+  color: var(--pbe-dim);
+}
+.pbetd-record-disclosure {
+  margin: 0;
+  padding: var(--s-3) var(--s-4);
+  border-bottom: 1px solid var(--pbe-line-faint);
+  font: 400 var(--fs-sm)/1.5 var(--pbe-font-ui);
+  color: var(--pbe-paper);
+}
+.pbetd-history { margin-top: var(--s-4); }
+.pbetd-history > summary {
+  cursor: pointer;
+  width: max-content;
+  max-width: 100%;
+  padding: var(--s-2) 0;
+  font: 600 var(--fs-micro)/1.4 var(--pbe-font-data);
+  letter-spacing: var(--ls-micro);
+  text-transform: uppercase;
+  color: var(--pbe-dim);
+}
+.pbetd-history > summary:hover, .pbetd-history[open] > summary { color: var(--pbe-paper); }
+.pbetd-history > .pbetd-panel { margin-top: var(--s-2); }
+
 .pbetd-filters {
   display: flex;
   flex-wrap: wrap;

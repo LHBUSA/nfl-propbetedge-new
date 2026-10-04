@@ -30,6 +30,7 @@
   };
 
   const filters = { week: 'all', team: 'all', position: 'all', result: 'all', rank: 'primary', model: 'all' };
+  let historyOpen = false;
 
   /* ------------------------------------------------------------ utilities */
 
@@ -417,11 +418,32 @@
         record?.error ? ` (${esc(record.error)})` : ''}. This is a source failure, not an empty record.</div></section>`;
     }
     const allRows = recordRows(record);
-    /* Two records, never merged: OFFICIAL first, then TRACKING (validation phase). */
-    return ['official', 'tracking'].map(scope => scopePanel(record, allRows, scope)).join('');
+    /* One grader, two publication scopes, ONE visible record. The governance
+       state picks which scope is the record that currently applies; the other
+       scope is never merged in. While publication is gated that is the
+       tracking (validation) record. Once it opens, it is the official record,
+       and validation history sits behind a secondary disclosure. */
+    const active = activeRecordScope(record);
+    if (active === 'tracking') return scopePanel(record, allRows, 'tracking', 'primary');
+    return `${scopePanel(record, allRows, 'official', 'primary')}
+      <details class="pbetd-history" data-pbetd-history${historyOpen ? ' open' : ''}>
+        <summary>View validation history</summary>
+        ${scopePanel(record, allRows, 'tracking', 'history')}
+      </details>`;
   }
 
-  function scopePanel(record, allRows, scope) {
+  /* The public record scope comes from the governance state the server
+     publishes (publication: GATED | ALLOWED), never from whether rows exist.
+     Anything other than an explicit ALLOWED fails closed to the validation
+     record, which is labelled as not official. */
+  function activeRecordScope(record) {
+    const publication = String(record?.publication ?? store.state?.publication ?? '').toUpperCase();
+    return publication === 'ALLOWED' ? 'official' : 'tracking';
+  }
+
+  const VALIDATION_DISCLOSURE = 'This is the verified validation record. It is not the Official Track Record and will never be backfilled into it.';
+
+  function scopePanel(record, allRows, scope, role) {
     const scopeRows = allRows.filter(row => row.scope === scope);
     const rows = applyFilters(scopeRows);
     const summary = summarize(rows);
@@ -438,7 +460,7 @@
       ['Avg PBE probability', summary.avgProbability === null ? '—' : pct(summary.avgProbability), 'at issuance', ''],
       ['Brier', summary.brier === null ? '—' : summary.brier.toFixed(4), 'lower is better', ''],
       ['Pending', pendingBlock ? String(pendingBlock.pending) : '—', official ? 'open official targets' : 'open tracking targets', ''],
-      ['Games abstained', String(coverage.abstained ?? '—'),
+      ['Abstentions', String(coverage.abstained ?? '—'),
         coverage.abstention_rate === null || coverage.abstention_rate === undefined ? 'rate pending' : `${(coverage.abstention_rate * 100).toFixed(1)}% of decidable games`, ''],
     ];
 
@@ -465,14 +487,18 @@
         </tr>`;
       }).join('')
       : `<tr><td colspan="13" class="pbetd-empty">${official && !scopeRows.length
-        ? 'No official Touchdown Targets have been graded yet. Targets are issued at tracking scope until the learning gate opens; their results are in the Tracking record below and never count here.'
-        : `No graded ${official ? 'official' : 'tracking'} touchdown targets match these filters.`}</td></tr>`;
+        ? 'No official Touchdown Targets have been graded yet. Validation results never count here.'
+        : `No graded ${official ? 'official' : 'validation'} touchdown targets match these filters.`}</td></tr>`;
 
-    return `<section class="pbetd-panel" data-pbetd-record-scope="${esc(scope)}">
-      <div class="pbetd-panel-head">
+    const primary = role === 'primary';
+    /* The history panel reuses this component and the ONE filter set rendered
+       in the primary panel's head; it never draws a second set of controls. */
+    const head = primary
+      ? `<div class="pbetd-panel-head">
         <div>${official
-          ? '<span>Verified live track record · official targets only</span><strong>Official TD Target record</strong>'
-          : '<span>Validation phase · tracking targets only · not the official record</span><strong>Tracking TD Target record</strong>'}</div>
+          ? '<span class="pbetd-record-badge official">OFFICIAL</span><strong>Official TD Target Record</strong>'
+          : '<span class="pbetd-record-badge validation">VALIDATION · TRACKING</span><strong>Verified TD Target Record</strong>'}
+          <small class="pbetd-record-sub">Named before kickoff · frozen at issuance · graded from the official final box score</small></div>
         <div class="pbetd-filters">
           <label>Rank<select data-pbetd-filter="rank">
             <option value="primary"${filters.rank === 'primary' ? ' selected' : ''}>Primary only</option>
@@ -485,7 +511,13 @@
           ${optionsFor(allRows, 'result', 'Result')}
           ${optionsFor(allRows, 'model', 'Selector')}
         </div>
-      </div>
+      </div>`
+      : `<div class="pbetd-panel-head"><div><span>Validation history · tracking targets · not the Official Track Record</span>
+        <small class="pbetd-record-sub">Filtered by the controls above.</small></div></div>`;
+
+    return `<section class="pbetd-panel${primary ? ' pbetd-record-primary' : ' pbetd-record-history'}" data-pbetd-record-scope="${esc(scope)}" data-pbetd-record-role="${primary ? 'primary' : 'history'}">
+      ${head}
+      ${!official ? `<p class="pbetd-record-disclosure">${esc(VALIDATION_DISCLOSURE)}</p>` : ''}
       <div class="pbetd-strip" style="padding:var(--s-4);border-top:0">
         ${hero.map(([label, value, note, cls]) => `<div class="pbetd-stat ${esc(cls)}"><span>${esc(label)}</span><strong>${esc(value)}</strong><small>${esc(note)}</small></div>`).join('')}
       </div>
@@ -631,6 +663,10 @@
     document.querySelectorAll('[data-pbetd-filter]').forEach(select => select.addEventListener('change', () => {
       filters[select.dataset.pbetdFilter] = select.value;
       paint();
+    }));
+    /* Keep validation history open across filter repaints. */
+    document.querySelectorAll('[data-pbetd-history]').forEach(details => details.addEventListener('toggle', () => {
+      historyOpen = details.open;
     }));
   }
 

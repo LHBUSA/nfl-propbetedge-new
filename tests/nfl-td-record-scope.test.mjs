@@ -2,6 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import vm from 'node:vm';
 import { tdRecordsByScope, scopeOf } from '../api/_td-record-scope.js';
 
@@ -103,43 +104,113 @@ function loadPage() {
   return window.PBETouchdownTargets;
 }
 const text = html => html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-const panel = (html, scope) => {
-  const i = html.indexOf(`data-pbetd-record-scope="${scope}"`);
-  const j = html.indexOf('data-pbetd-record-scope=', i + 10);
+
+/* 2026-10-04: one grader, two publication scopes, ONE visible record. The
+   governance state (publication) picks the record that currently applies. */
+const primaries = html => html.match(/data-pbetd-record-role="primary"/g) || [];
+const rolePanel = (html, role) => {
+  const i = html.indexOf(`data-pbetd-record-role="${role}"`);
+  if (i < 0) return '';
+  const j = html.indexOf('data-pbetd-record-role=', i + 10);
   return text(html.slice(i, j > i ? j : undefined));
 };
+const body = (rows, publication, extra = {}) => ({
+  publication, targets: settledOf(rows), records: rec(rows), coverage: {}, grading: {}, ...extra,
+});
+const mixed = () => [
+  ...['win', 'win', 'win', 'loss', 'loss'].map(x => row('tracking', x)),
+  ...['win', 'win', 'loss'].map(x => row('official', x)),
+  row('tracking', null), row('official', null),
+];
 
-test('UI: the OFFICIAL record panel is official-only; tracking is a separate, labelled validation panel; nothing combined', () => {
+test('UI gated: exactly one primary record panel, and it is the tracking validation record', () => {
   const page = loadPage();
-  const rows = [
-    ...['win', 'win', 'win', 'loss', 'loss'].map(x => row('tracking', x)),
-    ...['win', 'win', 'loss'].map(x => row('official', x)),
-  ];
-  const body = { targets: settledOf(rows), records: rec([...rows, row('tracking', null), row('official', null)]), coverage: {}, grading: {} };
-  const html = page.recordHtml(body);
-  const off = panel(html, 'official');
-  const trk = panel(html, 'tracking');
-  assert.match(off, /Official TD Target record/);
-  assert.match(off, /official targets only/);
-  assert.match(off, /Record 2-1/);
-  assert.match(off, /Pending 1 open official targets/);
-  assert.match(trk, /Tracking TD Target record/);
-  assert.match(trk, /Validation phase/);
-  assert.match(trk, /not the official record/);
-  assert.match(trk, /Record 3-2/);
-  assert.match(trk, /Pending 1 open tracking targets/);
-  assert.doesNotMatch(html, /Record 5-3/, 'the combined internal total is never rendered as a record');
+  const html = page.recordHtml(body(mixed(), 'GATED'));
+  assert.equal(primaries(html).length, 1);
+  assert.match(html, /data-pbetd-record-scope="tracking" data-pbetd-record-role="primary"/);
+  assert.doesNotMatch(html, /data-pbetd-record-scope="official"/, 'no official panel while gated');
+  assert.doesNotMatch(html, /View validation history/);
+  const p = rolePanel(html, 'primary');
+  assert.match(p, /Verified TD Target Record/);
+  assert.match(p, /VALIDATION · TRACKING/);
+  assert.match(p, /Named before kickoff · frozen at issuance · graded from the official final box score/);
+  assert.match(p, /This is the verified validation record\. It is not the Official Track Record and will never be backfilled into it\./);
+  assert.match(p, /Record 3-2/);
+  assert.match(p, /Pending 1 /);
+  for (const label of ['Hit rate', 'Units', 'ROI', 'Avg PBE probability', 'Brier', 'Abstentions']) assert.match(p, new RegExp(label));
+  assert.doesNotMatch(html, /Official TD Target Record|Official TD Target record|Tracking TD Target record/);
+  assert.doesNotMatch(html, /Record 0-0/, 'no empty official 0-0 panel');
 });
 
-test('UI today (every target tracking): official panel shows 0-0 and says why; tracking panel carries the results', () => {
+test('UI official: the primary record is official-only; validation history is secondary, never an equal panel', () => {
   const page = loadPage();
-  const rows = [row('tracking', 'win'), row('tracking', 'loss'), row('tracking', 'loss')];
-  const html = page.recordHtml({ targets: rows, records: rec([...rows, row('tracking', null)]), coverage: {}, grading: {} });
-  const off = panel(html, 'official');
-  assert.match(off, /Record 0-0/);
-  assert.match(off, /Pending 0/);
-  assert.match(off, /No official Touchdown Targets have been graded yet/);
-  assert.match(panel(html, 'tracking'), /Record 1-2/);
+  const html = page.recordHtml(body(mixed(), 'ALLOWED'));
+  assert.equal(primaries(html).length, 1);
+  assert.match(html, /data-pbetd-record-scope="official" data-pbetd-record-role="primary"/);
+  const p = rolePanel(html, 'primary');
+  assert.match(p, /OFFICIAL/);
+  assert.match(p, /Official TD Target Record/);
+  assert.match(p, /Record 2-1/);
+  assert.match(p, /Pending 1 open official targets/);
+  assert.doesNotMatch(p, /Verified TD Target Record|VALIDATION · TRACKING/);
+  assert.match(html, /<details class="pbetd-history" data-pbetd-history>\s*<summary>View validation history<\/summary>/);
+  const h = rolePanel(html, 'history');
+  assert.match(h, /not the Official Track Record/);
+  assert.match(h, /Record 3-2/);
+  assert.ok(html.indexOf('data-pbetd-record-role="history"') > html.indexOf('<details'), 'history lives inside the disclosure');
+});
+
+test('UI: tracking rows never enter the official totals; official rows never enter the validation totals', () => {
+  const page = loadPage();
+  const trackingOnly = [row('tracking', 'win'), row('tracking', 'win'), row('tracking', 'loss')];
+  const off = page.recordHtml(body(trackingOnly, 'ALLOWED'));
+  assert.match(rolePanel(off, 'primary'), /Record 0-0/);
+  assert.match(rolePanel(off, 'primary'), /No official Touchdown Targets have been graded yet/);
+  assert.match(rolePanel(off, 'history'), /Record 2-1/);
+  const officialOnly = [row('official', 'win'), row('official', 'win')];
+  const gated = page.recordHtml(body(officialOnly, 'GATED'));
+  assert.match(rolePanel(gated, 'primary'), /Record 0-0/);
+  assert.doesNotMatch(gated, /Record 2-0/);
+});
+
+test('UI: the scope comes from governance state, not from which rows exist; unknown state fails closed to validation', () => {
+  const page = loadPage();
+  assert.match(page.recordHtml(body([row('official', 'win')], 'GATED')), /data-pbetd-record-scope="tracking" data-pbetd-record-role="primary"/);
+  assert.match(page.recordHtml(body([row('tracking', 'win')], 'ALLOWED')), /data-pbetd-record-scope="official" data-pbetd-record-role="primary"/);
+  for (const publication of [undefined, null, '', 'UNKNOWN']) {
+    const html = page.recordHtml(body([row('official', 'win')], publication));
+    assert.match(html, /data-pbetd-record-scope="tracking" data-pbetd-record-role="primary"/, `publication ${publication}`);
+    assert.doesNotMatch(html, /Official TD Target Record/);
+  }
+});
+
+test('UI: combined_internal never renders publicly', () => {
+  const page = loadPage();
+  const rows = mixed();
+  for (const publication of ['GATED', 'ALLOWED']) {
+    const html = page.recordHtml(body(rows, publication));
+    assert.doesNotMatch(html, /Record 5-3/, 'the combined total is never a record');
+    assert.doesNotMatch(html, /combined/i);
+  }
+});
+
+test('UI: exactly one filter control set in both states; history reuses it', () => {
+  const page = loadPage();
+  for (const publication of ['GATED', 'ALLOWED']) {
+    /* varied rows so every optional control actually renders */
+    const varied = ['tracking', 'official', 'tracking', 'official'].map((scope, i) => row(scope, i % 2 ? 'win' : 'loss', {
+      week: 3 + i, player: { name: `V${i}`, team: i < 2 ? 'BUF' : 'KC', position: i % 2 ? 'WR' : 'RB' }, model: { selector_version: i < 2 ? 1 : 2 } }));
+    const html = page.recordHtml(body(varied, publication));
+    for (const key of ['rank', 'week', 'team', 'position', 'result', 'model']) {
+      assert.equal((html.match(new RegExp(`data-pbetd-filter="${key}"`, 'g')) || []).length, 1, `${publication} ${key}`);
+    }
+    assert.equal((html.match(/class="pbetd-filters"/g) || []).length, 1);
+  }
+});
+
+test('the grader Worker source is pinned: this presentation change does not touch it', () => {
+  const hash = createHash('sha256').update(readFileSync(new URL('../workers/nfl-touchdown-targets-grader/src/index.js', import.meta.url))).digest('hex');
+  assert.equal(hash, 'efa069904cc97072a515be8678038093ae25e5646c815a62ea4b1d91e58f200c');
 });
 
 test('hero: the learning-gate sample is labelled as the validation sample (all scopes), never as an official record', () => {
