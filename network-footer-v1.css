@@ -110,6 +110,7 @@
   .pbe-network-sport:nth-child(even){border-right:0}
   .pbe-network-sport:nth-child(-n+8){border-bottom:1px solid rgba(255,255,255,.065)}
   .pbe-network-sport:nth-child(n+9){border-bottom:0}
+  .pbe-network-sport:last-child:nth-child(3n+1){grid-column:auto}
   .pbe-network-sport:last-child:nth-child(odd){grid-column:1/-1;border-right:0}
   .pbe-network-sport-top b{font-size:22px}
   .pbe-network-console-head{align-items:flex-start;flex-direction:column;gap:12px}
