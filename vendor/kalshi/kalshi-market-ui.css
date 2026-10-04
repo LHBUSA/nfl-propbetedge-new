@@ -158,3 +158,66 @@
 .avm__vs b { font-size: 17px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .avm__vs em { font-style: normal; color: var(--pbe-dim, #a7a39a); font-size: 12px; }
 .avm__verdict { margin: 10px 0 0; font-size: 15px; }
+
+/* market tape rail — reserved height, fixed card size: refreshes never move the page */
+.tape { --kx-accent: #7fb8ff; --kx-up: #3ddc97; --kx-down: #ff6b6b; background: var(--pbe-ink-2, #16181d); color: var(--pbe-paper, #f3efe6); border: 1px solid rgba(127,184,255,.24); border-radius: 10px; padding: 10px 12px; min-width: 0; }
+.tape__top { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; min-height: 28px; }
+.tape__name { font: 800 12px/1 var(--f-mono, ui-monospace, monospace); letter-spacing: .14em; text-transform: uppercase; color: var(--kx-accent); }
+.tape__fs { display: flex; gap: 4px; flex-wrap: wrap; }
+.tape__f { font: 700 10.5px/1 var(--f-mono, ui-monospace, monospace); letter-spacing: .06em; text-transform: uppercase; padding: 5px 8px; border-radius: 999px; border: 1px solid var(--pbe-line, rgba(255,255,255,.16)); background: transparent; color: var(--pbe-dim, #a7a39a); cursor: pointer; }
+.tape__f.is-on { color: var(--pbe-paper, #f3efe6); border-color: var(--kx-accent); }
+.tape__row { display: flex; gap: 8px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; height: 112px; margin-top: 8px; padding-bottom: 4px; }
+.tape__c { flex: 0 0 216px; width: 216px; height: 104px; box-sizing: border-box; scroll-snap-align: start; display: flex; flex-direction: column; gap: 4px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--pbe-line, rgba(255,255,255,.10)); background: rgba(127,184,255,.04); color: inherit; text-decoration: none; overflow: hidden; }
+.tape__c:hover, .tape__c:focus-visible { border-color: var(--kx-accent); }
+.tape__hd { display: flex; justify-content: space-between; align-items: center; }
+.tape__sp { font: 700 10px/1 var(--f-mono, ui-monospace, monospace); letter-spacing: .1em; color: var(--pbe-dim, #a7a39a); }
+.tape__st { font: 700 9.5px/1 var(--f-mono, ui-monospace, monospace); letter-spacing: .08em; padding: 3px 5px; border-radius: 4px; border: 1px solid currentColor; }
+.tape__st--live { color: var(--kx-up); }
+.tape__st--upcoming { color: var(--kx-accent); }
+.tape__st--stale { color: #f2c14e; }
+.tape__st--closed { color: #f2c14e; }
+.tape__st--settled { color: var(--pbe-dim, #a7a39a); }
+.tape__ti { font-weight: 700; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tape__bd { display: flex; flex-direction: column; gap: 2px; font-size: 12px; min-width: 0; }
+.tape__l { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tape__l b { font-weight: 600; }
+.tape__l--res { color: var(--kx-up); font-weight: 700; }
+.tape__l--pbe { color: #f2c14e; }
+.tape__mv { font-style: normal; font-size: 11px; margin-left: 4px; }
+.tape__mv--up { color: var(--kx-up); }
+.tape__mv--down { color: var(--kx-down); }
+.tape__ft { margin: 4px 0 0; font-size: 10.5px; color: var(--pbe-dim, #a7a39a); }
+/* multi-venue lines on tape cards (v2 payloads only) */
+.tape__vl { display: block; font: 600 10.5px/1.3 var(--f-mono, ui-monospace, monospace); color: var(--pbe-dim, #a7a39a); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tape__vl b { color: var(--pbe-paper, #f3efe6); font-weight: 700; }
+.tape__rl { font-style: normal; font-size: 9px; letter-spacing: .06em; color: var(--kx-accent); }
+.tape__dx { display: block; font-size: 9px; font-weight: 500; white-space: normal; }
+.tape__stale { font-style: normal; color: var(--kx-down); }
+/* Venue cards (multi-venue Market Pulse): first-class siblings of the Kalshi card — same .kx card system. */
+.kx-v { margin-top: 12px; display: grid; gap: 12px; }
+.kx-v--solo { margin-top: 0; }
+.kx--venue { --kx-accent: #8f7ad8; }
+.kx--polymarket .kx__name { letter-spacing: .02em; }
+.kx-v__rel { margin: 0 0 10px; }
+.kx-v__rel span { display: inline-block; font: 700 10.5px/1.2 var(--f-mono, ui-monospace, monospace); letter-spacing: .08em; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; border: 1px solid currentColor; }
+.kx-v__rel--related span { color: #e0b25c; background: rgba(224,178,92,.10); }
+.kx-v__rel--comparable span { color: #7fc4a5; background: rgba(127,196,165,.10); }
+.kx-v__rel--exact span { color: #7fc4a5; background: rgba(127,196,165,.14); }
+.kx-v__rel--listed span { color: var(--kx-accent, #8f7ad8); background: rgba(143,122,216,.12); }
+.kx-v__rules { margin: 10px 0 0; padding: 10px 12px; border-radius: 8px; border-left: 3px solid #e0b25c; background: rgba(224,178,92,.08); display: grid; gap: 4px; }
+.kx-v__rules--cmp { border-left-color: #7fc4a5; background: rgba(127,196,165,.08); }
+.kx-v__rules b { font: 600 13px/1.35 var(--f-sans, system-ui, sans-serif); color: var(--pbe-paper, #f3efe6); }
+.kx-v__rules small { font-size: 12px; line-height: 1.4; color: var(--pbe-dim, #b9b4aa); }
+.kx-v__solo { margin: 8px 0 0; font-size: 12px; color: var(--pbe-dim, #b9b4aa); }
+.kx-v__gap { font: 600 11px/1.3 var(--f-mono, ui-monospace, monospace); color: var(--pbe-dim, #b9b4aa); }
+.kx-v__ft { margin: 0; font-size: 11px; color: var(--pbe-dim, #a7a39a); }
+@media (max-width: 520px) {
+  .kx--venue .kx__sub { font-size: 11px; }
+  .kx-v__rules { padding: 8px 10px; }
+  .kx-v__rules small { font-size: 11.5px; }
+}
+/* Compact venue cue on list / card surfaces */
+.kx-vchip { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 4px; font: 600 10.5px/1.3 var(--f-mono, ui-monospace, monospace); letter-spacing: .04em; color: var(--pbe-dim, #a7a39a); }
+.kx-vchip i { font-style: normal; color: var(--kx-accent, #8f7ad8); }
+.kx-vchip b { color: var(--pbe-paper, inherit); font-weight: 700; }
+.kx-vchip__px { letter-spacing: 0; }

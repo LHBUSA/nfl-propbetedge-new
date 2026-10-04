@@ -145,8 +145,8 @@ test('loader: the poller loads after the rail, the version is busted, reduced mo
   const rail = loader.indexOf("{css:'./pbe-breaking-v1.css',js:'./pbe-breaking-v1.js'}");
   const poller = loader.indexOf("{js:'./touchdown-hit-live-v1.js'}");
   assert.ok(rail > 0 && poller > rail);
-  assert.match(loader, /const VERSION='20261003deeplink1'/);
-  assert.match(read('index.html'), /page-loader\.js\?v=20261003deeplink1/);
+  assert.match(loader, /const VERSION='20261004onesided1'/);
+  assert.match(read('index.html'), /page-loader\.js\?v=20261004onesided1/);
   assert.match(read('pbe-breaking-v1.css'), /@media \(prefers-reduced-motion: reduce\) \{\s*\.pbeb-tdface \{ animation: none; \}/);
 });
 

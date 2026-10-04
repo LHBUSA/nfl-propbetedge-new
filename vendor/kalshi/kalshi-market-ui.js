@@ -52,10 +52,12 @@ function link(k, inner, cls, placement, ticker) {
 }
 
 // Headline number: Mid-market when the book allows one, otherwise the honest bid / ask pair.
+// A missing side (one-sided book at the $0 / $1 boundary) reads "—"; it is never filled from last trade.
 function headline(o) {
   if (o.mid_bp !== null && o.mid_bp !== undefined) return { value: centsLabel(o.mid_bp, { fixed: true }), label: 'Mid-market', bp: o.mid_bp }
-  return { value: `${centsLabel(o.best_yes_bid_bp)} / ${centsLabel(o.best_yes_ask_bp)}`, label: 'YES bid / ask', bp: null }
+  return { value: `${side(o.best_yes_bid_bp)} / ${side(o.best_yes_ask_bp)}`, label: 'YES bid / ask', bp: null }
 }
+const side = (bp) => centsLabel(bp) ?? '—'
 
 /* ── change flashes: compare with the last value this placement rendered ── */
 const lastShown = new Map() // `${placement}|${ticker}` -> bp
@@ -120,8 +122,8 @@ function panel(k, o, { placement, movement, color }) {
     ${link(k, `<span class="kx__px mono${dir}">${esc(h.value)}</span><span class="kx__pxl">${esc(h.label)}</span>`, 'kx__price', placement, o.market_ticker)}
     <div class="kx__move">${deltaChip(mv)}${spark || sinceNote(mv)}</div>
     <dl class="kx__book mono">
-      <div><dt>Bid</dt><dd>${esc(centsLabel(o.best_yes_bid_bp))}</dd></div>
-      <div><dt>Ask</dt><dd>${esc(centsLabel(o.best_yes_ask_bp))}</dd></div>
+      <div><dt>Bid</dt><dd>${esc(side(o.best_yes_bid_bp))}</dd></div>
+      <div><dt>Ask</dt><dd>${esc(side(o.best_yes_ask_bp))}</dd></div>
       ${o.last_price_bp !== null && o.last_price_bp !== undefined ? `<div><dt>Last</dt><dd>${esc(centsLabel(o.last_price_bp))}</dd></div>` : ''}
     </dl>
     ${activity.length ? `<p class="kx__act mono">${esc(activity.join(' · '))}</p>` : ''}
@@ -160,7 +162,8 @@ function attrs(entry, k, placement) {
 function usable(entry) {
   const k = entry?.kalshi
   if (!k || !k.market_url || !Array.isArray(k.outcomes) || k.outcomes.length < 2) return null
-  if (k.state === 'open' && !k.outcomes.every(o => o.displayable)) return null
+  // renderable (a real side exists) is the card gate; an older API without it falls back to displayable
+  if (k.state === 'open' && !k.outcomes.every(o => o.renderable ?? o.displayable)) return null
   if (k.state !== 'open' && k.state !== 'settled') return null
   return k
 }
@@ -190,6 +193,7 @@ export function kalshiCard(entry, { placement, colors = {}, compact = false } = 
       ${freshnessBadge(k)}
     </header>
     ${body === null ? fieldList(k, k.outcomes, { placement, movement }) : `<div class="kx__grid" style="--kx-cols:${k.outcomes.length}">${body}</div>`}
+    ${k.state === 'open' && body !== null && !k.outcomes.every(o => o.mid_bp !== null && o.mid_bp !== undefined) ? `<p class="kx__note kx__note--nomid" data-kx-nomid>Mid-market unavailable at this observation · ${k.outcomes.some(o => o.one_sided || ((o.best_yes_bid_bp == null) !== (o.best_yes_ask_bp == null))) ? 'one-sided book' : 'spread wider than 10¢'}</p>` : ''}
     ${k.state === 'open' && !compact ? '<p class="kx__note">Live prediction-market pricing — no sportsbook line required. Traded contract prices on Kalshi, not sportsbook odds and not a PropBetEdge model. Each YES contract pays $1 if that outcome happens. Mid-market is the midpoint of the best YES bid and ask, shown only when the spread is 10¢ or less. Movement uses our stored observations only.</p>' : ''}
     <footer class="kx__ft"><span>Kalshi · Prediction market data</span>${link(k, 'View market on Kalshi ↗', 'kx__cta', placement, null)}</footer>
   </section>`
@@ -369,6 +373,142 @@ export function marketModule(entry, opts = {}) {
   return kalshiCard(entry, opts)
 }
 
+/* ───────────────────────── VENUES (multi-venue desk; venue-neutral) ─────────────────────────
+ * Data: one desk event from createKalshiClient(...).loadDesk(id) (GET /v1/market-desk?sport=&event=). The canonical PBE
+ * event is the parent: a product renders kalshiCard (when Kalshi has a market) and venueLines (when another venue has
+ * one) INDEPENDENTLY — neither venue depends on the other. With no Kalshi card pass { standalone: true } for the
+ * Market Pulse heading. Kalshi itself is never repeated here. Per venue:
+ *  - EXACT_MATCH / COMPARABLE_EXCEPT_EXCEPTIONS quotes: Mid-market (or bid / ask), freshness, and — COMPARABLE only —
+ *    the disclosure; an aligned comparison (desk `comparison`) is shown as a gap in points, never pooled;
+ *  - related[] (RULE_MISMATCH / UNVERIFIED): the "RELATED MARKET · …" label, the venue's own price and the exact
+ *    reason — never a gap, never compared;
+ *  - stale / unpriced quotes are omitted; nothing qualifying -> '' (no empty slot, no placeholder).
+ * No consensus or average is ever computed. Prices are cents of a $1 contract on each venue's own book. */
+const VENUE_NAME = { polymarket: 'Polymarket', kalshi: 'Kalshi' }
+const vName = (v) => VENUE_NAME[v] || String(v || '')
+function vPrice(q) {
+  if (q?.mid_bp != null) return { text: centsLabel(q.mid_bp, { fixed: true }), label: 'Mid-market', bp: q.mid_bp }
+  if (q?.bid_bp != null && q?.ask_bp != null) return { text: `${centsLabel(q.bid_bp)} / ${centsLabel(q.ask_bp)}`, label: 'Bid / ask', bp: null }
+  return null
+}
+// Relationship to OUR canonical contract (and to Kalshi when Kalshi lists it): one consistent vocabulary.
+const REL = {
+  EXACT_MATCH: { tag: 'Exact market', sub: 'Same contract rules as Kalshi' },
+  COMPARABLE_EXCEPT_EXCEPTIONS: { tag: 'Comparable market', sub: 'Comparable to Kalshi except edge cases' },
+  related: { tag: null, sub: 'Related market — not compared' },
+  listed: { tag: 'Prediction market', sub: 'Only venue with a market here' },
+}
+const secondsSince = (iso) => { const t = Date.parse(iso || ''); return Number.isFinite(t) ? Math.max(0, (Date.now() - t) / 1000) : null }
+// "Live" is earned by the observation's AGE, not by the lane cadence: a quote read 10 min ago on a 15-min pregame cadence
+// is current for its lane but is NOT live — it gets the neutral "Updated 10 min ago" (same 2.5-min rule as the Kalshi card).
+export const VENUE_LIVE_MAX_S = 150
+const venueLive = (fresh, observedAt) => fresh === 'live' && (secondsSince(observedAt) ?? Infinity) <= VENUE_LIVE_MAX_S
+function venueBadge(fresh, observedAt) {
+  const age = ageLabel(secondsSince(observedAt))
+  if ((fresh === 'live' || fresh === 'delayed') && !venueLive(fresh, observedAt) && secondsSince(observedAt) <= 1800) return `<span class="kx__st" data-kx-age-of="${esc(observedAt || '')}">Updated ${esc(age)}</span>`
+  if (fresh === 'live') return `<span class="kx__st kx__st--live" data-kx-age-of="${esc(observedAt || '')}"><span class="kx__pulse" aria-hidden="true"></span>Updated ${esc(age)}</span>`
+  if (fresh === 'delayed') return `<span class="kx__st kx__st--delayed" data-kx-age-of="${esc(observedAt || '')}">Delayed · Updated ${esc(age)}</span>`
+  return ''
+}
+function venuePanel(row, { placement, venue, url }) {
+  const { c, v } = row
+  const px = vPrice(v)
+  const mv = v.movement || null
+  const dir = px?.bp != null ? direction(`${placement}|${venue}`, v.outcome_id || c.label, px.bp) : ''
+  const spark = mv?.points?.length >= 3 ? sparkline(mv.points) : '' // a line needs >= 3 real observations; less says less
+  const gap = row.gap != null ? `<span class="kx-v__gap">Gap ${esc(String(row.gap))} pts vs Kalshi</span>` : ''
+  return `<div class="kx__panel">
+    <div class="kx__who"><b>${esc(c.label || '')}</b><small>${esc(c.label || '')} wins · YES</small></div>
+    <a class="kx__price" href="${esc(url)}" target="_blank" rel="noopener noreferrer" data-kx-click data-kx-placement="${esc(placement)}"><span class="kx__px mono${dir}">${esc(px.text)}</span><span class="kx__pxl">${esc(px.label)}</span></a>
+    <div class="kx__move">${deltaChip(mv)}${spark}${gap}</div>
+    <dl class="kx__book mono">
+      <div><dt>Bid</dt><dd>${esc(centsLabel(v.bid_bp) ?? '—')}</dd></div>
+      <div><dt>Ask</dt><dd>${esc(centsLabel(v.ask_bp) ?? '—')}</dd></div>
+    </dl>
+  </div>`
+}
+//  - listed[] (VENUE_ONLY): the only venue with a market on our contract — its own price, labelled, never compared.
+/**
+ * Venue cards (Polymarket, …) for one desk event — first-class siblings of kalshiCard, built on the SAME card structure
+ * (Market Pulse brand, two-sided panels, Mid-market, movement since first observed + sparkline of OUR stored
+ * observations, bid / ask, freshness badge, venue CTA) plus a relationship tag and, for related markets, a contained
+ * rules note (one scannable line + the precise detail). { standalone: true } when no Kalshi card is on the page: the
+ * card then carries the Market Pulse brand itself. Stale / unpriced quotes are omitted; nothing -> ''.
+ */
+export function venueLines(deskEvent, { placement = 'venues', standalone = false } = {}) {
+  const groups = new Map() // `${venue}|${kind}` -> card
+  for (const c of deskEvent?.contracts || []) {
+    const quotes = (c.venues || []).filter((v) => v.venue !== 'kalshi' && v.freshness && v.freshness !== 'stale').map((v) => ({ v, kind: v.match }))
+    const rel = (c.related || []).filter((r) => r.freshness && r.freshness !== 'stale').map((r) => ({ v: r, kind: 'related' }))
+    const lst = (c.listed || []).filter((r) => r.venue !== 'kalshi' && r.freshness && r.freshness !== 'stale').map((r) => ({ v: r, kind: 'listed' }))
+    for (const { v, kind } of [...quotes, ...rel, ...lst]) {
+      if (!vPrice(v) || !v.market_url) continue
+      const k = `${v.venue}|${kind}`
+      const g = groups.get(k) || { venue: v.venue, kind, url: v.market_url, label: v.label || null, summary: v.summary || null, reason: v.reason || null, disclosure: v.disclosure || null, fresh: v.freshness, observedAt: v.observed_at || null, rows: [] }
+      if (v.freshness === 'delayed') g.fresh = 'delayed' // the card is only as fresh as its least fresh quote
+      if (v.observed_at && (!g.observedAt || v.observed_at < g.observedAt)) g.observedAt = v.observed_at
+      const gap = kind !== 'related' && kind !== 'listed' && c.comparison?.match_class === v.match && c.comparison.venue_gap_pts != null ? Math.round(c.comparison.venue_gap_pts) : null
+      g.rows.push({ c, v, gap })
+      groups.set(k, g)
+    }
+  }
+  if (!groups.size) return ''
+  const cards = [...groups.values()].map((g) => {
+    const rel = REL[g.kind] || REL.related
+    const tag = g.kind === 'related' ? (g.label || 'RELATED MARKET · RULES DIFFER') : rel.tag
+    const live = venueLive(g.fresh, g.observedAt)
+    const sub = `${live ? 'Live prediction market' : 'Prediction market'}${standalone ? ` · ${vName(g.venue)}` : ''}`
+    const note = g.kind === 'related'
+      ? `<div class="kx-v__rules" role="note"><b>${esc(g.summary || 'Settlement rules differ between venues')}</b><small>${esc(g.reason || '')}${g.reason ? '. ' : ''}Shown at its own price; not compared.</small></div>`
+      : g.kind === 'COMPARABLE_EXCEPT_EXCEPTIONS' && g.disclosure
+        ? `<div class="kx-v__rules kx-v__rules--cmp" role="note"><b>Comparable except edge cases</b><small>${esc(g.disclosure)}</small></div>`
+        : g.kind === 'listed' ? `<p class="kx-v__solo">Only venue with a market on this ${g.rows.length === 2 ? 'contest' : 'event'} right now · not compared</p>` : ''
+    return `<section class="ic kx kx--venue kx--${esc(g.venue)}" data-kx-venue="${esc(g.venue)}" data-match="${esc(g.kind)}" aria-label="${esc(vName(g.venue))} prediction market">
+    <header class="kx__hd">
+      <div class="kx__brand"><span class="kx__name">${esc(standalone ? 'Market Pulse' : vName(g.venue))}</span><span class="kx__sub">${esc(sub)}</span></div>
+      ${venueBadge(g.fresh, g.observedAt)}
+    </header>
+    <p class="kx-v__rel kx-v__rel--${esc(g.kind === 'related' ? 'related' : g.kind === 'listed' ? 'listed' : g.kind === 'EXACT_MATCH' ? 'exact' : 'comparable')}"><span>${esc(tag)}</span></p>
+    <div class="kx__grid" style="--kx-cols:${g.rows.length}">${g.rows.map((r) => venuePanel(r, { placement, venue: g.venue, url: g.url })).join('')}</div>
+    ${note}
+    <footer class="kx__ft"><span>${esc(vName(g.venue))} · Prediction market data · not sportsbook odds or a PropBetEdge model</span><a class="kx__cta" href="${esc(g.url)}" target="_blank" rel="noopener noreferrer" data-kx-click data-kx-placement="${esc(placement)}">View market on ${esc(vName(g.venue))} ↗</a></footer>
+  </section>`
+  }).join('')
+  return `<div class="kx-v${standalone ? ' kx-v--solo' : ''}" data-kx-venues>${cards}</div>`
+}
+
+/** Re-render every "Updated Xs ago" inside `root` from its observed time (call on a timer; no DOM rebuild). */
+export function tickVenueAges(root) {
+  for (const el of root?.querySelectorAll?.('[data-kx-age-of]') || []) {
+    const age = ageLabel(secondsSince(el.dataset.kxAgeOf))
+    const t = el.lastChild
+    if (t && t.nodeType === 3) { const next = el.classList.contains('kx__st--delayed') ? `Delayed · Updated ${age}` : `Updated ${age}`; if (t.textContent !== next) t.textContent = next }
+  }
+}
+
+/** Venues of a desk event with a current, priced market (other than Kalshi), e.g. ['polymarket']. */
+export function deskVenues(deskEvent) {
+  const out = new Set()
+  for (const c of deskEvent?.contracts || []) for (const v of [...(c.venues || []), ...(c.related || []), ...(c.listed || [])]) {
+    if (v.venue !== 'kalshi' && v.freshness && v.freshness !== 'stale' && (v.mid_bp != null || (v.bid_bp != null && v.ask_bp != null))) out.add(v.venue)
+  }
+  return [...out]
+}
+/**
+ * Compact discovery cue for list / card surfaces ("MARKET · POLYMARKET  Allen 61.5¢ · Duncan 38.5¢"): every venue other
+ * than Kalshi with a current market on this canonical event (Kalshi keeps its own kalshiLine). '' when none.
+ */
+export function venueChip(deskEvent) {
+  const vs = deskVenues(deskEvent)
+  if (!vs.length) return ''
+  const v0 = vs[0]
+  const px = (deskEvent.contracts || []).map((c) => {
+    const q = [...(c.venues || []), ...(c.related || []), ...(c.listed || [])].find((x) => x.venue === v0 && x.mid_bp != null && x.freshness && x.freshness !== 'stale')
+    return q ? `${esc(String(c.label || '').split(' ').slice(-1)[0])} <b class="mono">${esc(centsLabel(q.mid_bp, { fixed: true }))}</b>` : null
+  }).filter(Boolean).slice(0, 2)
+  return `<span class="kx-vchip" data-kx-vchip="${esc(vs.join(','))}" title="Prediction market on ${esc(vs.map(vName).join(', '))} · not sportsbook odds"><i>MARKET</i> · ${esc(vs.map(vName).join(' · ').toUpperCase())}${px.length === 2 ? ` <span class="kx-vchip__px">${px.join(' · ')}</span>` : ''}</span>`
+}
+
 /* ───────────────────────── ALGO vs MARKET (track records + event pages) ─────────────────────────
  * Data: GET /v1/algo-vs-market/:sport (algos[].scoreboard / ledger) and /v1/algo-vs-market/event/:sport/:id.
  * Both opinions frozen at the algorithm lock; agreements never score; only disagreements are contests.
@@ -425,4 +565,128 @@ export function algoVsMarketEvent(payload, { nameOf = null } = {}) {
     ${res}
     <p class="kx__note">Market price recorded ${r.market?.snapshot_age_s != null ? `${esc(String(Math.round(r.market.snapshot_age_s / 60)))} min` : ''} before the algorithm locked (Kalshi prediction market). Later market moves never change this contest.</p>
   </section>`
+}
+
+/* ───────────────────────── MARKET TAPE rail (network) ─────────────────────────
+ * Consumes ONLY GET /v1/market-tape (no local movement math). Fixed-size cards inside a reserved-height
+ * scroller so refreshes update in place. Filters: ALL / LIVE / MOVERS / PBE vs MARKET / SETTLED — a filter
+ * with no items is not rendered (no empty-state UI). Clicks go to the PBE research page (destination);
+ * the event page owns the market link. Movement is labelled "since first observed" (never "since open"). */
+const TAPE_FILTERS = [['all', 'All'], ['live', 'Live'], ['movers', 'Movers'], ['pbe', 'PBE vs Market'], ['settled', 'Settled']]
+const SPORT_LABEL = { nba: 'NBA', wnba: 'WNBA', nfl: 'NFL', nhl: 'NHL', mlb: 'MLB', soccer: 'SOCCER', tennis: 'TENNIS', ufc: 'UFC', f1: 'F1', golf: 'GOLF', boxing: 'BOXING' }
+const cents = (bp) => (bp == null ? null : `${(bp / 100).toFixed(1)}¢`)
+const signed = (bp) => (bp > 0 ? '▲' : '▼') + Math.abs(bp / 100).toFixed(1)
+
+export function tapeState(it) {
+  if (it.lifecycle === 'SETTLED') return ['SETTLED', 'settled']
+  if (it.lifecycle === 'CLOSED') return ['CLOSED', 'closed']
+  if (it.freshness === 'stale' || it.freshness === 'delayed') return ['STALE', 'stale']
+  if (it.lifecycle === 'ACTIVE') return ['LIVE', 'live']
+  if (it.lifecycle === 'UPCOMING') return ['UPCOMING', 'upcoming']
+  return [it.lifecycle || '', 'other']
+}
+
+export function tapeItems(payload, filter = 'all') {
+  const c = payload?.classes || {}
+  const uniq = (arr) => { const seen = new Set(); return arr.filter((x) => { const k = `${x.sport}|${x.canonical_event_id}`; if (seen.has(k)) return false; seen.add(k); return true }) }
+  if (filter === 'live') return c.live || []
+  if (filter === 'movers') return c.movers || []
+  if (filter === 'pbe') return c.pbe_disagreements || []
+  if (filter === 'settled') return uniq([...(c.just_settled || []), ...(c.just_closed || [])])
+  return uniq([...(c.live || []), ...(c.movers || []).slice(0, 8), ...(c.closing_soon || []), ...(c.just_settled || []), ...(c.pbe_disagreements || [])])
+}
+
+function tapeOutcomes(it) {
+  const outs = (it.outcomes || []).slice(0, it.shape === 'field' ? 2 : 3)
+  if (it.lifecycle === 'SETTLED') {
+    const won = (it.outcomes || []).find((o) => o.result === 'yes')
+    const pre = (it.outcomes || []).filter((o) => o.pre_bp != null).sort((a, b) => b.pre_bp - a.pre_bp)[0]
+    return `${pre ? `<span class="tape__l">${esc(pre.label || '')} ${esc(cents(pre.pre_bp))} pre-start favorite</span>` : ''}${won ? `<span class="tape__l tape__l--res">${esc(won.label || '')} ${it.shape === 'two_way' || it.shape === 'three_way' ? 'won' : 'YES'}</span>` : ''}`
+  }
+  return outs.map((o) => {
+    const px = o.price_bp != null ? cents(o.price_bp) : null
+    const mv = o.delta_first_bp ? `<em class="tape__mv tape__mv--${o.delta_first_bp > 0 ? 'up' : 'down'}" title="Since first observed">${esc(signed(o.delta_first_bp))}</em>` : ''
+    return px ? `<span class="tape__l"><b>${esc(o.label || '')}</b> <span class="mono">${esc(px)}</span>${mv}</span>` : ''
+  }).join('')
+}
+
+// Multi-venue lines (Market Tape v2 items only; a v1 item has no venues/related -> ''). Polymarket is labelled
+// by venue; COMPARABLE quotes carry the disclosure; RELATED markets show their own price with the
+// "RELATED MARKET · RULES DIFFER" label and reason, never a gap. Stale is labelled; no number without freshness.
+const venueName = (v) => (v === 'polymarket' ? 'Polymarket' : v === 'kalshi' ? 'Kalshi' : String(v || ''))
+const pxList = (outs) => (outs || []).filter((o) => o.mid_bp != null && o.freshness).slice(0, 2)
+  .map((o) => `${esc(o.label || o.role || '')} <span class="mono">${esc(cents(o.mid_bp))}</span>${o.freshness === 'stale' ? ' <em class="tape__stale">stale</em>' : ''}`).join(' · ')
+export function tapeVenueLines(it) {
+  const pm = (it?.venues || []).filter((v) => v.venue !== 'kalshi')
+  const rel = (it?.related || [])
+  if (!pm.length && !rel.length) return ''
+  const lines = pm.map((v) => {
+    const gap = it.comparison && it.comparison.match_class === v.match ? ` · gap ${esc(Math.round(it.comparison.max_gap_pts))} pts` : ''
+    const dx = v.disclosure ? `<span class="tape__dx">${esc(v.disclosure)}</span>` : ''
+    return `<span class="tape__vl" data-venue="${esc(v.venue)}" data-match="${esc(v.match)}"><b>${esc(venueName(v.venue))}</b> ${pxList(v.outcomes)}${gap}${dx}</span>`
+  })
+  for (const r of rel) {
+    const px = pxList(r.outcomes)
+    lines.push(`<span class="tape__vl tape__vl--rel" data-venue="${esc(r.venue)}" data-match="${esc(r.match)}" title="${esc(r.reason || '')}"><i class="tape__rl">${esc(r.label || 'RELATED MARKET')}</i> <b>${esc(venueName(r.venue))}</b> ${px}</span>`)
+  }
+  return lines.join('')
+}
+
+function tapeCard(it) {
+  const [label, cls] = tapeState(it)
+  const pbe = it.pbe
+  const pbeLine = pbe && pbe.algo_probability != null && pbe.market?.selection_price_bp != null
+    ? `<span class="tape__l tape__l--pbe">PBE ${esc((pbe.algo_probability * 100).toFixed(1))}% · Market ${esc(cents(pbe.market.selection_price_bp))} · ${esc(((pbe.algo_probability * 100) - pbe.market.selection_price_bp / 100).toFixed(1))} pts</span>` : ''
+  const href = it.destination?.url || null
+  const inner = `<span class="tape__hd"><span class="tape__sp">${esc(SPORT_LABEL[it.sport] || String(it.sport || '').toUpperCase())}</span><span class="tape__st tape__st--${cls}">${esc(label)}</span></span>
+    <span class="tape__ti">${esc(it.title || '')}</span>
+    <span class="tape__bd">${pbeLine || tapeOutcomes(it)}${tapeVenueLines(it)}</span>`
+  return href ? `<a class="tape__c" href="${esc(href)}" data-tape-event="${esc(`${it.sport}|${it.canonical_event_id}`)}">${inner}</a>` : `<span class="tape__c">${inner}</span>`
+}
+
+/** The rail: filter chips (only non-empty ones) + one horizontally scrolling row of fixed-size cards. */
+export function marketTapeRail(payload, { filter = 'all', title = 'Market Tape' } = {}) {
+  if (!payload?.classes) return ''
+  const counts = Object.fromEntries(TAPE_FILTERS.map(([k]) => [k, tapeItems(payload, k).length]))
+  if (!counts.all) return ''
+  const f = counts[filter] ? filter : 'all'
+  const chips = TAPE_FILTERS.filter(([k]) => counts[k]).map(([k, l]) => `<button type="button" class="tape__f${k === f ? ' is-on' : ''}" data-tape-filter="${k}" aria-pressed="${k === f}">${esc(l)}</button>`).join('')
+  const cards = tapeItems(payload, f).slice(0, 24).map(tapeCard).join('')
+  return `<section class="tape" data-tape aria-label="Market tape: prediction-market prices across PropBetEdge">
+    <div class="tape__top"><span class="tape__name">${esc(title)}</span><span class="tape__fs" role="group" aria-label="Filter">${chips}</span></div>
+    <div class="tape__row" data-tape-row>${cards}</div>
+    <p class="tape__ft">Prediction-market prices (${tapeItems(payload, f).some((x) => tapeVenueLines(x)) ? 'Kalshi, Polymarket' : 'Kalshi'}) · movement since first observed · not sportsbook odds or a PropBetEdge model</p>
+  </section>`
+}
+
+/** Wire filter chips and in-place refresh. load(): Promise<payload>; refreshMs default 30 s. Returns stop(). */
+export function mountMarketTape(host, load, { refreshMs = 30000, title } = {}) {
+  if (!host) return () => {}
+  let filter = 'all', last = null, t = 0, dead = false
+  const paint = () => {
+    const html = marketTapeRail(last, { filter, title })
+    const row = host.querySelector('[data-tape-row]')
+    if (row && html) {
+      // in place: swap chips + cards only, keep the scroller element (and its scroll position)
+      const tmp = document.createElement('div'); tmp.innerHTML = html
+      const left = row.scrollLeft
+      host.querySelector('.tape__fs').innerHTML = tmp.querySelector('.tape__fs').innerHTML
+      row.innerHTML = tmp.querySelector('[data-tape-row]').innerHTML
+      row.scrollLeft = left
+    } else host.innerHTML = html
+  }
+  host.addEventListener('click', (e) => {
+    const b = e.target.closest?.('[data-tape-filter]')
+    if (!b) return
+    filter = b.dataset.tapeFilter
+    const row = host.querySelector('[data-tape-row]'); if (row) row.scrollLeft = 0
+    paint()
+  })
+  const tick = async () => {
+    if (dead) return
+    if (typeof document === 'undefined' || !document.hidden) { try { const p = await load(); if (p) { last = p; paint() } } catch {} }
+    t = setTimeout(tick, refreshMs)
+  }
+  tick()
+  return () => { dead = true; clearTimeout(t) }
 }

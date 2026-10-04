@@ -136,13 +136,13 @@ test('the browser never calls Kalshi: no Kalshi API host in any shipped browser 
 });
 
 test('vendored component is byte-identical to the canonical shared client', () => {
-  /* propbetedge-workers ad6187a workers/propsports-markets/client/ (failed reads never cached; Live subtitle only when live-fresh). Re-vendor
+  /* propbetedge-workers 64ca257 workers/propsports-markets/client/ (one-sided $0/$1 book keeps the full card; no Mid-market). Re-vendor
      the four files together and update these hashes; never edit them here. */
   const PINNED = {
     'README.md': 'a80e4ac5d8733bde8afc0c13c281242babff8b1acd083974741f677b7af5a480',
-    'kalshi-market-client.js': '68f9ed06de627654634e385acc79b1efdee858de4a59801e20b401b5c0bc43dc',
-    'kalshi-market-ui.css': 'fb046ada2b2e5450207e4301c0e41a193aa599e4661843fdcdb50d45ac7191ae',
-    'kalshi-market-ui.js': '03712a0eb48e5265523ec45b145fd2fa880c9435e1adf2c6ca988c78c3fa37a8',
+    'kalshi-market-client.js': 'bbab54f78382f336a149b18f332bc54abe0b9c471ada3dd8ef0d67e5e5706301',
+    'kalshi-market-ui.css': 'df81df5650cc66d0bcea37c2808eaf783522ad9f921449e954f590d4ad9a2c60',
+    'kalshi-market-ui.js': '639f834c27bffed519d37eea4066d3b31e5699f7215d6ea5c07e23c2591ccc48',
   };
   for (const [f, sha] of Object.entries(PINNED)) {
     assert.equal(createHash('sha256').update(readFileSync(new URL(`vendor/kalshi/${f}`, REPO))).digest('hex'), sha, `vendor/kalshi/${f} was edited`);
