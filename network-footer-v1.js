@@ -107,7 +107,6 @@
           <a href="https://propbetedge.ai/terms">Terms</a>
           <a href="https://propbetedge.ai/legal">Legal</a>
           <a href="https://propbetedge.ai/support">Support</a>
-          <a href="https://propbetedge.ai/media">Media</a>
           </nav>
 
         <section class="pbe-network-footer-ecosystem">
