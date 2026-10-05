@@ -3,58 +3,61 @@
 <head>
   <link rel="stylesheet" href="/pbe-consent-v1.css">
   <script src="/pbe-consent-v1.js"></script>
-  <!-- PropBetEdge network analytics: GA4 nfl -->
+  <!-- PropBetEdge network analytics: consent-gated GA4 nfl -->
   <script>
     (function () {
       var GA_ID = 'G-BRS48R8PG9';
       var SURFACE = 'nfl';
-      var HASH_ROUTES = true;
-      var host = String(location.hostname || '').toLowerCase();
-      var isProd = host === 'propbetedge.ai' || host.endsWith('.propbetedge.ai');
-      if (!isProd || host.endsWith('.vercel.app') || host.endsWith('.workers.dev') || host.endsWith('.pages.dev') || host === 'localhost' || host === '127.0.0.1') return;
-
-      window.dataLayer = window.dataLayer || [];
-      window.gtag = window.gtag || function () { window.dataLayer.push(arguments); };
-      window.gtag('js', new Date());
-      window.gtag('set', { pbe_surface: SURFACE });
-      window.gtag('config', GA_ID, {
-        cookie_domain: '.propbetedge.ai',
-        cookie_flags: 'SameSite=Lax;Secure'
-      });
-
-      var tag = document.createElement('script');
-      tag.async = true;
-      tag.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(GA_ID);
-      document.head.appendChild(tag);
-
-      // GA4 Enhanced Measurement owns normal page loads and browser-history
-      // page views. Hash-router surfaces need one supplement because their
-      // primary route changes do not necessarily call pushState/replaceState.
+      var loaded = false;
       var lastManualHash = '';
       var lastPopStateAt = 0;
-      addEventListener('popstate', function () { lastPopStateAt = Date.now(); });
-      if (HASH_ROUTES) {
-        addEventListener('hashchange', function () {
-          // Back/forward can emit popstate + hashchange. Let GA4 own popstate.
-          if (Date.now() - lastPopStateAt < 250) return;
-          var currentHash = location.hash || '#/';
-          if (currentHash === lastManualHash) return;
-          lastManualHash = currentHash;
-          window.gtag('event', 'page_view', {
-            page_title: document.title,
-            page_location: location.href,
-            page_path: location.pathname + location.search + currentHash,
-            pbe_surface: SURFACE,
-            pbe_route_type: 'hash'
-          });
+
+      function allowed() {
+        return window.PBEConsent && window.PBEConsent.state && window.PBEConsent.state() === 'granted';
+      }
+      function boot() {
+        if (loaded || !allowed()) return;
+        loaded = true;
+        window.dataLayer = window.dataLayer || [];
+        window.gtag = window.gtag || function () { window.dataLayer.push(arguments); };
+        window.gtag('js', new Date());
+        window.gtag('set', { pbe_surface: SURFACE });
+        window.gtag('config', GA_ID, {
+          cookie_domain: '.propbetedge.ai',
+          cookie_flags: 'SameSite=Lax;Secure'
+        });
+        var tag = document.createElement('script');
+        tag.async = true;
+        tag.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(GA_ID);
+        document.head.appendChild(tag);
+      }
+      function trackHash() {
+        if (!allowed() || typeof window.gtag !== 'function') return;
+        if (Date.now() - lastPopStateAt < 250) return;
+        var currentHash = location.hash || '#/';
+        if (currentHash === lastManualHash) return;
+        lastManualHash = currentHash;
+        window.gtag('event', 'page_view', {
+          page_title: document.title,
+          page_location: location.href,
+          page_path: location.pathname + location.search + currentHash,
+          pbe_surface: SURFACE,
+          pbe_route_type: 'hash'
         });
       }
 
+      addEventListener('popstate', function () { lastPopStateAt = Date.now(); });
+      addEventListener('hashchange', trackHash);
+      addEventListener('pbe:consentchange', function (event) {
+        if (event.detail && event.detail.analytics === 'granted') boot();
+      });
       document.addEventListener('click', function (event) {
+        if (!allowed() || typeof window.gtag !== 'function') return;
         var target = event.target && event.target.closest ? event.target.closest('a[href]') : null;
         if (!target) return;
         try {
           var url = new URL(target.href, location.href);
+          var host = String(location.hostname || '').toLowerCase();
           if (url.hostname !== host && (url.hostname === 'propbetedge.ai' || url.hostname.endsWith('.propbetedge.ai'))) {
             window.gtag('event', 'pbe_network_click', {
               pbe_surface: SURFACE,
@@ -65,6 +68,7 @@
           }
         } catch (_) {}
       }, { capture: true });
+      boot();
     })();
   </script>
 
