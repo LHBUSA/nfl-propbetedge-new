@@ -10,8 +10,8 @@
  *   3. The forged owner session the live smoke sends reads as signed out in the
  *      real handlers (401), never as a signed-in reader.
  *   4. judgeTrackRecord passes on the real handler's public payloads and fails
- *      on every drift it names: gate thresholds, gate/tuner/publication
- *      disagreement, merged or non-count totals, decision content in public
+ *      on every drift it names: production/learning disagreement, merged or
+ *      non-count totals, decision content in public
  *      views, non-official rows in the official record.
  *   5. The removed wall harness is gone and every browser smoke uses the
  *      contract.
@@ -90,15 +90,15 @@ test('track record: every drift the contract names is caught', async () => {
   const [s, pv, tr] = (await Promise.all(['state', 'preview', 'trackrecord'].map(view => call({ view })))).map(r => r.json);
   const judge = (over = {}) => C.judgeTrackRecord({ state: s, preview: pv, trackrecord: tr, ...over });
   const withState = patch => judge({ state: { ...s, ...patch } });
-  assert.match(withState({ graded_sample_required: 50 }).join(), /gate is 100/);
-  assert.match(withState({ distinct_weeks_required: 2 }).join(), /gate is 4/);
-  assert.match(withState({ graded_sample: '19' }).join(), /pair of counts/);
-  assert.match(withState({ graded_sample: s.graded_sample + 1 }).join(), /tracking \+ official/);
-  assert.match(withState({ auto_tuner: 'ELIGIBLE' }).join(), /auto_tuner/);
-  /* 120 finalized in 3 weeks is still GATED: both thresholds, never one */
-  assert.deepEqual(withState({ graded_sample: 120, graded_sample_tracking: 120, graded_sample_official: 0, distinct_weeks: 3, auto_tuner: 'GATED' }), []);
-  assert.match(withState({ graded_sample: 120, graded_sample_tracking: 120, graded_sample_official: 0, distinct_weeks: 3, auto_tuner: 'ELIGIBLE' }).join(), /auto_tuner/);
-  assert.match(withState({ publication: s.champion_trained ? 'GATED' : 'ALLOWED' }).join(), /publication/);
+  assert.match(withState({ graded_sample: '19' }).join(), /learning progress/);
+  assert.match(withState({ graded_sample: s.graded_sample + 1 }).join(), /tracking \+ official|learning_sample/);
+  if (s.champion_trained === true) {
+    assert.match(withState({ auto_tuner: 'ELIGIBLE' }).join(), /CONTINUOUS/);
+    assert.match(withState({ learning_mode: 'BOOTSTRAP' }).join(), /CONTINUOUS/);
+    assert.match(withState({ publication: 'GATED' }).join(), /expected ALLOWED/);
+  } else {
+    assert.match(withState({ publication: 'ALLOWED' }).join(), /expected GATED/);
+  }
   const merged = { ...s.decisions.tracking };
   assert.match(withState({ decisions: { tracking: merged, official: merged } }).join(), /merged/);
   assert.match(withState({ decisions: { ...s.decisions, official: { ...s.decisions.official, total: 1.5 } } }).join(), /not a count/);
