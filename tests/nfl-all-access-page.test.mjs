@@ -201,3 +201,9 @@ test('B1 lapsed on /all-access: signed in with the email, RENEW NFL PRO, VIEW AL
   assert.match(Pg.markup(Pg.viewFor({ ...lapsed, entitlement: { reason: 'no_subscription' } })), />GET NFL PRO</);
   assert.match(read('nfl-all-access-page-v1.js'), /v\?\.kind === 'lapsed' \? 'Renew'/, 'the page header reads Renew, never FREE');
 });
+
+test('page CSS never restyles the shared footer (Preferred Source button keeps its own colours)', () => {
+  const css = read('nfl-all-access-page-v1.css');
+  assert.doesNotMatch(css, /(^|\})\s*\.nflaa a\{/m, 'a page-wide link rule would reach the network footer');
+  assert.doesNotMatch(css, /pbe-psrc|pbe-network-footer [^{]*a\{/, 'the footer is styled only by its own sheets');
+});

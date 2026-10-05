@@ -6,7 +6,7 @@
   --aa-display:var(--pbe-font-display,"Playfair Display",Georgia,serif);--aa-ui:var(--pbe-font-ui,Inter,system-ui,sans-serif);--aa-data:var(--pbe-font-data,"JetBrains Mono",ui-monospace,monospace)}
 body.nflaa{margin:0;min-height:100vh;background:radial-gradient(1200px 520px at 15% -10%,rgba(212,175,55,.10),transparent 60%),linear-gradient(180deg,var(--aa-ink-2),var(--aa-ink) 40%);color:var(--aa-paper);font-family:var(--aa-ui);-webkit-font-smoothing:antialiased;overflow-x:hidden}
 .nflaa *{box-sizing:border-box}
-.nflaa a{color:inherit}
+#view-container a{color:inherit}
 .nflaa :focus-visible{outline:2px solid var(--aa-gold-bright);outline-offset:2px}
 .nflaa-skip{position:absolute;left:-9999px;top:8px;z-index:50;padding:10px 14px;border-radius:8px;background:var(--aa-gold-bright);color:#17120a;font:800 12px/1 var(--aa-data)}
 .nflaa-skip:focus{left:12px}
