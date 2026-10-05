@@ -319,7 +319,9 @@
     order:1!important;min-height:clamp(260px,34vh,380px);justify-content:flex-end!important;padding:calc(98px + env(safe-area-inset-top,0px)) 20px 22px!important;
     border:0!important;border-bottom:1px solid rgba(233,199,90,.18)!important;border-radius:0!important;
   }
-  .pbe-pro-modal.pbe-acct .pbe-pro-checkout{order:2!important;justify-content:flex-start!important;padding:22px 20px calc(30px + env(safe-area-inset-bottom,0px))!important;border:0!important}
+  .pbe-pro-modal.pbe-acct .pbe-pro-checkout{order:2!important;justify-content:flex-start!important;padding:22px 20px calc(68px + env(safe-area-inset-bottom,0px))!important;border:0!important}
+  /* 68px: the network "Privacy choices" pill (pbe-consent-v1, fixed bottom-left)
+     never sits over the last row of the sheet */
   .pbe-acct .pbe-acct-art{
     background:
       linear-gradient(180deg,rgba(14,11,8,.78) 0%,rgba(14,11,8,.22) 30%,rgba(14,11,8,.62) 60%,rgba(14,11,8,.96) 100%),
