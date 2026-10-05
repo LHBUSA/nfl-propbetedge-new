@@ -172,9 +172,13 @@
     const existing=root.querySelector(':scope > .pbe25-td-target');
     if(!target){existing?.remove();return}
     const probability=Number(target.model?.probability);
-    const label=`PBE TD TARGET · ${target.player?.name||''}`;
-    const html=`<button type="button" class="pbe25-td-target" data-route="tdtargets" title="${esc(label)}">`
+    const grade=String(target.grade?.result||'').toLowerCase();
+    const result=grade==='win'?'HIT':grade==='loss'?'MISS':grade==='void'?'VOID':'PENDING';
+    const resultClass=grade==='win'?'win':grade==='loss'?'loss':grade==='void'?'void':'pending';
+    const label=`PBE TD TARGET · ${target.player?.name||''} · ${result}`;
+    const html=`<button type="button" class="pbe25-td-target is-${resultClass}" data-route="tdtargets" data-td-result="${result}" title="${esc(label)}">`
       +`<span class="pbetd-badge">PBE TD TARGET</span><b>${esc(target.player?.name||'')}</b>`
+      +`<span class="pbetd-result ${resultClass}">${result}</span>`
       +`${Number.isFinite(probability)?`<i>${(probability*100).toFixed(0)}%</i>`:''}</button>`;
     if(existing){if(existing.outerHTML!==html)existing.outerHTML=html;return}
     const anchor=root.querySelector('.pbe25-actions')||root.querySelector('.pbe25-feature-actions');
