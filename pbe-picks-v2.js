@@ -518,19 +518,20 @@
   }
 
   function heroMetrics(s, gov) {
+    const sample = s.settled ? `${s.settled} graded` : 'No graded decisions';
     const cells = [
-      ['W-L-P', s.settled ? `${s.wins}-${s.losses}-${s.pushes}` : '—', ''],
-      ['Win rate', fmtRate(s.winRate), ''],
-      ['Flat 1u profit', fmtUnits(s.profit), toneOf(s.profit)],
-      ['ROI', fmtPct(s.roi), toneOf(s.roi)],
-      ['Avg issued odds', s.avgOdds === null ? '—' : american(s.avgOdds), ''],
-      ['CLV beat rate', fmtRate(s.clvBeatRate), ''],
-      ['Avg CLV', s.avgClvProb === null ? '—' : `${s.avgClvProb > 0 ? '+' : ''}${(s.avgClvProb * 100).toFixed(2)} pp`, toneOf(s.avgClvProb)],
-      ['Brier score', s.brier === null ? '—' : s.brier.toFixed(4), ''],
-      ['Max drawdown', s.maxDrawdown === null ? '—' : `${s.maxDrawdown.toFixed(2)}u`, s.maxDrawdown < 0 ? 'bad' : ''],
-      ['Weeks observed', num(gov?.distinct_weeks) ?? s.weeks, ''],
+      ['Locked calls', s.decisions, '', 'All persisted decisions in this record.'],
+      ['Record', s.settled ? `${s.wins}-${s.losses}-${s.pushes}` : '—', '', 'Wins-losses-pushes over graded decisions.'],
+      ['Hit rate', fmtRate(s.winRate), '', 'Straight-up decision accuracy. UNPRICED calls remain in this metric.'],
+      ['Brier', s.brier === null ? '—' : s.brier.toFixed(4), '', 'Calibration of the published probability. Lower is better.'],
+      ['Log loss', s.logLoss === null ? '—' : s.logLoss.toFixed(4), '', 'Penalty for confident misses. Lower is better.'],
+      ['Priced', s.priced, '', 'Graded calls with a legitimate persisted issue price.'],
+      ['UNPRICED', s.unpriced, '', 'Graded calls without a usable issue price. Excluded from ROI and CLV.'],
+      ['ROI', fmtPct(s.roi), toneOf(s.roi), 'Flat 1u ROI over priced graded calls only.'],
+      ['CLV', s.avgClvProb === null ? '—' : `${s.avgClvProb > 0 ? '+' : ''}${(s.avgClvProb * 100).toFixed(2)} pp`, toneOf(s.avgClvProb), 'Average probability CLV where a valid issue price and captured close both exist.'],
+      ['Sample size', s.settled, '', 'Graded decisions behind the performance metrics.'],
     ];
-    return `<div class="pbetr-kpis">${cells.map(([k, v, tone]) => `<div class="pbetr-kpi ${tone}"><span>${esc(k)}</span><strong>${esc(v)}</strong></div>`).join('')}</div>`;
+    return `<div class="pbetr-kpis pbetr-kpis-master">${cells.map(([k, v, tone, help]) => `<div class="pbetr-kpi ${tone}"><span>${esc(k)}</span><strong>${esc(v)}</strong><small>${esc(sample)}</small><em>${esc(help)}</em></div>`).join('')}</div>`;
   }
 
   function validationHero(rows, gov, meta = null) {
@@ -545,8 +546,8 @@
         <div class="pbetr-hero-label">Validation record · champion v${esc(gov?.champion_version ?? '—')}</div>
         <div class="pbetr-sample"><strong>${s.settled}</strong><span>finalized decisions</span></div>
         <div class="pbetr-sample-sub">${s.settled} graded · ${open === null ? '—' : open} pending · ${withdrawn === null ? '—' : withdrawn} withdrawn · ${replaced === null ? '—' : replaced} replaced before lock</div>
-        <div class="pbetr-hero-roi ${toneOf(s.roi)}">${fmtPct(s.roi)}<small>ROI</small></div>
-        <p class="pbetr-fine">Small sample: ${s.settled} decisions is not statistically meaningful on its own. ROI = flat 1u profit ÷ settled decisions (win + loss + push). Stake-weighted persisted units: ${fmtUnits(s.stakeUnits)}.</p>
+        <div class="pbetr-hero-roi ${toneOf(s.roi)}">${fmtPct(s.roi)}<small>ROI · priced only</small></div>
+        <p class="pbetr-fine">This is the live validation record, not the Official Record. W-L-P, Brier and log loss include every graded call. Economics are stricter: ${s.priced} priced · ${s.unpriced} UNPRICED; ROI and CLV use only calls with legitimate decision-time pricing. Stake-weighted persisted units: ${fmtUnits(s.stakeUnits)}.</p>
       </div>
       ${heroMetrics(s, gov)}
     </section>`;
@@ -562,7 +563,7 @@
         <p class="pbetr-fine">The validation performance — W-L-P, ROI, CLV, calibration — and the signal ledger are NFL Pro. Selections, lines, prices and model probabilities are never shown here to free readers.</p>
         <button type="button" class="pbe2-btn" data-pbe2-upgrade>Unlock the Validation Record</button>
       </div>
-      <div class="pbetr-kpis pbetr-kpis-locked">${['W-L-P', 'ROI', 'Flat 1u profit', 'CLV beat rate', 'Brier score', 'Max drawdown'].map(k => `<div class="pbetr-kpi"><span>${esc(k)}</span><strong aria-label="NFL Pro">NFL PRO</strong></div>`).join('')}</div>
+      <div class="pbetr-kpis pbetr-kpis-locked">${['Locked calls', 'Record', 'Hit rate', 'Brier', 'Log loss', 'Priced', 'UNPRICED', 'ROI', 'CLV', 'Sample size'].map(k => `<div class="pbetr-kpi"><span>${esc(k)}</span><strong aria-label="NFL Pro">NFL PRO</strong></div>`).join('')}</div>
     </section>`;
   }
 
@@ -693,8 +694,10 @@
       return `${officialZero(bundle)}${teaser}${gatePanel(bundle.gov)}`;
     }
     const data = { ...o.body, picks: officialRaw };
+    const C = CORE();
+    const coreRows = C.selectScope(officialRaw.map(row => C.fromOfficial(row, o.body?.publication_scope)), 'official');
     const rows = filteredRows(officialRaw);
-    return `${trackHero(rows, data, { topline: false })}<div class="pbe2-performance-grid">${performanceChart(rows)}${outcomeTape(rows)}</div><div class="pbe2-performance-grid">${marketPanel(rows)}${benchmark(data, rows)}</div>${history(officialRaw, rows)}`;
+    return `${trackHero(rows, data, { topline: false })}<section class="pbe2-panel pbetr-master-official"><div class="pbe2-panel-head"><div><span>Official regular-season performance</span><strong>NHL-standard record accounting</strong></div></div>${heroMetrics(C.summarize(coreRows), bundle.gov)}<div class="pbe2-tape-note">Record, hit rate, Brier and log loss use all graded official calls. ROI and CLV are calculated only where the issue price was legitimately captured. Missing pricing remains UNPRICED instead of being reconstructed.</div></section><div class="pbe2-performance-grid">${performanceChart(rows)}${outcomeTape(rows)}</div><div class="pbe2-performance-grid">${marketPanel(rows)}${benchmark(data, rows)}</div>${history(officialRaw, rows)}`;
   }
 
   function trackPage(bundle) {
