@@ -84,11 +84,14 @@ test('flat units use the persisted issue price: never a default -110', () => {
   assert.equal(C.flatUnits('win', -50), null);
   assert.equal(C.flatUnits('void', -110), null);
   assert.equal(C.flatUnits('pending', -110), null);
-  /* A win without a persisted price makes profit and ROI unavailable, not -110. */
+  /* NHL-standard accounting: an UNPRICED win stays in W-L-P/calibration but
+     never receives invented economics. The legitimately priced loss remains
+     the entire ROI denominator. */
   const rows = [card({ issue: { line: -2.5, price: null, at: 'x' } }), card({ grade: g('loss') })].map(C.fromValidation);
   const s = C.summarize(rows);
   assert.equal(s.wins, 1); assert.equal(s.losses, 1);
-  assert.equal(s.profit, null); assert.equal(s.roi, null); assert.equal(s.maxDrawdown, null);
+  assert.deepEqual([s.priced, s.unpriced], [1, 1]);
+  assert.equal(s.profit, -1); assert.equal(s.roi, -100); assert.equal(s.maxDrawdown, -1);
 });
 
 test('W-L-P reconciles to the rows; losses are included, pushes are settled at 0u, voids and pending are excluded', () => {
@@ -106,16 +109,17 @@ test('W-L-P reconciles to the rows; losses are included, pushes are settled at 0
   assert.equal(s.wins + s.losses + s.pushes, rows.filter(r => ['win', 'loss', 'push'].includes(r.result)).length);
   assert.deepEqual([s.wins, s.losses, s.pushes, s.voided, s.pending], [1, 2, 1, 1, 1]);
   assert.equal(s.profit, 1.5 - 1 - 1 + 0);
-  /* ROI denominator: settled decisions (W+L+P), 1u each. */
+  /* Every row here is priced, so the NHL-standard denominator is the four
+     priced settled decisions. */
   assert.equal(s.roi, (1.5 - 2) / 4 * 100);
-  assert.match(C.ROI_DENOMINATOR, /win \+ loss \+ push/);
-  assert.match(CORE_SRC, /ROI\s+flat 1u profit \/ number of settled decisions/);
+  assert.equal(s.priced, 4); assert.equal(s.unpriced, 0);
+  assert.match(CORE_SRC, /number of PRICED settled decisions/);
   assert.equal(s.winRate, 1 / 3 * 100);
   assert.equal(s.curve.length, 4);
   assert.equal(s.maxDrawdown, -2);
 });
 
-test('average odds, CLV, Brier and drawdown come only from persisted values', () => {
+test('average odds, CLV, Brier, log loss and drawdown come only from persisted values', () => {
   const rows = [
     card({ issue: { line: 1, price: 100, at: 'x' }, grade: g('win', { clv_beat: true, clv_prob: 0.02, brier: 0.2 }) }),
     card({ issue: { line: 1, price: -200, at: 'x' }, grade: g('loss', { clv_beat: false, clv_prob: -0.01, brier: 0.3 }) }),
@@ -131,9 +135,38 @@ test('average odds, CLV, Brier and drawdown come only from persisted values', ()
   assert.equal(s.avgClvProb, 0.005);
   assert.equal(s.brierSample, 2);
   assert.equal(s.brier, 0.25);
+  assert.equal(s.logLossSample, 3);
+  const expectedLogLoss = (-Math.log(0.55) - Math.log(0.45) - Math.log(0.45)) / 3;
+  assert.ok(Math.abs(s.logLoss - expectedLogLoss) < 1e-12);
   assert.equal(s.maxDrawdown, -2);
   const empty = C.summarize([]);
-  for (const k of ['winRate', 'profit', 'roi', 'avgOdds', 'clvBeatRate', 'avgClvProb', 'brier', 'maxDrawdown']) assert.equal(empty[k], null, k);
+  for (const k of ['winRate', 'profit', 'roi', 'avgOdds', 'clvBeatRate', 'avgClvProb', 'brier', 'logLoss', 'maxDrawdown']) assert.equal(empty[k], null, k);
+});
+
+test('UNPRICED decisions stay in record and calibration but are excluded from ROI and CLV', () => {
+  const rows = [
+    card({ issue: { line: -2.5, price: null, at: 'x' }, grade: g('win', { clv_beat: true, clv_prob: 0.04, brier: 0.16 }) }),
+    card({ issue: { line: -2.5, price: -110, at: 'x' }, grade: g('loss', { clv_beat: false, clv_prob: -0.01, brier: 0.36 }) }),
+  ].map(C.fromValidation);
+  const s = C.summarize(rows);
+  assert.deepEqual([s.wins, s.losses, s.priced, s.unpriced], [1, 1, 1, 1]);
+  assert.equal(s.brierSample, 2);
+  assert.equal(s.clvSample, 1, 'UNPRICED row cannot enter CLV even if a bad payload carries clv fields');
+  assert.equal(s.clvBeatRate, 0);
+  assert.equal(s.profit, -1);
+  assert.equal(s.roi, -100);
+});
+
+test('an UNPRICED loss is also excluded from ROI, not charged a synthetic -1u', () => {
+  const rows = [
+    card({ issue: { line: -2.5, price: null, at: 'x' }, grade: g('loss', { brier: 0.36 }) }),
+    card({ issue: { line: -2.5, price: 150, at: 'x' }, grade: g('win', { brier: 0.16 }) }),
+  ].map(C.fromValidation);
+  const s = C.summarize(rows);
+  assert.deepEqual([s.wins, s.losses, s.priced, s.unpriced], [1, 1, 1, 1]);
+  assert.equal(s.profit, 1.5);
+  assert.equal(s.roi, 150);
+  assert.equal(s.curve.length, 1);
 });
 
 test('breakdowns and filters reconcile to the source rows', () => {
@@ -355,7 +388,7 @@ test('Pro: the Validation Record renders from validation-history with VALIDATION
   /* Hero W-L-P reconciles to the rows. */
   const rows = C.selectScope(hist.json.picks.map(C.fromValidation), 'tracking');
   const s = C.summarize(rows);
-  assert.match(t, new RegExp(`W-L-P ${s.wins}-${s.losses}-${s.pushes}`));
+  assert.match(t, new RegExp(`Record ${s.wins}-${s.losses}-${s.pushes}`));
 });
 
 test('Official Record zero state is truthful and surfaces the Validation Record', async () => {

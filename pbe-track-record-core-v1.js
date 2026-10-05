@@ -13,11 +13,11 @@
  *             enter W-L-P, units or ROI.
  *   UNITS     Flat 1u at the persisted issue price (the American odds frozen
  *             at issuance). A win without a persisted price has no profit —
- *             never a default -110 — and makes profit/ROI unavailable ('—').
- *             Losses are always -1u, pushes 0u.
- *   ROI       flat 1u profit / number of settled decisions (win + loss + push),
- *             each risking exactly 1u. Voids and pending decisions are excluded
- *             from numerator and denominator.
+ *             never a default -110. UNPRICED rows stay in W-L-P/calibration
+ *             but are excluded from profit, ROI and CLV economics.
+ *   ROI       flat 1u profit / number of PRICED settled decisions (win + loss
+ *             + push), each risking exactly 1u. UNPRICED, void and pending
+ *             decisions are excluded from the ROI denominator.
  *   WIN RATE  wins / (wins + losses). Pushes are excluded.
  *   AVG ODDS  mean of the settled decisions' decimal issue odds, converted back
  *             to American. Rows without a persisted price are excluded.
@@ -34,7 +34,7 @@
 
   const SETTLED = ['win', 'loss', 'push'];
   const MARKETS = ['spread', 'moneyline', 'total'];
-  const ROI_DENOMINATOR = 'settled decisions (win + loss + push), 1u each; void and pending excluded';
+  const ROI_DENOMINATOR = 'priced settled decisions (win + loss + push), 1u each; UNPRICED, void and pending excluded';
 
   const num = value => {
     if (value === null || value === undefined || value === '') return null;
@@ -112,6 +112,7 @@
       line: num(row?.market_line),
       price: validPrice(row?.market_price),
       modelProb: num(row?.model_prob),
+      marketProb: num(row?.market_prob),
       edge: num(row?.edge_pct),
       confidence: text(row?.confidence_bucket).toUpperCase() || null,
       modelVersion: num(row?.model_version),
@@ -148,6 +149,7 @@
       line: num(card?.issue?.line),
       price: validPrice(card?.issue?.price),
       modelProb: num(card?.model?.prob),
+      marketProb: num(card?.market_prob),
       edge: num(card?.edge_pct),
       confidence: text(card?.confidence_bucket).toUpperCase() || null,
       modelVersion: num(card?.model?.version),
@@ -186,21 +188,33 @@
   function summarize(rows) {
     const all = Array.isArray(rows) ? rows : [];
     const settled = all.filter(r => r.settled).slice().sort(byTime);
+    const decided = settled.filter(r => r.result === 'win' || r.result === 'loss');
     const wins = settled.filter(r => r.result === 'win').length;
     const losses = settled.filter(r => r.result === 'loss').length;
     const pushes = settled.filter(r => r.result === 'push').length;
-    const priced = settled.every(r => r.flat !== null);
-    const profit = settled.length && priced ? settled.reduce((s, r) => s + r.flat, 0) : null;
+
+    /* NHL-standard economics: a missing issue price never poisons the entire
+       record and is never silently replaced with -110. It remains in W-L-P and
+       probability scoring, but only legitimately PRICED rows enter units/ROI. */
+    const pricedRows = settled.filter(r => r.price !== null && r.flat !== null);
+    const unpricedRows = settled.filter(r => r.price === null);
+    const profit = pricedRows.length ? pricedRows.reduce((sum, r) => sum + r.flat, 0) : null;
     let running = 0, peak = 0, maxDrawdown = 0;
-    const curve = priced ? settled.map(row => {
+    const curve = pricedRows.map(row => {
       running += row.flat; peak = Math.max(peak, running);
       maxDrawdown = Math.min(maxDrawdown, running - peak);
       return { row, equity: running, drawdown: running - peak };
-    }) : [];
-    const decimals = settled.map(r => decimalOdds(r.price)).filter(v => v !== null);
-    const clvRows = settled.filter(r => typeof r.clvBeat === 'boolean');
-    const clvProbs = settled.map(r => r.clvProb).filter(v => v !== null);
+    });
+    const decimals = pricedRows.map(r => decimalOdds(r.price)).filter(v => v !== null);
+    const clvRows = settled.filter(r => r.price !== null && typeof r.clvBeat === 'boolean');
+    const clvProbs = clvRows.map(r => r.clvProb).filter(v => v !== null);
     const briers = settled.map(r => r.brier).filter(v => v !== null);
+    const logLosses = decided.map(r => {
+      const p = num(r.modelProb);
+      if (p === null || p <= 0 || p >= 1) return null;
+      const y = r.result === 'win' ? 1 : 0;
+      return -(y * Math.log(p) + (1 - y) * Math.log(1 - p));
+    }).filter(v => v !== null);
     return {
       decisions: all.length,
       settled: settled.length,
@@ -208,10 +222,12 @@
       voided: all.filter(r => r.result === 'void').length,
       wins, losses, pushes,
       winRate: wins + losses ? wins / (wins + losses) * 100 : null,
+      priced: pricedRows.length,
+      unpriced: unpricedRows.length,
       profit,
-      roi: profit === null || !settled.length ? null : profit / settled.length * 100,
-      roiDenominator: ROI_DENOMINATOR,
-      stakeUnits: settled.length && settled.every(r => r.stakeDelta !== null) ? settled.reduce((s, r) => s + r.stakeDelta, 0) : null,
+      roi: profit === null || !pricedRows.length ? null : profit / pricedRows.length * 100,
+      roiDenominator: 'priced_settled_flat_1u',
+      stakeUnits: settled.length && settled.every(r => r.stakeDelta !== null) ? settled.reduce((sum, r) => sum + r.stakeDelta, 0) : null,
       avgOdds: decimals.length ? americanFromDecimal(mean(decimals)) : null,
       avgOddsSample: decimals.length,
       clvBeatRate: clvRows.length ? clvRows.filter(r => r.clvBeat).length / clvRows.length * 100 : null,
@@ -219,6 +235,8 @@
       avgClvProb: clvProbs.length ? mean(clvProbs) : null,
       brier: briers.length ? mean(briers) : null,
       brierSample: briers.length,
+      logLoss: logLosses.length ? mean(logLosses) : null,
+      logLossSample: logLosses.length,
       maxDrawdown: curve.length ? maxDrawdown : null,
       weeks: [...new Set(settled.filter(r => r.season !== null && r.week !== null).map(r => `${r.season}-${r.week}`))].length,
       curve,

@@ -299,8 +299,17 @@
 .pbetr-kpi{min-width:0;padding:12px;border:1px solid rgba(255,255,255,.06);border-radius:10px;background:rgba(255,255,255,.025)}
 .pbetr-kpi span{display:block;min-height:2.4em;font-size:10px;line-height:1.2;font-weight:900;letter-spacing:.8px;text-transform:uppercase;color:rgba(255,255,255,.38)}
 .pbetr-kpi strong{display:block;margin-top:5px;font-family:var(--font-d);font-size:21px;color:#fff;white-space:nowrap}
+.pbetr-kpi small{display:block;margin-top:5px;font:800 9px/1.2 var(--font-m,monospace);letter-spacing:.8px;text-transform:uppercase;color:rgba(255,255,255,.26)}
+.pbetr-kpi em{display:block;min-height:3.8em;margin-top:9px;font-style:normal;font-size:10.5px;line-height:1.4;color:rgba(255,255,255,.42)}
 .pbetr-kpi.good strong{color:var(--pbe-pos,#55d68c)}.pbetr-kpi.bad strong{color:#f16b78}
-.pbetr-kpis-locked{grid-template-columns:repeat(3,minmax(0,1fr))}
+.pbetr-kpis-master{gap:0;border:1px solid rgba(255,255,255,.08);border-radius:12px;overflow:hidden}
+.pbetr-kpis-master .pbetr-kpi{border:0;border-right:1px solid rgba(255,255,255,.07);border-bottom:1px solid rgba(255,255,255,.07);border-radius:0;background:rgba(255,255,255,.018);padding:15px}
+.pbetr-kpis-master .pbetr-kpi:nth-child(5n){border-right:0}
+.pbetr-master-official{padding:0;overflow:hidden}
+.pbetr-master-official .pbe2-panel-head{padding:16px 18px;margin:0;border-bottom:1px solid rgba(255,255,255,.07)}
+.pbetr-master-official .pbetr-kpis-master{border:0;border-radius:0}
+.pbetr-master-official .pbe2-tape-note{margin:0;padding:13px 18px;border-top:1px solid rgba(255,255,255,.06)}
+.pbetr-kpis-locked{grid-template-columns:repeat(5,minmax(0,1fr))}
 .pbetr-kpis-locked strong{font-size:14px;letter-spacing:1px;color:rgba(216,183,91,.7)}
 
 .pbetr-gate{padding:20px 22px;border:1px solid rgba(216,183,91,.18);border-radius:16px;background:linear-gradient(135deg,rgba(18,14,6,.55),rgba(5,11,18,.9))}
@@ -460,3 +469,6 @@
 @media (max-width: 620px) {
   .pbetr-categories button { flex: 1 1 100%; }
 }
+
+@media(max-width:920px){.pbetr-kpis-master,.pbetr-kpis-locked{grid-template-columns:repeat(2,minmax(0,1fr))}.pbetr-kpis-master .pbetr-kpi:nth-child(5n){border-right:1px solid rgba(255,255,255,.07)}.pbetr-kpis-master .pbetr-kpi:nth-child(2n){border-right:0}}
+@media(max-width:540px){.pbetr-kpis-master,.pbetr-kpis-locked{grid-template-columns:1fr}.pbetr-kpis-master .pbetr-kpi{border-right:0!important}.pbetr-kpi em{min-height:0}}
