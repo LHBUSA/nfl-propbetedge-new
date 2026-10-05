@@ -694,7 +694,6 @@
       return `${officialZero(bundle)}${teaser}${gatePanel(bundle.gov)}`;
     }
     const data = { ...o.body, picks: officialRaw };
-    const C = CORE();
     const coreRows = C.selectScope(officialRaw.map(row => C.fromOfficial(row, o.body?.publication_scope)), 'official');
     const rows = filteredRows(officialRaw);
     return `${trackHero(rows, data, { topline: false })}<section class="pbe2-panel pbetr-master-official"><div class="pbe2-panel-head"><div><span>Official regular-season performance</span><strong>NHL-standard record accounting</strong></div></div>${heroMetrics(C.summarize(coreRows), bundle.gov)}<div class="pbe2-tape-note">Record, hit rate, Brier and log loss use all graded official calls. ROI and CLV are calculated only where the issue price was legitimately captured. Missing pricing remains UNPRICED instead of being reconstructed.</div></section><div class="pbe2-performance-grid">${performanceChart(rows)}${outcomeTape(rows)}</div><div class="pbe2-performance-grid">${marketPanel(rows)}${benchmark(data, rows)}</div>${history(officialRaw, rows)}`;
