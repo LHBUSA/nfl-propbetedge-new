@@ -1187,3 +1187,21 @@ async function withPage(fn) {
     globalThis.self = previous.self;
   }
 }
+
+
+test('31 · TD target cards and NFL game cards surface HIT or MISS from the stored grade', () => {
+  assert.match(PAGE_JS, /function resultState\(target\)/);
+  assert.match(PAGE_JS, /data-pbetd-target-result="/);
+  assert.match(PAGE_JS, /result === 'win' \? 'HIT' : result === 'loss' \? 'MISS'/);
+  assert.doesNotMatch(PAGE_JS, /\$\{resultBadge\(primary\)\}[\s\S]*pbetd-links/, 'primary result no longer lives only in the footer');
+
+  const gamesIntel = readFileSync(join(ROOT, 'games-intel-v5.js'), 'utf8');
+  assert.match(gamesIntel, /const result=grade==='win'\?'HIT':grade==='loss'\?'MISS'/);
+  assert.match(gamesIntel, /data-td-result="\$\{result\}"/);
+  assert.match(gamesIntel, /<span class="pbetd-result \$\{resultClass\}">\$\{result\}<\/span>/);
+
+  assert.match(PAGE_CSS, /\.pbetd-target-block\.is-win/);
+  assert.match(PAGE_CSS, /\.pbetd-target-block\.is-loss/);
+  assert.match(PAGE_CSS, /\.pbe25-td-target\.is-win/);
+  assert.match(PAGE_CSS, /\.pbe25-td-target\.is-loss/);
+});
