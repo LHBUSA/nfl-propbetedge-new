@@ -83,7 +83,7 @@ test('no customer-facing NFL file carries the stale offer: eight-sport list, "So
     const src = read(f);
     assert.doesNotMatch(src, eight, `${f}: stale eight-sport list`);
     assert.doesNotMatch(src, /Soccer · Soccer/, `${f}: duplicated Soccer`);                      // 9
-    assert.doesNotMatch(src, /every PropBetEdge sport|every Pro sport →|\b(11|eleven) sports\b/i, `${f}: stale or wrong count copy`);
+    assert.doesNotMatch(src, /every PropBetEdge sport|every PropBetEdge Pro sport|every Pro sport →|\b(11|eleven) sports\b/i, `${f}: stale or wrong count copy`);
   }
   assert.doesNotMatch(read('nfl-all-access-hero-v1.js'), /esc\(o\.tagline\)/, 'the hero no longer leads with the old tagline');
 });
