@@ -157,6 +157,18 @@ test('UNPRICED decisions stay in record and calibration but are excluded from RO
   assert.equal(s.roi, -100);
 });
 
+test('an UNPRICED loss is also excluded from ROI, not charged a synthetic -1u', () => {
+  const rows = [
+    card({ issue: { line: -2.5, price: null, at: 'x' }, grade: g('loss', { brier: 0.36 }) }),
+    card({ issue: { line: -2.5, price: 150, at: 'x' }, grade: g('win', { brier: 0.16 }) }),
+  ].map(C.fromValidation);
+  const s = C.summarize(rows);
+  assert.deepEqual([s.wins, s.losses, s.priced, s.unpriced], [1, 1, 1, 1]);
+  assert.equal(s.profit, 1.5);
+  assert.equal(s.roi, 150);
+  assert.equal(s.curve.length, 1);
+});
+
 test('breakdowns and filters reconcile to the source rows', () => {
   const rows = [
     card({ market: 'spread', week: 1, confidence_bucket: 'A' }),
@@ -376,7 +388,7 @@ test('Pro: the Validation Record renders from validation-history with VALIDATION
   /* Hero W-L-P reconciles to the rows. */
   const rows = C.selectScope(hist.json.picks.map(C.fromValidation), 'tracking');
   const s = C.summarize(rows);
-  assert.match(t, new RegExp(`W-L-P ${s.wins}-${s.losses}-${s.pushes}`));
+  assert.match(t, new RegExp(`Record ${s.wins}-${s.losses}-${s.pushes}`));
 });
 
 test('Official Record zero state is truthful and surfaces the Validation Record', async () => {
