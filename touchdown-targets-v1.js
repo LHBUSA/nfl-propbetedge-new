@@ -238,13 +238,23 @@
       : '';
   }
 
-  function resultBadge(target) {
+  function resultState(target) {
     const grade = target?.grade;
-    if (!grade) return '<span class="pbetd-result pending">PENDING</span>';
+    if (!grade) return { key: 'pending', label: 'PENDING', detail: '' };
     const result = String(grade.result || '').toLowerCase();
-    const label = result === 'win' ? 'HIT' : result === 'loss' ? 'MISS' : result.toUpperCase();
-    return `<span class="pbetd-result ${esc(result)}">${esc(label)}${
-      result === 'win' && num(grade.offensive_td) ? ` · ${grade.offensive_td} TD` : ''}</span>`;
+    if (result === 'win') return {
+      key: 'win',
+      label: 'HIT',
+      detail: num(grade.offensive_td) ? ` · ${grade.offensive_td} TD` : '',
+    };
+    if (result === 'loss') return { key: 'loss', label: 'MISS', detail: '' };
+    if (result === 'void') return { key: 'void', label: 'VOID', detail: '' };
+    return { key: result || 'pending', label: result ? result.toUpperCase() : 'PENDING', detail: '' };
+  }
+
+  function resultBadge(target) {
+    const state = resultState(target);
+    return `<span class="pbetd-result ${esc(state.key)}">${esc(state.label)}${esc(state.detail)}</span>`;
   }
 
   function driversHtml(target) {
@@ -281,7 +291,9 @@
       label: `${player.name || 'Player'} · ${rank} TD target`.slice(0, 80), context: { source: 'td_targets', rank }
     }) || '') : '';
     const position = [player.position, player.team].filter(Boolean).join(' · ');
-    return `<div class="pbetd-rank ${rank === 'secondary' ? 'secondary' : ''}">${rank === 'secondary' ? 'Secondary TD target' : 'Primary TD target'}</div>
+    const state = resultState(target);
+    return `<div class="pbetd-target-block is-${esc(state.key)}" data-pbetd-target-result="${esc(state.label)}">
+      <div class="pbetd-rank ${rank === 'secondary' ? 'secondary' : ''}"><span>${rank === 'secondary' ? 'Secondary TD target' : 'Primary TD target'}</span>${resultBadge(target)}</div>
       <div class="pbetd-player">
         ${faceHtml(player)}
         <div class="pbetd-who">
@@ -290,7 +302,8 @@
         </div>${save}
       </div>
       ${numbersHtml(target)}
-      ${driversHtml(target)}`;
+      ${driversHtml(target)}
+    </div>`;
   }
 
   function cardHtml(game) {
@@ -332,7 +345,6 @@
       <div class="pbetd-foot">
         <span class="pbetd-locked">Locked <b>${esc(stamp(primary.locked?.at))}</b>${
   primary.locked?.before_kickoff === false ? ' · NOT PREGAME' : ''}</span>
-        ${resultBadge(primary)}
         <span class="pbetd-links">${gameLinks(game)}</span>
       </div>
     </article>`;
@@ -799,9 +811,11 @@
       <button type="button" class="pbetd-btn" data-route="${ROUTE}" data-pbetd-route="${ROUTE}">All targets</button></div>
       <div class="pbetd-rail-list">${games.map(game => {
     const target = game.primary;
-    return `<button type="button" class="pbetd-rail-row" data-route="${ROUTE}" data-pbetd-route="${ROUTE}">
+    const state = resultState(target);
+    return `<button type="button" class="pbetd-rail-row is-${esc(state.key)}" data-route="${ROUTE}" data-pbetd-route="${ROUTE}">
           ${faceHtml(target.player)}
           <span><b>${esc(target.player?.name || '')}</b><em>${esc(game.away_team || '')} @ ${esc(game.home_team || '')}</em></span>
+          <span class="pbetd-rail-result ${esc(state.key)}">${esc(state.label)}</span>
           <i>${esc(pct(target.model?.probability, 0))}</i>
         </button>`;
   }).join('')}</div>
