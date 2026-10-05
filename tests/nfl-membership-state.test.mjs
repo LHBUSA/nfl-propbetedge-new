@@ -125,11 +125,15 @@ test('auth-session: anonymous -> FREE membership, no email', async () => {
   assertFree(body.membership);
 });
 
-test('auth-session: an MLB-only identity is paywalled -> FREE, no email, no identity, cookie cleared', async () => {
+test('auth-session: an MLB-only identity is paywalled -> non-entitled, pro false, identity and cookie kept', async () => {
+  /* Owner decision 2026-10-05 ("keep lapsed sessions", B1): a VERIFIED session
+     without NFL entitlement stays signed in -- email kept, cookie kept -- and
+     pro stays false; the backend membership is still the non-entitled state. */
   const { res, body } = await session('mlb-only@membership.test');
-  assert.equal(body.paywalled, true); assert.equal(body.valid, false); assert.equal(body.user, null); assert.equal(body.pro, false);
-  assertFree(body.membership);
-  assert.ok(res.headers['set-cookie'].some(c => c.startsWith(`${SESSION_COOKIE}=;`)));
+  assert.equal(body.paywalled, true); assert.equal(body.valid, true); assert.equal(body.pro, false); assert.equal(body.access, 'no_entitlement');
+  assert.deepEqual(body.user, { email: 'mlb-only@membership.test' }); assert.equal(body.session_cleared, false);
+  assertFree(body.membership, { email: 'mlb-only@membership.test' });
+  assert.equal(res.headers['set-cookie'], undefined);
 });
 
 for (const [email, plan, cancelAtEnd] of [['weekly@membership.test', 'founding_weekly', false], ['monthly@membership.test', 'founding_monthly', true]]) {
@@ -175,11 +179,12 @@ test('auth-session: the owner -> OWNER, no manage link, no purchase CTA', async 
 });
 
 for (const [name, email] of [['canceled', 'canceled@membership.test'], ['expired', 'expired@membership.test'], ['past_due', 'pastdue@membership.test']]) {
-  test(`auth-session: ${name} NFL subscription -> paywalled FREE, no email`, async () => {
+  test(`auth-session: ${name} NFL subscription -> paywalled, non-entitled, still signed in with its email`, async () => {
     const { res, body } = await session(email);
-    assert.equal(body.pro, false); assert.equal(body.paywalled, true); assert.equal(body.user, null);
-    assertFree(body.membership);
-    assert.ok(res.headers['set-cookie'].some(c => c.startsWith(`${SESSION_COOKIE}=;`)));
+    assert.equal(body.pro, false); assert.equal(body.paywalled, true); assert.equal(body.valid, true);
+    assert.deepEqual(body.user, { email }); assert.equal(body.session_cleared, false);
+    assertFree(body.membership, { email });
+    assert.equal(res.headers['set-cookie'], undefined, 'the lapsed session is kept');
   });
 }
 

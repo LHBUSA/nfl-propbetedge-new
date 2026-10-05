@@ -404,9 +404,10 @@
       const access = ACCESS_STATES.has(payload?.access) ? payload.access : (valid ? 'unavailable' : 'anonymous');
       state.session = valid ? { issuer: 'propbetedge', valid: true } : null;
       state.user = valid && payload?.user?.email ? { email: String(payload.user.email).toLowerCase() } : null;
-      /* A verified email with no NFL entitlement is paywalled, never a signed-in
-       * NFL customer: the server clears that session; the page shows the plans. */
-      if (access === 'no_entitlement') { state.session = null; state.user = null; }
+      /* A verified email with no NFL entitlement stays signed in (owner decision
+       * 2026-10-05, "keep lapsed sessions"): pro is false below, so nothing
+       * premium unlocks; the account sheet shows the lapsed state with the
+       * verified email instead of the anonymous sales view. */
       /* Pro only when the server says granted AND pro, for a verified session. */
       state.pro = Boolean(valid && payload?.pro === true && access === 'granted');
       state.access = access === 'granted' && !state.pro ? 'unavailable' : access;
@@ -666,6 +667,17 @@
     await refreshAccess({ preserveOnError:false });
     await handleAuthReturn();
     await syncCheckoutSuccess();
+    openAccountFromLink();
+  }
+
+  /* /all-access hands a signed-in reader back to the account sheet with
+     ?pbe_account=renew (the NFL Pro renewal lives in the sheet). Opens the
+     sheet only; access is whatever the server verdict above says. */
+  function openAccountFromLink() {
+    const params = new URLSearchParams(location.search);
+    if (params.get('pbe_account') !== 'renew') return;
+    cleanQuery(['pbe_account']);
+    open('upgrade');
   }
 
   window.PBEPro = {

@@ -183,3 +183,20 @@ test('page states come from the server verdict only; outages render the access c
     assert.doesNotMatch(text(view), /\bFREE\b/, 'no visible FREE');
   }
 });
+
+test('B1 lapsed on /all-access: signed in with the email, RENEW NFL PRO, VIEW ALL ACCESS, SIGN OUT -- never the anonymous sale', () => {
+  const Pg = page();
+  const lapsed = { valid: true, pro: false, access: 'no_entitlement', paywalled: true, user: { email: 'lapsed@page.test' }, entitlement: { reason: 'expired' }, subscription: null, degraded: false, session_cleared: false };
+  const v = Pg.viewFor(lapsed);
+  assert.deepEqual({ ...v }, { kind: 'lapsed', email: 'lapsed@page.test', reason: 'expired' });
+  const html = Pg.markup(v);
+  assert.match(html, /SIGNED IN <b>lapsed@page\.test<\/b>/);
+  assert.match(html, /NFL Pro access<br><em>is no longer active\.<\/em>/);
+  assert.match(html, /<a class="nflaa-cta" href="\/\?pbe_account=renew" data-nflaa-renew>RENEW NFL PRO<\/a>/);
+  assert.match(html, />VIEW ALL ACCESS</); assert.match(html, /data-nflaa-signout>SIGN OUT</);
+  assert.doesNotMatch(text(html), /\bFREE\b|GET ALL ACCESS|\$29/);
+  /* the old anonymous answer (no identity) still renders the anonymous page */
+  assert.equal(Pg.viewFor({ ...lapsed, valid: false, user: null }).kind, 'anonymous');
+  /* never-subscribed verified email: not "renew" */
+  assert.match(Pg.markup(Pg.viewFor({ ...lapsed, entitlement: { reason: 'no_subscription' } })), />GET NFL PRO</);
+});

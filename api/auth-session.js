@@ -2,25 +2,32 @@
  * getNflSession() never throws, so a backend failure can no longer be
  * disguised as "not logged in". Every response carries an explicit `stage`. */
 
-import { getNflSession, purgeCookies, nflMembership } from './_nfl-auth.js';
+import { getNflSession, nflMembership } from './_nfl-auth.js';
 
-/* The paywalled and failure answers carry the shared membership contract too:
-   FREE, with no email (the browser is told nothing about the identity). */
+/* The failure answer carries the shared membership contract too: FREE, with
+   no email (an outage tells the browser nothing about the identity). */
 const FREE_MEMBERSHIP = Object.freeze(nflMembership({ entitled: false }));
 
-/* A verified email without a current NFL entitlement is NOT an NFL customer.
- * The browser gets the paywall: no identity, no signed-in state, and the
- * NFL-only session cookie is cleared (host-only and .propbetedge.ai variants of
- * pbe_nfl_session*; the network-wide pbe_session cookie is untouched). The
- * denial reason stays so the paywall can say expired / canceled / payment
- * failed. Premium routes refuse this verdict on their own (getNflSession). */
+/* A verified email without a current NFL entitlement is NOT an NFL customer:
+ * pro stays false, and every premium route refuses this verdict on its own
+ * (getNflSession is the authority there, unchanged). Owner decision
+ * 2026-10-05 ("keep lapsed sessions"): the reader nevertheless stays visibly
+ * signed in -- the verified session cookie is kept and the answer carries the
+ * verified email -- so the account sheet can say "NFL Pro access is no longer
+ * active" and offer renewal instead of throwing a lapsed member back to the
+ * anonymous sales view. The denial reasons stay so the copy is truthful
+ * (expired / canceled / payment failed vs never subscribed). Invalid, expired
+ * or forged cookies never reach this path (getNflSession returns them signed
+ * out), and the degraded/outage path is unchanged. */
 export function paywalledAnswer(session) {
+  const email = session?.valid === true ? String(session.user?.email || '').trim() : '';
   return {
-    valid: false, pro: false, access: 'no_entitlement', paywalled: true, role: null,
+    valid: Boolean(email), pro: false, access: 'no_entitlement', paywalled: true, role: null,
     entitlement: session.entitlement ? { reason: session.entitlement.reason || null } : null,
-    user: null, subscription: null, authority: session.authority, stage: session.stage,
-    cookies: session.cookies, degraded: false, session_cleared: true,
-    membership: FREE_MEMBERSHIP,
+    user: email ? { email } : null, subscription: null, authority: session.authority, stage: session.stage,
+    cookies: session.cookies, degraded: false, session_cleared: false,
+    /* the contract's non-entitled state, exactly as getNflSession built it */
+    membership: email && session.membership ? session.membership : FREE_MEMBERSHIP,
   };
 }
 
@@ -50,7 +57,7 @@ export default async function handler(req, res) {
     );
 
     if (session.access === 'no_entitlement') {
-      res.setHeader('Set-Cookie', purgeCookies({ includeCurrent: true }));
+      /* Lapsed / not entitled: keep the verified session (no purge), pro false. */
       return res.status(200).json(paywalledAnswer(session));
     }
 

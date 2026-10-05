@@ -285,8 +285,10 @@ test('auth-session: canceled / past_due / expired / malformed All Access is PAYW
     await handler({ method: 'GET', headers: { cookie: sessionCookie(email) } }, res);
     const body = JSON.parse(res.body);
     assert.equal(res.statusCode, 200);
-    assert.equal(body.pro, false, email); assert.equal(body.valid, false); assert.equal(body.access, 'no_entitlement'); assert.equal(body.paywalled, true);
-    assert.ok(res.headers['set-cookie'].some(c => c.startsWith(`${SESSION_COOKIE}=;`)), 'NFL cookie cleared');
+    /* B1: paywalled but still signed in (owner decision 2026-10-05); pro stays false */
+    assert.equal(body.pro, false, email); assert.equal(body.valid, true); assert.equal(body.access, 'no_entitlement'); assert.equal(body.paywalled, true);
+    assert.deepEqual(body.user, { email }); assert.equal(body.membership.entitled, false);
+    assert.equal(res.headers['set-cookie'], undefined, 'the verified session is kept');
   }
 });
 

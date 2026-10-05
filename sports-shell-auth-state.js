@@ -92,6 +92,8 @@
     if(loading)return 'Account';
     if(pro)return memberLabel(s);
     if(isDegraded(s))return 'Access Check';
+    /* A signed-in reader whose NFL access ended reads Renew (never FREE). */
+    if(signedIn&&s?.access==='no_entitlement')return 'Renew';
     return signedIn?'Upgrade':'Sign In';
   }
 

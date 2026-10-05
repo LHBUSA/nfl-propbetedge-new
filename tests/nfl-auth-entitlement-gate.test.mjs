@@ -330,11 +330,13 @@ test('auth-session: an MLB-only session (issued before the hotfix) is PAYWALLED,
     await handler({ method: 'GET', headers: { cookie: sessionCookie(email) } }, res);
     const body = JSON.parse(res.body);
     assert.equal(res.statusCode, 200);
-    assert.equal(body.pro, false, email); assert.equal(body.valid, false); assert.equal(body.user, null);
+    /* Owner decision 2026-10-05 ("keep lapsed sessions", B1): a VERIFIED session
+     without NFL entitlement stays signed in -- email kept, cookie kept -- and
+     pro stays false; the backend membership is still the non-entitled state. */
+    assert.equal(body.pro, false, email); assert.equal(body.valid, true); assert.deepEqual(body.user, { email });
     assert.equal(body.access, 'no_entitlement'); assert.equal(body.paywalled, true); assert.equal(body.subscription, null);
-    const cleared = res.headers['set-cookie'];
-    assert.ok(cleared.some(c => c.startsWith(`${SESSION_COOKIE}=;`) && /Max-Age=0/.test(c)), 'the NFL session cookie is cleared');
-    assert.ok(cleared.every(c => /^pbe_nfl_session(_v2)?=;/.test(c)), 'only NFL cookies are touched, never pbe_session');
+    assert.equal(body.membership.entitled, false); assert.equal(body.session_cleared, false);
+    assert.equal(res.headers['set-cookie'], undefined, 'no cookie is touched; pro stays false');
   }
 });
 
@@ -388,7 +390,9 @@ test('auth-verify: a not_authorized exchange sets no cookie and lands on the NFL
   } finally { globalThis.fetch = outer; if (saved === undefined) delete process.env.NFL_AUTH_WORKER_URL; else process.env.NFL_AUTH_WORKER_URL = saved; }
   const paywall = read('paywall.js');
   assert.match(paywall, /auth === 'not_authorized'[\s\S]{0,80}open\('upgrade'\)/);
-  assert.match(paywall, /if \(access === 'no_entitlement'\) \{ state\.session = null; state\.user = null; \}/);
+  /* B1 (owner, 2026-10-05): the client keeps the verified identity on no_entitlement; pro still needs granted */
+  assert.doesNotMatch(paywall, /if \(access === 'no_entitlement'\) \{ state\.session = null; state\.user = null; \}/);
+  assert.match(paywall, /state\.pro = Boolean\(valid && payload\?\.pro === true && access === 'granted'\);/);
 });
 
 /* ------------------------------------------------------------ drift */

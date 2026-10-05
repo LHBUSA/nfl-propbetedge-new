@@ -50,6 +50,7 @@
       const state = m?.entitled === true && MEMBER_STATES.has(m.state) ? m.state : (payload.role === 'owner' ? 'owner' : 'sport_pro');
       return { kind: state, email, membership: m?.entitled === true ? m : null, role: payload.role || null, subscription: payload.subscription || null };
     }
+    if (email && access === 'no_entitlement') return { kind: 'lapsed', email, reason: String(payload.entitlement?.reason || '') };
     if (email) return { kind: 'signed_in', email };
     return { kind: 'anonymous', denied: access === 'no_entitlement' ? (payload.entitlement?.reason || 'not_active') : null };
   }
@@ -135,6 +136,18 @@
           <a class="nflaa-btn" href="/#propboard">OPEN THE NFL DESK</a>
           ${v.membership?.show_manage === true ? `<a class="nflaa-btn" href="${esc(manageUrl())}" target="_blank" rel="noopener noreferrer">MANAGE MEMBERSHIP ↗</a>` : ''}
         </div>`;
+    }
+    if (v.kind === 'lapsed') {
+      const lapsed = ['expired', 'canceled', 'payment_failed', 'null_expiry'].includes(v.reason);
+      return `<div class="nflaa-pill"><i></i>SIGNED IN <b>${esc(v.email)}</b></div>
+        ${head(lapsed ? 'NFL PRO · ACCESS ENDED' : 'NFL PRO · NOT ACTIVE', lapsed ? 'NFL Pro access<br><em>is no longer active.</em>' : 'NFL Pro isn’t active<br><em>on this account.</em>', lapsed ? 'Renew NFL Pro from your NFL account, or add the whole PropBetEdge network with All Access — 10 sports plus PropBetEdge Predictions.' : 'Get NFL Pro from your NFL account, or the whole PropBetEdge network with All Access — 10 sports plus PropBetEdge Predictions.')}
+        <div class="nflaa-actions">
+          <a class="nflaa-cta" href="/?pbe_account=renew" data-nflaa-renew>${lapsed ? 'RENEW NFL PRO' : 'GET NFL PRO'}</a>
+          <a class="nflaa-btn" href="#nflaa-net-title" data-nflaa-view-aa>VIEW ALL ACCESS</a>
+          <button type="button" class="nflaa-btn" data-nflaa-signout>SIGN OUT</button>
+        </div>
+        <p class="nflaa-msg" role="status" aria-live="polite" data-nflaa-msg></p>
+        <p class="nflaa-fine">Signed in · renewal is tied to this verified email.</p>`;
     }
     if (v.kind === 'signed_in') {
       return `<div class="nflaa-pill"><i></i>SIGNED IN <b>${esc(v.email)}</b></div>

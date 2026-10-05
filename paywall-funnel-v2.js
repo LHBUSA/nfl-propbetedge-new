@@ -205,7 +205,41 @@
 
   /* ------------------------------------------------------------ STATE 3 — signed in, no access */
 
+  /* A verified reader whose NFL access has ended (server access ===
+     'no_entitlement' with a lapse reason). "Renew" is only truthful when there
+     was NFL access before; a verified email that never held NFL Pro reads
+     "isn't active" and gets the ordinary NFL Pro action. */
+  const LAPSE_REASONS = new Set(['expired', 'canceled', 'payment_failed', 'null_expiry']);
+  function lapsedKind(s = state()) {
+    if (s.pro || !s.user || s.access !== 'no_entitlement') return null;
+    return LAPSE_REASONS.has(String(s.entitlement?.reason || '')) ? 'lapsed' : 'inactive';
+  }
+
+  function lapsedMarkup(email, kind) {
+    const note = window.PBEPro?.denialNote?.() || '';
+    const lapsed = kind === 'lapsed';
+    const local = window.PBENflMember?.LOCAL_ALL_ACCESS_PATH || '/all-access';
+    return `<div class="pbe-funnel-root pbe-acct-panel" data-acct="v3" data-funnel-state="signed-in-free" data-funnel-view="${kind}" data-membership="free" data-funnel-note="${escapeHtml(state().entitlement?.reason || '')}">
+      <div class="pbe-acct-identity"><i aria-hidden="true"></i><span>SIGNED IN</span><strong>${escapeHtml(email)}</strong></div>
+      ${head(lapsed ? 'NFL PRO · ACCESS ENDED' : 'NFL PRO · NOT ACTIVE', lapsed ? 'NFL Pro access<br>is no longer active.' : 'NFL Pro isn’t active<br>on this account.', note ? escapeHtml(note) : (lapsed ? 'Renew NFL Pro to reopen PBE Picks, PBE Algo and the permanent Track Record on this account.' : 'Choose NFL Pro below, or All Access for the whole PropBetEdge network.'))}
+      ${plansHtml()}
+      <div class="pbe-pro-auth-state pbe-funnel-auth">
+        <button class="pbe-pro-cta" id="pbe-funnel-checkout" type="button" data-funnel-renew="${lapsed ? '1' : '0'}"></button>
+        <div class="pbe-funnel-charge">${escapeHtml(PRICING.charge)}</div>
+        <div class="pbe-pro-message" id="pbe-funnel-message" role="status" aria-live="polite"></div>
+      </div>
+      <div class="pbe-acct-lapsed-actions">
+        <a class="pbe-pro-cta secondary" href="${local}" data-nfl-all-access-cta="view">View All Access</a>
+        <button class="pbe-pro-cta secondary" id="pbe-funnel-signout" type="button">Sign out</button>
+      </div>
+      <div class="pbe-acct-switch"><span>Already renewed?</span><button class="pbe-funnel-signin-link" id="pbe-funnel-refresh" type="button">Refresh access</button></div>
+      <div class="pbe-pro-secure">◆ Signed in · ${lapsed ? 'renewal' : 'checkout'} is tied to this verified email</div>
+    </div>`;
+  }
+
   function signedInFreeMarkup(email) {
+    const kind = lapsedKind();
+    if (kind) return lapsedMarkup(email, kind);
     const note = window.PBEPro?.denialNote?.() || '';
     return `<div class="pbe-funnel-root pbe-acct-panel" data-acct="v3" data-funnel-state="signed-in-free" data-funnel-view="ready" data-membership="free" data-funnel-note="${escapeHtml(state().entitlement?.reason || '')}">
       <div class="pbe-acct-identity"><i aria-hidden="true"></i><span>SIGNED IN</span><strong>${escapeHtml(email)}</strong><button class="pbe-funnel-signin-link" id="pbe-funnel-signout" type="button">Sign out</button></div>
@@ -400,7 +434,7 @@
     });
     const btn = document.getElementById('pbe-funnel-checkout');
     const p = PLANS[selected] || PLANS.monthly;
-    if (btn) setText(btn, `Unlock NFL Pro · ${p.price}${selected === 'monthly' ? '/mo' : '/wk'}`);
+    if (btn) setText(btn, `${btn.dataset.funnelRenew === '1' ? 'Renew NFL Pro' : 'Unlock NFL Pro'} · ${p.price}${selected === 'monthly' ? '/mo' : '/wk'}`);
   }
 
   function stripeUrl(plan, email) {
@@ -538,7 +572,7 @@
     const root = host.querySelector('.pbe-funnel-root');
     const current = root?.dataset?.funnelState;
     const membershipChanged = (root?.dataset?.membership || 'free') !== mState;
-    const noteChanged = mode === 'signed-in-free' && (root?.dataset?.funnelNote || '') !== String(s.entitlement?.reason || '');
+    const noteChanged = mode === 'signed-in-free' && ((root?.dataset?.funnelNote || '') !== String(s.entitlement?.reason || '') || (root?.dataset?.funnelView === 'lapsed' || root?.dataset?.funnelView === 'inactive') !== Boolean(lapsedKind(s)));
     const viewChanged = mode === 'signed-out' && (root?.dataset?.funnelView || '') !== view;
     if (current !== mode || membershipChanged || noteChanged || viewChanged) {
       host.innerHTML = s.pro

@@ -224,3 +224,39 @@ test('sheet: loaded after the hero sheet, warm palette only, 16px inputs, 44px p
   assert.match(css, /env\(safe-area-inset-bottom/);
   assert.doesNotMatch(css, /overflow(?:-y)?\s*:\s*(?:auto|scroll)/, 'the backdrop stays the one scroll context');
 });
+
+/* ------------------------------------------------------------ B1: lapsed readers stay signed in */
+const lapsedState = (reason) => ({ ...proStateFor('free'), access: 'no_entitlement', user: { email: 'lapsed@acct.test' }, entitlement: { reason } });
+
+test('B1 lapsed: SIGNED IN + email, "NFL Pro access is no longer active.", RENEW NFL PRO, VIEW ALL ACCESS -> /all-access, SIGN OUT; no FREE, no anonymous view', () => {
+  for (const reason of ['expired', 'canceled', 'payment_failed']) {
+    const s = lapsedState(reason);
+    const w = run(FILES, s);
+    const html = w.PBECheckoutFunnel.markup.signedInFree('lapsed@acct.test');
+    assert.match(html, /data-funnel-view="lapsed"/, reason);
+    assert.match(html, /<span>SIGNED IN<\/span><strong>lapsed@acct\.test<\/strong>/);
+    assert.match(html, /NFL Pro access<br>is no longer active\./);
+    assert.match(html, /id="pbe-funnel-checkout" type="button" data-funnel-renew="1"/, 'the primary action is the existing NFL Pro checkout, labelled Renew');
+    assert.match(html, /data-funnel-plan="monthly"/); assert.match(html, /data-funnel-plan="weekly"/);
+    assert.match(html, /<a class="pbe-pro-cta secondary" href="\/all-access" data-nfl-all-access-cta="view">View All Access<\/a>/);
+    assert.match(html, /id="pbe-funnel-signout" type="button">Sign out</);
+    assert.doesNotMatch(html, /\bFREE\b|Choose your access|Welcome back|View membership options/);
+    assert.doesNotMatch(html, /pbe-funnel-email/, 'no email field: renewal is tied to the verified email');
+  }
+  /* the renew label comes from the same selection painter as Unlock NFL Pro */
+  const funnel = read('paywall-funnel-v2.js');
+  assert.match(funnel, /btn\.dataset\.funnelRenew === '1' \? 'Renew NFL Pro' : 'Unlock NFL Pro'/);
+  /* a verified email that never had NFL Pro is told the truth: not "renew" */
+  const never = run(FILES, lapsedState('no_subscription')).PBECheckoutFunnel.markup.signedInFree('lapsed@acct.test');
+  assert.match(never, /data-funnel-view="inactive"/); assert.match(never, /NFL Pro isn’t active<br>on this account\./); assert.match(never, /data-funnel-renew="0"/);
+  assert.doesNotMatch(never, /no longer active/);
+});
+
+test('B1 lapsed: the header reads Renew; paywall.js keeps the verified identity while pro still requires granted', () => {
+  const w = run(['sports-shell-auth-state.js'], proStateFor('free'));
+  assert.equal(w.PBEShellAuthState.accountLabel(lapsedState('expired')), 'Renew');
+  const paywall = read('paywall.js');
+  assert.doesNotMatch(paywall, /if \(access === 'no_entitlement'\) \{ state\.session = null; state\.user = null; \}/);
+  assert.match(paywall, /state\.pro = Boolean\(valid && payload\?\.pro === true && access === 'granted'\);/);
+  assert.match(paywall, /params\.get\('pbe_account'\) !== 'renew'/, '/all-access hands the reader back to the account sheet');
+});

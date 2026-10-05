@@ -382,3 +382,7 @@
 .pbe-acct .pbe-acct-network-link{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px;padding:0 14px;border:1px solid rgba(127,224,164,.32);border-radius:10px;background:rgba(127,224,164,.06);color:var(--acct-paper);font:700 11px/1.2 var(--acct-data);letter-spacing:.08em;text-decoration:none}
 .pbe-acct .pbe-acct-network-link:hover,.pbe-acct .pbe-acct-network-link:focus-visible{border-color:rgba(127,224,164,.6);color:var(--acct-green)}
 .pbe-acct .pbe-acct-network-link b{color:var(--acct-green)}
+/* Lapsed reader (B1, 2026-10-05): View All Access + Sign out under the renew CTA. */
+.pbe-acct .pbe-acct-lapsed-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.pbe-acct .pbe-acct-lapsed-actions .pbe-pro-cta.secondary{display:inline-flex;align-items:center;justify-content:center;min-height:46px;text-decoration:none}
+@media (max-width:620px){.pbe-acct .pbe-acct-lapsed-actions{grid-template-columns:1fr}.pbe-acct .pbe-acct-lapsed-actions .pbe-pro-cta.secondary{min-height:48px}}
