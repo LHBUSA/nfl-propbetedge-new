@@ -1112,7 +1112,16 @@ export function evaluate({ game, market, quote, ratings, weather, champion, seas
   const rawResidual = (priorMargin - anchorMargin) * residualWeight;
   const residual = Math.max(-residualCap, Math.min(residualCap, rawResidual));
   const modelHomeMargin = anchorMargin + residual;
-  const homeWin = normalCdf(modelHomeMargin / SPREAD_SIGMA);
+  const uncalibratedHomeWin = normalCdf(modelHomeMargin / SPREAD_SIGMA);
+  /* Continuous learning reweights confidence around 50/50 without changing
+     the coherent one-margin architecture. The same scale therefore moves
+     moneyline and spread probabilities together instead of training two
+     contradictory market models. */
+  const requestedProbabilityScale = Number(champion?.weights?.meta?.probability_scale ?? 1);
+  const probabilityScale = Number.isFinite(requestedProbabilityScale)
+    ? Math.max(0.50, Math.min(1.25, requestedProbabilityScale)) : 1;
+  const homeWin = Math.max(0.01, Math.min(0.99,
+    0.5 + probabilityScale * (uncalibratedHomeWin - 0.5)));
   const selectedWin = selectedWinProbability(homeWin, selectedIsHome);
 
   let modelProb;
@@ -1160,7 +1169,7 @@ export function evaluate({ game, market, quote, ratings, weather, champion, seas
     features_v2: featuresV2,
     integrity_status: integrityStatus, integrity_reason: integrityReason,
     integrity_warning: edgeState.warn && !edgeState.hard ? edgeState.reason : null,
-    integrity_context: { anchor_source: anchor.source, anchor_home_win_prob: Number(anchor.home_win_prob.toFixed(6)), model_home_margin: Number(modelHomeMargin.toFixed(3)), residual_points: Number(residual.toFixed(3)) },
+    integrity_context: { anchor_source: anchor.source, anchor_home_win_prob: Number(anchor.home_win_prob.toFixed(6)), model_home_margin: Number(modelHomeMargin.toFixed(3)), residual_points: Number(residual.toFixed(3)), probability_scale: probabilityScale },
     side: quote.side, selection_team: quote.team ?? null, selection_over_under: null,
     side_is_home: selectedIsHome, market_line: quote.line ?? null, market_price: quote.price,
     model_line: modelLine, model_prob: Number(modelProb.toFixed(6)),
