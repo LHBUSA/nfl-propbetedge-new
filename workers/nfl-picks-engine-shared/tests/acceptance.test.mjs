@@ -14,8 +14,8 @@ import { parseSlate } from '../current-slate.mjs';
 import { evaluate } from '../../nfl-game-picks-orchestrator/src/index.js';
 import { computeGrade } from '../../nfl-game-grader/src/index.js';
 import {
-  gateStatus, trainChallenger, backtest, promotionVerdict, blendedLabel, calibrate,
-  MIN_GRADED_PICKS, MIN_DISTINCT_WEEKS,
+  learningStatus, chronologicalSplit, fitCenterScale, scoreRows, reweightVerdict,
+  MIN_MONEYLINE_DECISIONS, MIN_HOLDOUT_DECISIONS,
 } from '../../nfl-weight-tuner/src/index.js';
 import { FEATURE_ORDER } from '../pick-math.mjs';
 
@@ -254,121 +254,73 @@ test('[3] grading is deterministic — same inputs, identical grade', () => {
 });
 
 /* --------------------------------------------------------------------------
- * Brief acceptance #4 — the tuner gate and champion/challenger
+ * Brief acceptance #4 — continuous production learning
  * ----------------------------------------------------------------------- */
 
-test('[4] the gate stays shut below 100 graded picks', () => {
-  const gate = gateStatus(corpus({ n: 99, weeks: 4 }));
-  assert.equal(gate.open, false);
-  assert.match(gate.reason, /insufficient_grades:99\/100/);
+function learningRows(n = 30) {
+  return Array.from({ length: n }, (_, i) => ({
+    pick_id: `p-${String(i).padStart(3,'0')}`,
+    finalized_at: new Date(Date.parse('2026-09-01T00:00:00Z') + i * 86400000).toISOString(),
+    model_prob: i % 2 ? 0.42 : 0.61,
+    outcome: i % 2 ? 0 : 1,
+  }));
+}
+
+test('[4] publication is not gated by the tuner; learning waits only for enough incumbent outcomes', () => {
+  const thin = learningStatus(learningRows(MIN_MONEYLINE_DECISIONS - 1));
+  assert.equal(thin.ready, false);
+  assert.match(thin.reason, /collecting_moneyline_outcomes/);
+  const ready = learningStatus(learningRows(Math.max(MIN_MONEYLINE_DECISIONS, Math.ceil(MIN_HOLDOUT_DECISIONS / 0.20))));
+  assert.equal(ready.ready, true);
 });
 
-test('[4] the gate stays shut below 4 distinct weeks even with 100+ grades', () => {
-  const gate = gateStatus(corpus({ n: 150, weeks: 3 }));
-  assert.equal(gate.open, false);
-  assert.match(gate.reason, /insufficient_weeks:3\/4/);
+test('[4] chronological split keeps the newest decisions out of fitting', () => {
+  const rows = learningRows(40);
+  const split = chronologicalSplit(rows);
+  assert.ok(split.train.length > split.holdout.length);
+  assert.ok(split.holdout.length >= MIN_HOLDOUT_DECISIONS);
+  assert.ok(Date.parse(split.train.at(-1).finalized_at) < Date.parse(split.holdout[0].finalized_at));
 });
 
-test('[4] the gate opens only when BOTH thresholds are met', () => {
-  const gate = gateStatus(corpus({ n: 150, weeks: 4 }));
-  assert.equal(gate.open, true);
-  assert.equal(gate.reason, null);
-  assert.equal(MIN_GRADED_PICKS, 100);
-  assert.equal(MIN_DISTINCT_WEEKS, 4);
+test('[4] center reweight is deterministic and bounded', () => {
+  const rows = learningRows(32);
+  const scale = fitCenterScale(rows);
+  assert.ok(scale >= 0.50 && scale <= 1.25);
+  assert.equal(scale, fitCenterScale(rows));
 });
 
-test('[4] a worse challenger is refused promotion and the reason is recorded', () => {
-  const verdict = promotionVerdict(
-    { clv_beat_pct: 51.0, brier: 0.26 },
-    { clv_beat_pct: 55.0, brier: 0.24 },
-  );
+test('[4] a weaker holdout challenger is rejected', () => {
+  const incumbent = { rows: 8, brier: 0.22, logloss: 0.64 };
+  const candidate = { rows: 8, brier: 0.225, logloss: 0.65 };
+  const verdict = reweightVerdict(candidate, incumbent);
   assert.equal(verdict.promote, false);
-  assert.match(verdict.reason, /did not clear champion/);
+  assert.match(verdict.reason, /holdout_not_better/);
 });
 
-test('[4] a marginally better challenger is still refused below the 1.0 point bar', () => {
-  const verdict = promotionVerdict(
-    { clv_beat_pct: 55.6, brier: 0.25 },
-    { clv_beat_pct: 55.0, brier: 0.25 },
-  );
-  assert.equal(verdict.promote, false);
+test('[4] a materially better Brier with non-worse log loss is promoted', () => {
+  const incumbent = { rows: 8, brier: 0.22, logloss: 0.64 };
+  const candidate = { rows: 8, brier: 0.218, logloss: 0.6399 };
+  assert.equal(reweightVerdict(candidate, incumbent).promote, true);
 });
 
-test('[4] a clearly better challenger is promoted', () => {
-  const verdict = promotionVerdict(
-    { clv_beat_pct: 56.5, brier: 0.24 },
-    { clv_beat_pct: 55.0, brier: 0.25 },
-  );
-  assert.equal(verdict.promote, true);
-});
-
-test('[4] a tied CLV promotes only on a better Brier', () => {
-  const better = promotionVerdict(
-    { clv_beat_pct: 55.2, brier: 0.22 }, { clv_beat_pct: 55.0, brier: 0.25 },
-  );
-  assert.equal(better.promote, true);
-  assert.match(better.reason, /brier improved/);
-
-  const worse = promotionVerdict(
-    { clv_beat_pct: 55.2, brier: 0.28 }, { clv_beat_pct: 55.0, brier: 0.25 },
-  );
-  assert.equal(worse.promote, false);
-});
-
-test('[4] missing CLV signal can never promote by default', () => {
-  assert.equal(promotionVerdict({ clv_beat_pct: null, brier: 0.1 },
-    { clv_beat_pct: 55, brier: 0.9 }).promote, false);
-});
-
-test('[4] training produces a full coefficient set and a backtest', () => {
-  const rows = corpus({ n: 150, weeks: 5 });
-  const challenger = trainChallenger(rows);
-  assert.deepEqual(Object.keys(challenger.coef).sort(), [...FEATURE_ORDER].sort());
-  assert.equal(challenger.meta.trained, true);
-  const score = backtest(challenger, rows);
-  assert.ok(score.clv_beat_pct !== null);
-  assert.ok(score.brier !== null);
-  assert.equal(score.rows, 150);
-});
-
-test('[4] the blended label weights CLV 70 / result 30', () => {
-  assert.equal(blendedLabel({ clv_beat: true, outcome: 1 }), 1);
-  assert.equal(blendedLabel({ clv_beat: false, outcome: 0 }), 0);
-  // CLV says yes, result says no -> 0.7
-  assert.ok(Math.abs(blendedLabel({ clv_beat: true, outcome: 0 }) - 0.7) < 1e-9);
-  // A void has no result component and trains on CLV alone.
-  assert.equal(blendedLabel({ clv_beat: true, outcome: null }), 1);
-  assert.equal(blendedLabel({ clv_beat: null, outcome: null }), null);
-});
-
-test('[4] calibration shrinks an overconfident bucket toward 0.5', () => {
-  // Bucket states 70% and realises 55%.
-  const rows = [];
-  for (let i = 0; i < 40; i += 1) {
-    rows.push({
-      confidence_bucket: 'A', model_prob: 0.70,
-      outcome: i < 22 ? 1 : 0, features: {}, season: 2026, week: 1,
-    });
-  }
-  const calib = calibrate(rows);
-  assert.ok(calib.A < 1.0, `expected shrinkage, got ${calib.A}`);
-  assert.ok(calib.A > 0);
-});
-
-test('[4] a thin bucket is left uncalibrated rather than over-fitted', () => {
-  const rows = [{ confidence_bucket: 'A', model_prob: 0.9, outcome: 0, features: {}, season: 2026, week: 1 }];
-  assert.equal(calibrate(rows).A, 1.0);
+test('[4] scoring uses only persisted model probability and factual outcome', () => {
+  const rows = learningRows(30);
+  const incumbent = scoreRows(rows, 1);
+  const candidate = scoreRows(rows, 0.9);
+  assert.equal(incumbent.rows, rows.length);
+  assert.equal(candidate.rows, rows.length);
+  assert.ok(Number.isFinite(incumbent.brier));
+  assert.ok(Number.isFinite(candidate.logloss));
 });
 
 /* --------------------------------------------------------------------------
  * Handoff invariants
  * ----------------------------------------------------------------------- */
 
-test('[handoff] training consumes only finalized observations, and a void still teaches CLV', () => {
-  const rows = corpus({ n: 120, weeks: 4 });
-  rows.push({ ...observation(0.3), result: 'void', outcome: null, clv_beat: true });
-  const challenger = trainChallenger(rows);
-  assert.ok(challenger.meta.training_rows >= 120);
+test('[handoff] the continuous tuner ignores rows without a factual win/loss outcome', () => {
+  const rows = learningRows(30);
+  rows.push({ pick_id: 'void', finalized_at: '2026-10-01T00:00:00Z', model_prob: 0.7, outcome: null });
+  assert.equal(scoreRows(rows, 1).rows, 30);
 });
 
 test('[handoff] a decision-time snapshot is never recomputed during grading', () => {
