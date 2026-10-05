@@ -196,8 +196,8 @@
     /* NHL-standard economics: a missing issue price never poisons the entire
        record and is never silently replaced with -110. It remains in W-L-P and
        probability scoring, but only legitimately PRICED rows enter units/ROI. */
-    const pricedRows = settled.filter(r => r.flat !== null);
-    const unpricedRows = settled.filter(r => r.flat === null);
+    const pricedRows = settled.filter(r => r.price !== null && r.flat !== null);
+    const unpricedRows = settled.filter(r => r.price === null);
     const profit = pricedRows.length ? pricedRows.reduce((sum, r) => sum + r.flat, 0) : null;
     let running = 0, peak = 0, maxDrawdown = 0;
     const curve = pricedRows.map(row => {
