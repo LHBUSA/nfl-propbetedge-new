@@ -448,12 +448,12 @@
     const health = healthOf(data);
     if (health !== 'HEALTHY') return { key: 'degraded', label: `ENGINE ${health === 'UNKNOWN' ? 'STATE UNKNOWN' : health}` };
     if (data?.champion_trained === true) return { key: 'production', label: `PRODUCTION CHAMPION · V${data?.champion_version ?? '—'}` };
-    return { key: 'validation', label: `VALIDATION MODE · CHAMPION V${data?.champion_version ?? '—'}` };
+    return { key: 'bootstrap', label: `PRE-PRODUCTION · CHAMPION V${data?.champion_version ?? '—'}` };
   }
 
   function recordTabs(active, counts) {
     const tab = (key, label, count) => `<button type="button" role="tab" aria-selected="${active === key}" class="${active === key ? 'active' : ''}" data-pbetr-tab="${key}"><span>${label}</span><b>${count}</b></button>`;
-    return `<div class="pbetr-tabs" role="tablist" aria-label="Track Record views">${tab('validation', 'Validation Record', counts.validation)}${tab('official', 'Official Record', counts.official)}</div>`;
+    return `<div class="pbetr-tabs" role="tablist" aria-label="Track Record views">${tab('official', 'Official Record', counts.official)}${tab('validation', 'Learning History', counts.validation)}</div>`;
   }
 
   const TRACK_CATEGORIES = [
@@ -474,45 +474,45 @@
     const mode = trackMode(gov);
     const tr = gov?.decisions?.tracking || {};
     const off = gov?.decisions?.official || {};
-    const copy = mode.key === 'validation'
-      ? 'Real pre-game decisions · graded from final results · not yet official PBE Picks'
-      : mode.key === 'production'
-        ? 'Official PBE Picks · frozen at issuance · graded from final results · losses never removed'
+    const copy = mode.key === 'production'
+      ? 'Official PBE Picks · frozen at issuance · every final result feeds continuous model learning'
+      : mode.key === 'bootstrap'
+        ? 'Pre-production learning history · preserved for transparency · never merged into the Official Record'
         : 'The run ledger is not reporting healthy. Records below are shown as persisted; nothing is inferred.';
     return `<header class="pbetr-head">
-      <div class="pbe2-topline"><div class="pbe2-eyebrow"><i class="pbe2-live-dot ${mode.key === 'degraded' ? 'degraded' : mode.key === 'validation' ? 'gated' : ''}"></i>Two records · never merged</div>${switcher('trackrecord')}</div>
+      <div class="pbe2-topline"><div class="pbe2-eyebrow"><i class="pbe2-live-dot ${mode.key === 'degraded' ? 'degraded' : mode.key === 'bootstrap' ? 'gated' : ''}"></i>Official record + learning history · never merged</div>${switcher('trackrecord')}</div>
       <div class="pbetr-title"><h1>PBE TRACK RECORD</h1><div class="pbetr-mode" data-mode="${esc(mode.key)}"><i></i>${esc(mode.label)}</div></div>
       <p class="pbetr-copy">${esc(copy)}</p>
       ${recordTabs(active, { validation: num(tr.graded) ?? '—', official: num(off.graded) ?? 0 })}
     </header>`;
   }
 
-  /* MODEL VALIDATION — the production gate, from view=state. */
+  /* Continuous learning status. Publication does not wait on a sample gate:
+   * finalized decisions feed the learning ledger and challengers may reweight
+   * the production champion only when their time-ordered evidence improves. */
   function gatePanel(gov) {
-    const grades = num(gov?.graded_sample), gradeReq = num(gov?.graded_sample_required) ?? 100;
-    const weeks = num(gov?.distinct_weeks), weekReq = num(gov?.distinct_weeks_required) ?? 4;
+    const sample = num(gov?.learning_sample) ?? num(gov?.graded_sample);
+    const weeks = num(gov?.learning_weeks) ?? num(gov?.distinct_weeks);
     const lanes = gov?.engine_runtime?.lanes || {};
     const orch = lanes['nfl-game-picks-orchestrator'] || null;
     const grader = lanes['nfl-game-grader'] || null;
     const next = orch?.detail?.next_game
       ? `${String(orch.detail.next_game.matchup).replace(/\bLA\b/, 'LAR')} · ${dateTime(orch.detail.next_game.kickoff_ts)}`
       : gov?.current?.next_game ? `${gov.current.next_game.name} · ${dateTime(gov.current.next_game.kickoff)}` : '—';
-    const meter = (label, have, need, unit) => {
-      const pct = have === null || !need ? 0 : clamp(have / need * 100, 0, 100);
-      return `<div class="pbetr-meter"><div class="pbetr-meter-top"><span>${esc(label)}</span><strong>${have === null ? '—' : esc(have)}<small> / ${esc(need)}${unit ? ` ${esc(unit)}` : ''}</small></strong></div><div class="pbetr-meter-bar" role="progressbar" aria-valuemin="0" aria-valuemax="${esc(need)}" aria-valuenow="${have ?? 0}"><i style="width:${pct.toFixed(1)}%"></i></div></div>`;
-    };
     const facts = [
-      ['Current champion', gov?.champion_version != null ? `v${gov.champion_version}${gov.champion_trained === true ? ' · trained' : ' · in validation'}` : '—'],
+      ['Production champion', gov?.champion_version != null ? `v${gov.champion_version} · ${gov?.champion_trained === true ? 'official' : 'bootstrap'}` : '—'],
+      ['Learning mode', gov?.learning_mode || (gov?.champion_trained === true ? 'CONTINUOUS' : 'BOOTSTRAP')],
+      ['Finalized learning rows', sample ?? '—'],
+      ['Weeks observed', weeks ?? '—'],
       ['Engine runtime', laneStateLabel(healthOf(gov))],
       ['Last grader run', grader?.last_tick_at ? ago(grader.last_tick_at) : '—'],
       ['Last engine evaluation', orch?.last_work_at ? ago(orch.last_work_at) : '—'],
       ['Latest finalized decision', gov?.latest_finalized_at ? dateTime(gov.latest_finalized_at) : '—'],
       ['Next eligible game', next],
     ];
-    return `<section class="pbetr-gate" aria-label="Model validation gate">
-      <div class="pbetr-gate-head"><span>Model validation</span><b data-open="${gov?.auto_tuner === 'ELIGIBLE'}">${gov?.auto_tuner === 'ELIGIBLE' ? 'GATES CLEARED' : 'IN PROGRESS'}</b></div>
-      <div class="pbetr-meters">${meter('Finalized decisions', grades, gradeReq)}${meter('Observation window', weeks, weekReq, 'weeks')}</div>
-      <p class="pbetr-gate-note">Both gates must clear before official publication can begin. Clearing them does not promote a model on its own — a trained champion must still pass promotion, and validation decisions never become official picks.</p>
+    return `<section class="pbetr-gate" aria-label="Continuous model learning">
+      <div class="pbetr-gate-head"><span>Continuous learning</span><b data-open="${gov?.champion_trained === true}">${gov?.champion_trained === true ? 'PRODUCTION LIVE' : 'BOOTSTRAP'}</b></div>
+      <p class="pbetr-gate-note">Official publication stays live while finalized outcomes continue feeding the learning ledger. Challenger reweights are evaluated against time-ordered data; a weaker challenger is rejected rather than changing the production model.</p>
       <dl class="pbetr-facts">${facts.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>
     </section>`;
   }
@@ -543,11 +543,11 @@
     const replaced = num(meta?.replaced_before_lock);
     return `<section class="pbe2-stage gated pbetr-hero"><div class="pbe2-gridwash"></div>
       <div class="pbetr-hero-main">
-        <div class="pbetr-hero-label">Validation record · champion v${esc(gov?.champion_version ?? '—')}</div>
+        <div class="pbetr-hero-label">Pre-production learning history</div>
         <div class="pbetr-sample"><strong>${s.settled}</strong><span>finalized decisions</span></div>
         <div class="pbetr-sample-sub">${s.settled} graded · ${open === null ? '—' : open} pending · ${withdrawn === null ? '—' : withdrawn} withdrawn · ${replaced === null ? '—' : replaced} replaced before lock</div>
         <div class="pbetr-hero-roi ${toneOf(s.roi)}">${fmtPct(s.roi)}<small>ROI · priced only</small></div>
-        <p class="pbetr-fine">This is the live validation record, not the Official Record. W-L-P, Brier and log loss include every graded call. Economics are stricter: ${s.priced} priced · ${s.unpriced} UNPRICED; ROI and CLV use only calls with legitimate decision-time pricing. Stake-weighted persisted units: ${fmtUnits(s.stakeUnits)}.</p>
+        <p class="pbetr-fine">These were real pre-game learning decisions issued before official production began. They remain permanently separate from the Official Record. W-L-P, Brier and log loss include every graded call; ROI and CLV use only legitimately priced decisions. Stake-weighted persisted units: ${fmtUnits(s.stakeUnits)}.</p>
       </div>
       ${heroMetrics(s, gov)}
     </section>`;
@@ -557,11 +557,11 @@
     const tr = gov?.decisions?.tracking || {};
     return `<section class="pbe2-stage gated pbetr-hero pbetr-locked"><div class="pbe2-gridwash"></div>
       <div class="pbetr-hero-main">
-        <div class="pbetr-hero-label">Validation record · champion v${esc(gov?.champion_version ?? '—')}</div>
+        <div class="pbetr-hero-label">Pre-production learning history</div>
         <div class="pbetr-sample"><strong>${esc(num(tr.graded) ?? '—')}</strong><span>finalized decisions</span></div>
-        <div class="pbetr-sample-sub">${esc(num(tr.open) ?? '—')} pending · graded from final results</div>
-        <p class="pbetr-fine">The validation performance — W-L-P, ROI, CLV, calibration — and the signal ledger are NFL Pro. Selections, lines, prices and model probabilities are never shown here to free readers.</p>
-        <button type="button" class="pbe2-btn" data-pbe2-upgrade>Unlock the Validation Record</button>
+        <div class="pbetr-sample-sub">Historical learning sample · never counted in the Official Record</div>
+        <p class="pbetr-fine">Detailed pre-production performance, prices, model probabilities and the signal ledger are NFL Pro. This history is retained for transparency and is not an active publication gate.</p>
+        <button type="button" class="pbe2-btn" data-pbe2-upgrade>Unlock Learning History</button>
       </div>
       <div class="pbetr-kpis pbetr-kpis-locked">${['Locked calls', 'Record', 'Hit rate', 'Brier', 'Log loss', 'Priced', 'UNPRICED', 'ROI', 'CLV', 'Sample size'].map(k => `<div class="pbetr-kpi"><span>${esc(k)}</span><strong aria-label="NFL Pro">NFL PRO</strong></div>`).join('')}</div>
     </section>`;
@@ -659,13 +659,13 @@
     const gov = bundle.gov;
     const v = bundle.validation;
     if (v.status === 'locked') return `${lockedValidation(gov)}${gatePanel(gov)}`;
-    if (v.status === 'unavailable') return `${gatePanel(gov)}<section class="pbe2-error pbetr-degraded"><span>VALIDATION RECORD</span><h2>Validation history unavailable</h2><p>The validation ledger could not be read. Nothing is shown in its place — a failed read is never a zero record.</p><button type="button" class="pbe2-btn" data-pbe2-retry-track>Retry</button></section>`;
+    if (v.status === 'unavailable') return `${gatePanel(gov)}<section class="pbe2-error pbetr-degraded"><span>LEARNING HISTORY</span><h2>Pre-production history unavailable</h2><p>The historical learning ledger could not be read. Nothing is shown in its place — a failed read is never a zero record.</p><button type="button" class="pbe2-btn" data-pbe2-retry-track>Retry</button></section>`;
     const allRows = C.selectScope((v.body?.picks || []).map(C.fromValidation), 'tracking');
-    if (!allRows.length) return `${gatePanel(gov)}<section class="pbe2-panel pbetr-none-panel"><strong>No validation decision has been finalized yet.</strong><span>Decisions appear here once their game is final and graded.</span></section>`;
+    if (!allRows.length) return `${gatePanel(gov)}<section class="pbe2-panel pbetr-none-panel"><strong>No pre-production learning history.</strong><span>The Official Record is the active production record.</span></section>`;
     const rows = C.applyFilters(allRows, state.valFilter);
     const confidence = C.coverage(rows, 'confidence') >= 0.9 ? breakdownTable('By confidence', 'Persisted bucket', C.byConfidence(rows), k => `Bucket ${k}`) : '';
     return `${validationHero(allRows, gov, v.body?.summary)}${gatePanel(gov)}
-      <div class="pbetr-section-head"><span>Performance intelligence</span><small>${rows.length === allRows.length ? 'All validation decisions' : `Filtered: ${rows.length} of ${allRows.length}`}</small></div>
+      <div class="pbetr-section-head"><span>Performance intelligence</span><small>${rows.length === allRows.length ? 'All pre-production learning decisions' : `Filtered: ${rows.length} of ${allRows.length}`}</small></div>
       <div class="pbe2-performance-grid">${chartPanel(rows, 'pbetr-equity')}${breakdownTable('By market', 'Where it performs', C.byMarket(rows), marketLabel)}</div>
       <div class="pbe2-performance-grid">${breakdownTable('By week', 'Week by week', C.byWeek(rows), k => { const [s, w] = String(k).split('-'); return `${s} · Week ${Number(w)}`; })}${confidence || calibrationPanel(rows)}</div>
       ${confidence ? `<div class="pbe2-performance-grid pbetr-single">${calibrationPanel(rows)}</div>` : ''}
@@ -676,9 +676,9 @@
     const gov = bundle.gov;
     return `<section class="pbe2-stage pbetr-official-zero"><div class="pbe2-gridwash"></div><div>
       <div class="pbe2-kicker">Official Verified Track Record</div>
-      <h2>OFFICIAL PUBLICATION HAS NOT STARTED</h2>
-      <p>Champion v${esc(gov?.champion_version ?? '—')} remains in model validation. The official record is <b>0-0</b> and stays official-only: actual issue price, frozen line, original model version, chained receipt and factual final grade. Losses can never disappear; no backtest or validation decision can enter it.</p>
-    </div><button type="button" class="pbe2-btn" data-pbetr-tab="validation">View the Validation Record →</button></section>`;
+      <h2>OFFICIAL PUBLICATION IS LIVE</h2>
+      <p>Champion v${esc(gov?.champion_version ?? '—')} is the production model. The Official Record begins at <b>0-0</b> from the first post-cutover decision: actual issue price, frozen line, original model version, chained receipt and factual final grade. Pre-production learning decisions are never backfilled into it.</p>
+    </div><button type="button" class="pbe2-btn" data-pbetr-tab="validation">View Pre-Production Learning History →</button></section>`;
   }
 
   function officialView(bundle) {
@@ -714,7 +714,7 @@
     }
     const C = CORE();
     const officialCount = (bundle.official.body?.picks || []).filter(row => C.selectScope([C.fromOfficial(row, bundle.official.body?.publication_scope)], 'official').length).length;
-    const active = state.trackTab || (officialCount ? 'official' : 'validation');
+    const active = state.trackTab || (bundle.gov?.champion_trained === true ? 'official' : (officialCount ? 'official' : 'validation'));
     const body = active === 'official' ? officialView(bundle) : validationView(bundle);
     return `${categorySwitch('game')}${trackHeader(bundle, active)}<div class="pbetr-body" data-view="${active}">${body}</div>`;
   }
@@ -793,7 +793,7 @@
   async function renderTrack() {
     const vc = document.getElementById('view-container'); if (!vc) return;
     const run = ++state.loadId;
-    vc.innerHTML = '<section class="pbe2-wrap"><div class="pbe2-loading"><div class="pbe2-loading-mark"></div><strong>Loading PBE Track Record</strong><span>Validation and official records, separately</span></div></section>';
+    vc.innerHTML = '<section class="pbe2-wrap"><div class="pbe2-loading"><div class="pbe2-loading-mark"></div><strong>Loading PBE Track Record</strong><span>Official record and learning history, separately</span></div></section>';
     const [gov, official, validation] = await Promise.all([
       json(`${API}?view=state`).then(body => ({ ok: true, body }), error => ({ ok: false, error })),
       json(`${API}?view=trackrecord`).then(body => ({ status: 'ok', body }), () => ({ status: 'unavailable', body: null })),
