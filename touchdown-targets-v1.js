@@ -444,6 +444,11 @@
     return publication === 'ALLOWED' ? 'official' : 'tracking';
   }
 
+  /* Fails closed: anything but an explicit Pro payload is treated as public. */
+  function hasModelMetrics(record) {
+    return String(record?.access ?? '').toLowerCase() === 'pro';
+  }
+
   const VALIDATION_DISCLOSURE = 'This is the verified validation record. It is not the Official Track Record and will never be backfilled into it.';
 
   function scopePanel(record, allRows, scope, role) {
@@ -454,14 +459,22 @@
     const scoped = record.records?.[scope] || null;
     const pendingBlock = scoped ? (filters.rank === 'primary' ? scoped.primary : scoped.all) : null;
     const official = scope === 'official';
+    /* Model metrics follow the payload's entitlement, never a guess from a
+       null: the public settled proof (access 'public_settled', built by
+       publicSettledTarget) deliberately carries no probability or Brier, so
+       those cells are omitted rather than shown as dashes. Only the full Pro
+       record shows them; there a genuinely missing value is still a dash. */
+    const modelMetrics = hasModelMetrics(record);
 
     const hero = [
       ['Record', `${summary.wins}-${summary.losses}`, `${summary.graded} graded`, summary.wins > summary.losses ? 'good' : summary.wins < summary.losses ? 'bad' : ''],
       ['Hit rate', summary.hitRate === null ? '—' : pct(summary.hitRate), 'graded targets only', ''],
       ['Units', units(summary.profit), '1u at the issued price', summary.profit > 0 ? 'good' : summary.profit < 0 ? 'bad' : ''],
       ['ROI', summary.roi === null ? '—' : `${summary.roi > 0 ? '+' : ''}${summary.roi.toFixed(1)}%`, 'per unit risked', summary.roi > 0 ? 'good' : summary.roi < 0 ? 'bad' : ''],
-      ['Avg PBE probability', summary.avgProbability === null ? '—' : pct(summary.avgProbability), 'at issuance', ''],
-      ['Brier', summary.brier === null ? '—' : summary.brier.toFixed(4), 'lower is better', ''],
+      ...(modelMetrics ? [
+        ['Avg PBE probability', summary.avgProbability === null ? '—' : pct(summary.avgProbability), 'at issuance', ''],
+        ['Brier', summary.brier === null ? '—' : summary.brier.toFixed(4), 'lower is better', ''],
+      ] : []),
       ['Pending', pendingBlock ? String(pendingBlock.pending) : '—', official ? 'open official targets' : 'open tracking targets', ''],
       ['Abstentions', String(coverage.abstained ?? '—'),
         coverage.abstention_rate === null || coverage.abstention_rate === undefined ? 'rate pending' : `${(coverage.abstention_rate * 100).toFixed(1)}% of decidable games`, ''],
@@ -479,7 +492,7 @@
           <td>${esc(target.player?.team || '—')}</td>
           <td>${esc(target.player?.position || '—')}</td>
           <td>${esc(String(target.target_rank || '').toUpperCase())}</td>
-          <td>${esc(pct(target.model?.probability))}</td>
+          ${modelMetrics ? `<td>${esc(pct(target.model?.probability))}</td>` : ''}
           <td>${esc(american(target.market?.best_price))}</td>
           <td>${grade?.result === 'win' ? `${esc(grade.offensive_td ?? 1)} TD` : grade ? '0 TD' : '—'}</td>
           <td>${resultBadge(target)}</td>
@@ -489,7 +502,7 @@
   target.receipt?.chain_hash ? `#${esc(target.receipt.seq)} ${esc(String(target.receipt.chain_hash).slice(0, 10))}…` : '—'}</td>
         </tr>`;
       }).join('')
-      : `<tr><td colspan="13" class="pbetd-empty">${official && !scopeRows.length
+      : `<tr><td colspan="${modelMetrics ? 13 : 12}" class="pbetd-empty">${official && !scopeRows.length
         ? 'No official Touchdown Targets have been graded yet. Validation results never count here.'
         : `No graded ${official ? 'official' : 'validation'} touchdown targets match these filters.`}</td></tr>`;
 
@@ -527,7 +540,7 @@
       <div class="pbetd-scroll"><table class="pbetd-table">
         <thead><tr>
           <th scope="col">Wk</th><th scope="col">Game</th><th scope="col">Target</th><th scope="col">Team</th>
-          <th scope="col">Pos</th><th scope="col">Rank</th><th scope="col">PBE prob.</th><th scope="col">Issued odds</th>
+          <th scope="col">Pos</th><th scope="col">Rank</th>${modelMetrics ? '<th scope="col">PBE prob.</th>' : ''}<th scope="col">Issued odds</th>
           <th scope="col">Final</th><th scope="col">Result</th><th scope="col">Units</th><th scope="col">Selector</th><th scope="col">Receipt</th>
         </tr></thead>
         <tbody>${body}</tbody>

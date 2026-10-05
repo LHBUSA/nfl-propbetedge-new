@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import vm from 'node:vm';
-import { tdRecordsByScope, scopeOf } from '../api/_td-record-scope.js';
+import { tdRecordsByScope, scopeOf, publicSettledTarget } from '../api/_td-record-scope.js';
 
 const read = p => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
 let n = 0;
@@ -137,7 +137,7 @@ test('UI gated: exactly one primary record panel, and it is the tracking validat
   assert.match(p, /This is the verified validation record\. It is not the Official Track Record and will never be backfilled into it\./);
   assert.match(p, /Record 3-2/);
   assert.match(p, /Pending 1 /);
-  for (const label of ['Hit rate', 'Units', 'ROI', 'Avg PBE probability', 'Brier', 'Abstentions']) assert.match(p, new RegExp(label));
+  for (const label of ['Hit rate', 'Units', 'ROI', 'Pending', 'Abstentions']) assert.match(p, new RegExp(label));
   assert.doesNotMatch(html, /Official TD Target Record|Official TD Target record|Tracking TD Target record/);
   assert.doesNotMatch(html, /Record 0-0/, 'no empty official 0-0 panel');
 });
@@ -291,4 +291,59 @@ test('filters: changes outside a TD record are ignored; Track Record repaints th
   const picks = read('pbe-picks-v2.js');
   assert.match(picks, /category === 'touchdown' && state\.trackCategoryHtml\.touchdown && td\?\.store\?\.record && td\.recordHtml\s*\?\s*td\.recordHtml\(td\.store\.record\)/);
   assert.doesNotMatch(read('touchdown-targets-v1.js'), /querySelectorAll\('\[data-pbetd-filter\]'\)\.forEach\(select => select\.addEventListener/, 'no per-element listener that only repaints the TD route');
+});
+
+/* 2026-10-04: the public settled proof deliberately carries no model internals.
+   The record shows Avg PBE probability / Brier only for the full Pro payload;
+   for the public payload those cells are omitted, never shown as dashes. */
+const fullTarget = (scope, result, probability, brier) => row(scope, result, {
+  model: { probability, confidence: 0.7, edge: 0.05, ev: 0.12, drivers: ['role'], selector_version: '1' },
+  market: { best_price: 150, best_book: 'dk', probability: 0.4, clv: 0.02 },
+  grade: { result, units: result === 'win' ? 1.5 : -1, brier, clv: 0.02, offensive_td: result === 'win' ? 1 : 0 },
+  environment: { wind: 3 }, snapshot: { x: 1 },
+});
+const PUBLIC_METRICS = ['Record', 'Hit rate', 'Units', 'ROI', 'Pending', 'Abstentions'];
+
+test('public settled payload still carries no probability, Brier, confidence, edge/EV, CLV, drivers or snapshot', () => {
+  const pub = publicSettledTarget(fullTarget('tracking', 'win', 0.4321, 0.1234));
+  const json = JSON.stringify(pub);
+  for (const key of ['probability', 'brier', 'confidence', '"edge"', '"ev"', 'clv', 'drivers', 'environment', 'snapshot']) {
+    assert.doesNotMatch(json, new RegExp(key, 'i'), `public payload leaks ${key}`);
+  }
+  assert.deepEqual(Object.keys(pub.model), ['selector_version']);
+  assert.deepEqual(Object.keys(pub.grade).sort(), ['graded_at', 'offensive_td', 'result', 'result_definition', 'units']);
+});
+
+test('public record UI: no Avg PBE probability / Brier / PBE prob. labels and no dashes for them; the six public metrics remain', () => {
+  const page = loadPage();
+  const rows = [row('tracking', 'win'), row('tracking', 'loss'), row('tracking', null)];
+  for (const access of ['public_settled', undefined, 'something-else']) {
+    const html = page.recordHtml(body(rows, 'GATED', access === undefined ? {} : { access }));
+    const p = rolePanel(html, 'primary');
+    assert.doesNotMatch(p, /probability|Brier|PBE prob/i, `access=${access} must not render model metric labels`);
+    for (const label of PUBLIC_METRICS) assert.match(p, new RegExp(label), `public metric ${label}`);
+    assert.equal((html.match(/class="pbetd-stat /g) || []).length, 6, 'exactly the six public metric cells');
+    assert.doesNotMatch(html, /colspan="13"/);
+  }
+});
+
+test('Pro record UI shows Avg PBE probability and Brier from the payload; a genuinely missing Pro value is a dash', () => {
+  const page = loadPage();
+  const rows = [fullTarget('tracking', 'win', 0.5, 0.25), fullTarget('tracking', 'loss', 0.3, 0.09)];
+  const html = page.recordHtml(body(rows, 'GATED', { access: 'pro' }));
+  const p = rolePanel(html, 'primary');
+  assert.match(p, /Avg PBE probability 40(\.0)?%/);
+  assert.match(p, /Brier 0\.1700/);
+  assert.match(html, /<th scope="col">PBE prob\.<\/th>/);
+  assert.equal((html.match(/class="pbetd-stat /g) || []).length, 8);
+  const missing = page.recordHtml(body([row('tracking', 'win'), row('tracking', 'loss')], 'GATED', { access: 'pro' }));
+  assert.match(rolePanel(missing, 'primary'), /Avg PBE probability — at issuance/);
+  assert.match(rolePanel(missing, 'primary'), /Brier — lower is better/);
+});
+
+test('no private value leaks into a public render even if a payload carried one', () => {
+  const page = loadPage();
+  const rows = [fullTarget('tracking', 'win', 0.4321, 0.1234), fullTarget('tracking', 'loss', 0.4321, 0.1234)];
+  const html = page.recordHtml(body(rows, 'GATED', { access: 'public_settled' }));
+  assert.doesNotMatch(html, /43\.2|0\.1234|probability|Brier/i);
 });
