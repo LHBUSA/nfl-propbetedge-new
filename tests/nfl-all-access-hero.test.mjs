@@ -85,7 +85,7 @@ test('hero: exact copy and destinations, from the shared contract and from the b
     assert.match(H.heroHtml(member('sport_pro')), /class="nfl-aa-hero is-modal is-upgrade"[\s\S]*<h3 class="nfl-aa-title">UPGRADE TO ALL ACCESS<\/h3>/);
     assert.equal(H.heroHtml(member('all_access')), ''); assert.equal(H.heroHtml(member('owner')), '');
     assert.equal(H.miniHtml(member('all_access')), '');
-    assert.ok(H.miniHtml(member('free')).includes('href="/all-access"') && !H.miniHtml(member('free')).includes(STRIPE_ALL_ACCESS), 'the mini is information: it opens /all-access, never Stripe');
+    assert.ok(H.miniHtml(member('free')).includes(`href="${STRIPE_ALL_ACCESS}"`) && !H.miniHtml(member('free')).includes('href="/all-access"'), 'owner link policy: the ALL ACCESS mini is a purchase action on the canonical Stripe link');
     assert.ok(text(H.miniHtml(member('free'))).includes('10 sports + Predictions →'));
   }
   assert.ok(readFileSync(new URL('../api/_pbe-membership.js', import.meta.url)).equals(readFileSync(new URL('../pbe-membership.js', import.meta.url))), 'the shared contract copy is untouched');

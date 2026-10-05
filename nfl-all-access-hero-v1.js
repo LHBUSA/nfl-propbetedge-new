@@ -174,7 +174,10 @@
   function miniHtml(m) {
     if (!shouldRender(m)) return '';
     const o = offer();
-    return `<a class="nfl-aa-mini" href="${LOCAL_ALL_ACCESS_PATH}" data-nfl-all-access="mini"><span>ALL ACCESS</span><b>${esc(o.price)}</b><i>${FAMILY.sports.length} sports + Predictions →</i></a>`;
+    /* Owner link policy (2026-10-05): the ALL ACCESS promo is a purchase action and
+       keeps the canonical All Access Stripe Payment Link; only informational links
+       (WHAT'S INCLUDED, the network) open the local /all-access page. */
+    return `<a class="nfl-aa-mini" href="${esc(o.checkoutUrl)}" rel="noopener" data-pbe-placement="all_access_checkout" data-nfl-all-access="mini"><span>ALL ACCESS</span><b>${esc(o.price)}</b><i>${FAMILY.sports.length} sports + Predictions →</i></a>`;
   }
 
   window.NFLAllAccessHero = Object.freeze({ offer, shouldRender, heroHtml, dividerHtml, miniHtml, FAMILY, SPORT_NAMES, PRODUCT_NAMES, SPORTS_LINE, VALUE_LINE, SUPPORT_LINE, SPORTS_NEXT, LOCAL_ALL_ACCESS_PATH, displayName, version: 2 });
