@@ -1,64 +1,49 @@
-/* nfl-weight-tuner — trains a challenger, backtests it against the reigning
- * champion, and promotes ONLY if it clears the gate.
+/* nfl-weight-tuner — continuous production reweighting.
  *
- * Non-negotiables enforced here:
+ * Official publication does NOT wait on this worker. The promoted trained
+ * champion stays live while finalized outcomes accumulate. This lane only
+ * decides whether a measured confidence reweight is better than the incumbent.
  *
- *   HARD GATE   >= 100 finalized graded picks AND >= 4 distinct graded weeks.
- *               Below either threshold the Worker logs and exits. There is no
- *               override parameter, no env flag, and no query string that can
- *               bypass it — deliberately, so a bypass cannot be added by
- *               accident later.
+ * The production picker is a coherent one-margin model shared by moneyline and
+ * spread. Replacing its coefficients with a generic pick-side classifier would
+ * break that architecture, so v2 of the tuner learns one bounded
+ * probability_scale from MONEYLINE outcomes only. Applying that scale to the
+ * latent home-win probability moves moneyline and spread together.
  *
- *   FINALIZED   Training reads nfl_learning_observations only. Live or
- *   ONLY        provisional results are not in that table, so production
- *               weights cannot be moved by an in-progress game.
- *
- *   APPEND-ONLY Old weight rows are never edited or deleted. A rejected
- *               challenger is still inserted with promoted=false and a note
- *               explaining which criterion it failed.
+ * Every challenger is evaluated chronologically: oldest 80% fit, newest 20%
+ * holdout. A weaker challenger is recorded and rejected. Promotion uses one
+ * database RPC which demotes the incumbent and promotes the trained candidate
+ * under an advisory lock.
  */
 
-import { select, insert, audit } from '../../nfl-picks-engine-shared/supabase.mjs';
+import { select, insert, audit, rpc } from '../../nfl-picks-engine-shared/supabase.mjs';
 import { recordRun, readLane, laneHealth } from '../../nfl-picks-engine-shared/runs.mjs';
-import {
-  logistic, scoreFeatures, FEATURE_ORDER,
-} from '../../nfl-picks-engine-shared/pick-math.mjs';
 
 const SERVICE = 'nfl-weight-tuner';
-const VERSION = 'v1.1.0';
-const INTEGRITY_TUNER_HOLD = true;
+const VERSION = 'v2.0.0';
 
-export const MIN_GRADED_PICKS = 100;
-export const MIN_DISTINCT_WEEKS = 4;
+export const MIN_MONEYLINE_DECISIONS = 24;
+export const MIN_HOLDOUT_DECISIONS = 6;
+export const HOLDOUT_FRACTION = 0.20;
+export const MIN_BRIER_IMPROVEMENT = 0.001;
+export const LOGLOSS_TOLERANCE = 0.00025;
+export const SCALE_MIN = 0.50;
+export const SCALE_MAX = 1.25;
 
-/* Promotion criteria from the brief. */
-export const CLV_IMPROVEMENT_POINTS = 1.0;
-export const CLV_TIE_TOLERANCE = 0.5;
-
-/* Training target: primary label clv_beat, secondary W/L, weighted 70/30. */
-export const CLV_LABEL_WEIGHT = 0.7;
-export const RESULT_LABEL_WEIGHT = 0.3;
-
-const L2 = 1.0;
-const LEARNING_RATE = 0.05;
-const EPOCHS = 400;
-
-const health = { last_cron_run: null, last_error_class: null, last_result: null, gate: null };
+const health = { last_cron_run: null, last_error_class: null, last_result: null, learning: null };
 
 export default {
   async fetch(req, env) {
     const url = new URL(req.url);
     if (url.pathname === '/health') {
       return json({
-        service: SERVICE, version: VERSION,
+        service: SERVICE,
+        version: VERSION,
         ledger: laneHealth(SERVICE, await readLane(env, SERVICE)),
         last_error_class: health.last_error_class,
         last_result: health.last_result,
-        gate: health.gate,
-        gate_requirements: {
-          min_graded_picks: MIN_GRADED_PICKS,
-          min_distinct_weeks: MIN_DISTINCT_WEEKS,
-        },
+        learning: health.learning,
+        publication_gate: 'NONE',
         requirements: {
           SUPABASE_URL: Boolean(env.SUPABASE_URL),
           SUPABASE_SERVICE_ROLE_KEY: Boolean(env.SUPABASE_SERVICE_ROLE_KEY),
@@ -68,281 +53,237 @@ export default {
     return json({ error: 'not_found', service: SERVICE, version: VERSION }, 404);
   },
 
-  async scheduled(event, env, ctx) { ctx.waitUntil(scheduledTuning(env, event)); },
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(scheduledTuning(env, event));
+  },
 };
 
-/* The gate. Pure, exported, and tested directly. */
-export function gateStatus(observations) {
-  const rows = Array.isArray(observations) ? observations : [];
-  const weeks = new Set(rows.map(o => `${o.season}-${o.week}`));
-  const graded = rows.length;
-  return {
-    graded,
-    distinct_weeks: weeks.size,
-    open: graded >= MIN_GRADED_PICKS && weeks.size >= MIN_DISTINCT_WEEKS,
-    reason: graded < MIN_GRADED_PICKS
-      ? `insufficient_grades:${graded}/${MIN_GRADED_PICKS}`
-      : weeks.size < MIN_DISTINCT_WEEKS
-        ? `insufficient_weeks:${weeks.size}/${MIN_DISTINCT_WEEKS}`
-        : null,
-  };
-}
-
-/* The run is recorded to the durable ledger whatever the outcome — including
- * the normal "gate closed" exit — so a weekly job's liveness is provable. */
 async function scheduledTuning(env, event) {
   const startedAt = new Date().toISOString();
   await runTuning(env);
   await recordRun(env, SERVICE, {
-    version: VERSION, cron: event?.cron || null, started_at: startedAt,
+    version: VERSION,
+    cron: event?.cron || null,
+    started_at: startedAt,
     status: health.last_error_class ? 'failed' : 'ok',
     reason: health.last_result,
     error_class: health.last_error_class,
-    counts: health.gate ? { ...health.gate } : null,
+    counts: health.learning,
   });
 }
 
 async function runTuning(env) {
   health.last_cron_run = new Date().toISOString();
+  health.last_error_class = null;
   try {
-    if (INTEGRITY_TUNER_HOLD) {
-      health.gate = { graded: 0, distinct_weeks: 0, open: false, reason: 'integrity_v2_training_corpus_pending' };
-      health.last_result = 'gated:integrity_v2_training_corpus_pending';
-      health.last_error_class = null;
-      return;
-    }
-    const observations = await select(
-      env, 'nfl_learning_observations',
-      'integrity_status=eq.eligible&is_final=is.true&select=*&order=season.desc,week.desc&limit=5000',
+    const champions = await select(
+      env,
+      'nfl_model_weights',
+      'promoted=is.true&select=version,weights,training_rows&order=version.desc&limit=1',
     ) || [];
-
-    const gate = gateStatus(observations);
-    health.gate = gate;
-
-    if (!gate.open) {
-      health.last_result = `gated:${gate.reason}`;
-      health.last_error_class = null;
-      console.log(`[${SERVICE}] gate closed ${gate.reason} — exiting without training`);
-      return;
-    }
-
-    const championRows = await select(
-      env, 'nfl_model_weights',
-      'promoted=is.true&select=version,weights&order=version.desc&limit=1',
-    ) || [];
-    const champion = championRows[0];
+    const champion = champions[0];
     if (!champion) throw new Error('no_promoted_model');
+    if (!trained(champion)) throw new Error('production_champion_not_trained');
 
-    const candidate = trainChallenger(observations);
-    const candidateScore = backtest(candidate, observations);
-    const championScore = backtest(champion.weights, observations);
-    const verdict = promotionVerdict(candidateScore, championScore);
+    /* Learn only from the incumbent champion's own finalized moneyline calls.
+       This makes an incremental scale mathematically interpretable even after
+       previous reweights: each new fit acts on probabilities actually
+       published by this champion. */
+    const observations = await select(
+      env,
+      'nfl_learning_observations',
+      `model_version=eq.${champion.version}&market=eq.moneyline&integrity_status=eq.eligible&is_final=is.true&outcome=in.(0,1)&select=pick_id,finalized_at,model_prob,outcome,season,week&order=finalized_at.asc&limit=5000`,
+    ) || [];
 
-    const trainedWeeks = [...new Set(observations.map(o => o.week))].sort((a, b) => b - a);
+    const learning = learningStatus(observations);
+    health.learning = { champion_version: champion.version, ...learning };
+
+    if (!learning.ready) {
+      health.last_result = `learning:${learning.reason}`;
+      return;
+    }
+
+    const { train, holdout } = chronologicalSplit(observations);
+    const incrementalScale = fitCenterScale(train);
+    const incumbentScale = boundedScale(champion?.weights?.meta?.probability_scale ?? 1);
+    const absoluteScale = boundedScale(incumbentScale * incrementalScale);
+
+    const incumbentScore = scoreRows(holdout, 1);
+    const candidateScore = scoreRows(holdout, incrementalScale);
+    const verdict = reweightVerdict(candidateScore, incumbentScore);
+
+    const candidateWeights = JSON.parse(JSON.stringify(champion.weights || {}));
+    candidateWeights.meta = {
+      ...(candidateWeights.meta || {}),
+      trained: true,
+      source: 'continuous_holdout_reweight_v1',
+      learning_mode: 'continuous_holdout_reweight_v1',
+      probability_scale: Number(absoluteScale.toFixed(6)),
+      parent_version: champion.version,
+      training_rows: observations.length,
+      train_rows: train.length,
+      holdout_rows: holdout.length,
+      fitted_incremental_scale: Number(incrementalScale.toFixed(6)),
+    };
 
     const inserted = await insert(env, 'nfl_model_weights', {
-      weights: candidate,
-      trained_through_week: trainedWeeks[0] ?? null,
+      weights: candidateWeights,
+      trained_through_week: latestWeek(observations),
       training_rows: observations.length,
-      backtest_clv_beat_pct: candidateScore.clv_beat_pct,
+      backtest_clv_beat_pct: null,
       backtest_brier: candidateScore.brier,
-      backtest_units: candidateScore.units,
-      promoted: verdict.promote,
-      promoted_at: verdict.promote ? new Date().toISOString() : null,
+      backtest_units: null,
+      promoted: false,
+      promoted_at: null,
       notes: verdict.promote
-        ? `promoted: ${verdict.reason}`
-        : `rejected: ${verdict.reason}`,
+        ? `continuous challenger accepted: ${verdict.reason}`
+        : `continuous challenger rejected: ${verdict.reason}`,
     });
     const newVersion = Array.isArray(inserted) ? inserted[0]?.version : inserted?.version;
+    if (!newVersion) throw new Error('candidate_insert_missing_version');
 
     await audit(env, {
-      event_type: 'training_run', model_version: newVersion,
-      detail: { training_rows: observations.length, gate },
+      event_type: 'training_run',
+      model_version: newVersion,
+      detail: {
+        mode: 'continuous_holdout_reweight_v1',
+        incumbent: champion.version,
+        train_rows: train.length,
+        holdout_rows: holdout.length,
+        incumbent_scale: incumbentScale,
+        incremental_scale: incrementalScale,
+        candidate_scale: absoluteScale,
+      },
     });
     await audit(env, {
-      event_type: 'challenger_evaluation', model_version: newVersion,
-      detail: { candidate: candidateScore, champion: championScore, verdict },
+      event_type: 'challenger_evaluation',
+      model_version: newVersion,
+      detail: { incumbent: incumbentScore, candidate: candidateScore, verdict },
     });
+
+    if (verdict.promote) {
+      await rpc(env, 'nfl_promote_model_weight', { p_version: newVersion });
+    }
+
     await audit(env, {
       event_type: verdict.promote ? 'champion_promoted' : 'champion_rejected',
       model_version: newVersion,
-      detail: { previous_champion: champion.version, reason: verdict.reason },
+      detail: {
+        previous_champion: champion.version,
+        reason: verdict.reason,
+        probability_scale: absoluteScale,
+      },
     });
 
     health.last_result = verdict.promote
       ? `promoted v${newVersion}: ${verdict.reason}`
       : `rejected v${newVersion}: ${verdict.reason}`;
-    health.last_error_class = null;
   } catch (error) {
     health.last_error_class = errorClass(error);
+    health.last_result = `failed:${health.last_error_class}`;
     console.error(`[${SERVICE}] tuning failed class=${health.last_error_class}`);
   }
 }
 
-/* ---------------------------------------------------------------------------
- * Training — L2-regularised logistic regression by batch gradient descent.
- * ------------------------------------------------------------------------ */
-
-export function blendedLabel(observation) {
-  /* Primary signal is CLV; W/L contributes only 30%. A void has no result
-   * component, so it trains on CLV alone — which is why killed picks still
-   * carry information. */
-  const clv = observation.clv_beat === true ? 1 : observation.clv_beat === false ? 0 : null;
-  const outcome = observation.outcome === 1 ? 1 : observation.outcome === 0 ? 0 : null;
-
-  if (clv === null && outcome === null) return null;
-  if (outcome === null) return clv;
-  if (clv === null) return outcome;
-  return CLV_LABEL_WEIGHT * clv + RESULT_LABEL_WEIGHT * outcome;
+export function learningStatus(observations) {
+  const rows = Array.isArray(observations) ? observations : [];
+  const decided = rows.filter(validDecision);
+  const holdout = Math.floor(decided.length * HOLDOUT_FRACTION);
+  if (decided.length < MIN_MONEYLINE_DECISIONS) {
+    return { rows: decided.length, holdout, ready: false, reason: `collecting_moneyline_outcomes:${decided.length}/${MIN_MONEYLINE_DECISIONS}` };
+  }
+  if (holdout < MIN_HOLDOUT_DECISIONS) {
+    return { rows: decided.length, holdout, ready: false, reason: `collecting_holdout:${holdout}/${MIN_HOLDOUT_DECISIONS}` };
+  }
+  return { rows: decided.length, holdout, ready: true, reason: null };
 }
 
-export function trainChallenger(observations) {
-  const rows = [];
-  for (const o of observations) {
-    const label = blendedLabel(o);
-    if (label === null) continue;
-    const features = o.features || {};
-    const x = FEATURE_ORDER.map(name => Number(features[name] || 0));
-    if (x.some(v => !Number.isFinite(v))) continue;
-    rows.push({ x, y: label });
+export function chronologicalSplit(observations) {
+  const rows = (Array.isArray(observations) ? observations : [])
+    .filter(validDecision)
+    .slice()
+    .sort((a, b) => Date.parse(a.finalized_at || 0) - Date.parse(b.finalized_at || 0)
+      || String(a.pick_id || '').localeCompare(String(b.pick_id || '')));
+  const holdoutSize = Math.max(MIN_HOLDOUT_DECISIONS, Math.floor(rows.length * HOLDOUT_FRACTION));
+  const cut = Math.max(1, rows.length - holdoutSize);
+  return { train: rows.slice(0, cut), holdout: rows.slice(cut) };
+}
+
+/* Least-squares center scaling of the probabilities actually published by the
+   incumbent: p' = .5 + scale * (p - .5). This is deterministic, bounded, and
+   cannot flip a side. */
+export function fitCenterScale(rows) {
+  let numerator = 0;
+  let denominator = 0;
+  for (const row of rows || []) {
+    if (!validDecision(row)) continue;
+    const x = Number(row.model_prob) - 0.5;
+    const y = Number(row.outcome) - 0.5;
+    numerator += x * y;
+    denominator += x * x;
   }
-  if (!rows.length) throw new Error('no_trainable_rows');
+  if (!(denominator > 0)) return 1;
+  return boundedScale(numerator / denominator);
+}
 
-  const n = FEATURE_ORDER.length;
-  const w = new Array(n).fill(0);
-  let intercept = 0;
-
-  for (let epoch = 0; epoch < EPOCHS; epoch += 1) {
-    const grad = new Array(n).fill(0);
-    let gradIntercept = 0;
-
-    for (const row of rows) {
-      let z = intercept;
-      for (let j = 0; j < n; j += 1) z += w[j] * row.x[j];
-      const error = logistic(z) - row.y;
-      gradIntercept += error;
-      for (let j = 0; j < n; j += 1) grad[j] += error * row.x[j];
-    }
-
-    intercept -= LEARNING_RATE * (gradIntercept / rows.length);
-    for (let j = 0; j < n; j += 1) {
-      grad[j] = grad[j] / rows.length + (L2 / rows.length) * w[j];
-      w[j] -= LEARNING_RATE * grad[j];
-    }
+export function scoreRows(rows, incrementalScale = 1) {
+  let brier = 0;
+  let logloss = 0;
+  let n = 0;
+  for (const row of rows || []) {
+    if (!validDecision(row)) continue;
+    const raw = Number(row.model_prob);
+    const p = Math.max(1e-6, Math.min(1 - 1e-6, 0.5 + incrementalScale * (raw - 0.5)));
+    const y = Number(row.outcome);
+    brier += (p - y) ** 2;
+    logloss += -(y * Math.log(p) + (1 - y) * Math.log(1 - p));
+    n += 1;
   }
-
-  const coef = {};
-  FEATURE_ORDER.forEach((name, j) => { coef[name] = Number(w[j].toFixed(6)); });
-
   return {
-    intercept: Number(intercept.toFixed(6)),
-    coef,
-    calib: calibrate(observations),
-    meta: {
-      source: 'trained_challenger',
-      trained: true,
-      feature_order: [...FEATURE_ORDER],
-      training_rows: rows.length,
-    },
+    rows: n,
+    brier: n ? Number((brier / n).toFixed(6)) : null,
+    logloss: n ? Number((logloss / n).toFixed(6)) : null,
   };
 }
 
-/* Per-bucket shrinkage: if a bucket states 70% and hits 55%, pull it toward
- * 0.5. Applied before any coefficient logic, per the brief. */
-export function calibrate(observations) {
-  const buckets = { A: [], B: [], C: [] };
-  for (const o of observations) {
-    if (o.outcome !== 0 && o.outcome !== 1) continue;
-    const bucket = o.confidence_bucket || inferBucket(o);
-    if (buckets[bucket]) buckets[bucket].push(o);
+export function reweightVerdict(candidate, incumbent) {
+  if (!candidate?.rows || !incumbent?.rows || candidate.rows !== incumbent.rows) {
+    return { promote: false, reason: 'holdout_unavailable' };
   }
-
-  const calib = {};
-  for (const key of ['A', 'B', 'C']) {
-    const rows = buckets[key];
-    if (rows.length < 20) { calib[key] = 1.0; continue; }
-    const stated = mean(rows.map(r => Number(r.model_prob)));
-    const realised = mean(rows.map(r => Number(r.outcome)));
-    const statedEdge = stated - 0.5;
-    const realisedEdge = realised - 0.5;
-    if (Math.abs(statedEdge) < 1e-6) { calib[key] = 1.0; continue; }
-    const factor = realisedEdge / statedEdge;
-    calib[key] = Number(Math.max(0, Math.min(1, factor)).toFixed(4));
+  const brierGain = Number(incumbent.brier) - Number(candidate.brier);
+  const loglossDelta = Number(candidate.logloss) - Number(incumbent.logloss);
+  if (brierGain >= MIN_BRIER_IMPROVEMENT && loglossDelta <= LOGLOSS_TOLERANCE) {
+    return {
+      promote: true,
+      reason: `holdout_brier_improved_${brierGain.toFixed(6)}_logloss_delta_${loglossDelta.toFixed(6)}`,
+    };
   }
-  return calib;
-}
-
-function inferBucket(o) {
-  const edge = Math.abs(Number(o.model_prob) - 0.5);
-  if (edge >= 0.05) return 'A';
-  if (edge >= 0.035) return 'B';
-  return 'C';
-}
-
-/* ---------------------------------------------------------------------------
- * Backtest + promotion gate
- * ------------------------------------------------------------------------ */
-
-export function backtest(weights, observations) {
-  let clvBeats = 0, clvCount = 0, brierSum = 0, brierCount = 0, units = 0;
-
-  for (const o of observations) {
-    let prob;
-    try {
-      prob = logistic(scoreFeatures(weights, o.features || {}));
-    } catch (_) {
-      continue;
-    }
-    if (o.clv_beat === true || o.clv_beat === false) {
-      clvCount += 1;
-      /* The model "agreed with the close" when it leaned the same way the
-       * market moved. */
-      const leaned = prob >= 0.5;
-      if (leaned === (o.clv_beat === true)) clvBeats += 1;
-    }
-    if (o.outcome === 0 || o.outcome === 1) {
-      brierSum += (prob - o.outcome) ** 2;
-      brierCount += 1;
-    }
-    units += Number(o.units_delta || 0);
-  }
-
   return {
-    clv_beat_pct: clvCount ? Number(((clvBeats / clvCount) * 100).toFixed(4)) : null,
-    brier: brierCount ? Number((brierSum / brierCount).toFixed(6)) : null,
-    units: Number(units.toFixed(4)),
-    rows: observations.length,
+    promote: false,
+    reason: `holdout_not_better_brier_gain_${brierGain.toFixed(6)}_logloss_delta_${loglossDelta.toFixed(6)}`,
   };
 }
 
-/* Promote ONLY if candidate CLV-beat% >= champion + 1.0 point, OR the CLV is
- * effectively tied (within 0.5) and the Brier is lower. Anything else is a
- * rejection with a recorded reason. */
-export function promotionVerdict(candidate, champion) {
-  const c = candidate.clv_beat_pct, k = champion.clv_beat_pct;
-
-  if (c === null || k === null) {
-    return { promote: false, reason: 'insufficient_clv_signal_for_comparison' };
-  }
-  if (c >= k + CLV_IMPROVEMENT_POINTS) {
-    return { promote: true, reason: `clv_beat ${c} >= champion ${k} + ${CLV_IMPROVEMENT_POINTS}` };
-  }
-  if (Math.abs(c - k) <= CLV_TIE_TOLERANCE) {
-    if (candidate.brier !== null && champion.brier !== null && candidate.brier < champion.brier) {
-      return { promote: true, reason: `clv tied (${c} vs ${k}), brier improved ${candidate.brier} < ${champion.brier}` };
-    }
-    return { promote: false, reason: `clv tied (${c} vs ${k}) and brier not improved` };
-  }
-  return { promote: false, reason: `clv_beat ${c} did not clear champion ${k} + ${CLV_IMPROVEMENT_POINTS}` };
+function validDecision(row) {
+  const p = Number(row?.model_prob);
+  const y = Number(row?.outcome);
+  return Number.isFinite(p) && p > 0 && p < 1 && (y === 0 || y === 1);
 }
 
-/* ---------------------------------------------------------------------------
- * Helpers
- * ------------------------------------------------------------------------ */
+function boundedScale(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return 1;
+  return Math.max(SCALE_MIN, Math.min(SCALE_MAX, n));
+}
 
-function mean(values) {
-  const list = values.filter(v => Number.isFinite(v));
-  return list.length ? list.reduce((a, b) => a + b, 0) / list.length : 0;
+function trained(champion) {
+  const value = champion?.weights?.meta?.trained;
+  return value === true || value === 'true';
+}
+
+function latestWeek(rows) {
+  const values = (rows || []).map(r => Number(r.week)).filter(Number.isFinite);
+  return values.length ? Math.max(...values) : null;
 }
 
 function errorClass(error) {

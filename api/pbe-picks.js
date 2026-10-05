@@ -100,7 +100,6 @@ async function governance(secret) {
   const weeks = new Set(obs.map(row => `${row.season}-${row.week}`));
   const tracking = obs.filter(row => row.publication_scope === 'tracking').length;
   const official = obs.filter(row => row.publication_scope === OFFICIAL).length;
-  const gateOpen = obs.length >= 100 && weeks.size >= 4;
   return {
     champion_version: champion?.version ?? null,
     champion_notes: champion?.notes ?? null,
@@ -112,16 +111,20 @@ async function governance(secret) {
     },
     publication: trained ? 'ALLOWED' : 'GATED',
     publication_blocked_reason: trained ? null : champion ? `untrained_champion:v${champion.version}` : 'no_promoted_champion',
+    learning_mode: trained ? 'CONTINUOUS' : 'BOOTSTRAP',
+    learning_sample: obs.length,
+    learning_weeks: weeks.size,
+    production_since: trained ? champion?.promoted_at ?? null : null,
     graded_sample: obs.length,
-    graded_sample_required: 100,
+    graded_sample_required: null,
     graded_sample_tracking: tracking,
     graded_sample_official: official,
     distinct_weeks: weeks.size,
-    distinct_weeks_required: 4,
+    distinct_weeks_required: null,
     /* When the newest finalized learning observation was written. A timestamp
        only: no selection, line, price or result leaves the server here. */
     latest_finalized_at: obs.length ? obs[0].finalized_at ?? null : null,
-    auto_tuner: gateOpen ? 'ELIGIBLE' : 'GATED',
+    auto_tuner: trained ? 'CONTINUOUS' : 'BOOTSTRAP',
     issuance_mode: trained ? 'OFFICIAL' : 'TRACKING_BOOTSTRAP',
     engine_state: composeEngineState({ health: runtime.health, trained, hasPicks: false, gatedState: UNTRAINED_STATE }),
     engine_health: runtime.health,

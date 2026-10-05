@@ -315,19 +315,24 @@
     /* Counts come straight from view=state; an absent count is '—', never 0. */
     const count = v => (v === null || v === undefined || !Number.isFinite(Number(v)) ? '—' : String(Number(v)));
     const bar = (have, need) => { const pct = Math.max(0, Math.min(100, (num(have) / num(need)) * 100 || 0)); return `<span class="pbecc-bar"><i style="width:${pct.toFixed(1)}%"></i></span>`; };
-    const kpis = gated
-      ? [['Validation finalized', tracking.graded, 'is-val'], ['Validation open', tracking.open, 'is-val'], ['Official published', official.total, 'is-off'], ['Official graded', official.graded, 'is-off']]
-      : [['Official published', official.total, 'is-off'], ['Official open', official.open, 'is-off'], ['Official graded', official.graded, 'is-off'], ['Validation finalized', tracking.graded, 'is-val']];
+    const learning = d.learning_sample ?? d.graded_sample;
+    const weeks = d.learning_weeks ?? d.distinct_weeks;
+    const kpis = [
+      ['Official published', official.total, 'is-off'],
+      ['Official open', official.open, 'is-off'],
+      ['Official graded', official.graded, 'is-off'],
+      ['Learning rows', learning, 'is-val'],
+    ];
     return `<section class="pbecc-panel pbecc-picks">${head}
-      <div class="pbecc-engine ${!running ? 'is-degraded' : gated ? 'is-gated' : 'is-live'}"><b><i class="pbecc-run ${running ? 'on' : ''}" aria-hidden="true"></i>${esc(running ? (gated ? 'ENGINE RUNNING · VALIDATION MODE' : 'ENGINE RUNNING · OFFICIAL PUBLICATION') : `ENGINE ${health}`)}</b><span>${d.champion_version != null ? `Champion v${esc(d.champion_version)} · ` : ''}${gated ? 'official publication intentionally gated' : 'publishing official picks'}</span></div>
+      <div class="pbecc-engine ${!running ? 'is-degraded' : gated ? 'is-gated' : 'is-live'}"><b><i class="pbecc-run ${running ? 'on' : ''}" aria-hidden="true"></i>${esc(running ? (gated ? 'ENGINE RUNNING · BOOTSTRAP' : 'ENGINE RUNNING · OFFICIAL + LEARNING') : `ENGINE ${health}`)}</b><span>${d.champion_version != null ? `Champion v${esc(d.champion_version)} · ` : ''}${gated ? 'production model unavailable' : 'official picks · continuous reweighting'}</span></div>
       <dl class="pbecc-kpis pbecc-kpis-4">${kpis.map(([label, value, cls]) => `<div class="${cls}"><dt>${esc(label)}</dt><dd>${esc(count(value))}</dd></div>`).join('')}</dl>
       <div class="pbecc-gate">
-        <div><span>Finalized validation sample</span><b>${esc(count(d.graded_sample))} / ${esc(d.graded_sample_required ?? 100)}</b>${bar(d.graded_sample, d.graded_sample_required || 100)}</div>
-        <div><span>Observation window</span><b>${esc(count(d.distinct_weeks))} / ${esc(d.distinct_weeks_required ?? 4)} weeks</b>${bar(d.distinct_weeks, d.distinct_weeks_required || 4)}</div>
+        <div><span>Continuous learning sample</span><b>${esc(count(learning))} finalized</b></div>
+        <div><span>Observed window</span><b>${esc(count(weeks))} weeks</b></div>
       </div>
       <p class="pbecc-note">${gated
-        ? 'The engine is issuing real pre-game validation decisions and grading them from final results. Official publication is intentionally gated: it opens only after both thresholds clear and a trained champion is promoted, and validation decisions never become official picks.'
-        : 'Only the production champion publishes. Every official pick is locked at issuance and graded from final results.'}</p>
+        ? 'No publishable production champion is available, so the engine fails closed.'
+        : 'The production champion publishes official picks now. Every finalized result feeds the learning ledger; challengers may reweight only when time-ordered evidence improves, while the Official Record remains immutable.'}</p>
       <div class="pbecc-actions"><button type="button" data-route="pbepicks">PBE Picks →</button><button type="button" data-route="trackrecord">Track record →</button></div>
     </section>`;
   }

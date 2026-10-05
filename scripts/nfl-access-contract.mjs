@@ -119,29 +119,35 @@ export function judgeTrackRecord({ state, preview, trackrecord }) {
   const problems = [];
   const p = m => problems.push(m);
   if (!state || typeof state !== 'object') return ['view=state unreadable'];
-  /* the publication gate: >= 100 finalized AND >= 4 weeks, published as counts */
-  if (state.graded_sample_required !== 100) p(`graded_sample_required ${state.graded_sample_required} (gate is 100)`);
-  if (state.distinct_weeks_required !== 4) p(`distinct_weeks_required ${state.distinct_weeks_required} (gate is 4)`);
-  if (!int(state.graded_sample) || !int(state.distinct_weeks)) p('gate progress is not a pair of counts');
+
+  if (!int(state.graded_sample) || !int(state.distinct_weeks)) p('learning progress is not a pair of counts');
+  if (state.learning_sample !== undefined && state.learning_sample !== state.graded_sample) p('learning_sample != graded_sample');
+  if (state.learning_weeks !== undefined && state.learning_weeks !== state.distinct_weeks) p('learning_weeks != distinct_weeks');
   if (int(state.graded_sample_tracking) && int(state.graded_sample_official)
     && state.graded_sample !== state.graded_sample_tracking + state.graded_sample_official) p('graded_sample != tracking + official observations');
-  const open = state.graded_sample >= 100 && state.distinct_weeks >= 4;
-  if (state.auto_tuner !== (open ? 'ELIGIBLE' : 'GATED')) p(`auto_tuner ${state.auto_tuner} disagrees with ${state.graded_sample}/100, ${state.distinct_weeks}/4`);
-  if (state.publication !== (state.champion_trained === true ? 'ALLOWED' : 'GATED')) p(`publication ${state.publication} disagrees with champion_trained=${state.champion_trained}`);
-  /* validation and official totals are separate objects, never summed */
+
+  if (state.champion_trained === true) {
+    if (state.publication !== 'ALLOWED') p(`trained champion publication ${state.publication} (expected ALLOWED)`);
+    if (state.auto_tuner !== 'CONTINUOUS') p(`trained champion auto_tuner ${state.auto_tuner} (expected CONTINUOUS)`);
+    if (state.learning_mode !== 'CONTINUOUS') p(`trained champion learning_mode ${state.learning_mode} (expected CONTINUOUS)`);
+  } else if (state.publication !== 'GATED') {
+    p(`untrained champion publication ${state.publication} (expected GATED)`);
+  }
+
   const tr = state.decisions?.tracking, off = state.decisions?.official;
   if (!tr || !off || tr === off) p('decisions.tracking / decisions.official missing or merged');
   else {
     for (const [scope, d] of [['tracking', tr], ['official', off]]) for (const k of ['total', 'open', 'graded']) if (!int(d[k])) p(`decisions.${scope}.${k} is not a count`);
     if (off.graded > off.total || tr.graded > tr.total) p('graded exceeds total');
   }
+
   const leaks = selectionKeys(state);
   if (leaks.length) p(`view=state exposes decision content: ${leaks.slice(0, 4).join(', ')}`);
   if (preview) {
     const pl = selectionKeys(preview);
     if (pl.length) p(`view=preview exposes decision content: ${pl.slice(0, 4).join(', ')}`);
   }
-  /* the official record is official only */
+
   if (!trackrecord || typeof trackrecord !== 'object') p('view=trackrecord unreadable');
   else {
     if (trackrecord.publication_scope !== 'official') p(`trackrecord publication_scope ${trackrecord.publication_scope}`);
@@ -151,7 +157,7 @@ export function judgeTrackRecord({ state, preview, trackrecord }) {
       if (picks.some(r => r.publication_scope && r.publication_scope !== 'official')) p('trackrecord carries a non-official row');
       if (off && int(off.total) && picks.length > off.total) p(`trackrecord lists ${picks.length} rows but official total is ${off.total}`);
       if (off && off.total === 0 && (picks.length || trackrecord.total_count)) p('official total is 0 but trackrecord lists rows');
-      if (picks.some(r => /VALIDATION/i.test(String(r.label || '')))) p('a validation signal is in the official record');
+      if (picks.some(r => /VALIDATION/i.test(String(r.label || '')))) p('a pre-production signal is in the official record');
     }
   }
   return problems;
@@ -208,7 +214,7 @@ export async function runLiveContract({ origin, log = console.log }) {
   const problems = judgeTrackRecord({ state: state.json, preview: preview.json, trackrecord: trackrecord.json });
   check('public Track Record contract', problems.length ? problems.join('; ') : null);
   const s = state.json || {};
-  log(`live gate              : ${s.graded_sample}/${s.graded_sample_required} finalized, ${s.distinct_weeks}/${s.distinct_weeks_required} weeks, publication ${s.publication}, engine ${s.engine_health}`);
+  log(`live learning          : ${s.learning_sample ?? s.graded_sample} finalized, ${s.learning_weeks ?? s.distinct_weeks} weeks, publication ${s.publication}, learning ${s.learning_mode}, engine ${s.engine_health}`);
   log(`live decisions         : validation ${JSON.stringify(s.decisions?.tracking)} official ${JSON.stringify(s.decisions?.official)}`);
   log(`official record rows   : ${Array.isArray(trackrecord.json?.picks) ? trackrecord.json.picks.length : '—'}`);
   return failures;
