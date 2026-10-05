@@ -1,0 +1,10 @@
+#pbe-consent{position:fixed;z-index:2147483000;left:12px;right:12px;bottom:12px;margin:auto;max-width:720px;padding:16px;border:1px solid #50482f;border-radius:14px;background:#11130f;color:#f5f2e8;box-shadow:0 24px 70px rgba(0,0,0,.55);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}
+#pbe-consent *{box-sizing:border-box}
+#pbe-consent h2{margin:0 0 7px;font-size:17px;line-height:1.2;color:#fff}
+#pbe-consent p{margin:0;color:#c8cdc7;font-size:13px;line-height:1.5}
+#pbe-consent a{color:#e1c65d}
+.pbe-consent-actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:14px}
+.pbe-consent-btn{min-height:42px;padding:10px 14px;border:1px solid #6e6547;border-radius:9px;background:#191c17;color:#f5f2e8;font:700 13px/1 Arial,sans-serif;cursor:pointer}
+.pbe-consent-btn.primary{background:#d4af37;color:#0b0d0b;border-color:#e4c963}
+#pbe-privacy-choice{position:fixed;z-index:2147482999;left:10px;bottom:10px;border:1px solid rgba(212,175,55,.45);border-radius:999px;background:rgba(17,19,15,.94);color:#e8dfc4;padding:8px 11px;font:700 11px/1 Arial,sans-serif;cursor:pointer;box-shadow:0 8px 26px rgba(0,0,0,.32)}
+@media(max-width:560px){.pbe-consent-actions{display:grid;grid-template-columns:1fr 1fr}.pbe-consent-btn{width:100%;min-height:46px}}
