@@ -675,10 +675,13 @@
 
   function officialZero(bundle) {
     const gov = bundle.gov;
+    const live = gov?.champion_trained === true;
     return `<section class="pbe2-stage pbetr-official-zero"><div class="pbe2-gridwash"></div><div>
       <div class="pbe2-kicker">Official Verified Track Record</div>
-      <h2>OFFICIAL PUBLICATION IS LIVE</h2>
-      <p>Champion v${esc(gov?.champion_version ?? '—')} is the production model. The Official Record begins at <b>0-0</b> from the first post-cutover decision: actual issue price, frozen line, original model version, chained receipt and factual final grade. Pre-production learning decisions are never backfilled into it.</p>
+      <h2>${live ? 'OFFICIAL PUBLICATION IS LIVE' : 'PRE-PRODUCTION HISTORY ONLY'}</h2>
+      <p>${live
+        ? `Champion v${esc(gov?.champion_version ?? '—')} is the production model. The Official Record begins at <b>0-0</b> from the first post-cutover decision: actual issue price, frozen line, original model version, chained receipt and factual final grade. Pre-production learning decisions are never backfilled into it.`
+        : `There is no trained production champion in this state, so the Official Record remains <b>0-0</b>. Historical learning decisions remain separate and can never be relabeled as official.`}</p>
     </div><button type="button" class="pbe2-btn" data-pbetr-tab="validation">View Pre-Production Learning History →</button></section>`;
   }
 
