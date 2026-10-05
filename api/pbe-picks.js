@@ -100,7 +100,6 @@ async function governance(secret) {
   const weeks = new Set(obs.map(row => `${row.season}-${row.week}`));
   const tracking = obs.filter(row => row.publication_scope === 'tracking').length;
   const official = obs.filter(row => row.publication_scope === OFFICIAL).length;
-  const gateOpen = obs.length >= 100 && weeks.size >= 4;
   return {
     champion_version: champion?.version ?? null,
     champion_notes: champion?.notes ?? null,
@@ -125,7 +124,7 @@ async function governance(secret) {
     /* When the newest finalized learning observation was written. A timestamp
        only: no selection, line, price or result leaves the server here. */
     latest_finalized_at: obs.length ? obs[0].finalized_at ?? null : null,
-    auto_tuner: trained ? 'CONTINUOUS' : gateOpen ? 'ELIGIBLE' : 'GATED',
+    auto_tuner: trained ? 'CONTINUOUS' : 'BOOTSTRAP',
     issuance_mode: trained ? 'OFFICIAL' : 'TRACKING_BOOTSTRAP',
     engine_state: composeEngineState({ health: runtime.health, trained, hasPicks: false, gatedState: UNTRAINED_STATE }),
     engine_health: runtime.health,
