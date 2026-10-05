@@ -172,14 +172,55 @@ const SIGNED_OUT = {
   membership: FREE_MEMBERSHIP,
 };
 
+async function networkSessionFromCookie(header) {
+  const tokens = readCookieValues(header, 'pbe_session');
+  if (!tokens.length) return null;
+  try {
+    const r = await fetch('https://auth.propbetedge.ai/membership?sport=nfl', {
+      headers: { cookie: `pbe_session=${tokens[0]}`, accept: 'application/json' },
+      cache: 'no-store',
+      signal: AbortSignal.timeout(2500),
+    });
+    if (!r.ok) return null;
+    const body = await r.json();
+    const m = body?.membership;
+    if (!body?.authenticated || m?.entitled !== true || !['all_access','owner'].includes(m?.state)) return null;
+    return {
+      valid: true,
+      pro: true,
+      access: 'granted',
+      role: m.state === 'owner' ? 'owner' : 'subscriber',
+      entitlement: { reason: m.state === 'owner' ? 'owner' : 'all_access', plan: m.plan || null, source: 'pbe_session' },
+      user: m.email ? { email: m.email } : null,
+      subscription: m.state === 'all_access' ? {
+        status: 'active',
+        plan: m.plan || 'monthly',
+        current_period_end: m.current_period_end || null,
+        cancel_at_period_end: Boolean(m.cancel_at_period_end),
+        source: 'pbe_all_access',
+      } : null,
+      authority: 'network-auth',
+      stage: m.state === 'owner' ? 'network_owner' : 'network_all_access',
+      cookies: { current: 0, legacy: 0, network: tokens.length },
+      degraded: false,
+      signing: { mode: 'network_pbe_session', verified_by: 'auth.propbetedge.ai' },
+      membership: m,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function getNflSession(req) {
   const header = req.headers?.cookie || '';
   const current = readCookieValues(header, SESSION_COOKIE);
   const legacy = readCookieValues(header, LEGACY_SESSION_COOKIE);
-  const cookies = { current: current.length, legacy: legacy.length };
+  const network = readCookieValues(header, 'pbe_session');
+  const cookies = { current: current.length, legacy: legacy.length, network: network.length };
 
   if (!current.length && !legacy.length) {
-    return { ...SIGNED_OUT, stage: 'no_cookie', cookies };
+    const shared = await networkSessionFromCookie(header);
+    return shared || { ...SIGNED_OUT, stage: network.length ? 'network_cookie_no_nfl_access' : 'no_cookie', cookies };
   }
 
   const signing = getSessionSigningSecrets();
