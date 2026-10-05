@@ -855,3 +855,48 @@
 /* The Prop Board row badge sits under the player's name, inside the cell that
    both the table row and the mobile card render. */
 .pbe5-player-copy .pbetd-badge { margin-top: 3px; }
+
+
+/* TD target settlement is part of the card itself, not a footer footnote. */
+.pbetd-target-block { position: relative; }
+.pbetd-target-block.is-win { box-shadow: inset 3px 0 0 var(--pbe-pos); }
+.pbetd-target-block.is-loss { box-shadow: inset 3px 0 0 var(--pbe-crimson); }
+.pbetd-target-block.is-void { box-shadow: inset 3px 0 0 var(--pbe-subtle); }
+.pbetd-rank { justify-content: space-between; }
+.pbetd-rank > span:first-child { flex: 0 1 auto; }
+.pbetd-rank .pbetd-result { margin-left: auto; flex: 0 0 auto; }
+
+.pbe25-td-target .pbetd-result {
+  margin-left: auto;
+  flex: 0 0 auto;
+}
+.pbe25-td-target.is-win {
+  border-color: rgba(78,163,115,.46);
+  background: linear-gradient(90deg, var(--pbe-pos-soft), transparent 74%);
+}
+.pbe25-td-target.is-loss {
+  border-color: rgba(193,39,61,.44);
+  background: linear-gradient(90deg, var(--pbe-neg-soft), transparent 74%);
+}
+.pbe25-td-target.is-void { border-color: var(--pbe-line-strong); }
+
+.pbetd-rail-result {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 54px;
+  border: 1px solid var(--pbe-line-faint);
+  border-radius: var(--r-xs);
+  padding: 3px 7px;
+  font: 700 var(--fs-micro)/1 var(--pbe-font-data);
+  letter-spacing: .08em;
+}
+.pbetd-rail-result.win { color: var(--pbe-pos); background: var(--pbe-pos-soft); border-color: rgba(78,163,115,.40); }
+.pbetd-rail-result.loss { color: var(--pbe-crimson-text); background: var(--pbe-neg-soft); border-color: rgba(193,39,61,.40); }
+.pbetd-rail-result.void { color: var(--pbe-faint-text); }
+.pbetd-rail-result.pending { color: var(--pbe-dim); }
+
+@media (max-width:720px) {
+  .pbe25-td-target { flex-wrap: wrap; }
+  .pbe25-td-target .pbetd-result { order: 3; margin-left: 0; }
+}
