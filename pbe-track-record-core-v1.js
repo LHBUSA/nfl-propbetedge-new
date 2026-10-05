@@ -13,11 +13,11 @@
  *             enter W-L-P, units or ROI.
  *   UNITS     Flat 1u at the persisted issue price (the American odds frozen
  *             at issuance). A win without a persisted price has no profit —
- *             never a default -110 — and makes profit/ROI unavailable ('—').
- *             Losses are always -1u, pushes 0u.
- *   ROI       flat 1u profit / number of settled decisions (win + loss + push),
- *             each risking exactly 1u. Voids and pending decisions are excluded
- *             from numerator and denominator.
+ *             never a default -110. UNPRICED rows stay in W-L-P/calibration
+ *             but are excluded from profit, ROI and CLV economics.
+ *   ROI       flat 1u profit / number of PRICED settled decisions (win + loss
+ *             + push), each risking exactly 1u. UNPRICED, void and pending
+ *             decisions are excluded from the ROI denominator.
  *   WIN RATE  wins / (wins + losses). Pushes are excluded.
  *   AVG ODDS  mean of the settled decisions' decimal issue odds, converted back
  *             to American. Rows without a persisted price are excluded.
