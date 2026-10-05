@@ -34,7 +34,7 @@
 
   const SETTLED = ['win', 'loss', 'push'];
   const MARKETS = ['spread', 'moneyline', 'total'];
-  const ROI_DENOMINATOR = 'settled decisions (win + loss + push), 1u each; void and pending excluded';
+  const ROI_DENOMINATOR = 'priced settled decisions (win + loss + push), 1u each; UNPRICED, void and pending excluded';
 
   const num = value => {
     if (value === null || value === undefined || value === '') return null;
