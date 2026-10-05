@@ -23,19 +23,23 @@
       .replace(/'/g,'&#39;');
   }
 
+  /* Signed in, entitlement check failed: identity is shown, membership is
+   * NOT assumed lost, and no price or upgrade prompt is rendered. Wears the
+   * v3 account shell (nfl-account-v3.css); the stadium column reads "access
+   * check" (paywall-funnel-v2.js paintVisual). */
   function degradedMarkup(s){
     const email=esc(s?.user?.email || 'Signed-in account');
-    return `<div class="pbe-pro-price-card pbe-auth-degraded-card" data-pbe-auth-degraded="1">
-      <div class="pbe-pro-plan-label">NFL PRO · ACCESS CHECK</div>
-      <div class="pbe-pro-price"><strong style="font-size:34px">SIGNED IN</strong></div>
-      <div class="pbe-pro-renew">We can verify your identity, but subscription verification is temporarily unavailable.</div>
-    </div>
-    <div class="pbe-pro-user-card"><strong>${email}</strong><span>Signed in · entitlement check pending</span></div>
-    <div class="pbe-pro-auth-copy">Your account is <strong>not</strong> being treated as unsubscribed. Pricing and upgrade prompts are hidden until the entitlement backend answers cleanly.</div>
-    <button class="pbe-pro-cta" type="button" data-pbe-auth-retry>Retry access check</button>
-    <button class="pbe-pro-cta secondary" type="button" data-pbe-auth-signout>Sign out</button>
-    <div class="pbe-pro-message" data-pbe-auth-message>${esc(s?.error || 'NFL Pro verification is temporarily unavailable.')}</div>
-    <div class="pbe-pro-secure">◆ Identity verified · subscription state protected during backend degradation</div>`;
+    return `<div class="pbe-acct-panel pbe-acct-degraded" data-pbe-auth-degraded="1">
+      <div class="pbe-acct-identity is-check"><i aria-hidden="true"></i><span>SIGNED IN</span><strong>${email}</strong></div>
+      <div class="pbe-funnel-head"><span>NFL PRO · ACCESS CHECK</span><strong>Signed in — access check temporarily unavailable</strong><p>We can verify your identity, but membership verification is temporarily unavailable.</p></div>
+      <div class="pbe-acct-protect"><b>Your account is <em>not</em> being treated as unsubscribed.</b><span>Pricing and upgrade prompts stay hidden until the entitlement backend answers cleanly.</span></div>
+      <div class="pbe-acct-actions">
+        <button class="pbe-pro-cta" type="button" data-pbe-auth-retry>Retry access check</button>
+        <button class="pbe-pro-cta secondary" type="button" data-pbe-auth-signout>Sign out</button>
+        <div class="pbe-pro-message" data-pbe-auth-message role="status" aria-live="polite">${esc(s?.error || 'NFL Pro verification is temporarily unavailable.')}</div>
+      </div>
+      <div class="pbe-pro-secure">◆ Identity verified · subscription state protected during backend degradation</div>
+    </div>`;
   }
 
   function wireDegraded(host){
@@ -48,6 +52,7 @@
         await window.PBEPro?.refreshAccess?.({preserveOnError:true});
       }finally{
         button.disabled=false;
+        if(msg&&msg.isConnected&&isDegraded(window.PBEPro?.state||{}))msg.textContent='Access check is still unavailable. Your membership has not changed; try again shortly.';
         sync();
       }
     });
@@ -125,7 +130,7 @@
     observer.observe(root,{childList:true,subtree:true});
   }
 
-  window.PBEShellAuthState={accountLabel,memberLabel,isDegraded};
+  window.PBEShellAuthState={accountLabel,memberLabel,isDegraded,degradedMarkup};
   window.addEventListener('pbe:pro-state',sync);
   window.addEventListener('pbe:upgrades-ready',sync);
   document.addEventListener('click',event=>{

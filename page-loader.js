@@ -1,7 +1,7 @@
 /* PropBetEdge NFL - ordered page/product upgrade loader v47 route-first */
 (() => {
   'use strict';
-  const VERSION='20261004tdmetrics1';
+  const VERSION='20261005account3';
   const upgrades=[
     /* Establish the final homepage authority first. v6 replaces the v5 DOM with
        .pbehome6; v7 historically registered itself after that without repainting
@@ -155,6 +155,10 @@
     /* Terminal purchase-surface geometry: hero, compact plan row, zero
        internal scrollbars, full-screen sheet on phones, ALL ACCESS nav/footer. */
     {css:'./nfl-all-access-hero-v1.css'},
+    /* Account surface v3: the one premium shell for every membership state
+       (stadium visual + account action, full-screen sheet on phones). Scoped
+       to .pbe-pro-modal.pbe-acct, so it is terminal for the modal only. */
+    {css:'./nfl-account-v3.css'},
     /* PBEcast v6 is the sole route authority: #pbecast -> PBEcastV6.load ->
        .pbecast6. v7 is additive only — it decorates v6's DOM and state and
        never registers a route or renders the container itself. */

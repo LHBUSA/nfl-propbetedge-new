@@ -45,6 +45,8 @@
   function applyPitch(){
     const pitch=document.querySelector('.pbe-pro-pitch');
     if(!pitch)return;
+    /* the v3 account shell (paywall-funnel-v2.js) paints its own visual column */
+    if(pitch.closest('.pbe-acct'))return;
 
     setText(pitch.querySelector('.pbe-pro-kicker'),'PROPBETEDGE NFL PRO · PBE ALGO · AUTOMATED LEARNING PICKER');
     setHtml(pitch.querySelector('h2'),'PBE Algo makes the pick.<br><em>Then the grade becomes evidence.</em>');
@@ -160,6 +162,8 @@
     const root=document.querySelector('.pbe-funnel-root');
     const head=root?.querySelector('.pbe-funnel-head');
     if(!root||!head)return;
+    /* the v3 account shell words every state itself; nothing to rewrite */
+    if(root.dataset.acct==='v3')return;
     if(applyActiveMember(root,head))return;
     const state=root.dataset.funnelState||'';
     /* Free readers: ALL ACCESS is the primary offer (the hero sits right under

@@ -139,9 +139,9 @@
   };
 
   function modalHtml() {
-    return `<div class="pbe-pro-backdrop" id="pbe-pro-backdrop" role="dialog" aria-modal="true" aria-label="NFL Pro">
+    return `<div class="pbe-pro-backdrop" id="pbe-pro-backdrop" role="dialog" aria-modal="true" aria-label="PropBetEdge NFL account">
       <div class="pbe-pro-modal">
-        <button class="pbe-pro-close" type="button" aria-label="Close NFL Pro">×</button>
+        <button class="pbe-pro-close" type="button" aria-label="Close account">×</button>
         <div class="pbe-pro-modal-grid">
           <section class="pbe-pro-pitch">
             <div class="pbe-pro-kicker">PROPBETEDGE NFL PRO · PBE PICKS</div>
@@ -571,8 +571,12 @@
     document.getElementById('pbe-pro-open-board')?.addEventListener('click',()=>{ close(); window.App?.nav?.('propboard'); });
   }
 
-  function open() {
+  /* `reason` says why the surface opened ('account' from the header, 'upgrade'
+   * from a Pro prompt, 'auth-failed' ...). It is announced, never acted on
+   * here: paywall-funnel-v2.js uses it to choose get-access vs member sign-in. */
+  function open(reason = '') {
     const backdrop = ensureModal();
+    window.dispatchEvent(new CustomEvent('pbe:pro-open',{ detail:{ reason:String(reason || '') } }));
     renderModal();
     backdrop?.classList.add('open');
     /* One vertical scroll context while the purchase surface is open: the
@@ -647,7 +651,7 @@
     const delivery = params.get('access_email');
     if (state.pro) notice('NFL Pro is active. Your premium model intelligence is unlocked.','success');
     else if (delivery === 'sent' || delivery === 'already_sent') notice('Payment received. Your secure NFL Pro access link was sent to the email you used at checkout.','success');
-    else notice('Payment received. Your access link has not been sent yet. In a minute, enter the email you used at checkout and choose "Sign in to NFL Pro" to request your secure access link.');
+    else notice('Payment received. Your access link has not been sent yet. In a minute, enter the email you used at checkout and choose "Send secure sign-in link" to request your secure access link.');
     cleanQuery(['checkout','session_id','tier','access_email']);
   }
 
@@ -672,6 +676,7 @@
     paintNotice,
     checkout,
     refreshAccess,
+    signOut,
     getToken,
     require(feature='NFL Pro') {
       if (state.pro) return true;

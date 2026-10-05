@@ -1,9 +1,15 @@
-/* PropBetEdge NFL — Founding Season purchase funnel v8
+/* PropBetEdge NFL — account + purchase surface v9 (one shell, four states)
  *
- * Presentation authority for signed-out, signed-in free, AND active Pro users.
- * Auth/session state remains owned by paywall.js; this file owns the customer-
- * facing account and purchase experience so old pricing or utility-grade paid
- * states cannot become the final rendered UI.
+ * Presentation authority for the account modal: signed-out (get access OR
+ * existing-member sign-in), signed-in without access, and active members
+ * (NFL Pro · All Access · owner). Auth/session state remains owned by
+ * paywall.js and the degraded "access check" screen by
+ * sports-shell-auth-state.js; this file renders, it never decides access.
+ *
+ * The shell is two columns on desktop: the cinematic stadium visual on the
+ * left (.pbe-pro-pitch, painted per state by paintVisual) and the account
+ * action on the right (#pbe-pro-checkout). Under 901px it is one full-screen
+ * sheet (nfl-account-v3.css).
  *
  * 2026 Founding Season: plans, prices and Payment Links come from
  * window.PBEPricing (paywall.js), the single pricing source. No free trial.
@@ -23,8 +29,49 @@
   if (!PRICING) { console.error('[nfl-funnel] window.PBEPricing is missing; purchase funnel not installed'); return; }
   const PLANS = { monthly: PRICING.monthly, weekly: PRICING.weekly };
 
+  /* The account visual: a real NFL venue from /stadiums. Lambeau Field is the
+     CC0 photograph in the set (no attribution condition, no licensing risk);
+     the composition keeps the goalpost, lights and bowl in frame and the end
+     zone under the gradient that carries the copy. */
+  const STADIUM = Object.freeze({
+    tall: '/stadiums/lambeau-bgsm.webp',
+    wide: '/stadiums/lambeau-bg.webp',
+    credit: 'Lambeau Field · photograph by Mtyson84 · CC0',
+  });
+  const PBE_LOGO = 'https://propbetedge.ai/logo/pbe-full-400.png';
+
+  /* What PropBetEdge NFL is, in the reader's terms. Real capabilities only. */
+  const FEATURES = Object.freeze([
+    ['PBE Algo', 'Automated learning picker'],
+    ['Official PBE Picks', 'Only qualified production calls'],
+    ['Player DNA', 'Player-level usage and performance intelligence'],
+    ['Model + Market', 'Probability, fair line, best line and market context'],
+    ['PBEcast', 'Live game intelligence'],
+    ['Track Record', 'Permanent graded history'],
+    ['Game Center', 'Your Sunday intelligence hub'],
+    ['Simulation + Research', 'Premium decision support'],
+  ]);
+  /* What an active member can open right now, each wired to its real route. */
+  const UNLOCKED = Object.freeze([
+    ['PBE Algo', 'Model Lab', 'picks'],
+    ['Official PBE Picks', 'Qualified calls', 'pbepicks'],
+    ['Player DNA', 'QB · WR · RB · TE', 'qbdna'],
+    ['PBEcast', 'Live game intelligence', 'pbecast'],
+    ['Game Center', 'Games + schedule', 'games'],
+    ['Model + Market', 'Market Watch', 'marketwatch'],
+    ['Simulation', 'Line Simulator', 'simulator'],
+    ['Track Record', 'Graded history', 'trackrecord'],
+    ['Research', 'Matchup Research', 'matchups'],
+  ]);
+  const REMINDER = 'PBE Picks · PBE Algo · Player DNA · PBEcast · Model + Market · Track Record';
+
   let queued = false;
   let checkoutRunning = false;
+  let linkRunning = false;
+  let focusPending = false;
+  /* Signed-out readers see one of two views: 'join' (get access) or 'signin'
+     (existing member). paywall.js announces why the surface opened. */
+  let view = 'join';
 
   function state() { return window.PBEPro?.state || {}; }
 
@@ -68,6 +115,16 @@
     paintSelection();
   }
 
+  /* ------------------------------------------------------------ shared parts */
+
+  function head(eyebrow, title, lede) {
+    return `<div class="pbe-funnel-head">
+        <span>${eyebrow}</span>
+        <strong>${title}</strong>
+        ${lede ? `<p>${lede}</p>` : ''}
+      </div>`;
+  }
+
   function planCard(key, selected) {
     const p = PLANS[key];
     const on = selected === key;
@@ -77,70 +134,97 @@
           <div class="pbe-pro-plan-label">NFL PRO · ${p.label.toUpperCase()}</div>
           <div class="pbe-funnel-plan-badge">${p.badge}</div>
         </div>
-        <div class="pbe-funnel-check">${on ? '✓' : '○'}</div>
+        <div class="pbe-funnel-check" aria-hidden="true">${on ? '✓' : ''}</div>
       </div>
       <div class="pbe-pro-price"><strong>${p.price}</strong><span>${p.detail}</span></div>
       <div class="pbe-pro-renew">${p.term}</div>
-      <div class="pbe-funnel-select-copy">${on ? 'Selected' : `Choose ${p.label.toLowerCase()}`}</div>
     </button>`;
   }
 
-  function signedOutMarkup() {
+  function plansHtml() {
     const selected = selectedKey();
-    return `<div class="pbe-funnel-root" data-funnel-state="signed-out" data-membership="free">
-      <div class="pbe-funnel-head">
-        <span>PROPBETEDGE PRO ACCESS</span>
-        <strong>Pick your access.</strong>
-        <p>All Access covers every PropBetEdge Pro sport under one membership. Only want NFL? Choose an NFL Pro plan below.</p>
-      </div>
-      ${allAccessCard(membership())}
-      ${allAccessDivider()}
-      <div class="pbe-pro-plans pbe-funnel-plans" role="radiogroup" aria-label="NFL Pro plans">
+    return `<div class="pbe-pro-plans pbe-funnel-plans" role="radiogroup" aria-label="NFL Pro plans">
         ${planCard('monthly', selected)}
         ${planCard('weekly', selected)}
-      </div>
-      <div class="pbe-funnel-email-label">
-        <b>Your access email</b>
-        <span>We tie this email to checkout so your NFL Pro access unlocks automatically.</span>
-      </div>
+      </div>`;
+  }
+
+  /* The product list again, for the phone sheet, where the visual column is a
+     short banner and the list reads after the action. Hidden on desktop. */
+  function includedSheetHtml() {
+    return `<section class="pbe-acct-included" aria-label="What PropBetEdge NFL includes">
+        <span class="pbe-acct-included-k">WHAT YOU GET</span>
+        <ul>${FEATURES.map(([name, line]) => `<li><b>${escapeHtml(name)}</b><span>${escapeHtml(line)}</span></li>`).join('')}</ul>
+      </section>`;
+  }
+
+  /* ------------------------------------------------------------ STATE 1 — get access */
+
+  function signedOutMarkup() {
+    const note = window.PBEPro?.denialNote?.() || '';
+    return `<div class="pbe-funnel-root pbe-acct-panel" data-acct="v3" data-funnel-state="signed-out" data-funnel-view="join" data-membership="free">
+      ${head('GET ACCESS · PROPBETEDGE PRO', 'Choose your access.', note ? escapeHtml(note) : 'One membership for every PropBetEdge Pro sport, or NFL on its own.')}
+      ${allAccessCard(membership())}
+      ${allAccessDivider()}
+      ${plansHtml()}
       <div class="pbe-pro-auth-state pbe-funnel-auth">
+        <label class="pbe-acct-label" for="pbe-funnel-email">Email for your NFL Pro access</label>
         <div class="pbe-funnel-checkout-row">
-          <input class="pbe-pro-email" id="pbe-funnel-email" type="email" autocomplete="email" inputmode="email" placeholder="you@example.com" aria-label="Email address">
+          <input class="pbe-pro-email" id="pbe-funnel-email" type="email" autocomplete="email" inputmode="email" autocapitalize="off" spellcheck="false" placeholder="you@example.com">
           <button class="pbe-pro-cta" id="pbe-funnel-checkout" type="button"></button>
         </div>
         <div class="pbe-funnel-charge">${escapeHtml(PRICING.charge)}</div>
-        <div class="pbe-funnel-signin-row"><span>Already have NFL Pro?</span><button class="pbe-funnel-signin-link" id="pbe-funnel-signin" type="button">Sign in to NFL Pro</button></div>
-        <div class="pbe-pro-message" id="pbe-funnel-message"></div>
+        <p class="pbe-acct-fine">Checkout is tied to this email, so NFL Pro unlocks automatically. New NFL Pro releases are included while access is active.</p>
+        <div class="pbe-pro-message" id="pbe-funnel-message" role="status" aria-live="polite"></div>
       </div>
+      <div class="pbe-acct-switch"><span>Already a member?</span><button class="pbe-funnel-signin-link" id="pbe-funnel-show-signin" type="button">Sign in</button></div>
       <div class="pbe-pro-secure">◆ Secure checkout by Stripe · Passwordless PropBetEdge access</div>
+      ${includedSheetHtml()}
     </div>`;
   }
 
+  /* ------------------------------------------------------------ STATE 2 — member sign-in */
+
+  function signInMarkup() {
+    return `<div class="pbe-funnel-root pbe-acct-panel pbe-acct-signin" data-acct="v3" data-funnel-state="signed-out" data-funnel-view="signin" data-membership="free">
+      ${head('VERIFIED MEMBER ACCESS', 'Welcome back.', 'Sign in with the email attached to your PropBetEdge access.')}
+      <form class="pbe-acct-form" id="pbe-funnel-signin-form" novalidate>
+        <label class="pbe-acct-label" for="pbe-funnel-email">Email address</label>
+        <input class="pbe-pro-email" id="pbe-funnel-email" type="email" autocomplete="email" inputmode="email" autocapitalize="off" spellcheck="false" placeholder="you@example.com" required>
+        <button class="pbe-pro-cta" id="pbe-funnel-send-link" type="submit">Send secure sign-in link</button>
+        <div class="pbe-pro-message" id="pbe-funnel-message" role="status" aria-live="polite"></div>
+      </form>
+      <ul class="pbe-acct-trust" aria-label="How sign-in works">
+        <li><b>Passwordless secure access.</b> No password required.</li>
+        <li>We email a single-use link to the address on your membership.</li>
+      </ul>
+      <div class="pbe-acct-switch"><span>Need access?</span><button class="pbe-funnel-signin-link" id="pbe-funnel-show-join" type="button">View membership options</button></div>
+      <p class="pbe-acct-reminder"><span>YOUR ACCESS</span>${escapeHtml(REMINDER)}</p>
+    </div>`;
+  }
+
+  /* ------------------------------------------------------------ STATE 3 — signed in, no access */
+
   function signedInFreeMarkup(email) {
-    const selected = selectedKey();
     const note = window.PBEPro?.denialNote?.() || '';
-    return `<div class="pbe-funnel-root" data-funnel-state="signed-in-free" data-membership="free" data-funnel-note="${escapeHtml(state().entitlement?.reason || '')}">
-      <div class="pbe-funnel-head">
-        <span>PROPBETEDGE PRO ACCESS</span>
-        <strong>${note ? 'Pick your access again.' : 'Your account is ready. Pick your access.'}</strong>
-        <p>${note ? escapeHtml(note) : 'All Access covers every PropBetEdge Pro sport under one membership. Only want NFL? Choose an NFL Pro plan below.'}</p>
-      </div>
+    return `<div class="pbe-funnel-root pbe-acct-panel" data-acct="v3" data-funnel-state="signed-in-free" data-funnel-view="ready" data-membership="free" data-funnel-note="${escapeHtml(state().entitlement?.reason || '')}">
+      <div class="pbe-acct-identity"><i aria-hidden="true"></i><span>SIGNED IN</span><strong>${escapeHtml(email)}</strong><button class="pbe-funnel-signin-link" id="pbe-funnel-signout" type="button">Sign out</button></div>
+      ${head('ACCOUNT READY', note ? 'Choose your access again.' : 'Your account is ready.<br>Choose your access.', note ? escapeHtml(note) : 'One membership for every PropBetEdge Pro sport, or NFL on its own.')}
       ${allAccessCard(membership())}
       ${allAccessDivider()}
-      <div class="pbe-funnel-user"><span>Signed in as</span><strong>${escapeHtml(email)}</strong></div>
-      <div class="pbe-pro-plans pbe-funnel-plans" role="radiogroup" aria-label="NFL Pro plans">
-        ${planCard('monthly', selected)}
-        ${planCard('weekly', selected)}
-      </div>
+      ${plansHtml()}
       <div class="pbe-pro-auth-state pbe-funnel-auth">
         <button class="pbe-pro-cta" id="pbe-funnel-checkout" type="button"></button>
         <div class="pbe-funnel-charge">${escapeHtml(PRICING.charge)}</div>
-        <div class="pbe-funnel-signin-row"><span>Already paid?</span><button class="pbe-funnel-signin-link" id="pbe-funnel-refresh" type="button">Refresh access</button></div>
-        <div class="pbe-pro-message" id="pbe-funnel-message"></div>
+        <div class="pbe-pro-message" id="pbe-funnel-message" role="status" aria-live="polite"></div>
       </div>
+      <div class="pbe-acct-switch"><span>Already paid?</span><button class="pbe-funnel-signin-link" id="pbe-funnel-refresh" type="button">Refresh access</button></div>
       <div class="pbe-pro-secure">◆ Secure checkout by Stripe · Entitlement verified by PropBetEdge</div>
+      ${includedSheetHtml()}
     </div>`;
   }
+
+  /* ------------------------------------------------------------ STATE 4 — active members */
 
   function accessPeriodCopy(subscription) {
     const raw = subscription?.current_period_end;
@@ -152,7 +236,8 @@
   }
 
   /* Active members. One markup, three states from the shared contract:
-       sport_pro   NFL PRO ACTIVE · plan · manage link · UPGRADE TO ALL ACCESS hero (no NFL purchase)
+       sport_pro   NFL PRO ACTIVE · plan · manage link · UPGRADE TO ALL ACCESS hero
+                   (only when the contract says show_all_access_upgrade; no NFL purchase)
        all_access  ALL ACCESS ACTIVE · manage link · network row · NO purchase CTA
        owner       OWNER · no manage link · no purchase CTA
      `owner` (the legacy role flag) still drives data-funnel-state so the
@@ -165,46 +250,110 @@
     const allAccess = mState === 'all_access';
     const isOwner = mState === 'owner';
     const badge = L?.membershipBadgeHtml?.(m?.entitled ? m : { state: mState, sport: 'nfl' }) || `<div class="pbe-funnel-plan-badge">${escapeHtml(label)}</div>`;
-    const period = isOwner ? 'Owner access · every NFL Pro feature, no subscription required.' : accessPeriodCopy(subscription);
-    const kicker = allAccess ? 'PROPBETEDGE ALL ACCESS · NFL' : isOwner ? 'NFL PRO · OWNER' : 'NFL PRO · VERIFIED ACCESS';
-    const headline = allAccess ? 'Your PropBetEdge All Access desk is live.' : 'Your NFL Pro decision desk is live.';
+    const period = isOwner ? 'Every NFL Pro feature · no subscription required' : accessPeriodCopy(subscription);
+    const kicker = allAccess ? 'PROPBETEDGE ALL ACCESS · NFL' : isOwner ? 'NFL PRO · VERIFIED OWNER' : 'NFL PRO · ACTIVE';
+    const headline = isOwner ? 'Owner access is active.' : 'You’re in.';
     const lede = allAccess
-      ? 'Every PropBetEdge Pro sport is unlocked on this account, NFL included: PBE Picks and the premium model + market desk are active across supported NFL surfaces.'
-      : 'PBE Picks and the premium model + market desk are active across supported NFL surfaces. Market truth stays visible; model intelligence stays separately labeled.';
-    const manage = m?.entitled ? (L?.manageLinkHtml?.(m) || '') : '';
-    return `<div class="pbe-funnel-root pbe-funnel-active" data-funnel-state="${owner ? 'active-owner' : 'active-pro'}" data-membership="${escapeHtml(mState)}">
-      <div class="pbe-funnel-head">
-        <span>${kicker}</span>
-        <strong>${headline}</strong>
-        <p>${lede}</p>
+      ? 'Your PropBetEdge All Access desk is live. Every PropBetEdge Pro sport is unlocked on this account, NFL included.'
+      : isOwner
+        ? 'Every NFL Pro surface is unlocked on this verified owner account.'
+        : 'Your NFL Pro decision desk is live. PBE Picks and the model + market desk are active across supported NFL surfaces.';
+    const manage = m?.entitled ? (L?.manageLinkHtml?.(m, 'Manage membership') || '') : '';
+    const upgrade = mState === 'sport_pro' && m?.show_all_access_upgrade === true ? allAccessCard(m) : '';
+    const tiles = UNLOCKED.map(([name, line, route]) => `<li><button type="button" class="pbe-acct-tile" data-acct-route="${route}"><i aria-hidden="true"></i><b>${escapeHtml(name)}</b><span>${escapeHtml(line)}</span></button></li>`).join('');
+    return `<div class="pbe-funnel-root pbe-funnel-active pbe-acct-panel" data-acct="v3" data-funnel-view="member" data-funnel-state="${owner ? 'active-owner' : 'active-pro'}" data-membership="${escapeHtml(mState)}">
+      ${head(kicker, headline, lede)}
+      <section class="pbe-acct-card pbe-funnel-active-card" aria-label="Verified account">
+        <div class="pbe-acct-card-top"><small>Verified account</small>${badge}</div>
+        <strong class="pbe-acct-email">${escapeHtml(email || 'NFL Pro member')}</strong>
+        <div class="pbe-acct-card-meta"><span class="pbe-funnel-plan-text">${escapeHtml(plan)}</span><span>${escapeHtml(period)}</span></div>
+      </section>
+      <div class="pbe-acct-unlocked">
+        <span class="pbe-acct-unlocked-k">UNLOCKED ON THIS ACCOUNT</span>
+        <ul>${tiles}</ul>
       </div>
-      <div class="pbe-funnel-user"><span>Verified account</span><strong>${escapeHtml(email || 'NFL Pro member')}</strong></div>
-      <div class="pbe-pro-price-card pbe-funnel-active-card">
-        <div class="pbe-funnel-plan-top">
-          <div>
-            <div class="pbe-pro-plan-label">${allAccess ? 'ALL ACCESS' : 'NFL PRO'} · ACCESS STATUS</div>
-            ${badge}
-          </div>
-          <div class="pbe-funnel-check">✓</div>
-        </div>
-        <div class="pbe-funnel-active-title">Pro intelligence is enabled</div>
-        <div class="pbe-funnel-plan-text">${escapeHtml(plan)}</div>
-        <div class="pbe-pro-renew">${escapeHtml(period)}</div>
-      </div>
-      <div class="pbe-funnel-email-label pbe-funnel-capabilities">
-        <b>Your Pro desk</b>
-        <span>PBE Picks · PBE Fair Line · Model Probability · Best Line · PBE Cast · Track Record · premium research under the same verified Pro entitlement.</span>
-      </div>
-      <div class="pbe-pro-auth-state pbe-funnel-auth">
+      <div class="pbe-pro-auth-state pbe-funnel-auth pbe-acct-actions">
         <button class="pbe-pro-cta" id="pbe-funnel-open-board" type="button">Open Pro Prop Board</button>
         ${manage}
         <button class="pbe-pro-cta secondary" id="pbe-funnel-refresh" type="button">Refresh verified access</button>
-        <div class="pbe-pro-message" id="pbe-funnel-message"></div>
+        <div class="pbe-pro-message" id="pbe-funnel-message" role="status" aria-live="polite"></div>
       </div>
-      ${allAccess ? (L?.networkLinksHtml?.('nfl') || '') : ''}
-      ${allAccessCard(m)}
-      <div class="pbe-pro-secure">◆ ${escapeHtml(label)} · ${isOwner ? 'verified server-side from your emailed sign-in link' : 'verified by PropBetEdge'}</div>
+      ${allAccess ? `<div class="pbe-acct-network"><span>YOUR NETWORK</span>${L?.networkLinksHtml?.('nfl') || ''}</div>` : ''}
+      ${upgrade}
+      <div class="pbe-pro-secure">◆ ${escapeHtml(label)} · ${isOwner ? 'verified server-side from your emailed sign-in link' : 'verified by PropBetEdge'} · new NFL Pro releases included while active</div>
     </div>`;
+  }
+
+  /* ------------------------------------------------------------ the visual column */
+
+  function chipsHtml(kind) {
+    return `<div class="pbe-acct-chips" aria-hidden="true">
+        <span><i></i>DECISION · PRE-KICKOFF</span>
+        <span><i></i>GRADE · FINAL</span>
+        <span><i></i>RECORD · PERMANENT</span>
+        ${kind === 'member' ? '<span class="is-unlocked"><i></i>UNLOCKED</span>' : ''}
+      </div>`;
+  }
+
+  function storyHtml(kind, s = state(), m = membership(s)) {
+    if (kind === 'member') {
+      const mState = memberState(s, m);
+      const label = m?.entitled && m.label ? m.label : (mState === 'owner' ? 'OWNER' : 'NFL PRO ACTIVE');
+      return `<span class="pbe-acct-eyebrow">${escapeHtml(label)} · VERIFIED</span>
+        <h2 class="pbe-acct-title">${mState === 'owner' ? 'The full desk,<br><em>unlocked.</em>' : 'Every surface<br><em>is live.</em>'}</h2>
+        <p class="pbe-acct-copy">PBE Algo evaluates eligible games, records each decision before kickoff and grades it at the final. Every part of that loop is open on this account.</p>`;
+    }
+    if (kind === 'signin') {
+      return `<span class="pbe-acct-eyebrow">PROPBETEDGE NFL · MEMBER ACCESS</span>
+        <h2 class="pbe-acct-title">The pick is only<br><em>the beginning.</em></h2>
+        <p class="pbe-acct-copy">Your PBE Picks, PBE Algo decisions and the permanent Track Record are one secure link away.</p>`;
+    }
+    if (kind === 'check') {
+      return `<span class="pbe-acct-eyebrow">PROPBETEDGE NFL · ACCESS CHECK</span>
+        <h2 class="pbe-acct-title">Your access<br><em>is protected.</em></h2>
+        <p class="pbe-acct-copy">While verification is unavailable, nothing about your membership changes, and public NFL intelligence keeps working.</p>`;
+    }
+    return `<span class="pbe-acct-eyebrow">PROPBETEDGE NFL · INTELLIGENCE BUILT TO BE GRADED</span>
+        <h2 class="pbe-acct-title">The pick is only<br><em>the beginning.</em></h2>
+        <p class="pbe-acct-copy">PBE Algo evaluates eligible games, records the decision before kickoff, and turns every final result into evidence for the permanent record.</p>
+        <ul class="pbe-acct-features">${FEATURES.map(([name, line]) => `<li><b>${escapeHtml(name)}</b><span>${escapeHtml(line)}</span></li>`).join('')}</ul>`;
+  }
+
+  function visualKind(s = state()) {
+    if (s.loading) return 'check';
+    if (s.pro) return 'member';
+    if (window.PBEShellAuthState?.isDegraded?.(s) || s.access === 'unavailable') return 'check';
+    if (s.user) return 'join';
+    return view === 'signin' ? 'signin' : 'join';
+  }
+
+  /* Paints the left column for the current state. Idempotent: the art layer
+     is built once; the story is replaced only when its state changes. */
+  function paintVisual() {
+    const modal = document.querySelector('#pbe-pro-backdrop .pbe-pro-modal');
+    const pitch = modal?.querySelector('.pbe-pro-pitch');
+    if (!modal || !pitch) return;
+    const s = state();
+    const kind = visualKind(s);
+    const m = membership(s);
+    const key = `${kind}:${memberState(s, m)}`;
+    if (!modal.classList.contains('pbe-acct')) modal.classList.add('pbe-acct');
+    if (modal.dataset.acctKind !== kind) modal.dataset.acctKind = kind;
+    if (pitch.dataset.acctKey === key) return;
+    pitch.dataset.acctKey = key;
+    pitch.classList.add('pbe-acct-visual');
+    if (!pitch.querySelector(':scope > .pbe-acct-art')) {
+      pitch.innerHTML = `<div class="pbe-acct-art" role="img" aria-label="NFL stadium under the lights" title="${escapeHtml(STADIUM.credit)}" style="--pbe-acct-tall:url('${STADIUM.tall}');--pbe-acct-wide:url('${STADIUM.wide}')">
+          <span class="pbe-acct-grid" aria-hidden="true"></span>
+          <img class="pbe-acct-logo" src="${PBE_LOGO}" alt="PropBetEdge" width="118" height="66" decoding="async" onerror="this.remove()">
+          <div data-acct-chips></div>
+        </div>
+        <div class="pbe-acct-story" data-acct-story></div>`;
+    }
+    const chips = pitch.querySelector('[data-acct-chips]');
+    if (chips) chips.innerHTML = chipsHtml(kind);
+    const story = pitch.querySelector('[data-acct-story]');
+    if (story) story.innerHTML = storyHtml(kind, s, m);
   }
 
   function escapeHtml(value) {
@@ -229,6 +378,10 @@
     el.textContent = text || '';
   }
 
+  /* Writes only on change: the modal is observed, and rewriting an identical
+     text node is still a mutation that would re-queue this surface forever. */
+  function setText(el, text) { if (el && el.textContent !== text) el.textContent = text; }
+
   function paintSelection() {
     const selected = selectedKey();
     document.querySelectorAll('#pbe-pro-checkout [data-funnel-plan]').forEach(card => {
@@ -237,16 +390,11 @@
       card.setAttribute('aria-pressed', on ? 'true' : 'false');
       card.setAttribute('aria-checked', on ? 'true' : 'false');
       const check = card.querySelector('.pbe-funnel-check');
-      if (check) check.textContent = on ? '✓' : '○';
-      const copy = card.querySelector('.pbe-funnel-select-copy');
-      if (copy) {
-        const p = PLANS[card.dataset.funnelPlan];
-        copy.textContent = on ? 'Selected' : `Choose ${p.label.toLowerCase()}`;
-      }
+      if (check) setText(check, on ? '✓' : '');
     });
     const btn = document.getElementById('pbe-funnel-checkout');
     const p = PLANS[selected] || PLANS.monthly;
-    if (btn) btn.textContent = `Unlock NFL Pro · ${p.price}${selected === 'monthly' ? '/mo' : '/wk'}`;
+    if (btn) setText(btn, `Unlock NFL Pro · ${p.price}${selected === 'monthly' ? '/mo' : '/wk'}`);
   }
 
   function stripeUrl(plan, email) {
@@ -260,6 +408,7 @@
     const email = emailValue();
     if (!validEmail(email)) {
       message('Enter the email you want tied to NFL Pro.', 'error');
+      document.getElementById('pbe-funnel-email')?.focus();
       return false;
     }
     const requested = planKey(ref);
@@ -274,12 +423,21 @@
     return true;
   }
 
+  /* Existing member: the auth Worker answers every request with the same
+     generic 200 and emails a link only when the address holds access. One
+     request per submit; the button stays disabled while it is in flight. */
   async function signInExisting() {
+    if (linkRunning) return;
     const email = emailValue();
-    if (!validEmail(email)) return message('Enter the email tied to your NFL Pro access.', 'error');
-    const btn = document.getElementById('pbe-funnel-signin');
+    if (!validEmail(email)) {
+      message('Enter the email attached to your PropBetEdge access.', 'error');
+      document.getElementById('pbe-funnel-email')?.focus();
+      return;
+    }
+    linkRunning = true;
+    const btn = document.getElementById('pbe-funnel-send-link');
     if (btn) btn.disabled = true;
-    message('Sending your secure NFL Pro sign-in link…');
+    message('Sending your secure sign-in link…');
     try {
       const r = await fetch(`${AUTH_WORKER}/v1/auth/request`, {
         method: 'POST',
@@ -294,7 +452,9 @@
     } catch (error) {
       message(error?.message || 'Could not send your sign-in link.', 'error');
     } finally {
-      if (btn) btn.disabled = false;
+      linkRunning = false;
+      const live = document.getElementById('pbe-funnel-send-link');
+      if (live) live.disabled = false;
     }
   }
 
@@ -304,7 +464,7 @@
     message('Checking NFL Pro access…');
     try {
       const pro = await window.PBEPro?.refreshAccess?.();
-      if (pro || state()?.pro) message('NFL Pro is active.', 'success');
+      if (pro || state()?.pro) message('Access verified.', 'success');
       else message('NFL Pro is not active on this email yet. If you just paid, wait a few seconds and try again.');
     } catch (error) {
       message(error?.message || 'Could not refresh NFL Pro access.', 'error');
@@ -313,33 +473,56 @@
     }
   }
 
+  function setView(next) {
+    const v = next === 'signin' ? 'signin' : 'join';
+    if (v === view) return;
+    view = v;
+    focusPending = true;
+    mountPurchaseState();
+  }
+
+  function navTo(route) {
+    window.PBEPro?.close?.();
+    window.App?.nav?.(route);
+  }
+
+  /* Handlers are assigned as properties (onclick / onsubmit), never added, so
+     re-wiring the same nodes after every repaint can never stack listeners. */
   function wire(host) {
     host.querySelectorAll('[data-funnel-plan]').forEach(card => {
       card.onclick = () => setSelected(card.dataset.funnelPlan);
     });
     const checkout = document.getElementById('pbe-funnel-checkout');
     if (checkout) checkout.onclick = () => startCheckout();
-    const signin = document.getElementById('pbe-funnel-signin');
-    if (signin) signin.onclick = signInExisting;
+    const form = document.getElementById('pbe-funnel-signin-form');
+    if (form) form.onsubmit = event => { event.preventDefault(); signInExisting(); };
+    const showSignin = document.getElementById('pbe-funnel-show-signin');
+    if (showSignin) showSignin.onclick = () => setView('signin');
+    const showJoin = document.getElementById('pbe-funnel-show-join');
+    if (showJoin) showJoin.onclick = () => setView('join');
     const refresh = document.getElementById('pbe-funnel-refresh');
     if (refresh) refresh.onclick = refreshExistingAccess;
+    const signout = document.getElementById('pbe-funnel-signout');
+    if (signout) signout.onclick = () => { signout.disabled = true; window.PBEPro?.signOut?.(); };
     const openBoard = document.getElementById('pbe-funnel-open-board');
-    if (openBoard) openBoard.onclick = () => {
-      window.PBEPro?.close?.();
-      window.App?.nav?.('propboard');
-    };
+    if (openBoard) openBoard.onclick = () => navTo('propboard');
+    host.querySelectorAll('[data-acct-route]').forEach(tile => {
+      tile.onclick = () => navTo(tile.dataset.acctRoute);
+    });
     const input = document.getElementById('pbe-funnel-email');
-    if (input) input.onkeydown = event => { if (event.key === 'Enter') startCheckout(); };
+    if (input && checkout) input.onkeydown = event => { if (event.key === 'Enter') startCheckout(); };
     paintSelection();
   }
 
   function mountPurchaseState() {
     const s = state();
+    paintVisual();
     if (s.loading) return;
     const host = document.getElementById('pbe-pro-checkout');
     if (!host) return;
-    /* paywall.js owns the "couldn't verify access" screen; no plans are pushed
-       at a reader whose subscription could not be checked */
+    /* paywall.js / sports-shell-auth-state.js own the "couldn't verify access"
+       screens; no plans are pushed at a reader whose subscription could not
+       be checked */
     if (s.access === 'unavailable') return;
 
     const owner = s.pro && s.role === 'owner';
@@ -350,17 +533,24 @@
     const current = root?.dataset?.funnelState;
     const membershipChanged = (root?.dataset?.membership || 'free') !== mState;
     const noteChanged = mode === 'signed-in-free' && (root?.dataset?.funnelNote || '') !== String(s.entitlement?.reason || '');
-    if (current !== mode || membershipChanged || noteChanged) {
+    const viewChanged = mode === 'signed-out' && (root?.dataset?.funnelView || '') !== view;
+    if (current !== mode || membershipChanged || noteChanged || viewChanged) {
       host.innerHTML = s.pro
         ? activeProMarkup(String(s.user?.email || '').toLowerCase(), s.subscription, owner, m)
         : s.user
           ? signedInFreeMarkup(String(s.user.email || '').toLowerCase())
-          : signedOutMarkup();
+          : view === 'signin' ? signInMarkup() : signedOutMarkup();
     }
     wire(host);
     /* paywall.js owns the reader-facing notice (refused link, checkout return);
        a re-render here must never drop it. */
     window.PBEPro?.paintNotice?.();
+    /* Desktop only: a phone keyboard must not cover the sheet on open. */
+    if (focusPending && document.getElementById('pbe-pro-backdrop')?.classList.contains('open')) {
+      focusPending = false;
+      const input = host.querySelector('.pbe-acct-signin #pbe-funnel-email');
+      if (input && window.matchMedia?.('(min-width:901px)').matches) input.focus({ preventScroll: true });
+    }
   }
 
   function updateStructuredData() {
@@ -398,6 +588,29 @@
     window.PBEPro.checkout = ref => startCheckout(ref);
   }
 
+  /* Why the surface opened (paywall.js open(reason)). The header's "Sign In",
+     a failed or incomplete magic link and a checkout return whose access link
+     still has to be requested land on the member sign-in view; everything
+     else (Unlock NFL Pro, Upgrade, plan buttons) on get-access. */
+  const SIGNIN_REASONS = new Set(['account', 'signin', 'auth-failed', 'auth-incomplete', 'checkout-success']);
+  function onOpen(event) {
+    const reason = String(event?.detail?.reason || '');
+    view = SIGNIN_REASONS.has(reason) ? 'signin' : 'join';
+    checkoutRunning = false;
+    focusPending = true;
+  }
+
+  /* Back from Stripe can restore this page from the back/forward cache with
+     the checkout button still disabled; release it so the page never wedges. */
+  function onPageShow(event) {
+    if (!event?.persisted) return;
+    checkoutRunning = false;
+    linkRunning = false;
+    const btn = document.getElementById('pbe-funnel-checkout');
+    if (btn) btn.disabled = false;
+    message('');
+  }
+
   function apply() {
     queued = false;
     publishPurchaseContract();
@@ -412,6 +625,8 @@
     updateStructuredData();
     publishPurchaseContract();
     window.addEventListener('pbe:pro-state', queue);
+    window.addEventListener('pbe:pro-open', onOpen);
+    window.addEventListener('pageshow', onPageShow);
     document.addEventListener('click', event => {
       if (event.target?.closest?.('.pbe-pro-account,[data-pbe-open-pro],[data-pro]')) setTimeout(queue, 20);
     });
@@ -422,13 +637,16 @@
     window.PBECheckoutFunnel = {
       apply,
       setSelected,
+      setView,
       startCheckout,
       signInExisting,
       refreshExistingAccess,
+      paintVisual,
       plans: PLANS,
+      stadium: STADIUM,
       /* Pure builders, exposed so the membership tests can render each state
          without a browser. */
-      markup: { signedOut: signedOutMarkup, signedInFree: signedInFreeMarkup, active: activeProMarkup, memberState, membership }
+      markup: { signedOut: signedOutMarkup, signIn: signInMarkup, signedInFree: signedInFreeMarkup, active: activeProMarkup, story: storyHtml, memberState, membership }
     };
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', install, { once: true });

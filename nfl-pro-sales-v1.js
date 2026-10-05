@@ -201,6 +201,8 @@
   function enhanceProModal() {
     const root = document.querySelector('.pbe-funnel-root');
     if (!root) return;
+    /* The v3 account shell carries the "new releases included" line itself. */
+    if (root.dataset.acct === 'v3') { root.closest('.pbe-pro-modal')?.querySelector('[data-pro-release-value]')?.remove(); return; }
     const state = root.dataset.funnelState || '';
     /* The note lives in the pitch column (after the feature list), where it
        has room; in the checkout column it sat between the reader and the

@@ -85,7 +85,10 @@ test('active NFL Pro uses the same premium presentation authority, worded by the
   assert.match(funnel, /Your PropBetEdge All Access desk is live\./);
   assert.match(funnel, /Verified account/);
   assert.match(funnel, /Open Pro Prop Board/);
-  assert.match(funnel, /PBE Fair Line · Model Probability · Best Line · PBE Cast · Track Record/);
+  /* the capability line became the unlocked grid: every tile opens a real route */
+  for (const route of ['picks', 'pbepicks', 'qbdna', 'pbecast', 'games', 'marketwatch', 'simulator', 'trackrecord', 'matchups']) {
+    assert.match(funnel, new RegExp(`'${route}'\]`), `unlocked tile -> ${route}`);
+  }
   assert.match(funnel, /const mode = s\.pro \? \(owner \? 'active-owner' : 'active-pro'\) : s\.user \? 'signed-in-free' : 'signed-out'/);
   assert.match(funnel, /const membershipChanged = \(root\?\.dataset\?\.membership \|\| 'free'\) !== mState;/, 'a membership change re-renders even when the funnel mode is unchanged');
   assert.match(funnel, /allAccessCardHtml/); assert.match(funnel, /manageLinkHtml/); assert.match(funnel, /networkLinksHtml\?\.\('nfl'\)/);
