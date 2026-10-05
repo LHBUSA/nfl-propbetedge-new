@@ -116,8 +116,10 @@ test('line_move is no longer hardcoded to zero in the feature vector', () => {
   assert.equal(/line_move: 0,/.test(src), false);
 });
 
-test('the new inputs are off until the owner turns them on, so live picks do not shift under a champion trained on zeros', () => {
+test('feature-v2 inputs remain explicitly gated while the production tuner reweights confidence only', () => {
   const src = read('workers/nfl-game-picks-orchestrator/src/index.js');
   assert.match(src, /PICKS_FEATURES_V2/, 'an explicit switch gates the repaired inputs');
-  assert.match(read('workers/nfl-weight-tuner/src/index.js'), /INTEGRITY_TUNER_HOLD = true/, 'the tuner stays on hold');
+  const tuner = read('workers/nfl-weight-tuner/src/index.js');
+  assert.match(tuner, /continuous_holdout_reweight_v1/, 'the tuner uses the production-safe reweight lane');
+  assert.doesNotMatch(tuner, /INTEGRITY_TUNER_HOLD = true/, 'continuous learning is no longer frozen');
 });
