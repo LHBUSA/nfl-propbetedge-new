@@ -80,6 +80,9 @@
    * is read from the contract object carried with it. */
   function memberLabel(s){
     const m=s?.membership;
+    /* Display only: ◆ PLATINUM for all_access, NFL PRO MEMBER, VERIFIED OWNER. */
+    const d=s?.pro===true?window.PBENflMember?.display?.(m?.entitled?m:null,s?.role==='owner'?'owner':null):null;
+    if(d)return d.header;
     return m?.entitled&&m.label?m.label:'NFL Pro';
   }
   function accountLabel(s){

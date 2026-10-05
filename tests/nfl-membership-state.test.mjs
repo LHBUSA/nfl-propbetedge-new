@@ -204,7 +204,7 @@ test('auth-diag reports the contract version', () => {
 /* ------------------------------------------------------------ the copies */
 test('api/_pbe-membership.js and pbe-membership.js are byte-identical; the CSS ships and the module is exposed on window', () => {
   assert.ok(readFileSync(new URL('../api/_pbe-membership.js', import.meta.url)).equals(readFileSync(new URL('../pbe-membership.js', import.meta.url))));
-  assert.equal(M.CONTRACT_VERSION, '1.2.0', 'the copy is the 1.2.0 shared contract (legacy tiers inside sport_pro)');
+  assert.equal(M.CONTRACT_VERSION, '1.4.0', 'the copy is the canonical 1.4.0 shared contract (10 sports; legacy tiers inside sport_pro)');
   assert.deepEqual([...M.LEGACY_TIERS], ['founding', 'season_pass']);
   for (const tier of ['founding', 'season_pass']) assert.match(read('pbe-membership.css'), new RegExp(`\\.pbe-mbr-badge\\.is-${tier}`));
   const html = read('index.html');
@@ -232,6 +232,7 @@ function run(file, proState) {
   const ctx = vm.createContext({ window, document, console, URL, setTimeout() { return 0; }, clearTimeout() {}, requestAnimationFrame() { return 0; }, queueMicrotask() {}, MutationObserver: class { observe() {} }, CustomEvent: class {}, KeyboardEvent: class {}, localStorage: { getItem() { return null; }, setItem() {} }, fetch: async () => ({}), location: window.location });
   /* page-loader.js loads the NFL All Access hero before the funnel and the
      sales layer; the DOM-less page does the same. */
+  vm.runInContext(read('nfl-member-presentation-v1.js'), ctx, { filename: 'nfl-member-presentation-v1.js' });
   vm.runInContext(read('nfl-all-access-hero-v1.js'), ctx, { filename: 'nfl-all-access-hero-v1.js' });
   vm.runInContext(read(file), ctx, { filename: file });
   return window;
@@ -271,14 +272,14 @@ test('funnel: sport_pro -> NFL PRO ACTIVE, plan text, manage link, UPGRADE TO AL
   assert.equal(w.PBECheckoutFunnel.markup.memberState(proStateFor('sport_pro')), 'sport_pro');
 });
 
-test('funnel: all_access -> ALL ACCESS ACTIVE, manage link, network row, NO purchase CTA anywhere', () => {
+test('funnel: all_access -> PLATINUM MEMBER (display only), manage link, local network link, NO purchase CTA anywhere', () => {
   const w = run('paywall-funnel-v2.js', proStateFor('all_access'));
   const html = w.PBECheckoutFunnel.markup.active('all_access@membership.test', { current_period_end: END }, false);
   assert.match(html, /data-funnel-state="active-pro" data-membership="all_access"/);
-  assert.match(html, /ALL ACCESS ACTIVE/); assert.match(html, /All Access · every PropBetEdge sport/);
-  assert.match(html, /Your PropBetEdge All Access desk is live\./);
+  assert.match(html, /PLATINUM ACCESS ACTIVE/); assert.match(html, /◆ PLATINUM/); assert.match(html, /PropBetEdge All Access · 10 sports \+ Predictions/);
+  assert.match(html, /Your PropBetEdge All Access membership unlocks the full network — 10 sports plus PropBetEdge Predictions\./);
   assert.ok(html.includes(`class="pbe-mbr-manage" href="${M.MANAGE_URL}"`), 'manage link');
-  assert.match(html, /class="pbe-mbr-network"/); assert.match(html, /aria-current="page" class="is-current">NFL</);
+  assert.match(html, /<a class="pbe-acct-network-link" href="\/all-access" data-nfl-network-link>/);
   assert.doesNotMatch(html, PURCHASE_CTA);
   assert.doesNotMatch(visibleText(html), /Stripe/);
   assert.equal(w.PBECheckoutFunnel.markup.memberState(proStateFor('all_access')), 'all_access');
@@ -288,7 +289,7 @@ test('funnel: owner -> OWNER, no manage link, NO purchase CTA', () => {
   const w = run('paywall-funnel-v2.js', proStateFor('owner'));
   const html = w.PBECheckoutFunnel.markup.active('owner@membership.test', null, true);
   assert.match(html, /data-funnel-state="active-owner" data-membership="owner"/);
-  assert.match(html, /is-owner[^>]*>OWNER</); assert.match(html, /Owner access/);
+  assert.match(html, /is-owner[^>]*>VERIFIED OWNER</); assert.match(html, /Owner access/);
   assert.doesNotMatch(html, /pbe-mbr-manage|Manage subscription/);
   assert.doesNotMatch(html, PURCHASE_CTA);
   assert.doesNotMatch(visibleText(html), /Stripe/);
@@ -303,15 +304,16 @@ test('funnel: a granted verdict whose membership object is missing still renders
   assert.equal(w.PBECheckoutFunnel.markup.memberState({ ...proStateFor('free'), membership: member('all_access') }), 'free');
 });
 
-test('header: members show the contract label; free readers keep Sign In / Upgrade; nothing before the answer', () => {
+test('header: members show the Platinum / Pro / Owner designation for the contract state; free readers keep Sign In / Upgrade; nothing before the answer', () => {
   const w = run('sports-shell-auth-state.js', proStateFor('free'));
   const label = w.PBEShellAuthState.accountLabel;
   assert.equal(label({ loading: true, pro: true, membership: member('all_access') }), 'Account');
   assert.equal(label(proStateFor('free')), 'Sign In');
   assert.equal(label({ ...proStateFor('free'), user: { email: 'reader@membership.test' } }), 'Upgrade');
-  assert.equal(label(proStateFor('sport_pro')), 'NFL PRO ACTIVE');
-  assert.equal(label(proStateFor('all_access')), 'ALL ACCESS ACTIVE');
-  assert.equal(label(proStateFor('owner')), 'OWNER');
+  /* display vocabulary (nfl-member-presentation-v1.js); the contract state is unchanged */
+  assert.equal(label(proStateFor('sport_pro')), 'NFL PRO MEMBER');
+  assert.equal(label(proStateFor('all_access')), '◆ PLATINUM');
+  assert.equal(label(proStateFor('owner')), 'VERIFIED OWNER');
   assert.equal(label({ ...proStateFor('sport_pro'), membership: null }), 'NFL Pro', 'legacy fallback when the contract object is absent');
   assert.match(read('sports-shell-v2.js'), /<button class="pbes-head-btn" type="button" id="pbes-account">Account<\/button>/, 'no gold NFL Pro flash before auth resolves');
   assert.doesNotMatch(read('sports-shell-v2.js'), /pbes-head-btn pro/);

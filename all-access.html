@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <link rel="stylesheet" href="/pbe-consent-v1.css">
+  <script src="/pbe-consent-v1.js"></script>
+  <!-- PropBetEdge network analytics: consent-gated GA4 nfl -->
+  <script>
+    (function () {
+      var GA_ID = 'G-BRS48R8PG9';
+      var SURFACE = 'nfl';
+      var loaded = false;
+      var lastManualHash = '';
+      var lastPopStateAt = 0;
+
+      function allowed() {
+        return window.PBEConsent && window.PBEConsent.state && window.PBEConsent.state() === 'granted';
+      }
+      function boot() {
+        if (loaded || !allowed()) return;
+        loaded = true;
+        window.dataLayer = window.dataLayer || [];
+        window.gtag = window.gtag || function () { window.dataLayer.push(arguments); };
+        window.gtag('js', new Date());
+        window.gtag('set', { pbe_surface: SURFACE });
+        window.gtag('config', GA_ID, {
+          cookie_domain: '.propbetedge.ai',
+          cookie_flags: 'SameSite=Lax;Secure'
+        });
+        var tag = document.createElement('script');
+        tag.async = true;
+        tag.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(GA_ID);
+        document.head.appendChild(tag);
+      }
+      function trackHash() {
+        if (!allowed() || typeof window.gtag !== 'function') return;
+        if (Date.now() - lastPopStateAt < 250) return;
+        var currentHash = location.hash || '#/';
+        if (currentHash === lastManualHash) return;
+        lastManualHash = currentHash;
+        window.gtag('event', 'page_view', {
+          page_title: document.title,
+          page_location: location.href,
+          page_path: location.pathname + location.search + currentHash,
+          pbe_surface: SURFACE,
+          pbe_route_type: 'hash'
+        });
+      }
+
+      addEventListener('popstate', function () { lastPopStateAt = Date.now(); });
+      addEventListener('hashchange', trackHash);
+      addEventListener('pbe:consentchange', function (event) {
+        if (event.detail && event.detail.analytics === 'granted') boot();
+      });
+      document.addEventListener('click', function (event) {
+        if (!allowed() || typeof window.gtag !== 'function') return;
+        var target = event.target && event.target.closest ? event.target.closest('a[href]') : null;
+        if (!target) return;
+        try {
+          var url = new URL(target.href, location.href);
+          var host = String(location.hostname || '').toLowerCase();
+          if (url.hostname !== host && (url.hostname === 'propbetedge.ai' || url.hostname.endsWith('.propbetedge.ai'))) {
+            window.gtag('event', 'pbe_network_click', {
+              pbe_surface: SURFACE,
+              source_host: host,
+              target_host: url.hostname,
+              link_url: url.href
+            });
+          }
+        } catch (_) {}
+      }, { capture: true });
+      boot();
+    })();
+  </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#14110d">
+  <meta name="color-scheme" content="dark">
+  <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
+  <title>PropBetEdge All Access on NFL — 10 sports + PropBetEdge Predictions | PropBetEdge NFL</title>
+  <meta name="description" content="Your NFL desk is only the beginning. PropBetEdge All Access adds MLB, NBA, WNBA, NHL, UFC, Tennis, Soccer, Golf, F1 Intelligence and PropBetEdge Predictions to NFL Pro — one membership, $29/month.">
+  <link rel="canonical" href="https://nfl.propbetedge.ai/all-access">
+  <link rel="icon" type="image/png" sizes="80x80" href="https://propbetedge.ai/logo/pbe-mark-80.png">
+  <link rel="icon" type="image/png" sizes="160x160" href="https://propbetedge.ai/logo/pbe-mark-160.png">
+  <link rel="apple-touch-icon" sizes="240x240" href="https://propbetedge.ai/logo/pbe-mark-240.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="PropBetEdge">
+  <meta property="og:title" content="PropBetEdge All Access on NFL — 10 sports + PropBetEdge Predictions">
+  <meta property="og:description" content="Your NFL desk is only the beginning: one membership opens 10 PropBetEdge sport desks plus PropBetEdge Predictions.">
+  <meta property="og:url" content="https://nfl.propbetedge.ai/all-access">
+  <meta property="og:image" content="https://nfl.propbetedge.ai/og/propbetedge-nfl-1200x630.png?v=20260926">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="PropBetEdge NFL — Football Intelligence. PBE Picks, PBEcast, Player DNA and Track Record.">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:site" content="@PROPBETEDGE">
+  <meta name="twitter:title" content="PropBetEdge All Access on NFL — 10 sports + PropBetEdge Predictions">
+  <meta name="twitter:description" content="Your NFL desk is only the beginning: one membership opens 10 PropBetEdge sport desks plus PropBetEdge Predictions.">
+  <meta name="twitter:image" content="https://nfl.propbetedge.ai/og/propbetedge-nfl-1200x630.png?v=20260926">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"WebPage","name":"PropBetEdge All Access on NFL","url":"https://nfl.propbetedge.ai/all-access","isPartOf":{"@type":"WebSite","name":"PropBetEdge NFL","url":"https://nfl.propbetedge.ai/"},"publisher":{"@id":"https://propbetedge.ai/#organization"},"about":{"@type":"Product","name":"PropBetEdge All Access","description":"10 sports + PropBetEdge Predictions under one PropBetEdge membership.","brand":{"@type":"Brand","name":"PropBetEdge"},"offers":{"@type":"Offer","price":"29","priceCurrency":"USD","url":"https://nfl.propbetedge.ai/all-access","availability":"https://schema.org/InStock"}}}
+  </script>
+  <script>document.documentElement.classList.add('js');</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,800;0,900;1,700;1,900&family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./pbe-tokens.css?v=20260904brand1">
+  <link rel="stylesheet" href="./pbe-system.css?v=20260904brand1">
+  <link rel="stylesheet" href="./pbe-membership.css?v=20260924aa1">
+  <link rel="stylesheet" href="./preferred-source-v1.css">
+  <link rel="stylesheet" href="./network-footer-v1.css">
+  <link rel="stylesheet" href="./nfl-all-access-page-v1.css?v=20261005aa1">
+  <script type="module">
+    import * as PBEMembership from './pbe-membership.js?v=20261005aa14';
+    window.PBEMembership = PBEMembership;
+    window.dispatchEvent(new CustomEvent('pbe:membership-ready'));
+  </script>
+  <script src="./nfl-member-presentation-v1.js?v=20261005platinum1"></script>
+</head>
+<body class="nflaa">
+  <a class="nflaa-skip" href="#nflaa-access">Skip to your access</a>
+  <header class="nflaa-top" role="banner">
+    <a class="nflaa-brand" href="/" aria-label="PropBetEdge NFL home">
+      <img src="https://propbetedge.ai/logo/pbe-mark-80.png" alt="" width="28" height="28" decoding="async">
+      <span>PropBet<em>Edge</em> <b>NFL</b></span>
+    </a>
+    <nav class="nflaa-nav" aria-label="NFL">
+      <a href="/#pbepicks">PBE Picks</a>
+      <a href="/#propboard">Prop Board</a>
+      <a href="/#pbecast">PBEcast</a>
+      <a href="/#qbdna">Player DNA</a>
+      <a href="/#trackrecord">Track Record</a>
+      <a class="is-current" href="/all-access" aria-current="page">★ All Access</a>
+    </nav>
+    <button type="button" class="nflaa-account" id="pbes-account" data-nflaa-account>Account</button>
+  </header>
+
+  <main id="main-content">
+    <div id="view-container">
+      <section class="nflaa-hero" aria-labelledby="nflaa-title">
+        <div class="nflaa-visual" role="img" aria-label="NFL stadium under the lights" title="Lambeau Field · photograph by Mtyson84 · CC0">
+          <div class="nflaa-visual-copy">
+            <span class="nflaa-eyebrow">PROPBETEDGE NETWORK · ALL ACCESS</span>
+            <h1 id="nflaa-title">Your football desk<br><em>is only the beginning.</em></h1>
+            <p>PBE Algo, official PBE Picks, Player DNA, PBEcast and the permanent Track Record are the NFL desk. All Access puts every other PropBetEdge desk — and PropBetEdge Predictions — on the same account.</p>
+            <ul class="nflaa-chips" aria-hidden="true"><li>10 SPORTS</li><li>+ PREDICTIONS</li><li>ONE MEMBERSHIP</li></ul>
+          </div>
+        </div>
+
+        <div class="nflaa-panel" id="nflaa-access" data-state="checking" aria-live="polite" tabindex="-1">
+          <div class="nflaa-state" data-static-offer>
+            <span class="nflaa-k is-gold">PROPBETEDGE ALL ACCESS</span>
+            <h2 class="nflaa-head">10 sports + PropBetEdge Predictions.<br><em>One membership.</em></h2>
+            <p class="nflaa-price"><strong>$29</strong><span>/month</span></p>
+            <p class="nflaa-promo">Launch offer: 25% off while active with code <b>THEEDGE25</b></p>
+            <div class="nflaa-actions">
+              <a class="nflaa-cta" href="https://buy.stripe.com/8x2eVdgmOaqy4pv8Ez7wA0N" rel="noopener" data-pbe-placement="all_access_checkout" data-nflaa-checkout>GET ALL ACCESS</a>
+              <a class="nflaa-btn" href="#nflaa-signin" data-nflaa-signin-open>SIGN IN</a>
+            </div>
+            <p class="nflaa-fine">Charged today · No free trial · Cancel anytime · Secure checkout by Stripe</p>
+          </div>
+          <div class="nflaa-checking" aria-hidden="true"><i></i>Checking your verified access…</div>
+        </div>
+      </section>
+
+      <section class="nflaa-section nflaa-network" aria-labelledby="nflaa-net-title">
+        <div class="nflaa-section-head">
+          <span class="nflaa-k is-gold">THE PROPBETEDGE NETWORK</span>
+          <h2 id="nflaa-net-title">Ten sport desks. <em>One intelligence product beside them.</em></h2>
+          <p>Each desk is built for how its sport actually works. All Access opens every one of them, and PropBetEdge Predictions sits alongside as a separate intelligence product — not an eleventh sport.</p>
+        </div>
+      <!-- network:begin (generated from network-family.json by scripts/build-all-access-page.mjs) -->
+      <div class="nflaa-net-group">
+        <span class="nflaa-k">SPORTS · 10</span>
+        <ul class="nflaa-net-grid" data-net="sports">
+        <li><a class="nflaa-net-tile" href="https://mlb.propbetedge.ai/" data-net-key="mlb">
+          <b>MLB</b><span>PropBetEdge MLB</span><em data-net-status>INCLUDED</em>
+        </a></li>
+        <li><a class="nflaa-net-tile is-here" href="/" data-net-key="nfl" aria-current="page">
+          <b>NFL</b><span>PropBetEdge NFL</span><em data-net-status>YOU ARE HERE</em>
+        </a></li>
+        <li><a class="nflaa-net-tile" href="https://nba.propbetedge.ai/" data-net-key="nba">
+          <b>NBA</b><span>PropBetEdge NBA</span><em data-net-status>INCLUDED</em>
+        </a></li>
+        <li><a class="nflaa-net-tile" href="https://wnba.propbetedge.ai/" data-net-key="wnba">
+          <b>WNBA</b><span>PropBetEdge WNBA</span><em data-net-status>INCLUDED</em>
+        </a></li>
+        <li><a class="nflaa-net-tile" href="https://nhl.propbetedge.ai/" data-net-key="nhl">
+          <b>NHL</b><span>PropBetEdge NHL</span><em data-net-status>INCLUDED</em>
+        </a></li>
+        <li><a class="nflaa-net-tile" href="https://ufc.propbetedge.ai/" data-net-key="ufc">
+          <b>UFC</b><span>PropBetEdge UFC</span><em data-net-status>INCLUDED</em>
+        </a></li>
+        <li><a class="nflaa-net-tile" href="https://tennis.propbetedge.ai/" data-net-key="tennis">
+          <b>Tennis</b><span>PropBetEdge Tennis</span><em data-net-status>INCLUDED</em>
+        </a></li>
+        <li><a class="nflaa-net-tile" href="https://soccer.propbetedge.ai/" data-net-key="soccer">
+          <b>Soccer</b><span>PropBetEdge Soccer</span><em data-net-status>INCLUDED</em>
+        </a></li>
+        <li><a class="nflaa-net-tile" href="https://golf.propbetedge.ai/" data-net-key="golf">
+          <b>Golf</b><span>PropBetEdge Golf</span><em data-net-status>INCLUDED</em>
+        </a></li>
+        <li><a class="nflaa-net-tile" href="https://f1.propbetedge.ai/" data-net-key="f1">
+          <b>F1 Intelligence</b><span>F1 Intelligence</span><em data-net-status>INCLUDED</em>
+        </a></li>
+        </ul>
+      </div>
+      <div class="nflaa-net-group is-intel">
+        <span class="nflaa-k">INTELLIGENCE</span>
+        <ul class="nflaa-net-grid is-products" data-net="products">
+        <li><a class="nflaa-net-tile is-product" href="https://predictions.propbetedge.ai/" data-net-key="predictions">
+          <b>PropBetEdge Predictions</b><span>Intelligence product · not a sport</span><em data-net-status>INCLUDED</em>
+        </a></li>
+        </ul>
+      </div>
+      <!-- network:end -->
+      </section>
+
+      <section class="nflaa-section nflaa-nfl" aria-labelledby="nflaa-nfl-title">
+        <div class="nflaa-section-head">
+          <span class="nflaa-k is-gold">THE NFL DESK INSIDE ALL ACCESS</span>
+          <h2 id="nflaa-nfl-title">Everything NFL Pro opens, <em>included.</em></h2>
+          <p>All Access includes the full NFL Pro desk — the same surfaces an NFL Pro member gets, verified by PropBetEdge on your account.</p>
+        </div>
+        <ul class="nflaa-caps">
+          <li><a href="/#picks"><b>PBE Algo</b><span>Model Lab · decisions recorded before kickoff</span></a></li>
+          <li><a href="/#pbepicks"><b>Official PBE Picks</b><span>Only qualified production calls</span></a></li>
+          <li><a href="/#qbdna"><b>Player DNA</b><span>QB · WR · RB · TE usage and performance</span></a></li>
+          <li><a href="/#pbecast"><b>PBEcast</b><span>Live game intelligence</span></a></li>
+          <li><a href="/#games"><b>Game Center</b><span>Games + schedule</span></a></li>
+          <li><a href="/#marketwatch"><b>Model + Market</b><span>Probability, fair line and market context</span></a></li>
+          <li><a href="/#simulator"><b>Simulation</b><span>Line Simulator</span></a></li>
+          <li><a href="/#trackrecord"><b>Track Record</b><span>Permanent graded history</span></a></li>
+          <li><a href="/#matchups"><b>Research</b><span>Matchup Research</span></a></li>
+        </ul>
+      </section>
+
+      <section class="nflaa-section nflaa-faq" aria-labelledby="nflaa-faq-title">
+        <div class="nflaa-section-head"><span class="nflaa-k is-gold">GOOD TO KNOW</span><h2 id="nflaa-faq-title">How All Access works</h2></div>
+        <dl>
+          <div><dt>Is PropBetEdge Predictions a sport?</dt><dd>No. It is a separate intelligence product — independent, source-backed forecasts with model probability, market comparison and a scored record. All Access includes it beside the 10 sports.</dd></div>
+          <div><dt>I only follow football.</dt><dd>NFL Pro remains available on its own from your NFL account. All Access is the option for readers who want the rest of the network too.</dd></div>
+          <div><dt>Already an NFL Pro member?</dt><dd>Your NFL desk stays exactly as it is. Upgrading adds the other nine sport desks and PropBetEdge Predictions to the same account.</dd></div>
+          <div><dt>How is access verified?</dt><dd>Passwordless: a single-use sign-in link to the email on your membership. Access is decided on the server from your active membership, never in the browser.</dd></div>
+        </dl>
+      </section>
+    </div>
+  </main>
+
+  <script src="./preferred-source-v1.js"></script>
+  <script src="./network-footer-v1.js"></script>
+  <script src="./nfl-all-access-hero-v1.js?v=20261005aa2"></script>
+  <script src="./nfl-all-access-page-v1.js?v=20261005aa1"></script>
+</body>
+</html>

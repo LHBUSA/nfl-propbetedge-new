@@ -14,9 +14,9 @@
  *   OWNER       — verified owner identity (access_source 'owner')
  */
 
-export const CONTRACT_VERSION = '1.2.0';
+export const CONTRACT_VERSION = '1.4.0';
 
-export const SPORT_LABELS = Object.freeze({ mlb: 'MLB', nfl: 'NFL', nba: 'NBA', nhl: 'NHL', wnba: 'WNBA', ufc: 'UFC', tennis: 'Tennis', soccer: 'Soccer' });
+export const SPORT_LABELS = Object.freeze({ mlb: 'MLB', nfl: 'NFL', nba: 'NBA', nhl: 'NHL', wnba: 'WNBA', ufc: 'UFC', tennis: 'Tennis', soccer: 'Soccer', golf: 'Golf', f1: 'F1' });
 
 export const ALL_ACCESS_URL = 'https://propbetedge.ai/pro';
 export const MANAGE_URL = 'https://billing.stripe.com/p/login/cNi3cv2vY7em3lr4oj7wA00';
@@ -44,6 +44,8 @@ export const NETWORK = Object.freeze([
   { key: 'ufc', label: 'UFC', name: 'PropBetEdge UFC', url: 'https://ufc.propbetedge.ai' },
   { key: 'tennis', label: 'Tennis', name: 'PropBetEdge Tennis', url: 'https://tennis.propbetedge.ai' },
   { key: 'soccer', label: 'Soccer', name: 'PropBetEdge Soccer', url: 'https://soccer.propbetedge.ai' },
+  { key: 'golf', label: 'Golf', name: 'PropBetEdge Golf', url: 'https://golf.propbetedge.ai' },
+  { key: 'f1', label: 'F1', name: 'PropBetEdge F1', url: 'https://f1.propbetedge.ai' },
 ]);
 
 export const STATES = Object.freeze(['free', 'sport_pro', 'all_access', 'owner']);
@@ -159,7 +161,7 @@ export function allAccessCardHtml(m, { compact = false } = {}) {
   return `<aside class="pbe-mbr-aa${compact ? ' is-compact' : ''}" aria-label="PropBetEdge All Access">
     <div class="pbe-mbr-aa-head"><span class="pbe-mbr-aa-eyebrow">PropBetEdge Network</span><span class="pbe-mbr-aa-price">${esc(ALL_ACCESS_OFFER.price)}</span></div>
     <h3 class="pbe-mbr-aa-title">${esc(heading)}</h3>
-    <p class="pbe-mbr-aa-copy">${esc(ALL_ACCESS_OFFER.tagline)} MLB · NFL · NBA · NHL · WNBA · UFC · Tennis · Soccer, plus every sport added next.</p>
+    <p class="pbe-mbr-aa-copy">${esc(ALL_ACCESS_OFFER.tagline)} MLB · NFL · NBA · NHL · WNBA · UFC · Tennis · Soccer · Golf · F1, plus every sport added next.</p>
     <p class="pbe-mbr-aa-promo">Launch offer: ${esc(ALL_ACCESS_OFFER.promoLine)}</p>
     <div class="pbe-mbr-aa-actions">
       <a class="pbe-mbr-aa-cta" href="${ALL_ACCESS_OFFER.checkoutUrl}" rel="noopener" data-pbe-placement="all_access_checkout">Get All Access →</a>

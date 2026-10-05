@@ -1,0 +1,157 @@
+/* PropBetEdge NFL — native All Access page v1 (/all-access).
+   The account-v3 visual language on a full page: warm ink, Playfair heads,
+   JetBrains Mono eyebrows, gold for offers, verified green for what a member
+   owns, a cool platinum accent for Platinum Members. Tokens: pbe-tokens.css. */
+:root{--aa-ink:#14110d;--aa-ink-2:#1d1914;--aa-ink-3:#2a241c;--aa-art:#0e0b08;--aa-paper:#f5f1eb;--aa-paper-2:#e8e1d4;--aa-dim:#b8b3a8;--aa-faint:#8a857b;--aa-line:rgba(255,245,220,.10);--aa-line-2:rgba(255,245,220,.16);--aa-gold:#d4af37;--aa-gold-bright:#e9c75a;--aa-green:#7fe0a4;--aa-platinum:#efe9df;
+  --aa-display:var(--pbe-font-display,"Playfair Display",Georgia,serif);--aa-ui:var(--pbe-font-ui,Inter,system-ui,sans-serif);--aa-data:var(--pbe-font-data,"JetBrains Mono",ui-monospace,monospace)}
+body.nflaa{margin:0;min-height:100vh;background:radial-gradient(1200px 520px at 15% -10%,rgba(212,175,55,.10),transparent 60%),linear-gradient(180deg,var(--aa-ink-2),var(--aa-ink) 40%);color:var(--aa-paper);font-family:var(--aa-ui);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+.nflaa *{box-sizing:border-box}
+.nflaa a{color:inherit}
+.nflaa :focus-visible{outline:2px solid var(--aa-gold-bright);outline-offset:2px}
+.nflaa-skip{position:absolute;left:-9999px;top:8px;z-index:50;padding:10px 14px;border-radius:8px;background:var(--aa-gold-bright);color:#17120a;font:800 12px/1 var(--aa-data)}
+.nflaa-skip:focus{left:12px}
+
+/* header */
+.nflaa-top{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:18px;min-height:60px;padding:0 clamp(16px,3vw,32px);border-bottom:1px solid var(--aa-line);background:rgba(20,17,13,.92);backdrop-filter:blur(8px)}
+.nflaa-brand{display:inline-flex;align-items:center;gap:10px;text-decoration:none;flex:none}
+.nflaa-brand span{color:var(--aa-paper);font:800 15px/1 var(--aa-ui);letter-spacing:-.01em}
+.nflaa-brand em{color:var(--aa-gold-bright);font-style:normal}
+.nflaa-brand b{margin-left:4px;padding:3px 6px;border:1px solid rgba(233,199,90,.45);border-radius:5px;color:var(--aa-gold-bright);font:800 10px/1 var(--aa-data);letter-spacing:.12em}
+.nflaa-nav{display:flex;gap:4px;min-width:0;overflow-x:auto;scrollbar-width:none;flex:1}
+.nflaa-nav::-webkit-scrollbar{display:none}
+.nflaa-nav a{flex:none;display:inline-flex;align-items:center;min-height:40px;padding:0 11px;border-radius:8px;color:var(--aa-dim);font:700 11px/1 var(--aa-data);letter-spacing:.08em;text-transform:uppercase;text-decoration:none}
+.nflaa-nav a:hover{color:var(--aa-paper);background:rgba(255,245,220,.04)}
+.nflaa-nav a.is-current{color:var(--aa-gold-bright);background:rgba(233,199,90,.08)}
+.nflaa-account{flex:none;min-height:40px;padding:0 14px;border:1px solid var(--aa-line-2);border-radius:9px;background:rgba(255,245,220,.03);color:var(--aa-paper);font:800 11px/1 var(--aa-data);letter-spacing:.1em;text-transform:uppercase;cursor:pointer}
+.nflaa-account[data-membership="sport_pro"],.nflaa-account[data-membership="owner"]{border-color:rgba(127,224,164,.45);color:var(--aa-green)}
+.nflaa-account.is-platinum{border-color:rgba(238,232,222,.62);color:var(--aa-platinum);background:linear-gradient(135deg,rgba(244,240,233,.12),rgba(196,188,176,.05))}
+
+/* hero: 46 / 54 like the account sheet */
+#view-container{max-width:1240px;margin:0 auto;padding:clamp(16px,3vw,32px) clamp(16px,3vw,32px) 48px}
+.nflaa-hero{display:grid;grid-template-columns:46fr 54fr;min-height:560px;border:1px solid rgba(233,199,90,.22);border-radius:20px;overflow:hidden;background:linear-gradient(180deg,var(--aa-ink-2),var(--aa-ink));box-shadow:0 40px 120px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,236,180,.06)}
+.nflaa-visual{position:relative;display:flex;align-items:flex-end;padding:32px 34px;background:linear-gradient(180deg,rgba(14,11,8,.78) 0%,rgba(14,11,8,.28) 30%,rgba(14,11,8,.14) 48%,rgba(14,11,8,.62) 70%,rgba(14,11,8,.95) 88%),linear-gradient(90deg,rgba(14,11,8,.5),transparent 35%,transparent 70%,rgba(14,11,8,.55)),url("/stadiums/lambeau-bgsm.webp") 50% 62%/auto 132% no-repeat,var(--aa-art)}
+.nflaa-visual::after{content:"";position:absolute;inset:0;background:rgba(120,82,28,.30);mix-blend-mode:color;pointer-events:none}
+.nflaa-visual-copy{position:relative;z-index:1;max-width:520px}
+.nflaa-eyebrow{display:block;color:var(--aa-gold-bright);font:700 10px/1.45 var(--aa-data);letter-spacing:.17em}
+.nflaa-visual h1{margin:12px 0 0;color:var(--aa-paper);font:900 clamp(34px,3.4vw,48px)/1.02 var(--aa-display);letter-spacing:-.01em}
+.nflaa-visual h1 em{color:var(--aa-gold-bright);font-style:italic}
+.nflaa-visual p{margin:14px 0 0;color:var(--aa-paper-2);font:400 14px/1.55 var(--aa-ui);opacity:.9}
+.nflaa-chips{display:flex;flex-wrap:wrap;gap:6px;margin:16px 0 0;padding:0;list-style:none}
+.nflaa-chips li{padding:6px 9px;border:1px solid var(--aa-line-2);border-radius:999px;background:rgba(14,11,8,.62);color:var(--aa-paper-2);font:700 9px/1 var(--aa-data);letter-spacing:.14em}
+
+/* access panel */
+.nflaa-panel{position:relative;display:flex;flex-direction:column;justify-content:center;padding:36px 38px;outline:0}
+.nflaa-checking{display:none;align-items:center;gap:10px;color:var(--aa-dim);font:700 11px/1 var(--aa-data);letter-spacing:.12em;text-transform:uppercase}
+.nflaa-checking i{width:8px;height:8px;border-radius:50%;background:var(--aa-gold-bright);animation:nflaaPulse 1.1s ease-in-out infinite}
+html.js .nflaa-panel[data-state="checking"] [data-static-offer]{display:none}
+html.js .nflaa-panel[data-state="checking"] .nflaa-checking{display:flex}
+@keyframes nflaaPulse{50%{opacity:.25}}
+.nflaa-state{display:grid;gap:14px;animation:nflaaIn .26s cubic-bezier(.2,.7,.2,1)}
+@keyframes nflaaIn{from{opacity:0;transform:translateY(8px)}}
+@media(prefers-reduced-motion:reduce){.nflaa-state,.nflaa-checking i{animation:none}}
+.nflaa-k{display:block;color:var(--aa-faint);font:700 10px/1.45 var(--aa-data);letter-spacing:.17em}
+.nflaa-k.is-gold{color:var(--aa-gold-bright)}
+.nflaa-k.is-member,.nflaa-k.is-owner{color:var(--aa-green)}
+.nflaa-k.is-platinum{color:var(--aa-platinum)}
+.nflaa-k.is-check{color:#e6c07a}
+.nflaa-head{margin:0;color:var(--aa-paper);font:900 clamp(30px,2.8vw,42px)/1.06 var(--aa-display);letter-spacing:-.01em}
+.nflaa-head em{color:var(--aa-gold-bright);font-style:italic}
+.nflaa-panel[data-state="all_access"] .nflaa-head em,.nflaa-panel[data-state="owner"] .nflaa-head em,.nflaa-panel[data-state="sport_pro"] .nflaa-head em{color:var(--aa-green)}
+.nflaa-lede{margin:0;color:var(--aa-paper-2);font:400 14px/1.55 var(--aa-ui);opacity:.86;max-width:52ch}
+.nflaa-price{display:flex;align-items:baseline;gap:4px;margin:2px 0 0}
+.nflaa-price strong{color:#fff;font:900 46px/1 var(--aa-ui);letter-spacing:-.04em}
+.nflaa-price span{color:var(--aa-dim);font:700 14px/1 var(--aa-ui)}
+.nflaa-promo{margin:0;color:var(--aa-gold-bright);font:700 12px/1.4 var(--aa-ui)}
+.nflaa-promo b{padding:2px 6px;border:1px dashed rgba(233,199,90,.6);border-radius:5px;font-family:var(--aa-data)}
+.nflaa-note,.nflaa-protect{margin:0;padding:11px 13px;border-left:3px solid rgba(233,199,90,.7);border-radius:8px;background:rgba(233,199,90,.06);color:var(--aa-paper-2);font:500 13px/1.5 var(--aa-ui)}
+.nflaa-protect{border-left-color:#e6c07a}
+.nflaa-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.nflaa-cta{display:inline-flex;align-items:center;justify-content:center;min-height:50px;padding:0 22px;border:0;border-radius:11px;background:linear-gradient(135deg,var(--aa-gold-bright),var(--aa-gold));color:#17120a;font:800 12px/1 var(--aa-data);letter-spacing:.1em;text-transform:uppercase;text-decoration:none;cursor:pointer;box-shadow:0 12px 30px rgba(212,175,55,.2),inset 0 1px 0 rgba(255,255,255,.25)}
+.nflaa-cta:hover{filter:brightness(1.06);transform:translateY(-1px)}
+.nflaa-cta.is-member{background:linear-gradient(135deg,#9af0bb,#5fcf8d);box-shadow:0 12px 30px rgba(127,224,164,.18),inset 0 1px 0 rgba(255,255,255,.25)}
+.nflaa-btn{display:inline-flex;align-items:center;justify-content:center;min-height:46px;padding:0 16px;border:1px solid var(--aa-line-2);border-radius:11px;background:rgba(255,245,220,.03);color:var(--aa-paper);font:700 11px/1 var(--aa-data);letter-spacing:.1em;text-transform:uppercase;text-decoration:none;cursor:pointer}
+.nflaa-btn:hover{border-color:rgba(233,199,90,.55);color:var(--aa-gold-bright)}
+.nflaa-btn:disabled{opacity:.55;cursor:progress}
+.nflaa-fine,.nflaa-secure{margin:0;color:var(--aa-faint);font:600 10.5px/1.5 var(--aa-data);letter-spacing:.04em}
+.nflaa-secure.is-member{color:var(--aa-green)}
+.nflaa-msg{margin:0;min-height:0;color:var(--aa-dim);font:600 12px/1.45 var(--aa-ui)}
+.nflaa-msg:empty{display:none}
+.nflaa-msg[data-tone="error"]{color:#f0a07a}
+.nflaa-msg[data-tone="success"]{color:var(--aa-green)}
+.nflaa-pill{display:inline-flex;align-items:center;gap:8px;justify-self:start;max-width:100%;padding:7px 11px;border:1px solid rgba(127,224,164,.32);border-radius:999px;background:rgba(127,224,164,.06);color:var(--aa-green);font:800 9.5px/1 var(--aa-data);letter-spacing:.14em}
+.nflaa-pill i{width:7px;height:7px;border-radius:50%;background:currentColor}
+.nflaa-pill b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--aa-paper);font-weight:700;letter-spacing:.02em}
+.nflaa-pill.is-check{border-color:rgba(230,192,122,.45);background:rgba(230,192,122,.07);color:#e6c07a}
+.nflaa-card{display:grid;gap:8px;padding:15px 16px;border:1px solid rgba(127,224,164,.26);border-radius:14px;background:radial-gradient(260px 120px at 100% 0,rgba(127,224,164,.10),transparent 70%),rgba(255,245,220,.02)}
+.nflaa-card.is-platinum{border-color:rgba(238,232,222,.4);background:radial-gradient(280px 130px at 100% 0,rgba(238,232,222,.14),transparent 70%),rgba(255,245,220,.02)}
+.nflaa-card-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.nflaa-card-top small{color:var(--aa-green);font:700 9.5px/1 var(--aa-data);letter-spacing:.16em;text-transform:uppercase}
+.nflaa-email{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--aa-paper);font:700 17px/1.2 var(--aa-ui)}
+.nflaa-card-meta{display:flex;flex-wrap:wrap;gap:4px 14px;color:var(--aa-dim);font:500 12px/1.4 var(--aa-ui)}
+.nflaa .pbe-mbr-badge.is-platinum{background:linear-gradient(135deg,rgba(244,240,233,.18),rgba(196,188,176,.10));border-color:rgba(238,232,222,.62);color:#f4efe7;box-shadow:inset 0 1px 0 rgba(255,255,255,.28)}
+.nflaa-adds ul{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 0;padding:0;list-style:none}
+.nflaa-adds li{padding:7px 10px;border:1px solid var(--aa-line-2);border-radius:8px;color:var(--aa-paper);font:700 11px/1 var(--aa-data);letter-spacing:.06em}
+.nflaa-adds li.is-product{border-color:rgba(233,199,90,.4);color:var(--aa-gold-bright)}
+.nflaa-signin{display:grid;gap:8px;padding:14px;border:1px solid var(--aa-line);border-radius:12px;background:rgba(14,11,8,.5)}
+.nflaa-signin label{color:var(--aa-dim);font:600 12px/1.3 var(--aa-ui)}
+.nflaa-signin-row{display:flex;gap:8px}
+.nflaa-signin input{flex:1;min-width:0;min-height:50px;padding:0 14px;border:1px solid var(--aa-line-2);border-radius:11px;background:var(--aa-art);color:var(--aa-paper);font:500 16px/1 var(--aa-ui)}
+.nflaa-signin input:focus{outline:0;border-color:var(--aa-gold-bright);box-shadow:0 0 0 3px rgba(233,199,90,.16)}
+
+/* sections */
+.nflaa-section{margin-top:clamp(36px,5vw,64px)}
+.nflaa-section-head{max-width:760px;margin-bottom:18px}
+.nflaa-section-head h2{margin:8px 0 0;color:var(--aa-paper);font:900 clamp(26px,2.6vw,36px)/1.1 var(--aa-display)}
+.nflaa-section-head h2 em{color:var(--aa-gold-bright);font-style:italic}
+.nflaa-section-head p{margin:10px 0 0;color:var(--aa-paper-2);font:400 14.5px/1.6 var(--aa-ui);opacity:.86}
+.nflaa-net-group{margin-top:14px}
+.nflaa-net-group .nflaa-k{margin-bottom:8px}
+.nflaa-net-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin:0;padding:0;list-style:none}
+.nflaa-net-grid.is-products{grid-template-columns:minmax(0,1fr)}
+.nflaa-net-tile{position:relative;display:grid;gap:4px;min-height:88px;padding:14px;border:1px solid var(--aa-line);border-radius:12px;background:linear-gradient(180deg,rgba(255,245,220,.035),rgba(255,245,220,.01));text-decoration:none;transition:border-color .15s,background .15s}
+.nflaa-net-tile:hover{border-color:rgba(233,199,90,.45)}
+.nflaa-net-tile b{color:var(--aa-paper);font:800 16px/1.15 var(--aa-ui)}
+.nflaa-net-tile span{color:var(--aa-faint);font:500 11.5px/1.3 var(--aa-ui)}
+.nflaa-net-tile em{justify-self:start;margin-top:4px;padding:4px 7px;border:1px solid rgba(233,199,90,.32);border-radius:6px;color:var(--aa-gold-bright);font:800 9px/1 var(--aa-data);font-style:normal;letter-spacing:.13em}
+.nflaa-net-tile.is-here{border-color:rgba(233,199,90,.55);background:linear-gradient(180deg,rgba(233,199,90,.10),rgba(233,199,90,.02))}
+.nflaa-net-tile.is-product{grid-template-columns:1fr auto;align-items:center;min-height:64px;border-color:rgba(233,199,90,.3)}
+.nflaa-net-tile.is-product b{color:var(--aa-gold-bright)}
+.nflaa-net-tile.is-product em{grid-row:1/3;grid-column:2;align-self:center}
+.nflaa-net-tile.is-unlocked{border-color:rgba(127,224,164,.34);background:linear-gradient(180deg,rgba(127,224,164,.08),rgba(127,224,164,.015))}
+.nflaa-net-tile.is-unlocked em{border-color:rgba(127,224,164,.5);color:var(--aa-green)}
+.nflaa-net-tile.is-unlocked::before{content:"";position:absolute;top:14px;right:14px;width:7px;height:7px;border-radius:50%;background:var(--aa-green);box-shadow:0 0 0 3px rgba(127,224,164,.14)}
+.nflaa-caps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0;padding:0;list-style:none}
+.nflaa-caps a{display:grid;gap:4px;min-height:64px;padding:13px 14px;border:1px solid var(--aa-line);border-top:2px solid rgba(233,199,90,.45);border-radius:10px;text-decoration:none;background:rgba(255,245,220,.02)}
+.nflaa-caps a:hover{border-color:rgba(233,199,90,.45)}
+.nflaa-caps b{color:var(--aa-paper);font:800 13px/1.2 var(--aa-data);letter-spacing:.04em;text-transform:uppercase}
+.nflaa-caps span{color:var(--aa-dim);font:500 12.5px/1.4 var(--aa-ui)}
+html[data-nflaa-state="all_access"] .nflaa-caps a,html[data-nflaa-state="owner"] .nflaa-caps a,html[data-nflaa-state="sport_pro"] .nflaa-caps a{border-top-color:rgba(127,224,164,.6)}
+.nflaa-faq dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:0}
+.nflaa-faq dl>div{padding:16px;border:1px solid var(--aa-line);border-radius:12px;background:rgba(255,245,220,.02)}
+.nflaa-faq dt{color:var(--aa-paper);font:800 14px/1.3 var(--aa-ui)}
+.nflaa-faq dd{margin:6px 0 0;color:var(--aa-dim);font:400 13.5px/1.55 var(--aa-ui)}
+.nflaa .pbe-network-footer{margin-top:48px}
+
+/* responsive */
+@media(max-width:1100px){.nflaa-hero{grid-template-columns:42fr 58fr}.nflaa-net-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:900px){
+  .nflaa-hero{grid-template-columns:1fr;min-height:0;border-radius:16px}
+  .nflaa-visual{min-height:clamp(280px,40vh,380px);padding:24px 22px;background:linear-gradient(180deg,rgba(14,11,8,.55) 0%,rgba(14,11,8,.2) 35%,rgba(14,11,8,.7) 70%,rgba(14,11,8,.96) 100%),url("/stadiums/lambeau-bg.webp") 40% 46%/cover no-repeat,var(--aa-art)}
+  .nflaa-visual h1{font-size:clamp(30px,6.4vw,40px)}
+  .nflaa-panel{padding:26px 22px 30px}
+  .nflaa-caps{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .nflaa-faq dl{grid-template-columns:1fr}
+}
+@media(max-width:620px){
+  .nflaa-top{gap:10px}
+  .nflaa-brand span{display:none}
+  .nflaa-net-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .nflaa-caps{grid-template-columns:1fr}
+  .nflaa-actions>*{flex:1 1 100%}
+  .nflaa-signin-row{flex-direction:column}
+  .nflaa-head{font-size:30px}
+  .nflaa-price strong{font-size:40px}
+  .nflaa-visual p{font-size:13.5px}
+  #view-container{padding-bottom:84px}
+}
+@media(max-width:360px){.nflaa-net-grid{grid-template-columns:1fr}}

@@ -46,7 +46,7 @@ function run(files, proState) {
 }
 const member = (state, over = {}) => M.deriveMembership({ sport: 'nfl', entitled: state !== 'free', accessSource: state === 'free' ? null : state === 'sport_pro' ? 'sport' : state, productKey: state === 'all_access' ? 'pbe_all_access' : 'nfl_pro', plan: state === 'sport_pro' ? 'founding_monthly' : state === 'all_access' ? 'all_access' : state === 'owner' ? 'owner' : null, email: state === 'free' ? null : `${state}@acct.test`, currentPeriodEnd: state === 'free' ? null : END, ...over });
 const proStateFor = state => ({ loading: false, pro: state !== 'free', access: state === 'free' ? 'anonymous' : 'granted', role: state === 'owner' ? 'owner' : state === 'free' ? null : 'subscriber', user: state === 'free' ? null : { email: `${state}@acct.test` }, subscription: state === 'free' ? null : { current_period_end: END, cancel_at_period_end: false }, membership: member(state), entitlement: null });
-const FILES = ['nfl-all-access-hero-v1.js', 'paywall-funnel-v2.js'];
+const FILES = ['nfl-member-presentation-v1.js', 'nfl-all-access-hero-v1.js', 'paywall-funnel-v2.js'];
 /* what a customer reads: tags and attribute values stripped */
 const visible = html => html.replace(/<[^>]+>/g, ' ').replace(/&[a-z#0-9]+;/g, ' ').replace(/\s+/g, ' ');
 const PURCHASE = /data-funnel-plan=|buy\.stripe\.com|nfl-aa-hero|data-nfl-all-access|pbe-funnel-checkout|Unlock NFL Pro|GET ALL ACCESS/;
@@ -123,19 +123,24 @@ test('signed in without access: the account is acknowledged, then the options', 
 
 test('members: owner / All Access / NFL Pro dashboards with truthful status and no stray purchase or manage CTAs', () => {
   const owner = run(FILES, proStateFor('owner')).PBECheckoutFunnel.markup.active('owner@acct.test', null, true);
-  assert.match(owner, /NFL PRO · VERIFIED OWNER/); assert.match(owner, /Owner access is active\./);
+  assert.match(owner, /NFL · VERIFIED OWNER/); assert.match(owner, /Owner access is active\./); assert.match(owner, /is-owner[^>]*>VERIFIED OWNER</);
   assert.doesNotMatch(owner, PURCHASE); assert.doesNotMatch(owner, /pbe-mbr-manage|Manage/);
   assert.match(owner, /Every NFL Pro feature · no subscription required/);
 
   const all = run(FILES, proStateFor('all_access')).PBECheckoutFunnel.markup.active('all_access@acct.test', { current_period_end: END }, false);
-  assert.match(all, /PROPBETEDGE ALL ACCESS · NFL/); assert.match(all, /You’re in\./);
+  /* all_access is PRESENTED as Platinum Member; the contract state is untouched */
+  assert.match(all, /NFL · PLATINUM MEMBER/); assert.match(all, /Your full NFL desk<br><em>is unlocked\.<\/em>/);
+  assert.match(all, /data-membership="all_access"/); assert.match(all, /is-all_access is-platinum[^>]*>◆ PLATINUM</);
+  assert.match(all, /PropBetEdge All Access · 10 sports \+ Predictions/); assert.match(all, /PLATINUM ACCESS ACTIVE/);
+  assert.match(all, /Your PropBetEdge All Access membership unlocks the full network — 10 sports plus PropBetEdge Predictions\./);
+  assert.doesNotMatch(all, /Platinum plan|PLATINUM PLAN|FREE/);
   assert.doesNotMatch(all, PURCHASE);
   assert.ok(all.includes(`class="pbe-mbr-manage" href="${M.MANAGE_URL}"`)); assert.match(all, />Manage membership ↗</);
-  assert.match(all, /class="pbe-acct-network"/);
+  assert.match(all, /class="pbe-acct-network"><span>YOUR NETWORK<\/span><a class="pbe-acct-network-link" href="\/all-access"/, 'the network link stays on NFL');
 
   const pro = run(FILES, proStateFor('sport_pro')).PBECheckoutFunnel.markup;
   const withUpgrade = pro.active('sport_pro@acct.test', { current_period_end: END }, false, member('sport_pro'));
-  assert.match(withUpgrade, /NFL PRO · ACTIVE/); assert.match(withUpgrade, /UPGRADE TO ALL ACCESS/);
+  assert.match(withUpgrade, /NFL PRO MEMBER/); assert.doesNotMatch(withUpgrade, /PLATINUM/); assert.match(withUpgrade, /UPGRADE TO ALL ACCESS/);
   assert.doesNotMatch(withUpgrade, /data-funnel-plan=|pbe-funnel-checkout|Unlock NFL Pro/);
   const noFlag = pro.active('sport_pro@acct.test', { current_period_end: END }, false, { ...member('sport_pro'), show_all_access_upgrade: false });
   assert.doesNotMatch(noFlag, /UPGRADE TO ALL ACCESS|nfl-aa-hero/, 'the upgrade follows the shared contract flag');

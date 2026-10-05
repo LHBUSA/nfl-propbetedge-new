@@ -67,7 +67,10 @@
   }
   function memberLabel(fallback) {
     const m = state.membership;
-    return m?.entitled && m.label ? m.label : fallback;
+    /* Display vocabulary (nfl-member-presentation-v1.js): PLATINUM ACCESS ACTIVE /
+       NFL PRO ACTIVE / VERIFIED OWNER. The contract state is unchanged. */
+    const shown = state.pro ? window.PBENflMember?.display?.(m?.entitled ? m : null, state.role === 'owner' ? 'owner' : null)?.status : null;
+    return shown || (m?.entitled && m.label ? m.label : fallback);
   }
   function memberPlanText(fallback) {
     const m = state.membership;

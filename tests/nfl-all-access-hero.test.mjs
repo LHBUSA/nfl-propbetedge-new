@@ -6,7 +6,8 @@
  *             in the purchase funnel AND on the homepage sales band. All
  *             Access is never rendered beneath the NFL plans again.
  *   facts     $29/month · THEEDGE25 · GET ALL ACCESS -> the exact Stripe
- *             Payment Link · WHAT'S INCLUDED -> propbetedge.ai/pro · no Labs.
+ *             Payment Link · WHAT'S INCLUDED -> the NFL-native /all-access page
+ *             (owner decision 2026-10-05) · no Labs.
  *   states    sport_pro -> UPGRADE TO ALL ACCESS, no NFL purchase;
  *             all_access / owner -> no purchase CTA at all.
  *   billing   NFL monthly/weekly price ids and Payment Links unchanged.
@@ -26,7 +27,7 @@ const M = await import('../api/_pbe-membership.js');
 const read = f => readFileSync(new URL(`../${f}`, import.meta.url), 'utf8');
 
 const STRIPE_ALL_ACCESS = 'https://buy.stripe.com/8x2eVdgmOaqy4pv8Ez7wA0N';
-const LEARN = 'https://propbetedge.ai/pro';
+const LEARN = '/all-access';
 const NFL_MONTHLY = { priceId: 'price_1UEWAXF3CaVzg4ORGlsgboLq', url: 'https://buy.stripe.com/eVqeVd1rUcyG5tz2gb7wA0y', price: '$9.99' };
 const NFL_WEEKLY = { priceId: 'price_1UEWAOF3CaVzg4ORjkWpwOz9', url: 'https://buy.stripe.com/9B628rb2udCK5tzf2X7wA0x', price: '$3.99' };
 
@@ -65,17 +66,27 @@ test('hero: exact copy and destinations, from the shared contract and from the b
     assert.match(html, /<h3 class="nfl-aa-title">ALL ACCESS<\/h3>/);
     assert.match(html, /BEST VALUE · MOST COMPLETE/);
     assert.ok(text(html).includes('$29/month'), 'the price reads $29/month');
-    assert.ok(text(html).includes('Every current and future PropBetEdge Pro sport.'));
-    assert.ok(text(html).includes('MLB · NFL · NBA · NHL · WNBA · UFC · Tennis · Soccer · Soccer plus every Pro sport added next.'));
+    /* value first: "10 sports + PropBetEdge Predictions." then the support line */
+    assert.ok(html.includes('<b class="nfl-aa-value">10 sports + PropBetEdge Predictions.</b>'), 'exact value line');
+    assert.ok(text(html).includes('One membership across the PropBetEdge intelligence network.'));
+    assert.ok(text(html).includes('SPORTS · 10 MLB · NFL · NBA · WNBA · NHL · UFC · Tennis · Soccer · Golf · F1 Intelligence'), 'the ten sports, registry order, F1 by its product name');
+    assert.ok(/<span class="nfl-aa-intel"><span class="nfl-aa-k">INTELLIGENCE<\/span><b>◆ PropBetEdge Predictions<\/b><\/span>/.test(html), 'Predictions sits in its own INTELLIGENCE block');
+    assert.ok(text(html).includes('Future PropBetEdge Pro sports join All Access at launch.'), 'future sports only as a secondary line');
+    assert.ok(text(html).indexOf('10 sports + PropBetEdge Predictions.') < text(html).indexOf('Future PropBetEdge Pro sports'), 'current product comes first');
+    assert.doesNotMatch(html, /Every current and future PropBetEdge Pro sport|MLB · NFL · NBA · NHL · WNBA · UFC · Tennis · Soccer(?! ·)|Soccer · Soccer|every Pro sport|\b(11|eleven) sports\b/i, 'no stale offer copy');
+    assert.equal(H.FAMILY.sports.length, 10); assert.ok(H.SPORT_NAMES.includes('Golf') && H.SPORT_NAMES.includes('F1 Intelligence'));
+    assert.ok(!H.SPORT_NAMES.includes('PropBetEdge Predictions') && !H.FAMILY.sports.some((s) => s.key === 'predictions'), 'Predictions is never counted as a sport');
     assert.ok(text(html).includes('Launch offer: 25% off while active with code THEEDGE25'));
     assert.ok(html.includes(`<a class="nfl-aa-cta" href="${STRIPE_ALL_ACCESS}" rel="noopener" data-pbe-placement="all_access_checkout" data-nfl-all-access-cta="checkout">GET ALL ACCESS</a>`), 'GET ALL ACCESS links to exactly the live Payment Link');
-    assert.ok(html.includes(`<a class="nfl-aa-learn" href="${LEARN}" rel="noopener" data-nfl-all-access-cta="learn">WHAT'S INCLUDED</a>`));
+    assert.ok(html.includes(`<a class="nfl-aa-learn" href="${LEARN}" data-nfl-all-access-cta="learn">WHAT'S INCLUDED</a>`), "WHAT'S INCLUDED stays on NFL: /all-access, same tab");
     assert.doesNotMatch(html, /Labs|computational/i, 'Labs / future computational products are never sold as included');
     assert.match(H.dividerHtml(), /data-nfl-all-access="divider"[^>]*><span>ONLY WANT NFL\?<\/span>/);
     /* upgrade heading for NFL Pro members; nothing for All Access / owner */
     assert.match(H.heroHtml(member('sport_pro')), /class="nfl-aa-hero is-modal is-upgrade"[\s\S]*<h3 class="nfl-aa-title">UPGRADE TO ALL ACCESS<\/h3>/);
     assert.equal(H.heroHtml(member('all_access')), ''); assert.equal(H.heroHtml(member('owner')), '');
-    assert.equal(H.miniHtml(member('all_access')), ''); assert.ok(H.miniHtml(member('free')).includes(STRIPE_ALL_ACCESS));
+    assert.equal(H.miniHtml(member('all_access')), '');
+    assert.ok(H.miniHtml(member('free')).includes('href="/all-access"') && !H.miniHtml(member('free')).includes(STRIPE_ALL_ACCESS), 'the mini is information: it opens /all-access, never Stripe');
+    assert.ok(text(H.miniHtml(member('free'))).includes('10 sports + Predictions →'));
   }
   assert.ok(readFileSync(new URL('../api/_pbe-membership.js', import.meta.url)).equals(readFileSync(new URL('../pbe-membership.js', import.meta.url))), 'the shared contract copy is untouched');
 });
@@ -177,23 +188,28 @@ test('no stylesheet leaves .pbe-pro-modal with an internal scrollbar; the termin
 });
 
 /* ------------------------------------------------------------ navigation + footer */
-test('navigation: ALL ACCESS is first-class on desktop (shell top bar, no More menu) and on phones (bottom tab bar), plus the drawer', () => {
+test('navigation: ALL ACCESS is first-class on desktop (shell top bar, no More menu) and on phones (bottom tab bar), plus the drawer -- all on NFL', () => {
   const shell = read('sports-shell-v2.js');
-  assert.match(shell, /<a class="pbes-head-btn pbes-head-aa" id="pbes-all-access" href="https:\/\/propbetedge\.ai\/pro" rel="noopener"[^>]*>ALL ACCESS<\/a><button class="pbes-head-btn" type="button" id="pbes-search">/, 'top bar, before Search and Account');
+  assert.match(shell, /<a class="pbes-head-btn pbes-head-aa" id="pbes-all-access" href="\/all-access"[^>]*>ALL ACCESS<\/a><button class="pbes-head-btn" type="button" id="pbes-search">/, 'top bar, before Search and Account, same tab');
   const html = read('index.html');
-  assert.match(html, /<a class="mbn-allaccess" id="mbn-allaccess" href="https:\/\/propbetedge\.ai\/pro" rel="noopener"[^>]*><div class="mbn-icon">★<\/div><span>ALL ACCESS<\/span><\/a>/, 'bottom tab bar item');
+  assert.match(html, /<a class="mbn-allaccess" id="mbn-allaccess" href="\/all-access"[^>]*><div class="mbn-icon">★<\/div><span>ALL ACCESS<\/span><\/a>/, 'bottom tab bar item');
   assert.equal((html.match(/class="mbn-item/g) || []).length, 5, 'the five app tabs are untouched (mobile-nav-gate counts them)');
-  assert.match(html, /<a class="nav-item ext nav-item-aa" href="https:\/\/propbetedge\.ai\/pro" rel="noopener">[\s\S]*?ALL ACCESS/, 'drawer entry');
+  assert.match(html, /<a class="nav-item nav-item-aa" href="\/all-access">[\s\S]*?ALL ACCESS/, 'drawer entry');
+  for (const src of [shell, html]) assert.doesNotMatch(src, /href="https:\/\/propbetedge\.ai\/pro"/, 'no customer navigation leaves NFL for the hub page');
   const css = read('nfl-all-access-hero-v1.css');
   assert.match(css, /\.mobile-bottom-nav-inner\{grid-template-columns:repeat\(6,1fr\)!important\}/);
   assert.match(css, /\.mbn-allaccess\{[^}]*min-height:44px;min-width:44px/);
   assert.match(css, /@media \(max-width:900px\)\{#pbe-sports-shell \.pbes-head-btn\.pbes-head-aa\{display:none!important\}\}/, 'the top-bar pill yields to the tab on phones');
 });
 
-test('footer: ALL ACCESS and WHAT\'S INCLUDED both resolve to propbetedge.ai/pro', () => {
+test('footer: ALL ACCESS and WHAT\'S INCLUDED open the NFL-native /all-access page in the same tab', () => {
   const footer = read('network-footer-v1.js');
-  assert.match(footer, /const ALL_ACCESS = 'https:\/\/propbetedge\.ai\/pro';/);
-  assert.match(footer, /<a href="\$\{ALL_ACCESS\}" rel="noopener" class="pbe-footer-aa-link" data-pbe-footer-all-access>ALL ACCESS ↗<\/a>/);
-  assert.match(footer, /<a href="\$\{ALL_ACCESS\}" rel="noopener" data-pbe-footer-all-access-included>WHAT'S INCLUDED ↗<\/a>/);
-  assert.match(footer, /<a href="\$\{ALL_ACCESS\}" rel="noopener" class="pbe-footer-aa-link">ALL ACCESS<\/a>/);
+  assert.match(footer, /const ALL_ACCESS = '\/all-access';/);
+  assert.match(footer, /<a href="\$\{ALL_ACCESS\}" class="pbe-footer-aa-link" data-pbe-footer-all-access>ALL ACCESS<\/a>/);
+  assert.match(footer, /<a href="\$\{ALL_ACCESS\}" data-pbe-footer-all-access-included>WHAT'S INCLUDED<\/a>/);
+  assert.match(footer, /<a href="\$\{ALL_ACCESS\}" class="pbe-footer-aa-link">ALL ACCESS<\/a>/);
+  assert.doesNotMatch(footer, /propbetedge\.ai\/pro|buy\.stripe\.com/, 'the footer neither leaves for the hub nor launches checkout');
+  /* NFL routes carry real /#route hrefs, so the footer also works off the app shell (/all-access) */
+  assert.doesNotMatch(footer, /javascript:void\(0\)/);
+  assert.match(footer, /if \(!window\.App\?\.nav\) return;\s*event\.preventDefault\(\);/);
 });

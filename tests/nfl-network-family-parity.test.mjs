@@ -37,7 +37,10 @@ test('Predictions is a separate intelligence product: never in SPORTS, linked ex
 test('network links (hub, All Access, Learn) use the family urls; no retired hosts, no http', () => {
   const eco = footerHtml.slice(footerHtml.indexOf('aria-label="PropBetEdge ecosystem"'));
   const nav = eco.slice(0, eco.indexOf('</nav>'));
-  assert.equal(src.match(/const ALL_ACCESS = '([^']+)'/)[1], family.network.find((n) => n.key === 'all_access').url);
+  /* Owner decision 2026-10-05: All Access navigation stays on NFL (/all-access);
+     the registry's all_access url remains the network reference, not footer navigation. */
+  assert.equal(src.match(/const ALL_ACCESS = '([^']+)'/)[1], '/all-access');
+  assert.equal(family.network.find((n) => n.key === 'all_access').url, 'https://propbetedge.ai/pro');
   assert.ok(nav.includes('href="${ALL_ACCESS}"'));
   for (const key of ['hub', 'learn']) assert.ok(nav.includes(`href="${family.network.find((n) => n.key === key).url}"`), key);
   for (const host of family.retired_hosts) assert.ok(!src.includes(host), host);

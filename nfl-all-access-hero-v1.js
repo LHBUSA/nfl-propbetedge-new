@@ -27,9 +27,96 @@
     checkoutUrl: 'https://buy.stripe.com/8x2eVdgmOaqy4pv8Ez7wA0N',
     learnUrl: 'https://propbetedge.ai/pro',
   });
-  const SPORTS_LINE = 'MLB · NFL · NBA · NHL · WNBA · UFC · Tennis · Soccer';
-  const SPORTS_NEXT = 'plus every Pro sport added next.';
+  /* The network, as published by the canonical family registry. This block is
+     GENERATED from network-family.json (keys, labels, names, urls, order) and
+     tests/nfl-all-access-page.test.mjs fails if it drifts from that file, so a
+     sport added to the registry changes this card or fails the build. */
+  const FAMILY = Object.freeze(/* family:begin */{
+    "sports": [
+      {
+        "key": "mlb",
+        "label": "MLB",
+        "name": "PropBetEdge MLB",
+        "url": "https://mlb.propbetedge.ai/"
+      },
+      {
+        "key": "nfl",
+        "label": "NFL",
+        "name": "PropBetEdge NFL",
+        "url": "https://nfl.propbetedge.ai/"
+      },
+      {
+        "key": "nba",
+        "label": "NBA",
+        "name": "PropBetEdge NBA",
+        "url": "https://nba.propbetedge.ai/"
+      },
+      {
+        "key": "wnba",
+        "label": "WNBA",
+        "name": "PropBetEdge WNBA",
+        "url": "https://wnba.propbetedge.ai/"
+      },
+      {
+        "key": "nhl",
+        "label": "NHL",
+        "name": "PropBetEdge NHL",
+        "url": "https://nhl.propbetedge.ai/"
+      },
+      {
+        "key": "ufc",
+        "label": "UFC",
+        "name": "PropBetEdge UFC",
+        "url": "https://ufc.propbetedge.ai/"
+      },
+      {
+        "key": "tennis",
+        "label": "Tennis",
+        "name": "PropBetEdge Tennis",
+        "url": "https://tennis.propbetedge.ai/"
+      },
+      {
+        "key": "soccer",
+        "label": "Soccer",
+        "name": "PropBetEdge Soccer",
+        "url": "https://soccer.propbetedge.ai/"
+      },
+      {
+        "key": "golf",
+        "label": "Golf",
+        "name": "PropBetEdge Golf",
+        "url": "https://golf.propbetedge.ai/"
+      },
+      {
+        "key": "f1",
+        "label": "F1",
+        "name": "F1 Intelligence",
+        "url": "https://f1.propbetedge.ai/"
+      }
+    ],
+    "products": [
+      {
+        "key": "predictions",
+        "label": "Predictions",
+        "name": "PropBetEdge Predictions",
+        "url": "https://predictions.propbetedge.ai/"
+      }
+    ]
+  }/* family:end */);
+  /* Display name: the sport label, or the registry's own product name where it
+     is not "PropBetEdge <label>" (F1 is published as "F1 Intelligence"). */
+  const displayName = (e) => (e.name === `PropBetEdge ${e.label}` ? e.label : e.name);
+  const SPORT_NAMES = Object.freeze(FAMILY.sports.map(displayName));
+  const PRODUCT_NAMES = Object.freeze(FAMILY.products.map((p) => p.name));
+  const SPORTS_LINE = SPORT_NAMES.join(' · ');
+  /* "10 sports + PropBetEdge Predictions." Predictions is a product, never a sport. */
+  const VALUE_LINE = `${FAMILY.sports.length} sports + ${PRODUCT_NAMES.join(' + ')}.`;
+  const SUPPORT_LINE = 'One membership across the PropBetEdge intelligence network.';
+  const SPORTS_NEXT = 'Future PropBetEdge Pro sports join All Access at launch.';
   const NO_HERO_STATES = new Set(['all_access', 'owner']);
+  /* WHAT'S INCLUDED and the compact mini are information, not purchase: they
+     open the NFL-native All Access page. Only GET ALL ACCESS goes to Stripe. */
+  const LOCAL_ALL_ACCESS_PATH = '/all-access';
 
   const esc = value => String(value ?? '')
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -63,12 +150,17 @@
         <h3 class="nfl-aa-title">${title}</h3>
         <span class="nfl-aa-price" aria-label="${esc(o.price)}"><strong>${esc(amount)}</strong>/${esc(cadence)}</span>
       </div>
-      <p class="nfl-aa-tagline">${esc(o.tagline)}</p>
-      <p class="nfl-aa-sports"><b>${esc(SPORTS_LINE)}</b> <span>${esc(SPORTS_NEXT)}</span></p>
+      <p class="nfl-aa-tagline"><b class="nfl-aa-value">${esc(VALUE_LINE)}</b><span class="nfl-aa-support">${esc(SUPPORT_LINE)}</span></p>
+      <div class="nfl-aa-sports">
+        <span class="nfl-aa-k">SPORTS · ${FAMILY.sports.length}</span>
+        <b>${esc(SPORTS_LINE)}</b>
+        <span class="nfl-aa-intel"><span class="nfl-aa-k">INTELLIGENCE</span><b>◆ ${esc(PRODUCT_NAMES.join(' · '))}</b></span>
+        <span class="nfl-aa-next">${esc(SPORTS_NEXT)}</span>
+      </div>
       <p class="nfl-aa-promo">Launch offer: ${esc(o.promoLine).replace(o.promoCode, `<b class="nfl-aa-code">${esc(o.promoCode)}</b>`)}</p>
       <div class="nfl-aa-actions">
         <a class="nfl-aa-cta" href="${esc(o.checkoutUrl)}" rel="noopener" data-pbe-placement="all_access_checkout" data-nfl-all-access-cta="checkout">GET ALL ACCESS</a>
-        <a class="nfl-aa-learn" href="${esc(o.learnUrl)}" rel="noopener" data-nfl-all-access-cta="learn">WHAT'S INCLUDED</a>
+        <a class="nfl-aa-learn" href="${LOCAL_ALL_ACCESS_PATH}" data-nfl-all-access-cta="learn">WHAT'S INCLUDED</a>
       </div>
     </aside>`;
   }
@@ -82,8 +174,8 @@
   function miniHtml(m) {
     if (!shouldRender(m)) return '';
     const o = offer();
-    return `<a class="nfl-aa-mini" href="${esc(o.checkoutUrl)}" rel="noopener" data-pbe-placement="all_access_checkout" data-nfl-all-access="mini"><span>ALL ACCESS</span><b>${esc(o.price)}</b><i>every Pro sport →</i></a>`;
+    return `<a class="nfl-aa-mini" href="${LOCAL_ALL_ACCESS_PATH}" data-nfl-all-access="mini"><span>ALL ACCESS</span><b>${esc(o.price)}</b><i>${FAMILY.sports.length} sports + Predictions →</i></a>`;
   }
 
-  window.NFLAllAccessHero = Object.freeze({ offer, shouldRender, heroHtml, dividerHtml, miniHtml, SPORTS_LINE, SPORTS_NEXT, version: 1 });
+  window.NFLAllAccessHero = Object.freeze({ offer, shouldRender, heroHtml, dividerHtml, miniHtml, FAMILY, SPORT_NAMES, PRODUCT_NAMES, SPORTS_LINE, VALUE_LINE, SUPPORT_LINE, SPORTS_NEXT, LOCAL_ALL_ACCESS_PATH, displayName, version: 2 });
 })();

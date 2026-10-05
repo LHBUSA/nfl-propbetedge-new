@@ -278,3 +278,13 @@ html.pbe-pro-open,html.pbe-pro-open body{overflow:hidden!important;overscroll-be
 .pbe-network-footer a.pbe-footer-aa-link:hover{color:#fff!important}
 
 @media(prefers-reduced-motion:reduce){.nfl-aa-cta{transition:none}.nfl-aa-cta:hover{transform:none}}
+
+/* v2 copy hierarchy (2026-10-05): value line, support line, SPORTS, a separate
+   INTELLIGENCE block for PropBetEdge Predictions, then the future-sports note. */
+.nfl-aa-tagline .nfl-aa-value{display:block;color:#fff;font:800 14px/1.25 var(--pbe-font-ui,Inter,system-ui,sans-serif);letter-spacing:-.005em}
+.nfl-aa-tagline .nfl-aa-support{display:block;margin-top:3px;color:var(--pbe-paper-2,#d8d2c6);font:500 11.5px/1.4 var(--pbe-font-ui,Inter,system-ui,sans-serif)}
+div.nfl-aa-sports{display:grid;gap:5px}
+.nfl-aa-sports .nfl-aa-k{display:block;color:var(--pbe-gold-bright,#e9c75a);font:800 9px/1 var(--pbe-font-data,'JetBrains Mono',ui-monospace,monospace);letter-spacing:.16em}
+.nfl-aa-sports .nfl-aa-intel{display:grid;gap:4px;margin-top:4px;padding:8px 10px;border:1px solid rgba(233,199,90,.28);border-radius:9px;background:rgba(233,199,90,.06)}
+.nfl-aa-sports .nfl-aa-intel b{color:#fff;font:800 11.5px/1.3 var(--pbe-font-ui,Inter,system-ui,sans-serif);letter-spacing:0}
+.nfl-aa-sports .nfl-aa-next{color:var(--pbe-paper-2,#b8b3a8);font:500 10.5px/1.35 var(--pbe-font-ui,Inter,system-ui,sans-serif);opacity:.85}

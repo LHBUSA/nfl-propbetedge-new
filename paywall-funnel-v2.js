@@ -245,16 +245,20 @@
   function activeProMarkup(email, subscription, owner = false, m = membership()) {
     const L = lib();
     const mState = m?.entitled ? m.state : (owner ? 'owner' : 'sport_pro');
-    const label = m?.entitled && m.label ? m.label : (owner ? 'OWNER' : 'NFL PRO ACTIVE');
-    const plan = (m?.entitled && L?.planText?.(m)) || (owner ? 'Owner access' : 'NFL Pro');
+    /* Display vocabulary only (nfl-member-presentation-v1.js): all_access is
+       presented as PLATINUM MEMBER, owner as VERIFIED OWNER, sport_pro as NFL
+       PRO MEMBER. The contract state and data-membership stay untouched. */
+    const P = window.PBENflMember?.display?.(m?.entitled ? m : null, mState) || null;
+    const label = P?.status || (m?.entitled && m.label ? m.label : (owner ? 'OWNER' : 'NFL PRO ACTIVE'));
     const allAccess = mState === 'all_access';
     const isOwner = mState === 'owner';
-    const badge = L?.membershipBadgeHtml?.(m?.entitled ? m : { state: mState, sport: 'nfl' }) || `<div class="pbe-funnel-plan-badge">${escapeHtml(label)}</div>`;
+    const plan = (allAccess && P?.product) || (m?.entitled && L?.planText?.(m)) || (owner ? 'Owner access' : 'NFL Pro');
+    const badge = (P && window.PBENflMember.badgeHtml(m?.entitled ? m : null, mState)) || L?.membershipBadgeHtml?.(m?.entitled ? m : { state: mState, sport: 'nfl' }) || `<div class="pbe-funnel-plan-badge">${escapeHtml(label)}</div>`;
     const period = isOwner ? 'Every NFL Pro feature · no subscription required' : accessPeriodCopy(subscription);
-    const kicker = allAccess ? 'PROPBETEDGE ALL ACCESS · NFL' : isOwner ? 'NFL PRO · VERIFIED OWNER' : 'NFL PRO · ACTIVE';
-    const headline = isOwner ? 'Owner access is active.' : 'You’re in.';
+    const kicker = P?.eyebrow || (allAccess ? 'PROPBETEDGE ALL ACCESS · NFL' : isOwner ? 'NFL PRO · VERIFIED OWNER' : 'NFL PRO · ACTIVE');
+    const headline = isOwner ? 'Owner access is active.' : allAccess ? 'Your full NFL desk<br><em>is unlocked.</em>' : 'You’re in.';
     const lede = allAccess
-      ? 'Your PropBetEdge All Access desk is live. Every PropBetEdge Pro sport is unlocked on this account, NFL included.'
+      ? 'Your PropBetEdge All Access membership unlocks the full network — 10 sports plus PropBetEdge Predictions.'
       : isOwner
         ? 'Every NFL Pro surface is unlocked on this verified owner account.'
         : 'Your NFL Pro decision desk is live. PBE Picks and the model + market desk are active across supported NFL surfaces.';
@@ -278,7 +282,7 @@
         <button class="pbe-pro-cta secondary" id="pbe-funnel-refresh" type="button">Refresh verified access</button>
         <div class="pbe-pro-message" id="pbe-funnel-message" role="status" aria-live="polite"></div>
       </div>
-      ${allAccess ? `<div class="pbe-acct-network"><span>YOUR NETWORK</span>${L?.networkLinksHtml?.('nfl') || ''}</div>` : ''}
+      ${allAccess ? `<div class="pbe-acct-network"><span>YOUR NETWORK</span><a class="pbe-acct-network-link" href="${window.PBENflMember?.LOCAL_ALL_ACCESS_PATH || '/all-access'}" data-nfl-network-link>10 sports + Predictions · open your network <b aria-hidden="true">→</b></a></div>` : ''}
       ${upgrade}
       <div class="pbe-pro-secure">◆ ${escapeHtml(label)} · ${isOwner ? 'verified server-side from your emailed sign-in link' : 'verified by PropBetEdge'} · new NFL Pro releases included while active</div>
     </div>`;
@@ -298,10 +302,12 @@
   function storyHtml(kind, s = state(), m = membership(s)) {
     if (kind === 'member') {
       const mState = memberState(s, m);
-      const label = m?.entitled && m.label ? m.label : (mState === 'owner' ? 'OWNER' : 'NFL PRO ACTIVE');
-      return `<span class="pbe-acct-eyebrow">${escapeHtml(label)} · VERIFIED</span>
-        <h2 class="pbe-acct-title">${mState === 'owner' ? 'The full desk,<br><em>unlocked.</em>' : 'Every surface<br><em>is live.</em>'}</h2>
-        <p class="pbe-acct-copy">PBE Algo evaluates eligible games, records each decision before kickoff and grades it at the final. Every part of that loop is open on this account.</p>`;
+      const P = window.PBENflMember?.display?.(m?.entitled ? m : null, mState) || null;
+      const label = P?.designation || (m?.entitled && m.label ? m.label : (mState === 'owner' ? 'OWNER' : 'NFL PRO ACTIVE'));
+      const platinum = mState === 'all_access';
+      return `<span class="pbe-acct-eyebrow">${escapeHtml(mState === 'owner' ? 'NFL · VERIFIED OWNER' : `${label} · VERIFIED`)}</span>
+        <h2 class="pbe-acct-title">${mState === 'owner' ? 'The full desk,<br><em>unlocked.</em>' : platinum ? 'The whole network,<br><em>unlocked.</em>' : 'Every surface<br><em>is live.</em>'}</h2>
+        <p class="pbe-acct-copy">${platinum ? 'PropBetEdge All Access · 10 sports + Predictions. PBE Algo, official PBE Picks and the permanent Track Record are open here, and every other PropBetEdge desk is open on the same account.' : 'PBE Algo evaluates eligible games, records each decision before kickoff and grades it at the final. Every part of that loop is open on this account.'}</p>`;
     }
     if (kind === 'signin') {
       return `<span class="pbe-acct-eyebrow">PROPBETEDGE NFL · MEMBER ACCESS</span>

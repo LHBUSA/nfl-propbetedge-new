@@ -82,7 +82,7 @@ test('active NFL Pro uses the same premium presentation authority, worded by the
      and sales layers key on it); the shared contract names the member kind. */
   assert.match(funnel, /data-funnel-state="\$\{owner \? 'active-owner' : 'active-pro'\}" data-membership="\$\{escapeHtml\(mState\)\}"/);
   assert.match(funnel, /Your NFL Pro decision desk is live\./);
-  assert.match(funnel, /Your PropBetEdge All Access desk is live\./);
+  assert.match(funnel, /Your PropBetEdge All Access membership unlocks the full network — 10 sports plus PropBetEdge Predictions\./);
   assert.match(funnel, /Verified account/);
   assert.match(funnel, /Open Pro Prop Board/);
   /* the capability line became the unlocked grid: every tile opens a real route */
@@ -91,7 +91,7 @@ test('active NFL Pro uses the same premium presentation authority, worded by the
   }
   assert.match(funnel, /const mode = s\.pro \? \(owner \? 'active-owner' : 'active-pro'\) : s\.user \? 'signed-in-free' : 'signed-out'/);
   assert.match(funnel, /const membershipChanged = \(root\?\.dataset\?\.membership \|\| 'free'\) !== mState;/, 'a membership change re-renders even when the funnel mode is unchanged');
-  assert.match(funnel, /allAccessCardHtml/); assert.match(funnel, /manageLinkHtml/); assert.match(funnel, /networkLinksHtml\?\.\('nfl'\)/);
+  assert.match(funnel, /allAccessCardHtml/); assert.match(funnel, /manageLinkHtml/); assert.match(funnel, /window\.PBENflMember\?\.LOCAL_ALL_ACCESS_PATH \|\| '\/all-access'/);
   assert.doesNotMatch(funnel, /Stripe-backed/, 'Stripe is never a state word shown to customers');
 });
 

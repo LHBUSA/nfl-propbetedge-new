@@ -375,3 +375,10 @@
   .pbe-acct .pbe-pro-cta,.pbe-acct .pbe-acct-tile{transition:none}
   .pbe-acct .pbe-pro-cta:hover{transform:none}
 }
+
+/* Platinum Member (display of the all_access state, 2026-10-05): a cool
+   platinum accent on the verified badge only. Owner keeps its own look. */
+.pbe-mbr-badge.is-platinum{background:linear-gradient(135deg,rgba(244,240,233,.18),rgba(196,188,176,.10))!important;border-color:rgba(238,232,222,.62)!important;color:#f4efe7!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.28),0 0 18px rgba(232,224,212,.10)!important;letter-spacing:.14em}
+.pbe-acct .pbe-acct-network-link{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px;padding:0 14px;border:1px solid rgba(127,224,164,.32);border-radius:10px;background:rgba(127,224,164,.06);color:var(--acct-paper);font:700 11px/1.2 var(--acct-data);letter-spacing:.08em;text-decoration:none}
+.pbe-acct .pbe-acct-network-link:hover,.pbe-acct .pbe-acct-network-link:focus-visible{border-color:rgba(127,224,164,.6);color:var(--acct-green)}
+.pbe-acct .pbe-acct-network-link b{color:var(--acct-green)}

@@ -4,8 +4,10 @@
 
   const FOOTER_ID = 'pbe-network-footer';
   const BILLING = 'https://billing.stripe.com/p/login/cNi3cv2vY7em3lr4oj7wA00';
-  /* PropBetEdge All Access (the network umbrella): ALL ACCESS + WHAT'S INCLUDED. */
-  const ALL_ACCESS = 'https://propbetedge.ai/pro';
+  /* PropBetEdge All Access: ALL ACCESS + WHAT'S INCLUDED open the NFL-native
+     All Access page in the same tab (the reader stays on NFL). Checkout stays
+     on the page's explicit GET ALL ACCESS action. */
+  const ALL_ACCESS = '/all-access';
 
   /* Family registry: kept in parity with network-family.json (vendored from
      propbetedge-workers shared/network/family.json; tests/nfl-network-family-parity.test.mjs). */
@@ -28,7 +30,7 @@
 
   function sportTile(sport) {
     const attrs = sport.current
-      ? `href="javascript:void(0)" data-pbe-footer-route="${sport.route}"`
+      ? `href="/#${sport.route}" data-pbe-footer-route="${sport.route}"`
       : `href="${sport.href}" target="_blank" rel="noopener"`;
     return `<a class="pbe-network-sport ${sport.key}${sport.current ? ' current' : ''}" ${attrs}>
       <span class="pbe-network-sport-top"><b>${sport.label}</b>${sport.current ? '<em>CURRENT</em>' : sport.live ? '<em>LIVE</em>' : '<i>↗</i>'}</span>
@@ -72,15 +74,15 @@
           <div class="pbe-network-nflpro">
             <div class="pbe-network-console-head">
               <div><span>NFL PRO</span><strong>Your football intelligence desk</strong></div>
-              <a href="javascript:void(0)" data-pbe-footer-route="pbepicks" class="pbe-network-primary-link">Today's PBE Card <b>→</b></a>
+              <a href="/#pbepicks" data-pbe-footer-route="pbepicks" class="pbe-network-primary-link">Today's PBE Card <b>→</b></a>
             </div>
             <nav class="pbe-network-nfl-links" aria-label="NFL Pro navigation">
-              <a href="javascript:void(0)" data-pbe-footer-route="pbepicks" class="featured">PBE Picks <em>LIVE</em></a>
-              <a href="javascript:void(0)" data-pbe-footer-route="propboard">Prop Board</a>
-              <a href="javascript:void(0)" data-pbe-footer-route="pbecast">PBEcast</a>
-              <a href="javascript:void(0)" data-pbe-footer-route="matchups">Matchups</a>
-              <a href="javascript:void(0)" data-pbe-footer-route="bestline">Best Line</a>
-              <a href="javascript:void(0)" data-pbe-footer-route="trackrecord">Track Record</a>
+              <a href="/#pbepicks" data-pbe-footer-route="pbepicks" class="featured">PBE Picks <em>LIVE</em></a>
+              <a href="/#propboard" data-pbe-footer-route="propboard">Prop Board</a>
+              <a href="/#pbecast" data-pbe-footer-route="pbecast">PBEcast</a>
+              <a href="/#matchups" data-pbe-footer-route="matchups">Matchups</a>
+              <a href="/#bestline" data-pbe-footer-route="bestline">Best Line</a>
+              <a href="/#trackrecord" data-pbe-footer-route="trackrecord">Track Record</a>
             </nav>
           </div>
 
@@ -91,8 +93,8 @@
             </div>
             <p data-pbe-footer-account-copy>Passwordless access · secure billing</p>
             <div class="pbe-footer-account-card-links">
-              <a href="${ALL_ACCESS}" rel="noopener" class="pbe-footer-aa-link" data-pbe-footer-all-access>ALL ACCESS ↗</a>
-              <a href="${ALL_ACCESS}" rel="noopener" data-pbe-footer-all-access-included>WHAT'S INCLUDED ↗</a>
+              <a href="${ALL_ACCESS}" class="pbe-footer-aa-link" data-pbe-footer-all-access>ALL ACCESS</a>
+              <a href="${ALL_ACCESS}" data-pbe-footer-all-access-included>WHAT'S INCLUDED</a>
               <a href="${BILLING}" target="_blank" rel="noopener" data-pbe-footer-manage hidden>Manage subscription ↗</a>
               <a href="https://discord.gg/kb5zCTHbME" target="_blank" rel="noopener">Member community ↗</a>
             </div>
@@ -115,7 +117,7 @@
             <span>Independent sports intelligence built from the data layer up.</span>
           </div>
           <nav aria-label="PropBetEdge ecosystem">
-            <a href="${ALL_ACCESS}" rel="noopener" class="pbe-footer-aa-link">ALL ACCESS</a>
+            <a href="${ALL_ACCESS}" class="pbe-footer-aa-link">ALL ACCESS</a>
             <a href="https://propbetedge.ai/">Sports News</a>
             <a href="https://learn.propbetedge.ai/">Learn</a>
             <a href="https://propsports.proptechusa.ai" target="_blank" rel="noopener">PropSports API</a>
@@ -155,8 +157,9 @@
        object; Manage subscription shows only when it says show_manage. */
     const m = s.membership;
     const member = pro && m?.entitled === true;
-    const label = member && m.label ? m.label : 'NFL Pro active';
-    const plan = member ? (window.PBEMembership?.planText?.(m) || 'Verified NFL Pro access') : 'Verified NFL Pro access';
+    const shown = pro ? window.PBENflMember?.display?.(member ? m : null, s.role === 'owner' ? 'owner' : null) : null;
+    const label = shown?.status || (member && m.label ? m.label : 'NFL Pro active');
+    const plan = shown?.state === 'all_access' ? shown.product : member ? (window.PBEMembership?.planText?.(m) || 'Verified NFL Pro access') : 'Verified NFL Pro access';
     const showManage = pro && (member ? m.show_manage === true : s.role !== 'owner');
 
     if (title) title.textContent = loading ? 'Checking access…' : pro ? label : signed ? 'Signed in · Pro inactive' : 'NFL Pro account';
@@ -178,12 +181,13 @@
 
   function wire(footer) {
     footer.querySelectorAll('[data-pbe-footer-route]').forEach((link) => link.addEventListener('click', (event) => {
+      /* Inside the app the router handles it; elsewhere (the /all-access
+         page) the link's own /#route href navigates normally. */
+      if (!window.App?.nav) return;
       event.preventDefault();
       const route = link.dataset.pbeFooterRoute;
-      if (window.App?.nav) {
-        window.App.nav(route);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }
+      window.App.nav(route);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }));
     footer.querySelectorAll('[data-pbe-footer-account]').forEach((link) => link.addEventListener('click', openAccount));
     syncAccount(footer);
