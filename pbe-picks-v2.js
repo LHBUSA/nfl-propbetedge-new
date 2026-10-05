@@ -188,8 +188,8 @@
   function topline(active, data) {
     const gated = data?.champion_trained !== true;
     const degraded = healthOf(data) !== 'HEALTHY';
-    const mode = degraded ? 'Engine degraded' : gated ? 'Validation mode' : 'Production champion';
-    const scope = active === 'trackrecord' ? 'official publication only' : gated ? 'Pro validation signals' : 'official picks';
+    const mode = degraded ? 'Engine degraded' : gated ? 'Pre-production' : 'Production champion';
+    const scope = active === 'trackrecord' ? 'official publication only' : gated ? 'bootstrap signals' : 'official picks · continuous learning';
     return `<div class="pbe2-topline"><div class="pbe2-eyebrow"><i class="pbe2-live-dot ${degraded ? 'degraded' : gated ? 'gated' : ''}"></i>${mode} · v${esc(data?.champion_version ?? '—')} · ${scope}</div>${switcher(active)}</div>`;
   }
 
@@ -220,6 +220,7 @@
   function engineProgress(data) {
     const d = data?.decisions || {};
     const tr = d.tracking || {};
+    const off = d.official || {};
     const orch = lane(data, 'nfl-game-picks-orchestrator');
     const detail = orch?.detail || {};
     const c = orch?.counts || {};
@@ -235,8 +236,8 @@
       : '';
     const final = data?.current?.latest_final;
     const tiles = [
-      ['Tracking decisions', `${num(tr.total) ?? 0}`, `${num(tr.open) ?? 0} open · ${num(tr.graded) ?? 0} graded · ${num(tr.superseded) ?? 0} superseded`],
-      ['Finalized', `${num(data?.graded_sample) ?? 0}`, `of ${num(data?.graded_sample_required) ?? 100} needed · ${num(data?.distinct_weeks) ?? 0}/${num(data?.distinct_weeks_required) ?? 4} weeks`],
+      ['Official decisions', `${num(off.total) ?? 0}`, `${num(off.open) ?? 0} open · ${num(off.graded) ?? 0} graded`],
+      ['Learning ledger', `${num(data?.learning_sample) ?? num(data?.graded_sample) ?? 0}`, `${num(data?.learning_weeks) ?? num(data?.distinct_weeks) ?? 0} weeks observed · continuous`],
       ['Last engine evaluation', evaluated, outcome],
       ['Next eligible game', next, final ? `Latest final: ${final.away} ${final.away_score}–${final.home_score} ${final.home}` : ''],
     ];
@@ -248,7 +249,7 @@
       const line = waiting ? 'Weekly · first run pending' : `${laneStateLabel(l.state)} · last run ${ago(l.last_tick_at)}`;
       return `<div class="pbe2-lane" data-state="${esc(state)}"><i></i><div><strong>${esc(l.label || l.lane)}</strong><span>${esc(line)}</span></div></div>`;
     }).join('');
-    return `<section class="pbe2-engine" aria-label="Picks Engine live progress"><div class="pbe2-engine-head"><span>Live engine · ${esc(data?.current?.season ?? d.season ?? '')} ${esc(data?.current?.season_type || '')} week ${esc(data?.current?.week ?? '—')}</span><b data-state="${esc(healthOf(data))}">${esc(laneStateLabel(healthOf(data)))}</b></div><div class="pbe2-engine-grid">${tiles.map(([label, value, sub]) => `<div class="pbe2-engine-tile"><span>${esc(label)}</span><strong>${esc(value)}</strong>${sub ? `<small>${esc(sub)}</small>` : ''}</div>`).join('')}</div><div class="pbe2-lanes">${laneRows || '<div class="pbe2-lane" data-state="UNKNOWN"><i></i><div><strong>Run ledger</strong><span>unavailable</span></div></div>'}</div><p class="pbe2-engine-note">Tracking decisions are real pregame decisions, frozen before kickoff and graded from the official final. NFL Pro sees the current ones as PBE Validation Signals. They are never official picks and never enter the Official Track Record.</p></section>`;
+    return `<section class="pbe2-engine" aria-label="Picks Engine live progress"><div class="pbe2-engine-head"><span>Live engine · ${esc(data?.current?.season ?? d.season ?? '')} ${esc(data?.current?.season_type || '')} week ${esc(data?.current?.week ?? '—')}</span><b data-state="${esc(healthOf(data))}">${esc(laneStateLabel(healthOf(data)))}</b></div><div class="pbe2-engine-grid">${tiles.map(([label, value, sub]) => `<div class="pbe2-engine-tile"><span>${esc(label)}</span><strong>${esc(value)}</strong>${sub ? `<small>${esc(sub)}</small>` : ''}</div>`).join('')}</div><div class="pbe2-lanes">${laneRows || '<div class="pbe2-lane" data-state="UNKNOWN"><i></i><div><strong>Run ledger</strong><span>unavailable</span></div></div>'}</div><p class="pbe2-engine-note">The promoted production champion issues official pregame decisions now. Every finalized official result feeds the learning ledger. Pre-production tracking history remains immutable and permanently separate from the Official Track Record.</p></section>`;
   }
 
   function validation(data) {
@@ -270,7 +271,7 @@
     const governance = state.governance;
     const card = window.PBECard ? window.PBECard.flagshipHtml() : '';
     const deep = !governance ? ''
-      : `<div class="pbe2-deep-head"><span>The engine behind the card</span><small>Publication gate, finalized sample and live run ledger</small></div>${healthOf(governance) !== 'HEALTHY' ? degradedBanner(governance) : ''}${governance.champion_trained !== true ? validation(governance) : engineProgress(governance)}`;
+      : `<div class="pbe2-deep-head"><span>The engine behind the card</span><small>Official publication, continuous learning and live run ledger</small></div>${healthOf(governance) !== 'HEALTHY' ? degradedBanner(governance) : ''}${governance.champion_trained !== true ? validation(governance) : engineProgress(governance)}`;
     const html = `<section class="pbe2-wrap">${topline('pbepicks', governance || {})}${card}${deep}</section>`;
     if (vc.dataset.pbe2Sig === html) return;
     const open = vc.querySelector('.pbec-history')?.open;
