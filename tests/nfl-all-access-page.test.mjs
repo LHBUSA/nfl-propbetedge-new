@@ -199,4 +199,5 @@ test('B1 lapsed on /all-access: signed in with the email, RENEW NFL PRO, VIEW AL
   assert.equal(Pg.viewFor({ ...lapsed, valid: false, user: null }).kind, 'anonymous');
   /* never-subscribed verified email: not "renew" */
   assert.match(Pg.markup(Pg.viewFor({ ...lapsed, entitlement: { reason: 'no_subscription' } })), />GET NFL PRO</);
+  assert.match(read('nfl-all-access-page-v1.js'), /v\?\.kind === 'lapsed' \? 'Renew'/, 'the page header reads Renew, never FREE');
 });

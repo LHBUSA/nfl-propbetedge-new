@@ -198,7 +198,7 @@
     if (btn) {
       const D = s.pro ? P()?.display?.(v.membership || null, v.kind) : null;
       const narrow = window.matchMedia?.('(max-width: 520px)')?.matches;
-      btn.textContent = loading ? 'Account' : D ? (narrow ? D.headerShort : D.header) : v?.kind === 'check' ? 'Access Check' : v?.email ? 'Account' : 'Sign In';
+      btn.textContent = loading ? 'Account' : D ? (narrow ? D.headerShort : D.header) : v?.kind === 'check' ? 'Access Check' : v?.kind === 'lapsed' ? 'Renew' : v?.email ? 'Account' : 'Sign In';
       btn.dataset.membership = s.pro ? v.kind : v?.kind === 'check' ? 'check' : 'none';
       btn.classList.toggle('is-platinum', v?.kind === 'all_access');
     }
