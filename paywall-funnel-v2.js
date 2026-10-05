@@ -163,7 +163,7 @@
   function signedOutMarkup() {
     const note = window.PBEPro?.denialNote?.() || '';
     return `<div class="pbe-funnel-root pbe-acct-panel" data-acct="v3" data-funnel-state="signed-out" data-funnel-view="join" data-membership="free">
-      ${head('GET ACCESS · PROPBETEDGE PRO', 'Choose your access.', note ? escapeHtml(note) : 'One membership for every PropBetEdge Pro sport, or NFL on its own.')}
+      ${head('GET ACCESS · PROPBETEDGE PRO', 'Choose your access.', note ? escapeHtml(note) : 'One membership for 10 sports + PropBetEdge Predictions, or NFL on its own.')}
       ${allAccessCard(membership())}
       ${allAccessDivider()}
       ${plansHtml()}
@@ -209,7 +209,7 @@
     const note = window.PBEPro?.denialNote?.() || '';
     return `<div class="pbe-funnel-root pbe-acct-panel" data-acct="v3" data-funnel-state="signed-in-free" data-funnel-view="ready" data-membership="free" data-funnel-note="${escapeHtml(state().entitlement?.reason || '')}">
       <div class="pbe-acct-identity"><i aria-hidden="true"></i><span>SIGNED IN</span><strong>${escapeHtml(email)}</strong><button class="pbe-funnel-signin-link" id="pbe-funnel-signout" type="button">Sign out</button></div>
-      ${head('ACCOUNT READY', note ? 'Choose your access again.' : 'Your account is ready.<br>Choose your access.', note ? escapeHtml(note) : 'One membership for every PropBetEdge Pro sport, or NFL on its own.')}
+      ${head('ACCOUNT READY', note ? 'Choose your access again.' : 'Your account is ready.<br>Choose your access.', note ? escapeHtml(note) : 'One membership for 10 sports + PropBetEdge Predictions, or NFL on its own.')}
       ${allAccessCard(membership())}
       ${allAccessDivider()}
       ${plansHtml()}

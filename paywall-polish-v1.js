@@ -86,7 +86,7 @@
     sport_pro:{kicker:'NFL PROPBETEDGE PRO · VERIFIED MEMBER',title:'You have NFL PropBetEdge Pro.',seal:['PRO','ACTIVE'],
       lede:'A national-scale NFL sports analytics platform is fully unlocked on this verified account: PBE Algo, official PBE Picks, model + market intelligence, Player DNA, team research, simulation, Game Center and the permanent Track Record.'},
     all_access:{kicker:'PROPBETEDGE ALL ACCESS · VERIFIED MEMBER',title:'You have PropBetEdge All Access.',seal:['ALL','ACCESS'],
-      lede:'Every current and future PropBetEdge Pro sport is unlocked on this verified account, NFL included: PBE Algo, official PBE Picks, model + market intelligence, Player DNA, team research, simulation, Game Center and the permanent Track Record.'},
+      lede:'PropBetEdge All Access unlocks the full network on this verified account — 10 sports plus PropBetEdge Predictions, NFL included: PBE Algo, official PBE Picks, model + market intelligence, Player DNA, team research, simulation, Game Center and the permanent Track Record.'},
     owner:{kicker:'NFL PROPBETEDGE PRO · OWNER',title:'Owner access is active.',seal:['PBE','OWNER'],
       lede:'Every NFL Pro surface is unlocked on this verified owner account: PBE Algo, official PBE Picks, model + market intelligence, Player DNA, team research, simulation, Game Center and the permanent Track Record.'},
   };
@@ -172,7 +172,7 @@
     if(state==='signed-out'||state==='signed-in-free'){
       setText(head.querySelector('span'),'PROPBETEDGE PRO ACCESS');
       setText(head.querySelector('strong'),state==='signed-out'?'Pick your access.':'Your account is ready. Pick your access.');
-      setText(head.querySelector('p'),'All Access covers every PropBetEdge Pro sport under one membership. Only want NFL? PBE Algo, official PBE Picks and the Track Record are yours with an NFL Pro plan below.');
+      setText(head.querySelector('p'),'All Access covers 10 sports + PropBetEdge Predictions under one membership. Only want NFL? PBE Algo, official PBE Picks and the Track Record are yours with an NFL Pro plan below.');
     }
   }
 

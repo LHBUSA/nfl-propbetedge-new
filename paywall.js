@@ -75,6 +75,7 @@
   function memberPlanText(fallback) {
     const m = state.membership;
     if (!m?.entitled) return fallback;
+    if (m.state === 'all_access') return window.PBENflMember?.display?.(m)?.product || 'PropBetEdge All Access · 10 sports + Predictions';
     return window.PBEMembership?.planText?.(m) || fallback;
   }
 
