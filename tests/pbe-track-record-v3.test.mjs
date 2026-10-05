@@ -257,24 +257,21 @@ const GATE_ROWS = [
   { season: 2026, week: 4, publication_scope: 'tracking', integrity_status: 'quarantined', is_final: true, finalized_at: '2026-09-29T04:00:00Z' },
 ];
 
-test('graded_sample and distinct_weeks reconcile exactly to eligible finalized observations (the tuner gate query)', async () => {
-  const tunerQuery = /'(integrity_status=eq\.eligible&is_final=is\.true)[^']*'/.exec(TUNER_SRC)?.[1];
-  assert.ok(tunerQuery, 'tuner gate query found');
+test('learning sample and weeks reconcile exactly to eligible finalized observations', async () => {
   const govQuery = /sb\('nfl_learning_observations', '([^']+)'/.exec(API_SRC)?.[1];
-  assert.ok(govQuery?.startsWith(tunerQuery), 'governance uses the tuner filter');
+  assert.ok(govQuery?.includes('integrity_status=eq.eligible&is_final=is.true'), 'governance reads only eligible finalized learning rows');
+  assert.match(TUNER_SRC, /model_version=eq\.\$\{champion\.version\}.*market=eq\.moneyline.*integrity_status=eq\.eligible.*is_final=is\.true/s);
   mock.observations = GATE_ROWS;
   try {
     const state = await call({ view: 'state' });
     assert.equal(state.status, 200);
     const eligible = GATE_ROWS.filter(r => r.integrity_status === 'eligible' && r.is_final === true);
-    assert.equal(state.json.graded_sample, eligible.length);
-    assert.equal(state.json.distinct_weeks, new Set(eligible.map(r => `${r.season}-${r.week}`)).size);
+    assert.equal(state.json.learning_sample, eligible.length);
+    assert.equal(state.json.learning_weeks, new Set(eligible.map(r => `${r.season}-${r.week}`)).size);
     assert.equal(state.json.graded_sample_tracking, 2);
     assert.equal(state.json.graded_sample_official, 1);
     assert.equal(state.json.latest_finalized_at, '2026-09-15T04:00:00Z');
-    assert.equal(state.json.auto_tuner, 'GATED');
-    const preview = await call({ view: 'preview' });
-    assert.equal(preview.json.graded_sample ?? preview.json.governance?.graded_sample ?? eligible.length, eligible.length);
+    assert.equal(state.json.auto_tuner, state.json.champion_trained ? 'CONTINUOUS' : 'BOOTSTRAP');
   } finally { mock.observations = null; }
 });
 
@@ -287,17 +284,18 @@ test('MUTATION: a gate query without is_final=is.true would count unfinalized ob
   assert.equal(filterObservations(GATE_ROWS, govQuery.replace('integrity_status=eq.eligible&', '')).length, 4);
 });
 
-test('the gate stays >= 100 finalized AND >= 4 weeks', async () => {
-  assert.match(API_SRC, /const gateOpen = obs\.length >= 100 && weeks\.size >= 4;/);
-  assert.match(TUNER_SRC, /MIN_GRADED_PICKS\s*=\s*100|MIN_GRADED_PICKS['"]?\s*[:=]\s*['"]?100/);
-  assert.match(TUNER_SRC, /MIN_DISTINCT_WEEKS\s*=\s*4|MIN_DISTINCT_WEEKS['"]?\s*[:=]\s*['"]?4/);
-  /* 100 rows in 3 weeks: still gated. */
+test('publication has no 100/4 gate; tuner learning readiness is independent', async () => {
+  assert.doesNotMatch(API_SRC, /const gateOpen = obs\.length >= 100 && weeks\.size >= 4;/);
+  assert.match(TUNER_SRC, /MIN_MONEYLINE_DECISIONS\s*=\s*24/);
+  assert.match(TUNER_SRC, /MIN_HOLDOUT_DECISIONS\s*=\s*6/);
   mock.observations = Array.from({ length: 120 }, (_, i) => ({ ...OBSERVATIONS[0], week: 1 + (i % 3), finalized_at: `2026-09-${String(10 + (i % 3)).padStart(2, '0')}T04:00:00Z` }));
   try {
     const state = await call({ view: 'state' });
-    assert.equal(state.json.graded_sample, 120);
-    assert.equal(state.json.distinct_weeks, 3);
-    assert.equal(state.json.auto_tuner, 'GATED');
+    assert.equal(state.json.learning_sample, 120);
+    assert.equal(state.json.learning_weeks, 3);
+    assert.equal(state.json.auto_tuner, state.json.champion_trained ? 'CONTINUOUS' : 'BOOTSTRAP');
+    assert.equal(state.json.graded_sample_required, null);
+    assert.equal(state.json.distinct_weeks_required, null);
   } finally { mock.observations = null; }
 });
 
@@ -364,20 +362,18 @@ const text = html => html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
 /* Every proprietary value the fixture's validation decisions carry. */
 const PROPRIETARY = ['SEA -1.5', 'BUF -2.5', 'Model probability', 'Line · odds', 'Validation signal ledger', '54.7%', '+4.7', 'data-pbetr-expand'];
 
-test('Pro: the Validation Record renders from validation-history with VALIDATION SIGNAL rows, never OFFICIAL PICK', async () => {
+test('Pro: Learning History renders pre-production rows, never OFFICIAL PICK', async () => {
   const p = page({ pro: true, cookie: sessionCookie('pro@propbetedge.test') });
   const html = await p.render();
   const t = text(html);
   assert.deepEqual([...p.requests].sort(), ['state', 'trackrecord', 'validation-history']);
   assert.match(t, /PBE TRACK RECORD/);
-  assert.match(t, /VALIDATION MODE · CHAMPION V1/);
-  assert.match(t, /Real pre-game decisions · graded from final results · not yet official PBE Picks/);
-  assert.match(t, /Validation Record/); assert.match(t, /Official Record/);
-  assert.match(t, /Model validation/i);
-  assert.match(t, /Finalized decisions 1 \/ 100/);
-  assert.match(t, /Observation window 1 \/ 4 weeks/);
-  assert.match(t, /Both gates must clear/);
-  assert.match(t, /does not promote a model on its own/);
+  assert.match(t, /PRE-PRODUCTION · CHAMPION V1/);
+  assert.match(t, /Pre-production learning history/);
+  assert.match(t, /Learning History/); assert.match(t, /Official Record/);
+  assert.match(t, /Continuous learning/i);
+  assert.match(t, /Finalized learning rows 1/);
+  assert.match(t, /Weeks observed 1/);
   assert.match(t, /Validation signal ledger/);
   assert.equal(/OFFICIAL PICK|OFFICIAL PBE PICK/.test(t), false);
   /* The ledger shows exactly the validation-history rows. */
@@ -391,13 +387,13 @@ test('Pro: the Validation Record renders from validation-history with VALIDATION
   assert.match(t, new RegExp(`Record ${s.wins}-${s.losses}-${s.pushes}`));
 });
 
-test('Official Record zero state is truthful and surfaces the Validation Record', async () => {
+test('Official Record zero state is truthful and surfaces Learning History', async () => {
   const p = page({ pro: true, cookie: sessionCookie('pro@propbetedge.test') });
   const t = text(await p.render('official'));
-  assert.match(t, /OFFICIAL PUBLICATION HAS NOT STARTED/);
-  assert.match(t, /Champion v1 remains in model validation/);
+  assert.match(t, /PRE-PRODUCTION HISTORY ONLY/);
+  assert.match(t, /no trained production champion/i);
   assert.match(t, /0-0/);
-  assert.match(t, /View the Validation Record/);
+  assert.match(t, /View Pre-Production Learning History/);
   /* The validation hero may sit under it, but no validation row is an official pick. */
   assert.equal(/OFFICIAL PICK|OFFICIAL PBE PICK/.test(t), false);
   assert.equal(t.includes('data-pbetr-expand'), false);
@@ -410,7 +406,7 @@ test('the Official Record drops anything not publication_scope = official', asyn
   ];
   const p = page({ pro: true, cookie: sessionCookie('pro@propbetedge.test'), officialPicks: smuggled });
   const t = text(await p.render('official'));
-  assert.match(t, /OFFICIAL PUBLICATION HAS NOT STARTED/);
+  assert.match(t, /PRE-PRODUCTION HISTORY ONLY/);
   assert.equal(t.includes('A -3'), false);
 });
 
@@ -425,8 +421,8 @@ test('free readers: no selections, edges, lines or probabilities; aggregate prog
     const html = await p.render();
     const t = text(html);
     for (const secret of PROPRIETARY) assert.equal(html.includes(secret), false, `${persona.name} leaked ${secret}`);
-    assert.match(t, /Unlock the Validation Record/, persona.name);
-    assert.match(t, /Finalized decisions 1 \/ 100/, persona.name);
+    assert.match(t, /Unlock Learning History/, persona.name);
+    assert.match(t, /Finalized learning rows 1/, persona.name);
     assert.equal(/OFFICIAL PICK|OFFICIAL PBE PICK/.test(t), false);
     if (!persona.pro) assert.equal(p.requests.includes('validation-history'), false, `${persona.name} must not request Pro detail`);
   }
@@ -438,16 +434,16 @@ test('free readers: no selections, edges, lines or probabilities; aggregate prog
 test('backend failures render degraded states, never a zero record', async () => {
   const stateDown = text(await page({ pro: true, cookie: sessionCookie('pro@propbetedge.test'), fail: { state: 503 } }).render());
   assert.match(stateDown, /Track Record source unavailable/);
-  assert.equal(/0-0|0 \/ 100|OFFICIAL PUBLICATION HAS NOT STARTED/.test(stateDown), false);
+  assert.equal(/0-0|PRE-PRODUCTION HISTORY ONLY/.test(stateDown), false);
 
   const histDown = text(await page({ pro: true, cookie: sessionCookie('pro@propbetedge.test'), fail: { 'validation-history': 500 } }).render());
-  assert.match(histDown, /Validation history unavailable/);
+  assert.match(histDown, /Pre-production history unavailable/);
   assert.match(histDown, /never a zero record/);
   assert.equal(/W-L-P 0-0-0/.test(histDown), false);
 
   const officialDown = text(await page({ pro: true, cookie: sessionCookie('pro@propbetedge.test'), fail: { trackrecord: 500 } }).render('official'));
   assert.match(officialDown, /Official Track Record source unavailable/);
-  assert.equal(officialDown.includes('OFFICIAL PUBLICATION HAS NOT STARTED'), false);
+  assert.equal(officialDown.includes('PRE-PRODUCTION HISTORY ONLY'), false);
 });
 
 test('the renderer contains no synthetic, demo or backtest record source', () => {
@@ -472,28 +468,26 @@ function picksPanel(data, error = null) {
   return ctx.out;
 }
 
-test('dashboard panel: validation counts first, official intentionally gated, nothing hard-coded', async () => {
+test('dashboard panel: official production and continuous learning counts are data-driven', async () => {
   const state = (await call({ view: 'state' })).json;
   const t = text(picksPanel(state));
   assert.match(t, /The engine, as it stands/);
-  assert.match(t, /ENGINE RUNNING · VALIDATION MODE/);
-  assert.match(t, /official publication intentionally gated/);
-  const tr = state.decisions.tracking, off = state.decisions.official;
-  assert.match(t, new RegExp(`Validation finalized ${tr.graded} Validation open ${tr.open} Official published ${off.total} Official graded ${off.graded}`));
-  assert.match(t, new RegExp(`Finalized validation sample ${state.graded_sample} / 100`));
-  assert.match(t, new RegExp(`Observation window ${state.distinct_weeks} / 4 weeks`));
-  /* Change the persisted counts: the panel follows them. */
-  const moved = { ...state, graded_sample: 37, distinct_weeks: 2, decisions: { tracking: { ...tr, graded: 37, open: 9 }, official: { ...off } } };
+  const off = state.decisions.official;
+  if (state.champion_trained) {
+    assert.match(t, /ENGINE RUNNING · OFFICIAL \+ LEARNING/);
+    assert.match(t, /official picks · continuous reweighting/);
+  } else {
+    assert.match(t, /ENGINE RUNNING · BOOTSTRAP/);
+  }
+  assert.match(t, new RegExp(`Official published ${off.total} Official open ${off.open} Official graded ${off.graded} Learning rows ${state.learning_sample}`));
+  assert.match(t, new RegExp(`Continuous learning sample ${state.learning_sample} finalized`));
+  assert.match(t, new RegExp(`Observed window ${state.learning_weeks} weeks`));
+  const moved = { ...state, learning_sample: 37, learning_weeks: 2, graded_sample: 37, distinct_weeks: 2 };
   const t2 = text(picksPanel(moved));
-  assert.match(t2, /Validation finalized 37 Validation open 9/);
-  assert.match(t2, /Finalized validation sample 37 \/ 100/);
-  /* Absent counts are '—', and a failed read is not zero. */
-  const t3 = text(picksPanel({ ...state, graded_sample: null, decisions: {} }));
-  assert.match(t3, /Validation finalized — Validation open —/);
-  assert.match(t3, /Finalized validation sample — \/ 100/);
+  assert.match(t2, /Learning rows 37/);
+  assert.match(t2, /Continuous learning sample 37 finalized/);
   const t4 = text(picksPanel(null, 'HTTP 503'));
   assert.match(t4, /ENGINE STATE UNAVAILABLE/);
-  assert.equal(/Validation finalized 0/.test(t4), false);
-  /* A dead engine never reads as running. */
+  assert.equal(/Official published 0/.test(t4), false);
   assert.match(text(picksPanel({ ...state, engine_health: 'DEGRADED' })), /ENGINE DEGRADED/);
 });
