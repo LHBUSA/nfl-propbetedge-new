@@ -13,7 +13,7 @@ import {
   issuanceScope, isCustomerFacing, championPublishable, isTrainedChampion,
   SCOPE_TRACKING, SCOPE_OFFICIAL, UNTRAINED_STATE,
 } from '../champion.mjs';
-import { gateStatus, MIN_GRADED_PICKS, MIN_DISTINCT_WEEKS } from '../../nfl-weight-tuner/src/index.js';
+import { learningStatus, MIN_MONEYLINE_DECISIONS } from '../../nfl-weight-tuner/src/index.js';
 import { computeGrade } from '../../nfl-game-grader/src/index.js';
 import { FEATURE_ORDER } from '../pick-math.mjs';
 
@@ -98,39 +98,29 @@ test('the grader carries publication_scope onto the learning observation', () =>
   assert.match(grader, /publication_scope:\s*pick\.publication_scope/);
 });
 
-test('tracking grades COUNT toward the tuner sample gate', () => {
+test('historical tracking grades remain valid learning evidence but do not control publication', () => {
   const rows = [];
-  for (let i = 0; i < 100; i += 1) {
-    rows.push({ season: 2026, week: (i % 4) + 1, publication_scope: SCOPE_TRACKING,
-      clv_beat: true, outcome: 1, features: {}, model_prob: 0.6, units_delta: 1 });
+  for (let i = 0; i < MIN_MONEYLINE_DECISIONS; i += 1) {
+    rows.push({
+      pick_id: `t-${i}`,
+      finalized_at: new Date(Date.parse('2026-09-01T00:00:00Z') + i * 86400000).toISOString(),
+      publication_scope: SCOPE_TRACKING,
+      model_prob: i % 2 ? 0.44 : 0.59,
+      outcome: i % 2 ? 0 : 1,
+    });
   }
-  const gate = gateStatus(rows);
-  assert.equal(gate.open, true, 'bootstrap tracking sample must be able to open the gate');
-  assert.equal(gate.graded, 100);
-  assert.equal(gate.distinct_weeks, 4);
+  const learning = learningStatus(rows);
+  assert.equal(learning.rows, MIN_MONEYLINE_DECISIONS);
+  assert.equal(issuanceScope(TRAINED_V2).scope, SCOPE_OFFICIAL, 'publication is champion state, not sample gating');
 });
 
-test('the loop can bootstrap from zero to the gate with no bypass', () => {
-  // 99 tracking grades over 4 weeks: still shut.
-  const near = [];
-  for (let i = 0; i < 99; i += 1) {
-    near.push({ season: 2026, week: (i % 4) + 1, publication_scope: SCOPE_TRACKING });
-  }
-  assert.equal(gateStatus(near).open, false);
-  // The 100th opens it — by data alone.
-  near.push({ season: 2026, week: 4, publication_scope: SCOPE_TRACKING });
-  assert.equal(gateStatus(near).open, true);
-  assert.equal(MIN_GRADED_PICKS, 100);
-  assert.equal(MIN_DISTINCT_WEEKS, 4);
-});
-
-test('100 tracking grades inside a single week still cannot open the gate', () => {
-  const rows = [];
-  for (let i = 0; i < 150; i += 1) {
-    rows.push({ season: 2026, week: 1, publication_scope: SCOPE_TRACKING });
-  }
-  assert.equal(gateStatus(rows).open, false);
-  assert.match(gateStatus(rows).reason, /insufficient_weeks/);
+test('continuous learning readiness is separate from the official publication switch', () => {
+  const thin = Array.from({ length: 4 }, (_, i) => ({
+    pick_id: `x-${i}`, finalized_at: `2026-09-0${i+1}T00:00:00Z`,
+    model_prob: 0.55, outcome: i % 2,
+  }));
+  assert.equal(learningStatus(thin).ready, false);
+  assert.equal(issuanceScope(TRAINED_V2).scope, SCOPE_OFFICIAL);
 });
 
 /* ------------------------------------------------------------------------
