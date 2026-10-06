@@ -23,9 +23,11 @@
     { key: 'golf', label: 'Golf', sub: 'Golf Intelligence', href: 'https://golf.propbetedge.ai/' },
     { key: 'f1', label: 'F1', sub: 'F1 Intelligence', href: 'https://f1.propbetedge.ai/' }
   ];
-  /* Intelligence products: never a sport, never in the sports grid or its count. */
+  /* All Access products: never a sport, never in the sports grid or its count. */
   const PRODUCTS = [
-    { key: 'predictions', label: 'PropBetEdge Predictions', href: 'https://predictions.propbetedge.ai/' }
+    { key: 'members', label: 'Command Center', href: 'https://members.propbetedge.ai/' },
+    { key: 'compare', label: 'Compare', href: 'https://compare.propbetedge.ai/' },
+    { key: 'predictions', label: 'Predictions', href: 'https://predictions.propbetedge.ai/' }
   ];
 
   function sportTile(sport) {
@@ -65,9 +67,10 @@
           ${SPORTS.map(sportTile).join('')}
         </section>
 
-        <nav class="pbe-network-intel" aria-label="PropBetEdge intelligence">
-          <span>INTELLIGENCE</span>
-          ${PRODUCTS.map((p) => `<a href="${p.href}" target="_blank" rel="noopener">${p.label} <i>↗</i></a>`).join('')}
+        <nav class="pbe-network-intel" aria-label="PropBetEdge All Access">
+          <span>ALL ACCESS</span>
+          <a href="https://propbetedge.ai/pro">All Access</a>
+          ${PRODUCTS.map((p) => `<a href="${p.href}">${p.label}</a>`).join('')}
         </nav>
 
         <section class="pbe-network-footer-console">
