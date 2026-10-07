@@ -10,7 +10,8 @@ test('network footer ecosystem links to PropBetEdge Learn (canonical, same-tab, 
   assert.match(nav, /<a href="https:\/\/learn\.propbetedge\.ai\/">Learn<\/a>/);
   assert.equal((src.match(/learn\.propbetedge\.ai/g) || []).length, 1, 'exactly one Learn link');
   // Existing ecosystem destinations are unchanged.
-  for (const s of ['ALL ACCESS', 'Sports News', 'PropSports API', 'PropTechUSA.ai', 'Discord ↗']) assert.ok(nav.includes(s), s);
+  for (const s of ['ALL ACCESS', 'Sports News', 'PropSports API', 'PropTechUSA.ai']) assert.ok(nav.includes(s), s);
+  assert.doesNotMatch(nav, /Discord|discord\.gg/i, 'Discord is retired from the brand footer');
 });
 
 test('network footer sports grid holds the ten family sports in canonical order (Soccer after Tennis, F1 last)', () => {
