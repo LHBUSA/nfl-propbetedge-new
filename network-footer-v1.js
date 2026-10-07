@@ -99,7 +99,6 @@
               <a href="${ALL_ACCESS}" class="pbe-footer-aa-link" data-pbe-footer-all-access>ALL ACCESS</a>
               <a href="${ALL_ACCESS}" data-pbe-footer-all-access-included>WHAT'S INCLUDED</a>
               <a href="${BILLING}" target="_blank" rel="noopener" data-pbe-footer-manage hidden>Manage subscription ↗</a>
-              <a href="https://discord.gg/kb5zCTHbME" target="_blank" rel="noopener">Member community ↗</a>
             </div>
           </aside>
         </section>
@@ -125,7 +124,6 @@
             <a href="https://learn.propbetedge.ai/">Learn</a>
             <a href="https://propsports.proptechusa.ai" target="_blank" rel="noopener">PropSports API</a>
             <a href="https://proptechusa.ai" target="_blank" rel="noopener">PropTechUSA.ai</a>
-            <a href="https://discord.gg/kb5zCTHbME" target="_blank" rel="noopener">Discord ↗</a>
             <a class="pbe-footer-x" href="https://x.com/PROPBETEDGE" target="_blank" rel="noopener noreferrer" aria-label="Follow PropBetEdge on X (@PROPBETEDGE)" title="Follow PropBetEdge on X"><span aria-hidden="true">𝕏</span> @PROPBETEDGE</a>
           </nav>
         </section>
