@@ -103,6 +103,8 @@
           </aside>
         </section>
 
+        <div class="pbe-network-kxo" data-pbe-kxo hidden></div>
+
         ${window.PBEPreferredSource?.render({ surface: 'footer' }) || ''}
 
         <nav class="pbe-network-intel" aria-label="PropBetEdge editorial and legal">
@@ -180,7 +182,31 @@
     });
   }
 
+  /* Kalshi PERPETUALS partner offer (kalshi-partner/2, owner 2026-10-07): one commercial partner block in the
+     footer's All Access area. Copy + link come only from /kalshi-partner.js (vendored byte-identical); config
+     via the same-origin /go/kalshi-perps/config rewrite. Never on picks, prop cards, PBEcast or Kalshi market
+     components. Disabled or failed config renders nothing (fail closed). */
+  const PARTNER_CTX = { placement: 'sport_footer', product: 'nfl', sport: 'nfl' };
+  function mountPartner(footer) {
+    const slot = footer.querySelector('[data-pbe-kxo]');
+    if (!slot || slot.dataset.kxoState) return;
+    slot.dataset.kxoState = 'loading';
+    let load;
+    try { load = import('/kalshi-partner.js?v=20261008kxo'); } catch { return; }
+    load
+      .then((m) => m.loadPartnerConfig('/go/kalshi-perps/config')
+        .then((cfg) => m.partnerOffer(cfg, PARTNER_CTX, { variant: 'footer' })))
+      .then((html) => {
+        if (!html || !slot.isConnected || document.querySelector('.kxo')) return;
+        slot.innerHTML = html;
+        slot.hidden = false;
+        slot.dataset.kxoState = 'ready';
+      })
+      .catch(() => {});
+  }
+
   function wire(footer) {
+    mountPartner(footer);
     footer.querySelectorAll('[data-pbe-footer-route]').forEach((link) => link.addEventListener('click', (event) => {
       /* Inside the app the router handles it; elsewhere (the /all-access
          page) the link's own /#route href navigates normally. */

@@ -95,6 +95,22 @@
   .pbe-footer-account-card{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:24px;align-items:center}
   .pbe-footer-account-card>p{grid-column:1/2}.pbe-footer-account-card-links{grid-column:2/3;grid-row:2}
 }
+/* Kalshi partner offer (kalshi-partner/2): one quiet commercial line in the All Access area, markup from /kalshi-partner.js */
+.pbe-network-kxo{margin-top:12px;min-width:0}
+.pbe-network-kxo[hidden]{display:none!important}
+.pbe-network-kxo .kxo{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:4px 16px;padding:11px 16px;border:1px solid rgba(255,255,255,.06);border-radius:12px;background:rgba(255,255,255,.012);box-sizing:border-box;max-width:100%}
+.pbe-network-kxo .kxo>span{min-width:0;overflow-wrap:anywhere}
+.pbe-network-kxo .kxo__kicker{color:#8f897e;font:800 8px/1.3 "JetBrains Mono",monospace;letter-spacing:.17em;white-space:nowrap}
+.pbe-network-kxo .kxo__body{color:#b9b3a8;font:500 11.5px/1.45 "Inter",sans-serif}
+.pbe-network-kxo .kxo__cta{justify-self:end;color:#d8d2c6;text-decoration:none;font:800 9.5px/1 "Inter",sans-serif;letter-spacing:.12em;padding:8px 11px;border:1px solid rgba(255,255,255,.16);border-radius:8px;white-space:nowrap;transition:color .16s ease,border-color .16s ease}
+.pbe-network-kxo .kxo__cta:hover,.pbe-network-kxo .kxo__cta:focus-visible{color:var(--pbe-gold);border-color:rgba(255,255,255,.3);outline:none}
+.pbe-network-kxo .kxo__disc{grid-column:1/-1;color:#6f6a61;font:500 9.5px/1.45 "Inter",sans-serif}
+.pbe-network-kxo .kxo--generic{grid-template-columns:auto minmax(0,1fr)}
+.pbe-network-kxo .kxo--generic .kxo__cta{justify-self:start}
+@media(max-width:720px){
+  .pbe-network-kxo .kxo{grid-template-columns:minmax(0,1fr);align-items:start;gap:5px;padding:12px 14px}
+  .pbe-network-kxo .kxo__cta{justify-self:start;margin:4px 0 2px;white-space:normal}
+}
 @media(max-width:720px){
   .pbe-network-footer{margin-top:36px}
   .pbe-network-footer-shell{width:min(100% - 26px,1460px);padding:28px 0 calc(82px + env(safe-area-inset-bottom))}

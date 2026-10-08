@@ -133,7 +133,9 @@ test('page: a real indexable NFL page -- canonical to itself, no redirect / meta
   assert.match(html, /<main id="main-content">\s*<div id="view-container">/, 'the shared footer mounts after #view-container');
   const vercel = JSON.parse(read('vercel.json'));
   assert.equal(vercel.cleanUrls, true, 'served at /all-access');
-  assert.ok(!vercel.redirects && !vercel.rewrites, 'no redirect or rewrite');
+  assert.ok(!vercel.redirects, 'no redirect');
+  /* the only rewrites are the two fixed Kalshi partner routes (tests/nfl-kalshi-partner.test.mjs); nothing touches /all-access */
+  for (const r of vercel.rewrites || []) assert.match(r.source, /^\/go\/kalshi-perps(\/config)?$/, 'no rewrite of /all-access');
 });
 
 /* ------------------------------------------------------------ states + vocabulary 12-14 */
